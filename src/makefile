@@ -1,7 +1,7 @@
 ################################################################################
 #  Q V.5 Makefile for Mac OSX  10.9.1                                          #
 #  main code author: Johan Aqvist                                              #
-#  maintainer: Mauricio Esguerra                                               #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
 #  latest update: January 20, 2014                                             #
 ################################################################################
 
@@ -10,7 +10,7 @@
 FC=		gfortran
 CC=		gcc
 MPIFC=		mpif90
-#FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+#FC_OPT=	-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 FC_OPT=		-O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 CC_OPT=		-O3
 #MPIFLAGS=	-f90=${FC}
