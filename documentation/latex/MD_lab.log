@@ -1,0 +1,330 @@
+This is pdfTeX, Version 3.14159-1.10b (Web2C 7.4.5) (format=pdflatex 2006.1.19)  24 OCT 2008 11:36
+**MD_lab
+(./MD_lab.tex{/usr/share/texmf/pdftex/config/pdftex.cfg}
+LaTeX2e <2001/06/01>
+Babel <v3.7h> and hyphenation patterns for american, french, german, ngerman, n
+ohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2001/04/21 v1.4e Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo
+File: size12.clo 2001/04/21 v1.4e Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+Package: graphics 2001/07/07 v1.0n Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texmf/tex/latex/config/graphics.cfg
+File: graphics.cfg 2001/08/31 v1.1 graphics configuration of teTeX/TeXLive
+)
+Package graphics Info: Driver file: pdftex.def on input line 80.
+
+(/usr/share/texmf/tex/latex/graphics/pdftex.def
+File: pdftex.def 2002/06/19 v0.03k graphics/color for pdftex
+\Gread@gobject=\count87
+))
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+\Gin@req@height=\dimen103
+\Gin@req@width=\dimen104
+)
+(/usr/share/texmf/tex/latex/psnfss/times.sty
+Package: times 2002/09/08 PSNFSS-v9.0a (SPQR) 
+)
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 14.
+
+(/usr/share/texmf/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+(/usr/share/texmf/tex/generic/babel/babel.sty
+Package: babel 2001/03/01 v3.7h The Babel package
+
+(/usr/share/texmf/tex/generic/babel/english.ldf
+Language: english 2001/04/15 v3.3l English support from the babel system
+
+(/usr/share/texmf/tex/generic/babel/babel.def
+File: babel.def 2001/03/01 v3.7h Babel common definitions
+\babel@savecnt=\count88
+\U@D=\dimen105
+)
+\l@canadian = a dialect from \language\l@english 
+))
+(/usr/share/texmf/tex/latex/base/inputenc.sty
+Package: inputenc 2001/07/10 v0.99a Input encoding file 
+
+(/usr/share/texmf/tex/latex/base/latin1.def
+File: latin1.def 2001/07/10 v0.99a Input encoding file 
+))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip43
+
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks15
+\ex@=\dimen106
+))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen107
+)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count89
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count90
+\leftroot@=\count91
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count92
+\DOTSCASE@=\count93
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box26
+\strutbox@=\box27
+\big@size=\dimen108
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count94
+\c@MaxMatrixCols=\count95
+\dotsspace@=\muskip10
+\c@parentequation=\count96
+\dspbrk@lvl=\count97
+\tag@help=\toks16
+\row@=\count98
+\column@=\count99
+\maxfields@=\count100
+\andhelp@=\toks17
+\eqnshift@=\dimen109
+\alignsep@=\dimen110
+\tagshift@=\dimen111
+\tagwidth@=\dimen112
+\totwidth@=\dimen113
+\lineht@=\dimen114
+\@envbody=\toks18
+\multlinegap=\skip44
+\multlinetaggap=\skip45
+\mathdisplay@stack=\toks19
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+)
+(/usr/share/texmf/tex/latex/tools/tabularx.sty
+Package: tabularx 1999/01/07 v2.07 `tabularx' package (DPC)
+
+(/usr/share/texmf/tex/latex/tools/array.sty
+Package: array 1998/05/13 v2.3m Tabular extension package (FMi)
+\col@sep=\dimen115
+\extrarowheight=\dimen116
+\NC@list=\toks20
+\extratabsurround=\skip46
+\backup@length=\skip47
+)
+\TX@col@width=\dimen117
+\TX@old@table=\dimen118
+\TX@old@col=\dimen119
+\TX@target=\dimen120
+\TX@delta=\dimen121
+\TX@cols=\count101
+\TX@ftn=\toks21
+) (./MD_lab.aux)
+\openout1 = `MD_lab.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 55.
+LaTeX Font Info:    ... okay on input line 55.
+
+(/usr/share/texmf/tex/context/base/supp-pdf.tex
+(/usr/share/texmf/tex/context/base/supp-mis.tex
+loading : Context Support Macros / Missing
+\protectiondepth=\count102
+\scratchcounter=\count103
+\scratchtoks=\toks22
+\scratchdimen=\dimen122
+\scratchskip=\skip48
+\scratchmuskip=\muskip11
+\scratchbox=\box28
+\scratchread=\read1
+\scratchwrite=\write3
+\zeropoint=\dimen123
+\minusone=\count104
+\thousandpoint=\dimen124
+\emptytoks=\toks23
+\nextbox=\box29
+\nextdepth=\dimen125
+\everyline=\toks24
+\!!counta=\count105
+\!!countb=\count106
+\recursecounter=\count107
+)
+loading : Context Support Macros / PDF
+\nofMPsegments=\count108
+\nofMParguments=\count109
+\everyMPtoPDFconversion=\toks25
+)
+Overfull \hbox (31.97578pt too wide) in paragraph at lines 57--57
+ [][] 
+ []
+
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17.28> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 59.
+(./MD_lab.toc
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 2.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 2.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 5.
+ (/usr/share/texmf/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+))
+\tf@toc=\write4
+\openout4 = `MD_lab.toc'.
+
+ [1
+
+{/usr/share/texmf/dvips/config/pdftex.map}]
+Underfull \hbox (badness 10000) in paragraph at lines 71--79
+
+ []
+
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 80.
+(/usr/share/texmf/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 80.
+
+Overfull \hbox (5.06958pt too wide) in paragraph at lines 112--121
+[]/ptmr7t@12.0pt/The Lennard-Jones ex-pres-sion (first sum-ma-tion in eq 2[]) h
+as a re-pul-sive term ($/cmmi12/A[]=R[]$/ptmr7t@12.0pt/)
+ []
+
+[2] <FF.pdf, id=37, 948.54375pt x 624.3325pt>
+File: FF.pdf Graphic file (type pdf)
+ <use FF.pdf>
+
+Package amsmath Warning: Foreign command \over;
+(amsmath)                \frac or \genfrac should be used instead
+(amsmath)                 on input line 142.
+
+[3 <./FF.pdf>]
+Overfull \hbox (11.52676pt too wide) in paragraph at lines 164--165
+[]/ptmr7t@12.0pt/Starting ve-loc-i-ties are ran-domly as-signed (see /ptmb7t@12
+.0pt/ran-dom[]seed /ptmr7t@12.0pt/key-word) from a Maxwell-
+ []
+
+[4] <cam.pdf, id=48, 614.295pt x 794.97pt>
+File: cam.pdf Graphic file (type pdf)
+ <use cam.pdf>
+Underfull \hbox (badness 10000) in paragraph at lines 222--225
+
+ []
+
+
+Overfull \hbox (5.03757pt too wide) in paragraph at lines 236--237
+/ptmr7t@12.0pt/un-der-stand these mod-i-fi-ca-tions! Open and com-pare the two 
+pdb files /pcrr7t@12.0pt/6cpp.pdb
+ []
+
+[5]
+Underfull \hbox (badness 10000) in paragraph at lines 242--247
+
+ []
+
+[6 <./cam.pdf>]
+Overfull \hbox (55.4391pt too wide) in paragraph at lines 265--266
+[]/ptmr7t@12.0pt/You can take a look at the files /pcrr7t@12.0pt/../FF[]Q/Qopls
+aa.lib /ptmr7t@12.0pt/and /pcrr7t@12.0pt/../FF[]Q/Qoplsaa.prm
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 267--268
+
+ []
+
+[7]
+Overfull \hbox (8.70811pt too wide) in paragraph at lines 277--278
+/ptmr7t@12.0pt/sim-u-la-tion will be the cen-tral atom of the lig-and, in-di-ca
+ted by residue:atom[]name) 
+ []
+
+
+Overfull \hbox (23.1438pt too wide) in paragraph at lines 284--289
+/ptmr7t@12.0pt/Alternatively you can write all /pcrr7t@12.0pt/Qprep5 /ptmr7t@12
+.0pt/com-mands in a sep-a-rate file (/ptmri7t@12.0pt/e.g. /pcrr7t@12.0pt/maketo
+p.inp
+ []
+
+LaTeX Font Info:    Font shape `OT1/pcr/bx/n' in size <14.4> not available
+(Font)              Font shape `OT1/pcr/b/n' tried instead on input line 303.
+
+Underfull \hbox (badness 10000) in paragraph at lines 310--311
+
+ []
+
+[8]
+Underfull \hbox (badness 10000) in paragraph at lines 323--323
+[]|/ptmr7t@12.0pt/Force
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 323--323
+/ptmr7t@12.0pt/con-stant
+ []
+
+[9]
+Underfull \hbox (badness 10000) in paragraph at lines 371--377
+
+ []
+
+[10] (./MD_lab.aux) ) 
+Here is how much of TeX's memory you used:
+ 2053 strings out of 95437
+ 23993 string characters out of 1189055
+ 80038 words of memory out of 1000001
+ 5030 multiletter control sequences out of 10000+50000
+ 21268 words of font info for 50 fonts, out of 500000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 27i,12n,20p,994b,400s stack positions out of 1500i,500n,5000p,200000b,5000s
+ 73 PDF objects out of 300000
+ 0 named destinations out of 131072
+ 10 words of extra memory for PDF output out of 65536
+{/usr/share/texmf/dvips/psnfss/8r.enc}{/usr/share/texmf/dv
+ips/tetex/bbad153f.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmsy8.pfb>{/usr
+/share/texmf/dvips/tetex/aae443f0.enc}</usr/share/texmf/fonts/type1/bluesky/cm/
+cmmi8.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmex10.pfb>{/usr/share/texmf
+/dvips/tetex/f7b6d320.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmr12.pfb></
+usr/share/texmf/fonts/type1/bluesky/cm/cmr8.pfb></usr/share/texmf/fonts/type1/b
+luesky/cm/cmmi12.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmsy10.pfb>
+Output written on MD_lab.pdf (10 pages, 166175 bytes).

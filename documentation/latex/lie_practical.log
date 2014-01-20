@@ -1,0 +1,292 @@
+This is pdfTeX, Version 3.14159-1.10b (Web2C 7.4.5) (format=pdflatex 2006.1.19)  24 OCT 2008 15:36
+**lie_practical
+(./lie_practical.tex{/usr/share/texmf/pdftex/config/pdftex.cfg}
+LaTeX2e <2001/06/01>
+Babel <v3.7h> and hyphenation patterns for american, french, german, ngerman, n
+ohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2001/04/21 v1.4e Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo
+File: size12.clo 2001/04/21 v1.4e Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+Package: graphics 2001/07/07 v1.0n Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texmf/tex/latex/config/graphics.cfg
+File: graphics.cfg 2001/08/31 v1.1 graphics configuration of teTeX/TeXLive
+)
+Package graphics Info: Driver file: pdftex.def on input line 80.
+
+(/usr/share/texmf/tex/latex/graphics/pdftex.def
+File: pdftex.def 2002/06/19 v0.03k graphics/color for pdftex
+\Gread@gobject=\count87
+))
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+\Gin@req@height=\dimen103
+\Gin@req@width=\dimen104
+)
+(/usr/share/texmf/tex/latex/psnfss/times.sty
+Package: times 2002/09/08 PSNFSS-v9.0a (SPQR) 
+)
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 7.
+
+(/usr/share/texmf/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+(/usr/share/texmf/tex/generic/babel/babel.sty
+Package: babel 2001/03/01 v3.7h The Babel package
+
+(/usr/share/texmf/tex/generic/babel/english.ldf
+Language: english 2001/04/15 v3.3l English support from the babel system
+
+(/usr/share/texmf/tex/generic/babel/babel.def
+File: babel.def 2001/03/01 v3.7h Babel common definitions
+\babel@savecnt=\count88
+\U@D=\dimen105
+)
+\l@canadian = a dialect from \language\l@english 
+))
+(/usr/share/texmf/tex/latex/base/t1enc.sty
+Package: t1enc 1994/06/01 Standard LaTeX package
+LaTeX Font Info:    Try loading font information for T1+ptm on input line 52.
+
+(/usr/share/texmf/tex/latex/psnfss/t1ptm.fd
+File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
+))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip43
+
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks15
+\ex@=\dimen106
+))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen107
+)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count89
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count90
+\leftroot@=\count91
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count92
+\DOTSCASE@=\count93
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box26
+\strutbox@=\box27
+\big@size=\dimen108
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count94
+\c@MaxMatrixCols=\count95
+\dotsspace@=\muskip10
+\c@parentequation=\count96
+\dspbrk@lvl=\count97
+\tag@help=\toks16
+\row@=\count98
+\column@=\count99
+\maxfields@=\count100
+\andhelp@=\toks17
+\eqnshift@=\dimen109
+\alignsep@=\dimen110
+\tagshift@=\dimen111
+\tagwidth@=\dimen112
+\totwidth@=\dimen113
+\lineht@=\dimen114
+\@envbody=\toks18
+\multlinegap=\skip44
+\multlinetaggap=\skip45
+\mathdisplay@stack=\toks19
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+) (./lie_practical.aux)
+\openout1 = `lie_practical.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 44.
+LaTeX Font Info:    ... okay on input line 44.
+
+(/usr/share/texmf/tex/context/base/supp-pdf.tex
+(/usr/share/texmf/tex/context/base/supp-mis.tex
+loading : Context Support Macros / Missing
+\protectiondepth=\count101
+\scratchcounter=\count102
+\scratchtoks=\toks20
+\scratchdimen=\dimen115
+\scratchskip=\skip46
+\scratchmuskip=\muskip11
+\scratchbox=\box28
+\scratchread=\read1
+\scratchwrite=\write3
+\zeropoint=\dimen116
+\minusone=\count103
+\thousandpoint=\dimen117
+\emptytoks=\toks21
+\nextbox=\box29
+\nextdepth=\dimen118
+\everyline=\toks22
+\!!counta=\count104
+\!!countb=\count105
+\recursecounter=\count106
+)
+loading : Context Support Macros / PDF
+\nofMPsegments=\count107
+\nofMParguments=\count108
+\everyMPtoPDFconversion=\toks23
+)
+Overfull \hbox (31.97578pt too wide) in paragraph at lines 46--46
+ [][] 
+ []
+
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <17.28> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 47.
+(./lie_practical.toc
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 2.
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 2.
+)
+\tf@toc=\write4
+\openout4 = `lie_practical.toc'.
+
+ [1
+
+{/usr/share/texmf/dvips/config/pdftex.map}]
+Underfull \hbox (badness 10000) in paragraph at lines 53--60
+
+ []
+
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 93.
+(/usr/share/texmf/tex/latex/psnfss/omsptm.fd
+File: omsptm.fd 
+)
+LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <12> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 93.
+
+Underfull \hbox (badness 10000) in paragraph at lines 102--116
+
+ []
+
+[2]
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 138.
+ (/usr/share/texmf/tex/latex/psnfss/t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+) [3]
+Underfull \hbox (badness 10000) in paragraph at lines 211--216
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 211--216
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 216--217
+
+ []
+
+[4]
+Overfull \hbox (18.46335pt too wide) in paragraph at lines 233--238
+[]/ptmb8t@12.0pt/Convergence: /ptmr8t@12.0pt/First we will look at the con-ver-
+gence and re-sults of the ligand-surrounding
+ []
+
+
+Overfull \hbox (12.15198pt too wide) in paragraph at lines 233--238
+/ptmr8t@12.0pt/en-er-gies for the lig-ands in wa-ter and pro-tein. By us-ing th
+e /pcrr8t@12.0pt/perl /ptmr8t@12.0pt/script /pcrr8t@12.0pt/energies.pl/ptmr8t@1
+2.0pt/,
+ []
+
+
+Overfull \hbox (1.38887pt too wide) in paragraph at lines 242--247
+/ptmr8t@12.0pt/ma-rizes and plots all ligand-surrounding en-er-gies for the en-
+tire pro-duc-tion phase
+ []
+
+[5]
+Overfull \hbox (38.87892pt too wide) in paragraph at lines 317--328
+/ptmr8t@12.0pt/each pro-tein sim-u-la-tion. Type /pcrr8t@12.0pt/Qprep5 < qprep_
+av1.inp > qprep_av1.out
+ []
+
+
+Overfull \hbox (0.58774pt too wide) in paragraph at lines 317--328
+/ptmr8t@12.0pt/and then /pcrr8t@12.0pt/Qprep5 < qprep_av2.inp > qprep_av2.out /
+ptmr8t@12.0pt/in your com-
+ []
+
+
+Overfull \hbox (38.06169pt too wide) in paragraph at lines 317--328
+/ptmr8t@12.0pt/sim-u-la-tions. Use /pcrr8t@12.0pt/pymol /ptmr8t@12.0pt/to com-p
+are the these two pdb files (/pcrr8t@12.0pt/average_md1to7.pdb
+ []
+
+[6]
+Overfull \hbox (9.3464pt too wide) in paragraph at lines 348--355
+/ptmr8t@12.0pt/for all pro-duc-tion files has been saved to the file /pcrr8t@12
+.0pt/res_lig.txt/ptmr8t@12.0pt/. Type /pcrr8t@12.0pt/gnuplot
+ []
+
+[7] (./lie_practical.aux) ) 
+Here is how much of TeX's memory you used:
+ 1925 strings out of 95437
+ 22545 string characters out of 1189055
+ 76431 words of memory out of 1000001
+ 4913 multiletter control sequences out of 10000+50000
+ 30609 words of font info for 49 fonts, out of 500000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 27i,9n,20p,313b,337s stack positions out of 1500i,500n,5000p,200000b,5000s
+ 49 PDF objects out of 300000
+ 0 named destinations out of 131072
+ 0 words of extra memory for PDF output out of 65536
+{/usr/share/texmf/dvips/psnfss/8r.enc}{/usr/share/te
+xmf/dvips/tetex/bbad153f.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmsy8.pfb
+>{/usr/share/texmf/dvips/tetex/aae443f0.enc}</usr/share/texmf/fonts/type1/blues
+ky/cm/cmmi8.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmsy10.pfb>{/usr/share
+/texmf/dvips/tetex/f7b6d320.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmr8.p
+fb></usr/share/texmf/fonts/type1/bluesky/cm/cmmi12.pfb></usr/share/texmf/fonts/
+type1/bluesky/cm/cmr12.pfb>
+Output written on lie_practical.pdf (7 pages, 40501 bytes).

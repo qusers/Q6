@@ -1,6 +1,6 @@
-readlib  ~/pfs/Q/lib/Qoplsaa_QM_zn1.lib
-readlib  ~/pfs/Q/lib/co_0p50.lib
-readprm  ~/pfs/Q/lib/Qoplsaa.prm
+readlib  parameter/qoplsaa_QM_zn1.lib
+readlib  parameter/co_0p50.lib
+readprm  parameter/qoplsaa.prm
 readpdb  co_0p50.pdb
 boundary
 1
@@ -15,6 +15,4 @@ maketop  co_0p50.top
 writetop co_0p50.top
 writepdb co_0p50_start.pdb
 y
-
-
 

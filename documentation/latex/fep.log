@@ -1,0 +1,563 @@
+This is pdfTeX, Version 3.14159-1.10b (Web2C 7.4.5) (format=pdflatex 2006.1.19)  24 OCT 2008 15:35
+**fep
+(./fep.tex{/usr/share/texmf/pdftex/config/pdftex.cfg}
+LaTeX2e <2001/06/01>
+Babel <v3.7h> and hyphenation patterns for american, french, german, ngerman, n
+ohyphenation, loaded.
+(/usr/share/texmf/tex/latex/base/article.cls
+Document Class: article 2001/04/21 v1.4e Standard LaTeX document class
+(/usr/share/texmf/tex/latex/base/size12.clo
+File: size12.clo 2001/04/21 v1.4e Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texmf/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/share/texmf/tex/latex/graphics/graphics.sty
+Package: graphics 2001/07/07 v1.0n Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/share/texmf/tex/latex/config/graphics.cfg
+File: graphics.cfg 2001/08/31 v1.1 graphics configuration of teTeX/TeXLive
+)
+Package graphics Info: Driver file: pdftex.def on input line 80.
+
+(/usr/share/texmf/tex/latex/graphics/pdftex.def
+File: pdftex.def 2002/06/19 v0.03k graphics/color for pdftex
+\Gread@gobject=\count87
+))
+\Gin@req@height=\dimen103
+\Gin@req@width=\dimen104
+)
+(/usr/share/texmf/tex/latex/psnfss/times.sty
+Package: times 2002/09/08 PSNFSS-v9.0a (SPQR) 
+)
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 3.
+
+(/usr/share/texmf/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+(/usr/share/texmf/tex/generic/babel/babel.sty
+Package: babel 2001/03/01 v3.7h The Babel package
+
+(/usr/share/texmf/tex/generic/babel/english.ldf
+Language: english 2001/04/15 v3.3l English support from the babel system
+
+(/usr/share/texmf/tex/generic/babel/babel.def
+File: babel.def 2001/03/01 v3.7h Babel common definitions
+\babel@savecnt=\count88
+\U@D=\dimen105
+)
+\l@canadian = a dialect from \language\l@english 
+))
+(/usr/share/texmf/tex/latex/base/t1enc.sty
+Package: t1enc 1994/06/01 Standard LaTeX package
+LaTeX Font Info:    Try loading font information for T1+ptm on input line 52.
+
+(/usr/share/texmf/tex/latex/psnfss/t1ptm.fd
+File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
+))
+(/usr/share/texmf/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip43
+
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/share/texmf/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks15
+\ex@=\dimen106
+))
+(/usr/share/texmf/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen107
+)
+(/usr/share/texmf/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count89
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count90
+\leftroot@=\count91
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count92
+\DOTSCASE@=\count93
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box26
+\strutbox@=\box27
+\big@size=\dimen108
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count94
+\c@MaxMatrixCols=\count95
+\dotsspace@=\muskip10
+\c@parentequation=\count96
+\dspbrk@lvl=\count97
+\tag@help=\toks16
+\row@=\count98
+\column@=\count99
+\maxfields@=\count100
+\andhelp@=\toks17
+\eqnshift@=\dimen109
+\alignsep@=\dimen110
+\tagshift@=\dimen111
+\tagwidth@=\dimen112
+\totwidth@=\dimen113
+\lineht@=\dimen114
+\@envbody=\toks18
+\multlinegap=\skip44
+\multlinetaggap=\skip45
+\mathdisplay@stack=\toks19
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+)
+(/usr/share/texmf/tex/latex/tools/longtable.sty
+Package: longtable 2000/10/22 v4.10 Multi-page Table package (DPC)
+\LTleft=\skip46
+\LTright=\skip47
+\LTpre=\skip48
+\LTpost=\skip49
+\LTchunksize=\count101
+\LTcapwidth=\dimen115
+\LT@head=\box28
+\LT@firsthead=\box29
+\LT@foot=\box30
+\LT@lastfoot=\box31
+\LT@cols=\count102
+\LT@rows=\count103
+\c@LT@tables=\count104
+\c@LT@chunks=\count105
+\LT@p@ftn=\toks20
+)
+(/usr/share/texmf/tex/latex/misc/supertabular.sty
+Package: supertabular 2002/07/19 v4.1e the supertabular environment
+\c@tracingst=\count106
+\ST@wd=\dimen116
+\ST@rightskip=\skip50
+\ST@leftskip=\skip51
+\ST@parfillskip=\skip52
+\ST@pageleft=\dimen117
+\ST@headht=\dimen118
+\ST@tailht=\dimen119
+\ST@pagesofar=\dimen120
+\ST@pboxht=\dimen121
+\ST@lineht=\dimen122
+\ST@stretchht=\dimen123
+\ST@prevht=\dimen124
+\ST@toadd=\dimen125
+\ST@dimen=\dimen126
+\ST@pbox=\box32
+)
+(/usr/share/texmf/tex/latex/tools/tabularx.sty
+Package: tabularx 1999/01/07 v2.07 `tabularx' package (DPC)
+
+(/usr/share/texmf/tex/latex/tools/array.sty
+Package: array 1998/05/13 v2.3m Tabular extension package (FMi)
+\col@sep=\dimen127
+\extrarowheight=\dimen128
+\NC@list=\toks21
+\extratabsurround=\skip53
+\backup@length=\skip54
+)
+\TX@col@width=\dimen129
+\TX@old@table=\dimen130
+\TX@old@col=\dimen131
+\TX@target=\dimen132
+\TX@delta=\dimen133
+\TX@cols=\count107
+\TX@ftn=\toks22
+)
+(/usr/share/texmf/tex/latex/multirow/multirow.sty
+\bigstrutjot=\dimen134
+) (./fep.aux
+
+LaTeX Warning: Label `tab:fepfileformat' multiply defined.
+
+
+LaTeX Warning: Label `tab:fepfileformat' multiply defined.
+
+
+LaTeX Warning: Label `tab:fepfileformat' multiply defined.
+
+
+LaTeX Warning: Label `tab:fepfileformat' multiply defined.
+
+)
+\openout1 = `fep.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 42.
+LaTeX Font Info:    ... okay on input line 42.
+ (/usr/share/texmf/tex/context/base/supp-pdf.tex
+(/usr/share/texmf/tex/context/base/supp-mis.tex
+loading : Context Support Macros / Missing
+\protectiondepth=\count108
+\scratchcounter=\count109
+\scratchtoks=\toks23
+\scratchdimen=\dimen135
+\scratchskip=\skip55
+\scratchmuskip=\muskip11
+\scratchbox=\box33
+\scratchread=\read1
+\scratchwrite=\write3
+\zeropoint=\dimen136
+\minusone=\count110
+\thousandpoint=\dimen137
+\emptytoks=\toks24
+\nextbox=\box34
+\nextdepth=\dimen138
+\everyline=\toks25
+\!!counta=\count111
+\!!countb=\count112
+\recursecounter=\count113
+)
+loading : Context Support Macros / PDF
+\nofMPsegments=\count114
+\nofMParguments=\count115
+\everyMPtoPDFconversion=\toks26
+)
+Overfull \hbox (28.77904pt too wide) in paragraph at lines 43--43
+ [][] 
+ []
+
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <17.28> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 44.
+(./fep.toc
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <12> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 2.
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 4.
+ (/usr/share/texmf/tex/latex/psnfss/t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+LaTeX Font Info:    Font shape `T1/pcr/bx/n' in size <12> not available
+(Font)              Font shape `T1/pcr/b/n' tried instead on input line 7.
+)
+\tf@toc=\write4
+\openout4 = `fep.toc'.
+
+ [1
+
+{/usr/share/texmf/dvips/config/pdftex.map}]
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <14.4> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 52.
+ <LIE1.pdf, id=13, 539.01375pt x 516.93124pt>
+File: LIE1.pdf Graphic file (type pdf)
+
+<use LIE1.pdf> [2]
+LaTeX Font Info:    Font shape `T1/pcr/bx/n' in size <14.4> not available
+(Font)              Font shape `T1/pcr/b/n' tried instead on input line 115.
+
+Underfull \hbox (badness 10000) in paragraph at lines 117--119
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 128--134
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 135--139
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 140--142
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 162--163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 162--163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 162--163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 162--163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 162--163
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 166--179
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 166--179
+
+ []
+
+[3 <./LIE1.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 182--186
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 187--188
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 189--192
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 193--194
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 195--196
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 197--199
+
+ []
+
+[4]
+Underfull \hbox (badness 10000) in paragraph at lines 206--210
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 211--214
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 215--217
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 218--221
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 222--223
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 224--225
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 226--231
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 232--233
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 234--235
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 236--237
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 238--240
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 241--242
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 243--244
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 245--246
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 247--249
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 250--254
+
+ []
+
+[5]
+Underfull \hbox (badness 10000) in paragraph at lines 255--257
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 258--260
+
+ []
+
+
+Overfull \hbox (25.88019pt too wide) in paragraph at lines 261--266
+[]/ptmr8t@12.0pt/- Type /pcrr8t@12.0pt/pymol /ptmr8t@12.0pt/and open /pcrr8t@12
+.0pt/cma_cam.pse /ptmr8t@12.0pt/which loads /pcrr8t@12.0pt/cma_cam0.pdb/ptmr8t@
+12.0pt/, /pcrr8t@12.0pt/cma_cam10.pdb
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 261--266
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 267--268
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 269--271
+
+ []
+
+[6]
+LaTeX Font Info:    Font shape `T1/ptm/bx/n' in size <10.95> not available
+(Font)              Font shape `T1/ptm/b/n' tried instead on input line 285.
+
+Underfull \hbox (badness 10000) in paragraph at lines 296--296
+[]|/ptmr8t@10.95pt/switching-
+ []
+
+
+Underfull \hbox (badness 2781) in paragraph at lines 296--297
+[]|/ptmr8t@10.95pt/Required with pe-ri-odic bound-ary
+ []
+
+
+Overfull \hbox (8.75713pt too wide) in paragraph at lines 304--304
+[]|/ptmr8t@10.95pt/offset_residue| 
+ []
+
+
+Overfull \hbox (0.8514pt too wide) in paragraph at lines 305--305
+[]|/ptmr8t@10.95pt/offset_name| 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 306--306
+[]|/ptmr8t@10.95pt/qq_use-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 306--306
+/ptmr8t@10.95pt/_library-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 307--307
+[]|/ptmr8t@10.95pt/softcore-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 307--307
+/ptmr8t@10.95pt/_use-_max-
+ []
+
+[7]
+Underfull \hbox (badness 10000) in paragraph at lines 378--379
+[]|/ptmr8t@10.95pt/Harmonic force con-stant k$[]$
+ []
+
+[8] [9] [10]
+LaTeX Font Info:    Font shape `T1/pcr/bx/n' in size <17.28> not available
+(Font)              Font shape `T1/pcr/b/n' tried instead on input line 487.
+
+Underfull \hbox (badness 10000) in paragraph at lines 489--494
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 495--519
+
+ []
+
+[11] [12] (./fep.aux)
+
+LaTeX Warning: There were multiply-defined labels.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 2221 strings out of 95437
+ 26011 string characters out of 1189055
+ 97268 words of memory out of 1000001
+ 5191 multiletter control sequences out of 10000+50000
+ 45273 words of font info for 67 fonts, out of 500000 for 1000
+ 14 hyphenation exceptions out of 1000
+ 27i,9n,20p,478b,272s stack positions out of 1500i,500n,5000p,200000b,5000s
+ 93 PDF objects out of 300000
+ 0 named destinations out of 131072
+ 5 words of extra memory for PDF output out of 65536
+{/usr/share/texmf/dvips/tetex/f7b6d320.enc}</usr/share/texmf/fonts/type1/blue
+sky/cm/cmr6.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmr10.pfb>{/usr/share/
+texmf/dvips/tetex/aae443f0.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmmi10.
+pfb>{/usr/share/texmf/dvips/tetex/bbad153f.enc}</usr/share/texmf/fonts/type1/bl
+uesky/cm/cmsy6.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmex10.pfb>{/usr/sh
+are/texmf/dvips/psnfss/8r.enc}</usr/share/texmf/fonts/type1/bluesky/cm/cmsy10.p
+fb></usr/share/texmf/fonts/type1/bluesky/cm/cmmi6.pfb></usr/share/texmf/fonts/t
+ype1/bluesky/cm/cmmi8.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmr8.pfb></u
+sr/share/texmf/fonts/type1/bluesky/cm/cmsy8.pfb></usr/share/texmf/fonts/type1/b
+luesky/cm/cmmi12.pfb></usr/share/texmf/fonts/type1/bluesky/cm/cmr12.pfb>
+Output written on fep.pdf (12 pages, 85150 bytes).
