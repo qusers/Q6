@@ -1,0 +1,20 @@
+readlib  ~/pfs/Q/lib/Qoplsaa_QM_zn1.lib
+readlib  ~/pfs/Q/lib/co_0p50.lib
+readprm  ~/pfs/Q/lib/Qoplsaa.prm
+readpdb  co_0p50.pdb
+boundary
+1
+ -0.167   0.864  -0.312
+18
+solvate
+ -0.167   0.864  -0.312
+18
+1
+HOH
+maketop  co_0p50.top
+writetop co_0p50.top
+writepdb co_0p50_start.pdb
+y
+
+
+

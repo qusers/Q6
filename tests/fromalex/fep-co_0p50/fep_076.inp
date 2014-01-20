@@ -1,0 +1,34 @@
+[MD]
+steps                          50000
+stepsize                        1.0
+temperature                    300
+separate_scaling                on
+bath_coupling                     100
+random_seed                     1250
+lrf                               on
+
+[cut-offs]
+solute_solute                 10
+solvent_solvent               10
+q_atom                        99
+
+[sphere]
+
+[water]
+
+[intervals]
+non_bond                      30
+output                        50
+energy                         5
+trajectory                   50
+
+[files]
+topology             co_0p50.top
+restart	         fep_078.re
+final	         fep_076.re
+energy	         fep_076.en
+trajectory           fep_076.dcd
+fep	                     co_0p50.fep
+
+[lambdas]
+0.76   0.24

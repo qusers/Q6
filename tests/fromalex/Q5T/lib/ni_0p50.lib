@@ -1,0 +1,30 @@
+*-------------------------------------------------------------
+** Q-library:
+** J. Aqvist's version of the OPLS-AA potential.
+**
+** Name convention on basic and acidic a.a.:
+** ARG, ARN, HIP, HID, HIE, LYS, LYN, ASP, ASH, GLU, GLH
+**  +1    0   +1    0    0   +1    0   -1    0   -1    0
+**----------------------------------------------------------------------
+{NI6}  !Ni octahedral dummy with -1.0 central charge
+
+[info]
+SYBYLtype  GROUP
+
+[atoms]
+1      N61      NI6     -1.000
+2      DD2      D61      0.500
+3      DD3      D62      0.500
+4      DD4      D63      0.500
+5      DD5      D61      0.500
+6      DD6      D62      0.500
+7      DD7      D63      0.500
+
+[bonds]
+N61 DD2
+N61 DD3
+N61 DD4
+N61 DD5
+N61 DD6
+N61 DD7
+*----------------------------------------
