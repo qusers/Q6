@@ -1,0 +1,28 @@
+[MD]
+steps                   100
+stepsize                   0.1
+initial_temperature        0.1
+random_seed                1
+temperature                0.1
+bath_coupling              1
+shake_hydrogens           off
+lrf                       on
+
+[sphere]
+shell_radius              16
+shell_force               20
+
+[cut_offs]
+
+[intervals]
+non_bond                  25
+output                    50
+
+[files]
+topology                  prep/lig_w.top
+fep                       prep/lig_w.fep
+final                     eq1.re
+
+[sequence_restraints]
+1 46 0.5 0 1
+

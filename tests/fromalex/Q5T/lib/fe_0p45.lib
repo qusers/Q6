@@ -1,0 +1,30 @@
+*-------------------------------------------------------------
+** Q-library:
+** J. Aqvist's version of the OPLS-AA potential.
+**
+** Name convention on basic and acidic a.a.:
+** ARG, ARN, HIP, HID, HIE, LYS, LYN, ASP, ASH, GLU, GLH
+**  +1    0   +1    0    0   +1    0   -1    0   -1    0
+**----------------------------------------------------------------------
+{FE6}  !Fe octahedral dummy with -0.7 central charge
+
+[info]
+SYBYLtype  GROUP
+
+[atoms]
+1      C61      FE6     -0.700
+2      DD2      D61      0.450
+3      DD3      D62      0.450
+4      DD4      D63      0.450
+5      DD5      D61      0.450
+6      DD6      D62      0.450
+7      DD7      D63      0.450
+
+[bonds]
+C61 DD2
+C61 DD3
+C61 DD4
+C61 DD5
+C61 DD6
+C61 DD7
+*----------------------------------------
