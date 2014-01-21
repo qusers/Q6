@@ -1,7 +1,17 @@
 qsource
 =======
-Version control of the molecular dynamics code called Q, version 5, via git at github.
-Source for the Molecular Dynamics Package Q
+Version control of the molecular dynamics code called Q, version 5, via github.
+
+## Installation
+
+
+
+```bash
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+make all
+make clean
+```
 
 Q is a set of Molecular Dynamics (MD) tools tailored to specific kinds of free energy calculations, mainly:
 
