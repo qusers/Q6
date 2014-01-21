@@ -3,3 +3,4 @@ bin/
 *.pdf
 tests
 examples
+obj/
