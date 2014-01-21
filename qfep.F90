@@ -347,7 +347,7 @@ implicit none
 			avEQ(istate)%qw%el,avEQ(istate)%qw%vdw,avEQ(istate)%restraint
 
 		end do
-17	format(a,t23,i2,1x,i6,1x,f8.6,14f8.2)
+17	format(a,t23,i2,1x,i6,f9.6,14f8.2)
 	end do  !ifile
 
 	if(nfiles > 1) then !the following is meaningless for a single file
@@ -415,7 +415,7 @@ implicit none
                FEP(ifile)%lambda(1),dgf(ifile-1),dgfsum(ifile), &
                              dgr(ifile+1),dgrsum(ifile),dG(ifile)
         end do
-23		format(3x,f8.6,5f9.3)
+23		format(2x,f9.6,5f9.3)
 
 		write (*,*)
 		write (*,'(a,f9.2)') '# Min energy-gap is: ',gapmin
@@ -431,7 +431,7 @@ implicit none
 		write(*,25)
 24		format('# Part 2: Reaction free energy summary:')
 25		format('# Lambda(1)  bin Energy gap      dGa     dGb     dGg    # pts    c1**2    c2**2')
-26		format(3x,f8.6,i5,2x,4f9.2,2x,i5,2f9.3)
+26		format(2x,f9.6,i5,2x,4f9.2,2x,i5,2f9.3)
 		gaprange=gapmax-gapmin      !Range of reaction coordinate
 		xint=gaprange/real(nbins)   !Divide R.C. into bins
 		do ifile=1,nfiles         
@@ -574,7 +574,7 @@ subroutine prompt (outtxt)
 	integer, parameter			::	f=6
 	!write (f2,'($,a)') outtxt
 #endif
-write (f,'($,a)') outtxt	     
+write (f,'(a,$)') outtxt	     
 end subroutine prompt
 
 !------------------------------

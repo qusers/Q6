@@ -116,12 +116,13 @@ integer						::	ivolume_cycle
 ! --- Protein boundary
 logical						::	exclude_bonded
 real(8)						::	fk_pshell
-real(8), parameter			::	fk_fix				= 200.0
+real(8)      :: fk_fix    = 200.0
 
 ! --- Water sphere
 real(8)						::	Dwmz, awmz, rwat_in
 real(8)						::	fkwpol
 logical						::	wpol_restr, wpol_Born
+logical      :: freeze
 real(8)						::	fk_wsphere, crgtot, crgQtot
 integer(AI), allocatable	::	list_sh(:,:), nsort(:,:)
 real(8),  allocatable		::	theta(:), theta0(:), tdum(:)
@@ -149,6 +150,7 @@ real(8), parameter			::	rcpw_default		= 10.
 real(8), parameter			::	rcq_default			= 99.
 real(8), parameter			::	rcLRF_default		= 99.
 !recxl_i is set to rexcl_o * shell_default
+real(8), parameter   :: fk_fix_default = 200.
 real(8), parameter			::	shell_default		= 0.85
 real(8), parameter			::	fk_pshell_default	= 10.
 integer, parameter			::	itrj_cycle_default	= 100
@@ -179,7 +181,7 @@ character(len=200)			::	xwat_file
 
 ! --- Restraints
 integer						::	implicit_rstr_from_file
-integer						::	nrstr_seq, nrstr_pos, nrstr_dist, nrstr_wall
+integer      :: nrstr_seq, nrstr_pos, nrstr_dist, nrstr_angl, nrstr_wall
 
 
 type RSTRSEQ_TYPE
@@ -206,6 +208,13 @@ type RSTRDIS_TYPE
         character(len=20)       ::  itext,jtext
 end type RSTRDIS_TYPE
 
+type RSTRANG_TYPE 
+        integer(AI)    :: i,j,k
+        integer(TINY)  :: ipsi
+        real(8)        :: fk
+        real(8)        :: ang
+!       character(len=20)       ::  itext,jtext,ktext
+end type RSTRANG_TYPE                                                                                                
 
 type RSTRWAL_TYPE
 
@@ -218,6 +227,7 @@ end type RSTRWAL_TYPE
 type(RSTRSEQ_TYPE), allocatable::	rstseq(:)
 type(RSTRPOS_TYPE), allocatable::	rstpos(:)
 type(RSTRDIS_TYPE), allocatable::	rstdis(:)
+type(RSTRANG_TYPE), allocatable:: rstang(:)
 type(RSTRWAL_TYPE), allocatable::	rstwal(:)
 
 
@@ -420,7 +430,8 @@ character(*), optional		:: cause
 integer						:: i
 ! flush stuff
 integer(4), parameter			:: stdout_unit = 6
-external flush
+! external flush disabled for gfortran
+! external flush
 
 if (nodeid .eq. 0) then
         write(*,*)
@@ -592,6 +603,7 @@ deallocate(iwhich_cgp, lrf, stat=alloc_status)
 deallocate(rstseq, stat=alloc_status)
 deallocate(rstpos, stat=alloc_status)
 deallocate(rstdis, stat=alloc_status)
+deallocate(rstang, stat=alloc_status)
 deallocate(rstwal, stat=alloc_status)
 
 #if defined (USE_MPI)
@@ -1456,12 +1468,22 @@ real(8)						::	dr(3)
 do i = 1, nat_pro
 if (excl(i) .or. shell(i)) then
   ! decide which fk to use
+  i3 = i*3 - 3
 if ( excl(i) ) then 
     fk = fk_fix
+    if ( freeze ) then
+       v(i3+1)=0
+       v(i3+2)=0
+       v(i3+3)=0
+       x(i3+1)=xtop(i3+1)
+       x(i3+2)=xtop(i3+2)
+       x(i3+3)=xtop(i3+3)
+       fk = 0
+    endif
   else
 fk = fk_pshell
   end if
-i3 = i*3-3
+!i3 = i*3-3
 
   ! calculate drift from topology
 dr(1)   = x(i3+1) - xtop(i3+1)
@@ -2789,9 +2811,9 @@ integer						::	mask_rows
 !  nrstr_dist, [rstdis] (allocating memory for rstdis)
 !  nrstr_wall, [rstwal] (allocating memory for rstwal)
 
-! external definition of iargc
-integer(4) iargc
-external iargc
+! external definition of iargc disabled for gfortran
+!integer(4) iargc
+!external iargc
 
 ! read name of input file from the command line
 num_args = iargc()
@@ -3074,6 +3096,20 @@ if( .not. box ) then
                         write(*,47) fk_pshell
                 end if
 47		format('Shell restraint force constant         =',f8.2)
+                if(.not. prm_get_real8_by_key('excluded_force', fk_fix   )) then
+                        write(*,'(a)') 'Excluded atoms force constant set to default'
+                        fk_fix = fk_fix_default
+                end if
+                if(fk_fix > 0) then
+                        write(*,48) fk_fix
+                end if
+48              format('Excluded atom restraint force constant         =',f8.2)
+
+                yes = prm_get_logical_by_key('excluded_freeze', freeze, .false.)
+                if(freeze) then
+                        write(*,'(a)') &
+                                'Excluded atoms will not move.'
+                end if
 
                 yes = prm_get_logical_by_key('exclude_bonded', exclude_bonded, .false.)
                 if(exclude_bonded) then
@@ -3426,18 +3462,54 @@ if ( nrstr_dist .gt. 0 ) then
 132		format (i6,1x,i6,3f8.2,i8)
 end if
 
+! --- nrstr_angl, [rstang]
+nrstr_angl = prm_count('angle_restraints')
+135     format (/,'No. of angle restraints =',i10)
+if ( nrstr_angl .gt. 0 ) then
+        write (*,135) nrstr_angl
+        ! allocate memory for rstang
+        allocate(rstang(nrstr_angl), stat=alloc_status)
+        call check_alloc('restraint list')
+        write (*,140)
+140             format ('atom_i atom_j atom_k   angle   fc        state')
+        do i=1,nrstr_angl
+                yes=prm_get_line(text)
+                ! read rstang(i)
+                !if(scan(text, ':') > 0) then !got res:atnr
+                  !Store in i&j as res:atnr and assign atom nr after topology is
+                  !read (prep_coord)
+                !  read(text,*, iostat=fstat) rstang(i)%itext,rstang(i)%jtext,rstang(i)%ktext,&
+                !     rstang(i)%ang, rstang(i)%fk, rstang(i)%ipsi
+                !else !Plain numbers
+                  read(text,*, iostat=fstat) rstang(i)%i,rstang(i)%j,rstang(i)%k,&
+                        rstang(i)%ang, rstang(i)%fk, rstang(i)%ipsi
+                 ! rstang(i)%itext = 'nil'
+                 ! rstang(i)%jtext = 'nil'
+                 ! rstang(i)%ktext = 'nil'
+                !end if
+                if(fstat /= 0) then
+                  write(*,'(a)') '>>> ERROR: Invalid angle restraint data.'
+                  initialize = .false.
+                  exit
+                end if
+                write (*,142) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang,rstang(i)%fk, &
+                        rstang(i)%ipsi
+        end do
+142             format (i6,1x,i6,1x,i6,2f8.2,i8)
+end if
+
 
 if (.not. box )then
 ! --- nrstr_wall, [rstwal]
 nrstr_wall = prm_count('wall_restraints')
-135 format (/,'No. of wall sequence restraints=',i10)
+145 format (/,'No. of wall sequence restraints=',i10)
 if ( nrstr_wall .gt. 0) then
-        write (*,135) nrstr_wall
+        write (*,145) nrstr_wall
         ! allocate memory for rstwal
         allocate(rstwal(nrstr_wall), stat=alloc_status)
         call check_alloc('restraint list')
-        write (*,140)
-140		format ('atom_i atom_j   dist.      fc  aMorse  dMorse  H-flag')
+        write (*,150)
+150  format ('atom_i atom_j   dist.      fc  aMorse  dMorse  H-flag')
         do i=1,nrstr_wall
                 ! read rstwal(:)
                 yes = prm_get_line(text)
@@ -3448,9 +3520,9 @@ if ( nrstr_wall .gt. 0) then
                         initialize = .false.
                         exit
                 end if
-                write (*,142) rstwal(i)     
+                write (*,152) rstwal(i)     
         end do
-142		format (i6,1x,i6,4f8.2,i8)
+152  format (i6,1x,i6,4f8.2,i8)
 end if
 end if
 
@@ -3787,28 +3859,47 @@ write (*,132) rstdis(i)%i,rstdis(i)%j,rstdis(i)%d1,rstdis(i)%fk, &
   rstdis(i)%ipsi
 end do
 132 format (i6,1x,i6,2f8.2,i8)
+! --- nrstr_ang, [rstang]
+read (fu,*) nrstr_angl
+write (*,135) nrstr_angl
+135 format ('No. angle rstrs =',i10)
+if ( nrstr_angl .gt. 0 ) then
+! allocate memory for rstang
+allocate(rstang(nrstr_angl), stat=alloc_status)
+call check_alloc('restraint list')
+write (*,140)
+end if
+140 format ('atom_i atom_j atom_k   angle      fc  istate')
+do i=1,nrstr_angl
+! read rstang(i)
+read (fu,*) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang, &
+  rstang(i)%fk,rstang(i)%ipsi
+write (*,142) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang, &
+  rstang(i)%fk,rstang(i)%ipsi
+end do
+142 format (i6,1x,i6,1x,i6,2f8.2,i8)
 
 ! --- nrstr_wall, [rstwal]
 read (fu,*) nrstr_wall
-write (*,135) nrstr_wall
-135 format ('No. wall seq. rstrs=',i10)
+write (*,145) nrstr_wall
+145 format ('No. wall seq. rstrs=',i10)
 if ( nrstr_wall .gt. 0) then
 
 
 ! allocate memory for rstwal
 allocate(rstwal(nrstr_wall), stat=alloc_status)
 call check_alloc('restraint list')
-write (*,140)
+write (*,150)
 end if
-140 format ('atom_i atom_j   dist.      fc  H-flag')
+150 format ('atom_i atom_j   dist.      fc  H-flag')
 do i=1,nrstr_wall
 ! read rstwal(:)
 read (fu,*) rstwal(i)%i,rstwal(i)%j,rstwal(i)%d,rstwal(i)%fk, &
   rstwal(i)%ih
-write (*,142) rstwal(i)%i,rstwal(i)%j,rstwal(i)%d,rstwal(i)%fk, &
+write (*,152) rstwal(i)%i,rstwal(i)%j,rstwal(i)%d,rstwal(i)%fk, &
   rstwal(i)%ih     
 end do
-142 format (i6,1x,i6,2f8.2,i8)
+152 format (i6,1x,i6,2f8.2,i8)
 
 read (fu,'(a80)') text
 write (*,157) 
@@ -4191,11 +4282,11 @@ do istep = 0, nsteps-1
                         ! print timing info
                         call centered_heading('Timing', '-')
                         time1 = rtime()
-                        time_per_step = (time1-time0)/NBcycle
-                        time_completion = int(time_per_step*(nsteps-istep)/60)
+                        time_per_step = 1000*(time1-time0)/NBcycle
+                        time_completion = int(time_per_step*(nsteps-istep)/60000)
                         time0 = time1
                         write(*,222) time_per_step, time_completion
-222				format('Seconds per step (wall-clock): ',f5.2,&
+222    format('Milliseconds per step (wall-clock): ',f5.2,&
                                 ' Estimated completion in',i6,' minutes')
                 end if
 
@@ -11394,10 +11485,13 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein energies
-  if(i < 3173 .OR. i > 3180) then
+!This section makes no sense at all, commenting it for now
+!What was supposed to be done with that???
+!Paul Bauer 2014-01-21
+!  if(i < 3173 .OR. i > 3180) then
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-  end if
+!  end if
 end do ! istate
 
 end do
@@ -13135,14 +13229,14 @@ end subroutine offdiag
 !-----------------------------------------------------------------------
 subroutine p_restrain
 ! *** Local variables
-integer						::	ir,i,j,k,i3,j3,istate, n_ctr
-real(8)						::	fk,r2,erst,Edum,x2,y2,z2,wgt,b,db,dv, totmass
-real(8)						::	dr(3), ctr(3)
+integer :: ir,i,j,k,i3,j3,k3,istate, n_ctr
+real(8) :: fk,r2,erst,Edum,x2,y2,z2,wgt,b,db,dv, totmass, theta,rij,r2ij,rjk,r2jk, scp,f1
+real(8) :: dr(3), dr2(3), ctr(3), di(3), dk(3)
 real(8)						::	fexp
 
 ! global variables used:
 !  E, nstates, EQ, nrstr_seq, rstseq, heavy, x, xtop, d, nrstr_pos, rstpos, nrstr_dist, 
-!  rstdis, nrstr_wall, rstwal, xwcent
+!  rstdis, nrstr_wall, rstang, nrstr_ang, rstwal, xwcent, excl, freeze
 
 ! sequence restraints (independent of Q-state)
 do ir = 1, nrstr_seq
@@ -13157,7 +13251,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
 
   ! calculate deviation from center
   do i = rstseq(ir)%i, rstseq(ir)%j
-        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 ) then
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
           n_ctr = n_ctr + 1
           dr(:) = dr(:) + x(i*3-2:i*3) - xtop(i*3-2:i*3)
         end if
@@ -13174,7 +13268,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
 
         ! apply same force to all atoms
         do i = rstseq(ir)%i, rstseq(ir)%j
-          if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 ) then
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
                 d(i*3-2:i*3) = d(i*3-2:i*3) + fk*dr(:)*iaclib(iac(i))%mass/12.010
           end if
         end do
@@ -13188,7 +13282,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
   
 ! calculate deviation from mass center
   do i = rstseq(ir)%i, rstseq(ir)%j
-        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 ) then
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
           totmass = totmass + iaclib(iac(i))%mass                              ! Add masses
           dr(:) = dr(:) + (x(i*3-2:i*3) - xtop(i*3-2:i*3))*iaclib(iac(i))%mass ! Massweight distances
 		end if
@@ -13205,7 +13299,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
 
         ! apply same force to all atoms
         do i = rstseq(ir)%i, rstseq(ir)%j
-          if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 ) then
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
                 d(i*3-2:i*3) = d(i*3-2:i*3) + fk*dr(:)
           end if
         end do
@@ -13214,7 +13308,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
 else 
   ! restrain each atom to its topology co-ordinate
   do i = rstseq(ir)%i, rstseq(ir)%j
-        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 ) then
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
           i3 = i*3-3
 
           dr(1)   = x(i3+1) - xtop(i3+1)
@@ -13332,6 +13426,105 @@ EQ(istate)%restraint = EQ(istate)%restraint + Edum
 end if
 end do
 
+! atom-atom-atom angle restraints (Q-state dependent)
+do ir = 1, nrstr_angl
+
+istate = rstang(ir)%ipsi
+i      = rstang(ir)%i
+j      = rstang(ir)%j
+k      = rstang(ir)%k
+i3     = i*3-3
+j3     = j*3-3
+k3     = k*3-3
+
+! distance from atom i to atom j
+dr(1)  = x(i3+1) - x(j3+1)
+dr(2)  = x(i3+2) - x(j3+2)
+dr(3)  = x(i3+3) - x(j3+3)
+
+! distance from atom k to atom j
+dr2(1) = x(k3+1) - x(j3+1)
+dr2(2) = x(k3+2) - x(j3+2)
+dr2(3) = x(k3+3) - x(j3+3)
+
+! if PBC then adjust lengths according to periodicity - MA
+if( use_PBC ) then
+        dr(1) = dr(1) - boxlength(1)*nint( dr(1)*inv_boxl(1) )
+        dr(2) = dr(2) - boxlength(2)*nint( dr(2)*inv_boxl(2) )
+        dr(3) = dr(3) - boxlength(3)*nint( dr(3)*inv_boxl(3) )
+
+        dr2(1) = dr2(1) - boxlength(1)*nint( dr2(1)*inv_boxl(1) )
+        dr2(2) = dr2(2) - boxlength(2)*nint( dr2(2)*inv_boxl(2) )
+        dr2(3) = dr2(3) - boxlength(3)*nint( dr2(3)*inv_boxl(3) )
+
+end if
+
+if ( istate .ne. 0 ) then
+wgt = EQ(istate)%lambda
+else
+wgt = 1.0
+end if
+
+! square distances from the triangle formed by the atoms i, j and k
+r2ij = dr(1)**2 + dr(2)**2 + dr(3)**2
+r2jk = dr2(1)**2 + dr2(2)**2 + dr2(3)**2
+
+rij  = sqrt ( r2ij )
+rjk  = sqrt ( r2jk )
+
+! calculate the scalar product (scp) and the angle theta from it
+scp = ( dr(1)*dr2(1) + dr(2)*dr2(2) + dr(3)*dr2(3) )
+scp = scp / ( rij*rjk )
+
+! criteria inserted on the real angle force calculations to ensure no weird scp.
+if ( scp .gt.  1.0 ) scp =  1.0
+if ( scp .lt. -1.0 ) scp = -1.0
+
+theta = acos(scp)
+db    = theta - (rstang(ir)%ang)*deg2rad
+
+! dv is the force to be added in module
+Edum   = 0.5*rstang(ir)%fk*db**2
+dv     = wgt*rstang(ir)%fk*db
+
+! calculate sin(theta) to use in forces
+f1 = sin ( theta )
+if ( abs(f1) .lt. 1.e-12 ) then
+        ! avoid division by zero
+        f1 = -1.e12
+else
+        f1 =  -1.0 / f1
+end if
+
+        ! calculate di and dk
+di(1) = f1 * ( dr2(1) / ( rij * rjk ) - scp * dr(1) / r2ij )
+di(2) = f1 * ( dr2(2) / ( rij * rjk ) - scp * dr(2) / r2ij )
+di(3) = f1 * ( dr2(3) / ( rij * rjk ) - scp * dr(3) / r2ij )
+dk(1) = f1 * ( dr(1) / ( rij * rjk ) - scp * dr2(1) / r2jk )
+dk(2) = f1 * ( dr(2) / ( rij * rjk ) - scp * dr2(2) / r2jk )
+dk(3) = f1 * ( dr(3) / ( rij * rjk ) - scp * dr2(3) / r2jk )
+
+        ! update d
+d(i3+1) = d(i3+1) + dv*di(1)
+d(i3+2) = d(i3+2) + dv*di(2)
+d(i3+3) = d(i3+3) + dv*di(3)
+d(k3+1) = d(k3+1) + dv*dk(1)
+d(k3+2) = d(k3+2) + dv*dk(2)
+d(k3+3) = d(k3+3) + dv*dk(3)
+d(j3+1) = d(j3+1) - dv*( di(1) + dk(1) )
+d(j3+2) = d(j3+2) - dv*( di(2) + dk(2) )
+d(j3+3) = d(j3+3) - dv*( di(3) + dk(3) )
+
+
+if ( istate .eq. 0 ) then
+do k = 1, nstates
+EQ(k)%restraint = EQ(k)%restraint + Edum
+end do
+if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+else
+EQ(istate)%restraint = EQ(istate)%restraint + Edum
+end if
+end do
 if( .not. use_PBC ) then
 ! extra half-harmonic wall restraints
 do ir = 1, nrstr_wall
@@ -14130,6 +14323,12 @@ k3 = 3*k-3
         EQ(istate)%q%angle = EQ(istate)%q%angle + Eurey*gamma
         du = gamma*2*(qanglib(ic)%ureyfk*ru/dik)*EQ(istate)%lambda
 
+        d(k3+1) = d(k3+1) + du*rik(1)
+        d(k3+2) = d(k3+2) + du*rik(2)
+        d(k3+3) = d(k3+3) + du*rik(3)
+        d(i3+1) = d(i3+1) - du*rik(1)
+        d(i3+2) = d(i3+2) - du*rik(2)
+        d(i3+3) = d(i3+3) - du*rik(3)
 
 if ( icoupl .ne. 0 ) then
 
