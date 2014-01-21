@@ -29,7 +29,7 @@ implicit none
 !-----------------------------------------------------------------------
 
 	integer, parameter			::	max_states		= 10
-	integer, parameter			::	max_qat			= 100
+	integer, parameter			::	max_qat			= 1000
 	integer, parameter			::	max_link		= 10
 
 	integer						::	nstates, nqat
@@ -137,7 +137,7 @@ implicit none
 	!type holding all scaling factors for electostatic interactions in qq-pairs
 	type qq_el_scale_TYPE
 		integer(AI)      ::iqat,jqat
-		real(8)          ::el_scale
+		real(8)          ::el_scale(max_states)! to hold the el_scale for different states "masoud Oct_2013"
 	end type qq_el_scale_TYPE
 
 	type(qq_el_scale_TYPE),allocatable             :: qq_el_scale(:) 
@@ -449,7 +449,7 @@ logical function qatom_load_atoms(fep_file)
 			call upcase(res_str)
 			if(.not. (res_str == 'ALL')) then
 				write(*, '(a)', advance='no') ">>>>> ERROR: invalid syntax in fep file, &
-					&section 'atoms': ",res_str
+					section 'atoms': ",res_str
 				qatom_load_atoms = .false.
 				return
 			end if 
@@ -860,9 +860,9 @@ logical function qatom_load_fep(fep_file)
   integer					::	i,j,k,l,iat,st
   integer					::	nqcrg,nqcod
   character(len=40)			::	section
-  logical, allocatable, dimension(:)		::	type_read
+  logical					::	type_read(max_qat)
   integer					::	type_count, filestat
-  real(8)                   ::  el_scale
+  real(8)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
   integer                   ::  stat
   	
 	!temp. array to read integer flags before switching to logicals
@@ -1060,10 +1060,10 @@ logical function qatom_load_fep(fep_file)
 	if(nel_scale > 0) then
 	allocate(qq_el_scale(nel_scale))
 		write (*,154) nel_scale
-		write(*,155)
+		write(*,155) ('state',i, i=1,nstates) !heading for qq_el_scale at different states "masoud Oct_2013"
 		do i=1,nel_scale
 			if(.not. prm_get_line(line)) goto 1000
-			read(line,*, err=1000) j, k, el_scale
+			read(line,*, err=1000) j, k, el_scale(1:nstates)
 			if(j < 1 .or. j > nqat .or. k < 1 .or. k > nqat) then !Check if qatoms...
 				write(*,148) j,k
 				qatom_load_fep = .false.
@@ -1075,13 +1075,13 @@ logical function qatom_load_fep(fep_file)
 			end if
             qq_el_scale(i)%iqat=j
             qq_el_scale(i)%jqat=k
-            qq_el_scale(i)%el_scale=el_scale
+            qq_el_scale(i)%el_scale(1:nstates)=el_scale(1:nstates) !assigning scale factor to qq_el_scale variable "masoud Oct_2013"
 			write (*,156) qq_el_scale(i)%iqat,qq_el_scale(i)%jqat,qq_el_scale(i)%el_scale
 		end do
 	end if
 154	format (/,'No. of el. scaling factors between q-q-atoms = ',i5)
-155	format('q-atom_i q-atom_j el_scale')
-156	format (i8,1x,i8,1x,f8.2)
+155	format('q-atom_i q-atom_j el_scale' , 7(1x,a5,i2))
+156	format (i8,1x,i8,1x,7f8.2) !print out up to 7 states "masoud Oct_2013"
 
 ! --- Read special exclusions among quantum atoms
 	section='excluded_pairs'
@@ -1118,9 +1118,8 @@ logical function qatom_load_fep(fep_file)
 	! --- Set new bonds
 	section='bond_types'
 	nqcod = prm_max_enum(section, type_count)
+	type_read(:) = .false.
 	if(nqcod > 0 ) then
-		allocate(type_read(nqcod))
-		type_read(:) = .false.
 		allocate(qbondlib(nqcod))
 		write (*,150)
 		write (*,'(a)') 'type #  Morse E_diss    alpha       b0  Harmonic force_k ' 
@@ -1168,14 +1167,9 @@ logical function qatom_load_fep(fep_file)
 			!check types
 			do j=1,nstates
 				if(qbnd(i)%cod(j) >0) then
-					if (allocated(type_read)) then
-					    if(.not. type_read(qbnd(i)%cod(j))) then
+					if(.not. type_read(qbnd(i)%cod(j))) then
 						write(*,112) 'Q-bond', qbnd(i)%cod(j)
 						qatom_load_fep = .false.
-					    end if
-					else
-					    write(*,112) 'Q-bond', qbnd(i)%cod(j)
-					    qatom_load_fep = .false.
 					end if
 				end if
 			end do
@@ -1185,17 +1179,13 @@ logical function qatom_load_fep(fep_file)
 161		format('atom_i atom_j   bond type in',6(1x,a5,i2))
 162		format(i6,1x,i6,t29,6i8)
 	end if
-	if (allocated(type_read)) then
-	    deallocate(type_read)
-	end if
 
 
 	! --- Set new angles
 	section = 'angle_types'
 	nqcod = prm_max_enum(section, type_count)
+	type_read(:) = .false.
 	if ( nqcod .gt. 0 ) then
-		allocate(type_read(nqcod))
-		type_read(:) = .false.
 		allocate(qanglib(nqcod))
 		!set optional params to 0
 		qanglib(:)%ureyfk = 0.
@@ -1241,14 +1231,9 @@ logical function qatom_load_fep(fep_file)
 			!check types
 			do j=1,nstates
 				if(qang(i)%cod(j) > 0) then
-					if (allocated(type_read)) then
-					    if(.not. type_read(qang(i)%cod(j))) then
+					if(.not. type_read(qang(i)%cod(j))) then
 						write(*,112) 'Q-angle', qang(i)%cod(j)
 						qatom_load_fep = .false.
-					    end if
-					else
-					    write(*,112) 'Q-angle', qang(i)%cod(j)
-					    qatom_load_fep = .false.
 					end if
 				end if
 			end do !j
@@ -1256,17 +1241,13 @@ logical function qatom_load_fep(fep_file)
 261		format('atom_i atom_j atom_k    angle type in',5(1x,a5,i2))
 262		format(i6,1x,i6,1x,i6,t38,5i8)
 	end if
-	if (allocated(type_read)) then
-	    deallocate(type_read)
-	end if
 
   ! --- Set new torsions
 	section = 'torsion_types'
 	nqcod = prm_max_enum(section, type_count)
+	type_read(:) = .false.
 	allocate(qfktor(nqcod), qrmult(nqcod), qdeltor(nqcod))
 	if ( nqcod .gt. 0 ) then
-		allocate(type_read(nqcod))
-		type_read(:) = .false.
 		write (*,350)
 		do i=1,type_count
 			if(.not. prm_get_line(line)) goto 1000
@@ -1301,14 +1282,9 @@ logical function qatom_load_fep(fep_file)
 			!check types
 			do j=1,nstates
 				if(qtorcod(i,j) >0) then
-					if (allocated(type_read)) then
-					    if(.not. type_read(qtorcod(i,j))) then
+					if(.not. type_read(qtorcod(i,j))) then
 						write(*,112) 'Q-torsion', qtorcod(i,j)
 						qatom_load_fep = .false.
-					    end if
-					else
-					    write(*,112) 'Q-torsion', qtorcod(i,j)
-					    qatom_load_fep = .false.
 					end if
 				end if
 			end do !j
@@ -1316,16 +1292,12 @@ logical function qatom_load_fep(fep_file)
 361	format('atom_i atom_j atom_k atom_l    torsion type in',4(1x,a5,i2))
 362	format(4(i6,1x),t47,4i8)
 	end if
-	if (allocated(type_read)) then
-	    deallocate(type_read)
-	end if
 	
 	! --- Set new impropers
 	section='improper_types'
 	nqcod=prm_max_enum(section, type_count)
+	type_read(:) = .false.
 	if(nqcod > 0 ) then
-		allocate(type_read(nqcod))
-		type_read(:) = .false.
 		allocate(qfkimp(nqcod), qimp0(nqcod))
 		write (*,450)
 450	format(/,'Q-improper types:',/,'type #       force-k     imp0')
@@ -1362,14 +1334,9 @@ logical function qatom_load_fep(fep_file)
 			!check types
 			do j=1,nstates
 				if(qimpcod(i,j) >0) then
-					if (allocated(type_read)) then
-					    if(.not. type_read(qimpcod(i,j))) then
+					if(.not. type_read(qimpcod(i,j))) then
 						write(*,112) 'Q-impsion', qimpcod(i,j)
 						qatom_load_fep = .false.
-					    end if
-					else
-					    write(*,112) 'Q-impsion', qimpcod(i,j)
-					    qatom_load_fep = .false.
 					end if
 				end if
 			end do !j
@@ -1377,9 +1344,6 @@ logical function qatom_load_fep(fep_file)
 	end if
 461	format('atom_i atom_j atom_k atom_l    improper type in',4(1x,a5,i2))
 462	format(4(i6,1x),t48,4i8)
-	if (allocated(type_read)) then
-	    deallocate(type_read)
-	end if
 
   ! --- Read angle,torsion and improper couplings to Morse bonds
 	section = 'angle_couplings'

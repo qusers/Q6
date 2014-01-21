@@ -327,11 +327,11 @@ integer function update(s, m)
 
 
 	do i = s%first, s%last
-		if( (( solute(i) .eqv. s%solute1) .or. ( solute(i) .eqv. s%solute2)).and.&
-		    (( excl(i) .eqv. s%excl1) .or. ( excl(i) .eqv. s%excl2)) .and. &
-		    (( (shell(i) .or. excl(i)) .eqv. s%restr1) .or. (( shell(i) .or. excl(i)) .eqv. s%restr2)) .and. &
-		    (( heavy(i) .eqv. s%heavy1) .or. ( heavy(i) .eqv. s%heavy2)) .and. &
-		    (( sybyl(i) .eqv. s%sybyl1) .or. ( sybyl(i) .eqv. s%sybyl2))) then
+		if( (( (solute(i).ne. 0) .eqv. s%solute1) .or. ( (solute(i).ne. 0) .eqv. s%solute2)).and.&
+		    (( (excl(i).ne. 0) .eqv. s%excl1) .or. ( (excl(i).ne. 0) .eqv. s%excl2)) .and. &
+		    (( ((shell(i).ne. 0) .or. (excl(i).ne. 0)) .eqv. s%restr1) .or. (( (shell(i).ne. 0) .or. (excl(i).ne. 0)) .eqv. s%restr2)) .and. &
+		    (( (heavy(i).ne. 0) .eqv. s%heavy1) .or. ( (heavy(i).ne. 0) .eqv. s%heavy2)) .and. &
+		    (( (sybyl(i).ne. 0) .eqv. s%sybyl1) .or. ( (sybyl(i).ne. 0) .eqv. s%sybyl2))) then
 			if(.not. m%mask(i)) then
 				m%mask(i) = .true.
 				update = update + 1

@@ -37,7 +37,7 @@ subroutine avetr_calc
 
   !add from multiple files
   fin = .false.
-  do while(.not. fin)
+  do while(fin == .false.)
     CALL get_string_arg(ans, '-----> Add more frames? (y or n): ')
     if (ans .eq. 'y') then
 	  call trajectory

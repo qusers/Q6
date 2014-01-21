@@ -15,7 +15,8 @@ module TOPO
 	real, private, parameter			::	MODULE_VERSION = 5.03
 	character(*), private, parameter	::	MODULE_DATE = '2003-11-12'
 
-	integer, parameter			::	nljtyp = 3	!TINY
+    integer, parameter			::	nljtyp = 3	!TINY
+
 	integer, parameter			::	max_nbr_range	= 25
 
 ! types
@@ -916,11 +917,7 @@ logical function topo_read(u, require_version, extrabonds)
 
 	if(nres > 0) READ(unit=u, fmt=*, err=1000) res(1:nres)%start
 	READ(unit=u, fmt=*, err=1000)
-	if(nres > 0) then
-	    do i = 0, int((nres+15)/16)-1
-		READ(unit=u, fmt='(16(a4,1x))', err=1000) (res(i*16+j)%name, j = 1, min(16, nres-i*16))
-	    end do
-	endif
+	if(nres > 0) READ(unit=u, fmt='(16(a4,1x))', err=1000) res(1:nres)%name
 	WRITE(*, '(a,i10)') 'No. of residues         = ', nres
 	if(nres_solute < nres) then
 		WRITE(*, '(a,i10)') 'No of solute residues   = ', nres_solute
@@ -933,11 +930,7 @@ logical function topo_read(u, require_version, extrabonds)
 	WRITE(*, '(a,i10)') 'No. of molecules        = ', nmol
 
 	read(unit=u, fmt=*, iostat=filestat)
-	if(natyps > 0) then
-	    do i = 0, int((natyps+7)/8)-1
-		read(unit=u, fmt='(8(a8,1x))', err=900, end=900) (tac(i*8+j), j = 1, min(8, natyps-i*8))
-	    end do
-	endif
+	if(natyps > 0) read(unit=u, fmt='(8(a8,1x))', err=900, end=900) tac(1:natyps)
 	if(filestat /= 0) then
 		if(version > 3.5) then
 			goto 1000 !its an error
@@ -950,12 +943,8 @@ logical function topo_read(u, require_version, extrabonds)
 	WRITE(*, '(a,i10)') 'Atom type names         = ', natyps
 
 	read(unit=u, fmt=*, iostat=filestat)
-	if(natyps > 0) then
-	    do i = 0, int((natyps+12)/13)-1
-		read(unit=u, fmt='(13(a5,1x))', iostat=filestat) &
-		    (SYBYL_atom_type(i*13+j), j = 1, min(13, natyps-i*13))
-	    end do
-	endif
+	if(natyps > 0) read(unit=u, fmt='(13(a5,1x))', iostat=filestat) &
+		SYBYL_atom_type(1:natyps)
 	if(filestat /= 0) then
 		if(version > 3.5) then
 			goto 1000 !its an error
@@ -1029,8 +1018,8 @@ logical function topo_read(u, require_version, extrabonds)
 	return
 
 1100 write(*,1101) version, require_version
-1101 format('>>>>> ERROR: Incompatible topology version ',f5.2, &
-				' found. Version >= ',f5.2,' required.')
+1101 format('>>>>> ERROR: Incompatible topology version ',f4.2, &
+				' found. Version >= ',f4.2,' required.')
 	return
 end function topo_read
 
@@ -1206,15 +1195,15 @@ subroutine topo_save(name)
 		write(u, '(a)') 'R* normal:'
 		write(u, '(8(f7.4,1x))') (iaclib(i)%avdw(1), i=1, max_atyps)
 		write(u, '(a)') 'epsilon normal:'
-		write(u, '(8(f10.7,1x))') (iaclib(i)%bvdw(1), i=1, max_atyps)
+		write(u, '(8(f9.7,1x))') (iaclib(i)%bvdw(1), i=1, max_atyps)
 		write(u, '(a)') 'R* polar:'
 		write(u, '(8(f8.4,1x))') (iaclib(i)%avdw(2), i=1, max_atyps)
 		write(u, '(a)') 'epsilon polar:'
-		write(u, '(8(f10.7,1x))') (iaclib(i)%bvdw(2), i=1, max_atyps)
+		write(u, '(8(f9.7,1x))') (iaclib(i)%bvdw(2), i=1, max_atyps)
 		write(u, '(a)') 'R* 1-4:'
 		write(u, '(8(f8.4,1x))') (iaclib(i)%avdw(3), i=1, max_atyps)
 		write(u, '(a)') 'epsilon 1-4:'
-		write(u, '(8(f10.7,1x))') (iaclib(i)%bvdw(3), i=1, max_atyps)
+		write(u, '(8(f9.7,1x))') (iaclib(i)%bvdw(3), i=1, max_atyps)
 	ENDIF
 	write(*, 20) max_atyps
 

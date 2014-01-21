@@ -41,7 +41,7 @@ use NRGY
   real(kind=wp8),allocatable     :: d_recv(:,:)
   type(MPI_NB_ENERGIES),allocatable  :: E_recv(:),E_send(:)
   type(MPI_NBQ_ENERGIES),allocatable :: EQ_recv(:,:),EQ_send(:)
-  integer,allocatable            ::request_recv(:,:)
+  integer,allocatable            ::request_recv(:)
 
  !Book keeping of nb-pairs
  integer  :: totnbpp,totnbpw,totnbww,totnbqp,totnbqw
