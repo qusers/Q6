@@ -64,8 +64,10 @@ subroutine RDF_finalize(i)
 	! normalize the contents of each bin with respect to shell
 	! volume and # processed frames and print the results
 	do j = 1, rdf_calcs(i)%Nbins
-		volume = 4 * pi / 3 * ((j * rdf_calcs(i)%rdf_radius / rdf_calcs(i)%Nbins)**3 - ((j-1) * rdf_calcs(i)%rdf_radius / rdf_calcs(i)%Nbins)**3)
-		rdf_calcs(i)%bins(j) = rdf_calcs(i)%bins(j) / volume / rdf_calcs(i)%frames / rdf_calcs(i)%atoms_in_mask1
+		volume = 4 * pi / 3 * ((j * rdf_calcs(i)%rdf_radius / &
+		rdf_calcs(i)%Nbins)**3 - ((j-1) * rdf_calcs(i)%rdf_radius / rdf_calcs(i)%Nbins)**3)
+		rdf_calcs(i)%bins(j) = rdf_calcs(i)%bins(j) / volume / &
+		rdf_calcs(i)%frames / rdf_calcs(i)%atoms_in_mask1
 		write (*,5) j , j * rdf_calcs(i)%rdf_radius / rdf_calcs(i)%Nbins , rdf_calcs(i)%bins(j)
 	end do
 5	format(i7 , f10.6 , f10.6)

@@ -254,7 +254,7 @@ module CALC_PMF
 	real, dimension(34,16,60)								:: pmfdata																! (ligand type, protein type, bin)
 	character(len=2),dimension(2,34)				:: pmftype
 
-	parameter																	 nProt = 16, nLig = 34
+	integer, parameter :: nProt = 16, nLig = 34
 
   data pmftype(1,:) / 'CF','CP','cF','cP','C3','CW','CO','CN','NC','NP', &					! ligand atom types
 											'NA','ND','NR','N0','NS','OC','OA','OE','OR','OS', &
@@ -286,7 +286,7 @@ subroutine PMFReadAtomTypeConversions(filename, chType)
 	character(len=12),allocatable		:: tmp(:)		
 
 	fp = freefile()
-	open(unit=fp,file=filename,err=999,action='READ',READONLY)
+	open(unit=fp,file=filename,err=999,action='READ')
 		do
 			! First, find the right section
 			read(fp,'(a256)',iostat=filestat) buf
@@ -357,7 +357,7 @@ subroutine PMFReadAtomTypeConversions(filename, chType)
 		count = 0
 		do
 			read(fp,'(a256)',iostat=filestat) buf
-			if(filestat) goto 10
+			if(filestat.ne.0) goto 10
 			if(trim(buf).eq.'') goto 2		! skip blank line
 			if(buf(1:1).eq.'#') goto 2		! skip REM
 		
@@ -365,7 +365,7 @@ subroutine PMFReadAtomTypeConversions(filename, chType)
 			if(trim(buf).eq.'{ligand atom type translations}') then
 				do
 					read(fp,'(a256)',iostat=filestat) buf
-					if(filestat) goto 10
+					if(filestat.ne.0) goto 10
 
 					buf = adjustl(trim(buf))
 					if(buf.eq.'') goto 3		! skip blank line
@@ -379,11 +379,11 @@ subroutine PMFReadAtomTypeConversions(filename, chType)
 					p = index(buf,'#')
 					buf = adjustl(buf(1:p-1))			! remove traling comment
 
-					if(mark) then									! read translation table
+					if(mark.ne.0) then									! read translation table
 						tmp(1) = ''
 						tmp(column) = ''
 						read(buf,*,iostat=filestat) tmp(1:column)
-						if(filestat) goto 10
+						if(filestat.ne.0) goto 10
 
 						if(buf(1:1).eq.'{') then
 						 goto 10
@@ -402,9 +402,12 @@ subroutine PMFReadAtomTypeConversions(filename, chType)
 		if(atomtypetable(i)%other.eq.'.') cycle
 		do j = i,size(atomtypetable)
 			if(atomtypetable(j)%other.eq.'.') cycle
-			if(trim(atomtypetable(i)%other).eq.trim(atomtypetable(j)%other).and.trim(atomtypetable(i)%mol2).ne.trim(atomtypetable(j)%mol2)) then
-				write(*,'(a,a,a,a,a,a,a,a)') 'Fatal: Ambiguous entries in type translation matrix (file ', trim(adjustl(filename)), '). ', &
-					 trim(adjustl(atomtypetable(j)%other)), ' maps to both ', adjustl(trim(atomtypetable(i)%mol2)), ' and ', &
+			if(trim(atomtypetable(i)%other).eq.trim(atomtypetable(j)%other).and. &
+			trim(atomtypetable(i)%mol2).ne.trim(atomtypetable(j)%mol2)) then
+				write(*,'(a,a,a,a,a,a,a,a)') &
+				'Fatal: Ambiguous entries in type translation matrix (file ', trim(adjustl(filename)), '). ', &
+					 trim(adjustl(atomtypetable(j)%other)), ' maps to both ', &
+					 adjustl(trim(atomtypetable(i)%mol2)), ' and ', &
 					 adjustl(trim(atomtypetable(j)%mol2))
 				stop
 			end if
@@ -430,7 +433,7 @@ subroutine pmfRead_Input
 	if(chInput.ne.'default') then
 		! Open file
 		fp = freefile()
-		open(unit=fp,file=chInput,err=999,action='READ',READONLY)
+		open(unit=fp,file=chInput,err=999,action='READ')
 			do
 				read(fp,'(a256)',iostat=filestat) buf
 
@@ -575,7 +578,7 @@ subroutine pmf_extract_rules(filename)
 	type(tPMFRule)					:: rule
 
 	fp = freefile()
-	open(unit=fp,file=filename,err=999,action='READ',READONLY)
+	open(unit=fp,file=filename,err=999,action='READ')
 
     cnt(:) = 0																							! reset counters
     do
@@ -601,7 +604,9 @@ subroutine pmf_extract_rules(filename)
 
 		rewind(fp)
 
-		write(*,'(a,i3,a,i3,a,a)') 'Reading ', cnt(1), ' ligand atom type rules and ', cnt(2), ' protein atom type rules from ', trim(adjustl(filename))
+		write(*,'(a,i3,a,i3,a,a)') 'Reading ', cnt(1), &
+		' ligand atom type rules and ', cnt(2), &
+		' protein atom type rules from ', trim(adjustl(filename))
 
 		allocate( ligRule(1:cnt(1)))
 		allocate(protRule(1:cnt(2)))
@@ -687,7 +692,7 @@ subroutine pmfRead_Data(filename)
 	j = 1
 	fp = freefile()
 	write(*,'(a,a)') 'Reading pmf''s from ', adjustl(trim(filename))
-	open(unit=fp,file=filename,err=999,action='READ',READONLY)
+	open(unit=fp,file=filename,err=999,action='READ')
 		do i = 1,nProt
 			do j = 1,nLig
 				read(fp,'(a256)',iostat=filestat) buf
@@ -739,7 +744,7 @@ subroutine pmfRead_Names(filename)
 	j = 1
 	fp = freefile()
 	write(*,'(a,a)') 'Reading name translations from ', adjustl(trim(filename))
-	open(unit=fp,file=filename,err=999,action='READ',READONLY)
+	open(unit=fp,file=filename,err=999,action='READ')
 		count = 0
 		do
 			read(fp,'(a256)',iostat=filestat) buf
@@ -890,7 +895,8 @@ subroutine pmfScoring_Stats(mol,iAtom)
 	sum = 0
 	if(present(iAtom)) then
 		i = iAtom
-		write(*,'(t40,a6, t47,i4, t52,a1,t53,a2,t55,a2, t58,f7.2)') 'qatom ', mol%atom(i)%id, '(', mol%atom(i)%ttype, '):', mol%atom(i)%abs
+		write(*,'(t40,a6, t47,i4, t52,a1,t53,a2,t55,a2, t58,f7.2)') &
+		'qatom ', mol%atom(i)%id, '(', mol%atom(i)%ttype, '):', mol%atom(i)%abs
 	else
 		write(*,'(t30,a4, t38,a4, t50,a5)')  'ID', 'TYPE', 'SCORE'
 		do i = 0,mol%num_atom -1
@@ -898,7 +904,13 @@ subroutine pmfScoring_Stats(mol,iAtom)
 			
 			if(input%show_detailed_abs.eq.'YES') then
 				do j = 1, mol%atom(i)%abscount
-					write(*,'(t1,i4,t8,f6.2,t16,f6.2, t24,a,t29,a,t34,i3)') mol%atom(i)%absdetail(j)%atom_id,  mol%atom(i)%absdetail(j)%score,mol%atom(i)%absdetail(j)%r,mol%atom(i)%absdetail(j)%k,mol%atom(i)%absdetail(j)%l,mol%atom(i)%absdetail(j)%m
+					write(*,'(t1,i4,t8,f6.2,t16,f6.2, t24,a,t29,a,t34,i3)') &
+					mol%atom(i)%absdetail(j)%atom_id, &
+					mol%atom(i)%absdetail(j)%score, &
+					mol%atom(i)%absdetail(j)%r, &
+					mol%atom(i)%absdetail(j)%k, &
+					mol%atom(i)%absdetail(j)%l, &
+					mol%atom(i)%absdetail(j)%m
 				end do
 			end if
 
@@ -935,7 +947,10 @@ real function PMF_Score(lig,prot,inp)
 			if(prot%atom(j)%valid.eq.0) cycle
 			if(prot%atom(j)%mask.eq.0)  cycle
 
-			if((lig%atom(i)%ttype(1:1).eq.'C' .or. lig%atom(i)%ttype(1:1).eq.'c') .and. (prot%atom(j)%ttype(1:1).eq.'C' .or. prot%atom(j)%ttype(1:1).eq.'c')) then
+			if((lig%atom(i)%ttype(1:1).eq.'C' .or. &
+			lig%atom(i)%ttype(1:1).eq.'c') .and. &
+			(prot%atom(j)%ttype(1:1).eq.'C' .or. &
+			prot%atom(j)%ttype(1:1).eq.'c')) then
 				cutoff = 6.0
 			else
 				cutoff = 9.0
@@ -949,9 +964,14 @@ real function PMF_Score(lig,prot,inp)
 			m = int(r/resolution)																	! bin
 						
 			if(m<1) then
-				write(*,'(a,i6,a,a,a,a,a,i6,a,a,a,a,a,f5.3,a)') 'WARNING: Ligand atom ', i+1, ' (', trim(adjustl(lig%atom(i)%qtype_long)),',',trim(adjustl(lig%atom(i)%residue)), &
-																			') and protein atom ', j+1, ' (', trim(adjustl(prot%atom(j)%qtype_long)),',',trim(adjustl(prot%atom(j)%residue)), &
-																			') are too close (r = ', r,' A). Using r = 0.2 A.'
+				write(*,'(a,i6,a,a,a,a,a,i6,a,a,a,a,a,f6.3,a)') &
+				'WARNING: Ligand atom ', i+1, ' (', &
+				trim(adjustl(lig%atom(i)%qtype_long)),',', &
+				trim(adjustl(lig%atom(i)%residue)), &
+				') and protein atom ', j+1, ' (', &
+				trim(adjustl(prot%atom(j)%qtype_long)),',', &
+				trim(adjustl(prot%atom(j)%residue)), &
+				') are too close (r = ', r,' A). Using r = 0.2 A.'
 				warn = warn +1
 				m = 1
 				cycle
@@ -1088,7 +1108,8 @@ subroutine pmfprotein_translate(protein,nAtoms,coordinates,bond,num_bond,transfe
 	! Count protein bonds
 	protein%num_bond = 0
 	do i = 1,num_bond
-		if(((bond(i)%i<=nAtoms).and.(bond(i)%j<=nAtoms)).and.(iqatom(bond(i)%i).eq.0.and.iqatom(bond(i)%j).eq.0)) protein%num_bond = protein%num_bond +1
+		if(((bond(i)%i<=nAtoms).and.(bond(i)%j<=nAtoms)).and. &
+		(iqatom(bond(i)%i).eq.0.and.iqatom(bond(i)%j).eq.0)) protein%num_bond = protein%num_bond +1
 	end do
 	
 	allocate(protein%bond(0:protein%num_bond-1))
@@ -1120,7 +1141,7 @@ subroutine pmfprotein_translate(protein,nAtoms,coordinates,bond,num_bond,transfe
 			protein%bond(i) = protein%bond(i+1)
 			protein%bond(i+1) = tmp
 2		end do
-		if(not(mark)) exit
+		if(mark.eq.0) exit
 	end do
 
 	! Reset bond id
@@ -1228,7 +1249,7 @@ subroutine pmfLigand_Translate(ligand,nAtoms,nBonds,aQ,aB,offset)
 			ligand%bond(i) = ligand%bond(i+1)
 			ligand%bond(i+1) = tmp
 2		end do
-		if(not(mark)) exit
+		if(mark.eq.0) exit
 	end do
 
 	! Reset bond id
@@ -1255,8 +1276,12 @@ subroutine pmfFixAtomTypes(mol)
 			end if
 		end do
 		if(mol2mark.eq.0) then
-			write(*,'(a,i5,a,a,a,a,a)') 'WARNING: No MOL2 type specified for atom ', mol%atom(i)%id, ' (type ', trim(adjustl(mol%atom(i)%qtype)), &
-																 ') in molecule ', trim(adjustl(mol%name)), '. PMF-type will not be determined correctly.'
+			write(*,'(a,i5,a,a,a,a,a)') &
+			'WARNING: No MOL2 type specified for atom ', &
+			mol%atom(i)%id, ' (type ', &
+			trim(adjustl(mol%atom(i)%qtype)), &
+			') in molecule ', trim(adjustl(mol%name)), &
+			'. PMF-type will not be determined correctly.'
 			warn = 1
 		end if
 
@@ -1350,14 +1375,20 @@ subroutine pmfValue_Molecule(mol,rule,count,prot,literun)
 	do i = 0,mol%num_atom -1
 		if(mol%atom(i)%ttype.eq.' .') then
 			mol%atom(i)%valid = 0
-			write(*,'(a,i6,a,a,a,a,a)') 'WARNING: Atom ', mol%atom(i)%id, ' (', trim(adjustl(mol%atom(i)%qtype)),') in residue ', trim(adjustl(mol%atom(i)%residue)), ' does not match any type rule and will be ignored.'			
+			write(*,'(a,i6,a,a,a,a,a)') &
+			'WARNING: Atom ', mol%atom(i)%id, ' (', &
+			trim(adjustl(mol%atom(i)%qtype)),') in residue ', &
+			trim(adjustl(mol%atom(i)%residue)), &
+			' does not match any type rule and will be ignored.'
 			j = j +1
 		end if
 	end do
 
 	ignored = j
 	if(j>0) then
-		write(*,'(a,i4,a,i4,a,a,a)') 'WARNING: ', j, ' atoms (out of ', mol%num_atom, ') in ', adjustl(trim(mol%name)), ' are of unknown type.'
+		write(*,'(a,i4,a,i4,a,a,a)') 'WARNING: ', j, &
+		' atoms (out of ', mol%num_atom, ') in ', &
+		adjustl(trim(mol%name)), ' are of unknown type.'
 		warn = warn +1
 	end if
 
@@ -2385,7 +2416,8 @@ subroutine pmfShow_Molecule(mol)
 	character(len=64)   :: ringpath,neibs,bonds
 
 	write(*,'(a,a)') 'MOLECULE: ', adjustl(trim(mol%name))
-	write(*,'(a)') '  ID topoID MASK TYPE QTYPE   RES   CHARGE  HB  POL HYBR AR  RINGS      PLANAR NEIGHBOURING ATOMS        BONDS TO ATOM'
+	write(*,'(a)') &
+	'  ID topoID MASK TYPE QTYPE   RES   CHARGE  HB  POL HYBR AR  RINGS      PLANAR NEIGHBOURING ATOMS        BONDS TO ATOM'
 
 	do i = 0, mol%num_atom -1
 		if(input%show_hydrogens.eq.'NO' .and. mol%atom(i)%ttype(1:1).eq.'H') cycle

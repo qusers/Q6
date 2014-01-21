@@ -44,17 +44,6 @@ program Qdyn5
 !   external proc
 ! end function
 !  end interface
-=======
-  integer(4), parameter			:: SIGINT = 2	! CTRL-C signal
-  integer(4), parameter			:: SIGKILL = 9	! kill/CTRL-BREAK signal
-  integer(4), parameter			:: SIGABRT = 6	! kill/CTRL-BREAK signal
-#if ! defined(__PATHCC__)
-  interface
-	integer(4) function signal( signum, proc, flag )
-	  integer(4) signum, flag
-	  external proc
-	end function
-  end interface
 #endif
   external sigint_handler
   external sigkill_handler

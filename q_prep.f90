@@ -298,12 +298,8 @@ character(200), intent(OUT)  :: infilename
 character(300)  :: text
 
 
-! external definition of iargc
-integer(4) iargc
-external iargc
-
 ! read name of input file from the command line
-num_args = iargc()
+num_args = command_argument_count()
 if (num_args .lt. 1) then
   check_inputfile = .false.
   return

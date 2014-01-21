@@ -72,7 +72,7 @@ integer function entropy_add(desc)
 	! Open output file
 	open(100, file='Entropy.out',err=999)		! Entropy output file
 999 write(*,'(a)') 'WARNING: Unable to initialize entropy output file. If you are not doing entropy calculations and &
-										multiple instances of Q are running in the same directory, you may ignore this warning.'
+	&multiple instances of Q are running in the same directory, you may ignore this warning.'
 
 	!Add a new entropy mask
 	
