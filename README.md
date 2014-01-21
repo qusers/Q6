@@ -31,13 +31,15 @@ if your shell is bash you can add the following line to your .bashrc file:
 export Q5MD=$SOFT/qsource
 export PATH=$Q5MD/bin:$PATH  
 ```
-Where $SOFT will be the place where your software folder is locate at, e.g. /Users/johndoe/software
+Where $SOFT will be the place where your software folder is located at, e.g. /Users/johndoe/software
 
-Once the q binaries are declared in your path you should be able to call all q binaries.
+Once the q binaries are declared in your path you should be able to call all q binaries from your terminal.
 
 ```bash
 source .bashrc
 echo $path | grep qsource
+/Users/johndoe/software/qsource
+
 qprep5
 
 ###############################################################################
@@ -53,5 +55,8 @@ NOTES:
 
 20/01/2014
 
-In order to compile, using gfortran,  with Alex's additional subroutine for angle constraints it's necessary to
-turn of the symbols flush and iargc, which he has turned on as he's most likely compiling with ifortran.
+In order to compile using gfortran with Alexandre Barrozo's additional subroutine for angle constraints
+it's necessary to turn off the flush and iargc symbols.
+
+
+
