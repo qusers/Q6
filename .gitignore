@@ -1,8 +1,10 @@
-.DS_Store
+*.DS_Store
 bin/
 tests
 examples
 obj/
+ff
+scripts
 *.pdf
 *.toc
 *.dvi
