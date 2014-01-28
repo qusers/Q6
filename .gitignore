@@ -1,10 +1,9 @@
 *.DS_Store
 bin/
-tests
-examples
+tests/
+examples/
 obj/
-ff
-scripts
+ff/
 *.pdf
 *.toc
 *.dvi
