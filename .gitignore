@@ -8,3 +8,4 @@ obj/
 *.dvi
 *.ps
 *.log
+.DS_Store
