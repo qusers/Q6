@@ -3,7 +3,6 @@ bin/
 tests/
 examples/
 obj/
-ff/
 *.pdf
 *.toc
 *.dvi

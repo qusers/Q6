@@ -1,0 +1,786 @@
+*------------------------------------------------------------------
+*
+* Q residue library file: CHARMM27 nucleic acid library
+*
+*------------------------------------------------------------------
+{ALA}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT3         -0.270
+         6 HB1    HA3          0.090
+         7 HB2    HA3          0.090
+         8 HB3    HA3          0.090
+         9 C      C            0.510
+        10 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+*------------------------------------------------------------------
+{ARG}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT2         -0.180
+         9 HG1    HA2          0.090
+        10 HG2    HA2          0.090
+        11 CD     CT2          0.200
+        12 HD1    HA2          0.090
+        13 HD2    HA2          0.090
+        14 NE     NC2         -0.700
+        15 HE     HC           0.440
+        16 CZ     C            0.640
+        17 NH1    NC2         -0.800
+        18 HH11   HC           0.460
+        19 HH12   HC           0.460
+        20 NH2    NC2         -0.800
+        21 HH21   HC           0.460
+        22 HH22   HC           0.460
+        23 C      C            0.510
+        24 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD   CG                !connect i -- j
+       NE   CD                !connect i -- j
+       CZ   NE                !connect i -- j
+       NH2  CZ                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       CG   HG1               !connect i -- j
+       CG   HG2               !connect i -- j
+       CD   HD1               !connect i -- j
+       CD   HD2               !connect i -- j
+       NE   HE                !connect i -- j
+       NH1  HH11              !connect i -- j
+       NH1  HH12              !connect i -- j
+       NH2  HH21              !connect i -- j
+       NH2  HH22              !connect i -- j
+*------------------------------------------------------------------
+{ASN}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CC           0.550
+         9 OD1    O           -0.550
+        10 ND2    NH2         -0.620
+        11 HD21   H            0.320
+        12 HD22   H            0.300
+        13 C      C            0.510
+        14 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       ND2  CG                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       ND2  HD21              !connect i -- j
+       ND2  HD22              !connect i -- j
+*------------------------------------------------------------------
+{ASP}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.280
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CC           0.620
+         9 OD1    OC          -0.760
+        10 OD2    OC          -0.760
+        11 C      C            0.510
+        12 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       OD2  CG                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+*------------------------------------------------------------------
+{CYS}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.110
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 SG     S           -0.230
+         9 HG1    HS           0.160
+        10 C      C            0.510
+        11 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       SG   CB                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       SG   HG1               !connect i -- j
+*------------------------------------------------------------------
+{GLN}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT2         -0.180
+         9 HG1    HA2          0.090
+        10 HG2    HA2          0.090
+        11 CD     CC           0.550
+        12 OE1    O           -0.550
+        13 NE2    NH2         -0.620
+        14 HE21   H            0.320
+        15 HE22   H            0.300
+        16 C      C            0.510
+        17 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD   CG                !connect i -- j
+       NE2  CD                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CG   HG2               !connect i -- j
+       NE2  HE21              !connect i -- j
+       NE2  HE22              !connect i -- j
+*------------------------------------------------------------------
+{GLU}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2A        -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT2         -0.280
+         9 HG1    HA2          0.090
+        10 HG2    HA2          0.090
+        11 CD     CC           0.620
+        12 OE1    OC          -0.760
+        13 OE2    OC          -0.760
+        14 C      C            0.510
+        15 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD   CG                !connect i -- j
+       OE2  CD                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CG   HG2               !connect i -- j
+*------------------------------------------------------------------
+{GLY}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT2         -0.020
+         4 HA1    HB2          0.090
+         5 HA2    HB2          0.090
+         6 C      C            0.510
+         7 O      O           -0.510
+    [bonds]
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+*------------------------------------------------------------------
+{HSD}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.090
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 ND1    NR1         -0.360
+         9 HD1    H            0.320
+        10 CG     CPH1        -0.050
+        11 CE1    CPH2         0.250
+        12 HE1    HR1          0.130
+        13 NE2    NR2         -0.700
+        14 CD2    CPH1         0.220
+        15 HD2    HR3          0.100
+        16 C      C            0.510
+        17 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       ND1  CG                !connect i -- j
+       CE1  ND1               !connect i -- j
+       NE2  CD2               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       ND1  HD1               !connect i -- j
+       CD2  HD2               !connect i -- j
+       CE1  HE1               !connect i -- j
+*------------------------------------------------------------------
+{HSE}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.080
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 ND1    NR2         -0.700
+         9 CG     CPH1         0.220
+        10 CE1    CPH2         0.250
+        11 HE1    HR1          0.130
+        12 NE2    NR1         -0.360
+        13 HE2    H            0.320
+        14 CD2    CPH1        -0.050
+        15 HD2    HR3          0.090
+        16 C      C            0.510
+        17 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       ND1  CG                !connect i -- j
+       NE2  CD2               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       NE2  HE2               !connect i -- j
+       CD2  HD2               !connect i -- j
+       CE1  HE1               !connect i -- j
+*------------------------------------------------------------------
+{HSP}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2A        -0.050
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CD2    CPH1         0.190
+         9 HD2    HR1          0.130
+        10 CG     CPH1         0.190
+        11 NE2    NR3         -0.510
+        12 HE2    H            0.440
+        13 ND1    NR3         -0.510
+        14 HD1    H            0.440
+        15 CE1    CPH2         0.320
+        16 HE1    HR2          0.180
+        17 C      C            0.510
+        18 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       ND1  CG                !connect i -- j
+       CE1  ND1               !connect i -- j
+       NE2  CD2               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       ND1  HD1               !connect i -- j
+       NE2  HE2               !connect i -- j
+       CD2  HD2               !connect i -- j
+       CE1  HE1               !connect i -- j
+*------------------------------------------------------------------
+{ILE}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT1         -0.090
+         6 HB     HA1          0.090
+         7 CG2    CT3         -0.270
+         8 HG21   HA3          0.090
+         9 HG22   HA3          0.090
+        10 HG23   HA3          0.090
+        11 CG1    CT2         -0.180
+        12 HG11   HA2          0.090
+        13 HG12   HA2          0.090
+        14 CD     CT3         -0.270
+        15 HD1    HA3          0.090
+        16 HD2    HA3          0.090
+        17 HD3    HA3          0.090
+        18 C      C            0.510
+        19 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG1  CB                !connect i -- j
+       CG2  CB                !connect i -- j
+       CD   CG1               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB                !connect i -- j
+       CG1  HG11              !connect i -- j
+       CG1  HG12              !connect i -- j
+       CG2  HG21              !connect i -- j
+       CG2  HG22              !connect i -- j
+       CG2  HG23              !connect i -- j
+       CD   HD1               !connect i -- j
+       CD   HD2               !connect i -- j
+       CD   HD3               !connect i -- j
+*------------------------------------------------------------------
+{LEU}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT1         -0.090
+         9 HG     HA1          0.090
+        10 CD1    CT3         -0.270
+        11 HD11   HA3          0.090
+        12 HD12   HA3          0.090
+        13 HD13   HA3          0.090
+        14 CD2    CT3         -0.270
+        15 HD21   HA3          0.090
+        16 HD22   HA3          0.090
+        17 HD23   HA3          0.090
+        18 C      C            0.510
+        19 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD1  CG                !connect i -- j
+       CD2  CG                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CG   HG                !connect i -- j
+       CD1  HD11              !connect i -- j
+       CD1  HD12              !connect i -- j
+       CD1  HD13              !connect i -- j
+       CD2  HD21              !connect i -- j
+       CD2  HD22              !connect i -- j
+       CD2  HD23              !connect i -- j
+*------------------------------------------------------------------
+{LYS}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT2         -0.180
+         9 HG1    HA2          0.090
+        10 HG2    HA2          0.090
+        11 CD     CT2         -0.180
+        12 HD1    HA2          0.090
+        13 HD2    HA2          0.090
+        14 CE     CT2          0.210
+        15 HE1    HA2          0.050
+        16 HE2    HA2          0.050
+        17 NZ     NH3         -0.300
+        18 HZ1    HC           0.330
+        19 HZ2    HC           0.330
+        20 HZ3    HC           0.330
+        21 C      C            0.510
+        22 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD   CG                !connect i -- j
+       CE   CD                !connect i -- j
+       NZ   CE                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CG   HG2               !connect i -- j
+       CD   HD1               !connect i -- j
+       CD   HD2               !connect i -- j
+       CE   HE1               !connect i -- j
+       CE   HE2               !connect i -- j
+       NZ   HZ1               !connect i -- j
+       NZ   HZ2               !connect i -- j
+       NZ   HZ3               !connect i -- j
+*------------------------------------------------------------------
+{MET}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CT2         -0.140
+         9 HG1    HA2          0.090
+        10 HG2    HA2          0.090
+        11 SD     S           -0.090
+        12 CE     CT3         -0.220
+        13 HE1    HA3          0.090
+        14 HE2    HA3          0.090
+        15 HE3    HA3          0.090
+        16 C      C            0.510
+        17 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       SD   CG                !connect i -- j
+       CE   SD                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CG   HG1               !connect i -- j
+       CG   HG2               !connect i -- j
+       CE   HE1               !connect i -- j
+       CE   HE2               !connect i -- j
+       CE   HE3               !connect i -- j
+*------------------------------------------------------------------
+{PHE}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CA           0.000
+         9 CD1    CA          -0.115
+        10 HD1    HP           0.115
+        11 CE1    CA          -0.115
+        12 HE1    HP           0.115
+        13 CZ     CA          -0.115
+        14 HZ     HP           0.115
+        15 CD2    CA          -0.115
+        16 HD2    HP           0.115
+        17 CE2    CA          -0.115
+        18 HE2    HP           0.115
+        19 C      C            0.510
+        20 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD2  CG                !connect i -- j
+       CE1  CD1               !connect i -- j
+       CZ   CE2               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CD1  HD1               !connect i -- j
+       CD2  HD2               !connect i -- j
+       CE1  HE1               !connect i -- j
+       CE2  HE2               !connect i -- j
+       CZ   HZ                !connect i -- j
+*------------------------------------------------------------------
+{PRO}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      N           -0.290
+         2 CD     CP3          0.000
+         3 HD1    HA2          0.090
+         4 HD2    HA2          0.090
+         5 CA     CP1          0.020
+         6 HA     HB1          0.090
+         7 CB     CP2         -0.180
+         8 HB1    HA2          0.090
+         9 HB2    HA2          0.090
+        10 CG     CP2         -0.180
+        11 HG1    HA2          0.090
+        12 HG2    HA2          0.090
+        13 C      C            0.510
+        14 O      O           -0.510
+    [bonds]
+       C    CA                !connect i -- j
+       N    CA                !connect i -- j
+       CA   CB                !connect i -- j
+       CB   CG                !connect i -- j
+       CG   CD                !connect i -- j
+       N    CD                !connect i -- j
+       HA   CA                !connect i -- j
+       HG1  CG                !connect i -- j
+       HG2  CG                !connect i -- j
+       HD1  CD                !connect i -- j
+       HD2  CD                !connect i -- j
+*------------------------------------------------------------------
+{SER}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2          0.050
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 OG     OH1         -0.660
+         9 HG1    H            0.430
+        10 C      C            0.510
+        11 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       OG   CB                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB2               !connect i -- j
+       OG   HG1               !connect i -- j
+*------------------------------------------------------------------
+{THR}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT1          0.140
+         6 HB     HA1          0.090
+         7 OG1    OH1         -0.660
+         8 HG1    H            0.430
+         9 CG2    CT3         -0.270
+        10 HG21   HA3          0.090
+        11 HG22   HA3          0.090
+        12 HG23   HA3          0.090
+        13 C      C            0.510
+        14 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       OG1  CB                !connect i -- j
+       CG2  CB                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB                !connect i -- j
+       OG1  HG1               !connect i -- j
+       CG2  HG21              !connect i -- j
+       CG2  HG22              !connect i -- j
+       CG2  HG23              !connect i -- j
+*------------------------------------------------------------------
+{TRP}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CY          -0.030
+         9 CD1    CA          -0.150
+        10 HD1    HP           0.220
+        11 NE1    NY          -0.510
+        12 HE1    H            0.370
+        13 CE2    CPT          0.240
+        14 CD2    CPT          0.110
+        15 CE3    CAI         -0.250
+        16 HE3    HP           0.170
+        17 CZ3    CA          -0.200
+        18 HZ3    HP           0.140
+        19 CZ2    CAI         -0.270
+        20 HZ2    HP           0.160
+        21 CH2    CA          -0.140
+        22 HH2    HP           0.140
+        23 C      C            0.510
+        24 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD2  CG                !connect i -- j
+       NE1  CD1               !connect i -- j
+       CZ2  CE2               !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CZ3  CH2               !connect i -- j
+       CD2  CE3               !connect i -- j
+       NE1  CE2               !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CD1  HD1               !connect i -- j
+       NE1  HE1               !connect i -- j
+       CE3  HE3               !connect i -- j
+       CZ2  HZ2               !connect i -- j
+       CZ3  HZ3               !connect i -- j
+       CH2  HH2               !connect i -- j
+*------------------------------------------------------------------
+{TYR}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT2         -0.180
+         6 HB1    HA2          0.090
+         7 HB2    HA2          0.090
+         8 CG     CA           0.000
+         9 CD1    CA          -0.115
+        10 HD1    HP           0.115
+        11 CE1    CA          -0.115
+        12 HE1    HP           0.115
+        13 CZ     CA           0.110
+        14 OH     OH1         -0.540
+        15 HH     H            0.430
+        16 CD2    CA          -0.115
+        17 HD2    HP           0.115
+        18 CE2    CA          -0.115
+        19 HE2    HP           0.115
+        20 C      C            0.510
+        21 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG   CB                !connect i -- j
+       CD2  CG                !connect i -- j
+       CE1  CD1               !connect i -- j
+       CZ   CE2               !connect i -- j
+       OH   CZ                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CA   HA                !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CD1  HD1               !connect i -- j
+       CD2  HD2               !connect i -- j
+       CE1  HE1               !connect i -- j
+       CE2  HE2               !connect i -- j
+       OH   HH                !connect i -- j
+*------------------------------------------------------------------
+{VAL}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 N      NH1         -0.470
+         2 HN     H            0.310
+         3 CA     CT1          0.070
+         4 HA     HB1          0.090
+         5 CB     CT1         -0.090
+         6 HB     HA1          0.090
+         7 CG1    CT3         -0.270
+         8 HG11   HA3          0.090
+         9 HG12   HA3          0.090
+        10 HG13   HA3          0.090
+        11 CG2    CT3         -0.270
+        12 HG21   HA3          0.090
+        13 HG22   HA3          0.090
+        14 HG23   HA3          0.090
+        15 C      C            0.510
+        16 O      O           -0.510
+    [bonds]
+       CB   CA                !connect i -- j
+       CG1  CB                !connect i -- j
+       CG2  CB                !connect i -- j
+       N    HN                !connect i -- j
+       N    CA                !connect i -- j
+       C    CA                !connect i -- j
+       CB   HB                !connect i -- j
+       CG1  HG11              !connect i -- j
+       CG1  HG12              !connect i -- j
+       CG1  HG13              !connect i -- j
+       CG2  HG21              !connect i -- j
+       CG2  HG22              !connect i -- j
+       CG2  HG23              !connect i -- j
+*------------------------------------------------------------------
+{ALAD}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+         1 CL     CT3         -0.270
+         2 HL1    HA3          0.090
+         3 HL2    HA3          0.090
+         4 HL3    HA3          0.090
+         5 CLP    C            0.510
+         6 OL     O           -0.510
+         7 NL     NH1         -0.470
+         8 HL     H            0.310
+         9 CA     CT1          0.070
+        10 HA     HB1          0.090
+        11 CB     CT3         -0.270
+        12 HB1    HA3          0.090
+        13 HB2    HA3          0.090
+        14 HB3    HA3          0.090
+        15 CRP    C            0.510
+        16 OR     O           -0.510
+        17 NR     NH1         -0.470
+        18 HR     H            0.310
+        19 CR     CT3         -0.110
+        20 HR1    HA3          0.090
+        21 HR2    HA3          0.090
+        22 HR3    HA3          0.090
+    [bonds]
+       CL   CLP               !connect i -- j
+       CLP  NL                !connect i -- j
+       NL   CA                !connect i -- j
+       CA   CRP               !connect i -- j
+       CRP  NR                !connect i -- j
+       NR   CR                !connect i -- j
+       NL   HL                !connect i -- j
+       NR   HR                !connect i -- j
+       CA   HA                !connect i -- j
+       CA   CB                !connect i -- j
+       CL   HL1               !connect i -- j
+       CL   HL2               !connect i -- j
+       CL   HL3               !connect i -- j
+       CB   HB1               !connect i -- j
+       CB   HB2               !connect i -- j
+       CB   HB3               !connect i -- j
+       CR   HR1               !connect i -- j
+       CR   HR2               !connect i -- j
+       CR   HR3               !connect i -- j
+*------------------------------------------------------------------
