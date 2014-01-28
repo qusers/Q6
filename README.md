@@ -17,6 +17,7 @@ source /sw/bin/init.sh
 ```bash
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
+cp makefile.osx makefile
 source /sw/bin/init.sh
 make all
 make clean
