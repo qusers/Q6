@@ -2,7 +2,7 @@
 #  Q V.5 Makefile for Mac OSX  10.9.1                                          #
 #  main code author: Johan Aqvist                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: January 29, 2014                                             #
+#  latest update: January 20, 2014                                             #
 ################################################################################
 
 # Specify compilers and their options in the following variables.
@@ -220,9 +220,9 @@ what:
 	@echo "usage: make <target>"
 	@echo
 	@echo "<target> is one of:"
-	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
+	@echo "all              Everything except for the MPI parallel version of q (qdyn5p)"
 	@echo "debug            'all' but with debug information (stacktraces etc)."
-	@echo "mpi              qdyn5p using a loaded mpi library"
+	@echo "mpi              qdyn5p using the currently loaded mpi library"
 	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
 	@echo
 #

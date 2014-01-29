@@ -1,9 +1,11 @@
-###############################################################################
-#                       Q v.5 Makefile for Linux                              #
-###############################################################################
+################################################################################
+#  Q V.5 Makefile for linux                                                    #
+#  main code author: Johan Aqvist                                              #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
+#  latest update: January 29, 2014                                             #
+################################################################################
 
-### -i-static -static
-# Put your favorite compilers and flags here.
+# Specify compilers and their options in the following variables.
 FC=		gfortran
 CC=		gcc
 MPIFC=		mpif90
@@ -28,59 +30,58 @@ default: what
 
 ###
 # Targets
-all:	Qfep5 Qprep5 Qdyn5 Qdum5 Qcalc5
+all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
-	Qfep5 Qprep5 Qdyn5 Qdum5 Qcalc5
+	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
 mpi:	
 	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
-	Qdyn5p
+	qdyn5p
 
 mpi_debug:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
-	Qdyn5p
+	qdyn5p
 
 clean:
 	-rm -f *.o *.F90 *.mod *.M *.kmo *.il
 
 nuke:
-	-rm -f *.o *.F90 *.mod *.M *.kmo *.il Qfep5 Qdyn5p Qdyn5 Qprep5 Qcalc5 Qdum5
+	-rm -f *.o *.F90 *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5
 
-Qcalc5 Qdyn5 Qdum5 Qdyn5p Qprep5 Qfep5: misc.o mpiglob.o 
+qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o 
 
-Qcalc5 Qdyn5 Qdum5 Qdyn5p Qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o 
+qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o 
 
-Qcalc5 Qdyn5 Qdum5 Qdyn5p Qfep5: nrgy.o
+qcalc5 qdyn5 qdum5 qdyn5p qfep5: nrgy.o
 
-Qcalc5 Qdyn5 Qdum5 Qdyn5p: qatom.o  
+qcalc5 qdyn5 qdum5 qdyn5p: qatom.o  
 
-Qcalc5 Qprep5 Qfep5: parse.o 
+qcalc5 qprep5 qfep5: parse.o 
 
-Qcalc5 Qprep5: maskmanip.o 
+qcalc5 qprep5: maskmanip.o 
 
-Qdyn5 Qdum5: qdyn.o
+qdyn5 qdum5: qdyn.o
 
-Qprep5: q_prep.o prefs.o prep.o avetr.o
+qprep5: q_prep.o prefs.o prep.o avetr.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-Qfep5: qfep.o 
+qfep5: qfep.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-Qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
+qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
         calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
         calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o 
-	@cp qcalc.f90 qcalc.F90
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-Qdyn5 : md.o
+qdyn5 : md.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-Qdum5 : md_dum.o 
+qdum5 : md_dum.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-Qdyn5p : md_mpi.o qdyn_mpi.o
+qdyn5p : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
 ###
@@ -142,15 +143,15 @@ mask.o:	mask.f90 topo.o
 maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
-md.o:	md.F90 mpiglob.o qatom.o sizes.o trj.o topo.o 
-	${FC} ${FFLAGS} ${FPP_FLG} -c md.F90
+md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o 
+	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 
-md_dum.o:md.F90 mpiglob.o qatom.o sizes.o topo.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.F90 -o md_dum.o 
+md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o 
 
-md_mpi.o: md.F90 mpiglob.o qatom.o sizes.o topo.o trj.o
+md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
-	-c md.F90 -o md_mpi.o 
+	-c md.f90 -o md_mpi.o 
 
 misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
@@ -179,21 +180,21 @@ q_prep.o: q_prep.f90 prep.o avetr.o
 qatom.o: qatom.f90 misc.o nrgy.o prmfile.o sizes.o index.o topo.o
 	${FC} ${FFLAGS} -c $<
 
-qcalc.o: qcalc.F90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o
-	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.F90
+qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o
+	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
-qdyn.o: qdyn.F90 md.o mpiglob.o
-	${FC} ${FFLAGS} ${FPP_FLG} -c qdyn.F90
+qdyn.o: qdyn.f90 md.o mpiglob.o
+	${FC} ${FFLAGS} ${FPP_FLG} -c qdyn.f90
 
-qdyn_dum.o: qdyn.F90 md.o mpiglob.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c qdyn.F90 -o qdyn_dum.o 
+qdyn_dum.o: qdyn.f90 md.o mpiglob.o
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c qdyn.f90 -o qdyn_dum.o 
 
-qdyn_mpi.o: qdyn.F90 md_mpi.o mpiglob.o
+qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
-        -c qdyn.F90 -o qdyn_mpi.o
+        -c qdyn.f90 -o qdyn_mpi.o
 
-qfep.o: qfep.F90 nrgy.o parse.o
-	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.F90
+qfep.o: qfep.f90 nrgy.o parse.o
+	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
 sizes.o: sizes.f90
 	${FC} ${FFLAGS} -c $<
@@ -203,6 +204,12 @@ topo.o:  topo.f90 misc.o mpiglob.o sizes.o
 
 trj.o:  trj.f90 mask.o misc.o 
 	${FC} ${FFLAGS} -c $<
+
+move1:
+	mkdir ../obj ; mv *.o *.mod ../obj/
+
+move2:
+	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 #
 ###
 
@@ -212,9 +219,9 @@ what:
 	@echo "usage: make <target>"
 	@echo
 	@echo "<target> is one of:"
-	@echo "all              Everything except for the MPI parallel version of Q (Qdyn5p)"
+	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
 	@echo "debug            'all' but with debug information (stacktraces etc)."
-	@echo "mpi              Qdyn5p using the currently loaded mpi library"
+	@echo "mpi              qdyn5p using a loaded mpi library"
 	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
 	@echo
 #

@@ -1,5 +1,0 @@
-Path to ifort compiler:
-source /home/apps/intel/bin/ifortvars.csh intel64
-setenv OMPI_FC ifort
-
-this the same code as glenn with modification on el_scale and qq interactions
