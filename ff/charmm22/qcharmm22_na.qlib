@@ -1,0 +1,829 @@
+*------------------------------------------------------------------
+*
+* Q residue library file: CHARMM22 nucleic acid library
+*
+*------------------------------------------------------------------
+{GUA}                 !
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 P      P            1.500 !At. no., name, iac, charge
+         2 O1P    ON3         -0.800 !At. no., name, iac, charge
+         3 O2P    ON3         -0.800 !At. no., name, iac, charge
+         4 O5'    ON2         -0.550 !At. no., name, iac, charge
+         5 C5'    CN8         -0.080 !At. no., name, iac, charge
+         6 H5'    HN7          0.090 !At. no., name, iac, charge
+         7 H5''   HN7          0.090 !At. no., name, iac, charge
+         8 C4'    CN6          0.110 !At. no., name, iac, charge
+         9 H4'    HN6          0.090 !At. no., name, iac, charge
+        10 O4'    ON6         -0.400 !At. no., name, iac, charge
+        11 C1'    CN6B         0.110 !At. no., name, iac, charge
+        12 H1'    HN6          0.090 !At. no., name, iac, charge
+        13 N9     NN2         -0.140 !At. no., name, iac, charge
+        14 C4     CN5          0.140 !At. no., name, iac, charge
+        15 N3     NN3A        -0.660 !At. no., name, iac, charge
+        16 C2     CN2          0.760 !At. no., name, iac, charge
+        17 N1     NN2G        -0.380 !At. no., name, iac, charge
+        18 H1     HN2          0.280 !At. no., name, iac, charge
+        19 N2     NN1         -0.640 !At. no., name, iac, charge
+        20 H21    HN1          0.310 !At. no., name, iac, charge
+        21 H22    HN1          0.330 !At. no., name, iac, charge
+        22 C6     CN1          0.550 !At. no., name, iac, charge
+        23 O6     ON1         -0.470 !At. no., name, iac, charge
+        24 C5     CN5         -0.080 !At. no., name, iac, charge
+        25 N7     NN4         -0.690 !At. no., name, iac, charge
+        26 C8     CN4          0.410 !At. no., name, iac, charge
+        27 H8     HN3          0.280 !At. no., name, iac, charge
+        28 C2'    CN6          0.110 !At. no., name, iac, charge
+        29 H2''   HN6          0.090 !At. no., name, iac, charge
+        30 O2'    ON5         -0.600 !At. no., name, iac, charge
+        31 H2'    HN5          0.400 !At. no., name, iac, charge
+        32 C3'    CN6          0.010 !At. no., name, iac, charge
+        33 H3'    HN6          0.090 !At. no., name, iac, charge
+        34 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       P    O1P               !connect i -- j
+       P    O2P               !connect i -- j
+       P    O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N9                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N9   C4                !connect i -- j
+       N9   C8                !connect i -- j
+       C4   N3                !connect i -- j
+       C4   C5                !connect i -- j
+       N3   C2                !connect i -- j
+       C2   N2                !connect i -- j
+       C2   N1                !connect i -- j
+       N2   H21               !connect i -- j
+       N2   H22               !connect i -- j
+       N1   H1                !connect i -- j
+       N1   C6                !connect i -- j
+       C6   O6                !connect i -- j
+       C6   C5                !connect i -- j
+       C5   N7                !connect i -- j
+       N7   C8                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C8   H8                !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+        N2     N3     N1     C2
+        H1     C2     C6     N1
+        O6     N1     C5     C6
+        H8     N7     N9     C8
+       H22    H21     C2     N2
+    [charge_groups] !charge groups, with switch atom first
+        P    O1P  O2P  O5'  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        N9   C4 
+        N3   C2   N1   H1 
+        N2   H21  H22
+        C6   O6   C5 
+        N7   C8   H8 
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{GUA5}                 !Very adhoc
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 HO5    HN5         -0.100 !At. no., name, iac, charge
+         2 O5'    ON2         -0.550 !At. no., name, iac, charge
+         3 C5'    CN8         -0.080 !At. no., name, iac, charge
+         4 H5'    HN7          0.090 !At. no., name, iac, charge
+         5 H5''   HN7          0.090 !At. no., name, iac, charge
+         6 C4'    CN6          0.110 !At. no., name, iac, charge
+         7 H4'    HN6          0.090 !At. no., name, iac, charge
+         8 O4'    ON6         -0.400 !At. no., name, iac, charge
+         9 C1'    CN6B         0.110 !At. no., name, iac, charge
+        10 H1'    HN6          0.090 !At. no., name, iac, charge
+        11 N9     NN2         -0.140 !At. no., name, iac, charge
+        12 C4     CN5          0.140 !At. no., name, iac, charge
+        13 N3     NN3A        -0.660 !At. no., name, iac, charge
+        14 C2     CN2          0.760 !At. no., name, iac, charge
+        15 N1     NN2G        -0.380 !At. no., name, iac, charge
+        16 H1     HN2          0.280 !At. no., name, iac, charge
+        17 N2     NN1         -0.640 !At. no., name, iac, charge
+        18 H21    HN1          0.310 !At. no., name, iac, charge
+        19 H22    HN1          0.330 !At. no., name, iac, charge
+        20 C6     CN1          0.550 !At. no., name, iac, charge
+        21 O6     ON1         -0.470 !At. no., name, iac, charge
+        22 C5     CN5         -0.080 !At. no., name, iac, charge
+        23 N7     NN4         -0.690 !At. no., name, iac, charge
+        24 C8     CN4          0.410 !At. no., name, iac, charge
+        25 H8     HN3          0.280 !At. no., name, iac, charge
+        26 C2'    CN6          0.110 !At. no., name, iac, charge
+        27 H2''   HN6          0.090 !At. no., name, iac, charge
+        28 O2'    ON5         -0.600 !At. no., name, iac, charge
+        29 H2'    HN5          0.400 !At. no., name, iac, charge
+        30 C3'    CN6          0.010 !At. no., name, iac, charge
+        31 H3'    HN6          0.090 !At. no., name, iac, charge
+        32 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       HO5  O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N9                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N9   C4                !connect i -- j
+       N9   C8                !connect i -- j
+       C4   N3                !connect i -- j
+       C4   C5                !connect i -- j
+       N3   C2                !connect i -- j
+       C2   N2                !connect i -- j
+       C2   N1                !connect i -- j
+       N2   H21               !connect i -- j
+       N2   H22               !connect i -- j
+       N1   H1                !connect i -- j
+       N1   C6                !connect i -- j
+       C6   O6                !connect i -- j
+       C6   C5                !connect i -- j
+       C5   N7                !connect i -- j
+       N7   C8                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C8   H8                !connect i -- j
+    [connections]   !how to bond to previous and next
+        tail     O3'
+    [impropers]
+        N2     N3     N1     C2
+        H1     C2     C6     N1
+        O6     N1     C5     C6
+        H8     N7     N9     C8
+       H22    H21     C2     N2
+    [charge_groups] !charge groups, with switch atom first
+        O5'  HO5  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        N9   C4 
+        N3   C2   N1   H1 
+        N2   H21  H22
+        C6   O6   C5 
+        N7   C8   H8 
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{ADE}                 !
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 P      P            1.500 !At. no., name, iac, charge
+         2 O1P    ON3         -0.800 !At. no., name, iac, charge
+         3 O2P    ON3         -0.800 !At. no., name, iac, charge
+         4 O5'    ON2         -0.550 !At. no., name, iac, charge
+         5 C5'    CN8         -0.080 !At. no., name, iac, charge
+         6 H5'    HN7          0.090 !At. no., name, iac, charge
+         7 H5''   HN7          0.090 !At. no., name, iac, charge
+         8 C4'    CN6          0.110 !At. no., name, iac, charge
+         9 H4'    HN6          0.090 !At. no., name, iac, charge
+        10 O4'    ON6         -0.400 !At. no., name, iac, charge
+        11 C1'    CN6B         0.110 !At. no., name, iac, charge
+        12 H1'    HN6          0.090 !At. no., name, iac, charge
+        13 C5     CN5          0.230 !At. no., name, iac, charge
+        14 N7     NN4         -0.630 !At. no., name, iac, charge
+        15 C8     CN4          0.380 !At. no., name, iac, charge
+        16 H8     HN3          0.180 !At. no., name, iac, charge
+        17 N9     NN2         -0.160 !At. no., name, iac, charge
+        18 N1     NN3A        -0.740 !At. no., name, iac, charge
+        19 C2     CN4          0.530 !At. no., name, iac, charge
+        20 H2     HN3          0.160 !At. no., name, iac, charge
+        21 N3     NN3A        -0.690 !At. no., name, iac, charge
+        22 C4     CN5          0.310 !At. no., name, iac, charge
+        23 C6     CN2          0.430 !At. no., name, iac, charge
+        24 N6     NN1         -0.800 !At. no., name, iac, charge
+        25 H61    HN1          0.400 !At. no., name, iac, charge
+        26 H62    HN1          0.400 !At. no., name, iac, charge
+        27 C2'    CN6          0.110 !At. no., name, iac, charge
+        28 H2''   HN6          0.090 !At. no., name, iac, charge
+        29 O2'    ON5         -0.600 !At. no., name, iac, charge
+        30 H2'    HN5          0.400 !At. no., name, iac, charge
+        31 C3'    CN6          0.010 !At. no., name, iac, charge
+        32 H3'    HN6          0.090 !At. no., name, iac, charge
+        33 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       P    O1P               !connect i -- j
+       P    O2P               !connect i -- j
+       P    O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N9                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N9   C4                !connect i -- j
+       N9   C8                !connect i -- j
+       C4   N3                !connect i -- j
+       C4   C5                !connect i -- j
+       N3   C2                !connect i -- j
+       C2   N1                !connect i -- j
+       N1   C6                !connect i -- j
+       C6   N6                !connect i -- j
+       N6   H61               !connect i -- j
+       N6   H62               !connect i -- j
+       C6   C5                !connect i -- j
+       C5   N7                !connect i -- j
+       N7   C8                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C8   H8                !connect i -- j
+       C2   H2                !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+       H62     C6    H61     N6
+        N6     N1     C5     C6
+        H2     N1     N3     C2
+        H8     N7     N9     C8
+    [charge_groups] !charge groups, with switch atom first
+        P    O1P  O2P  O5'  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        C5   N7   C8   H8   N9 
+        N1   C2   H2   N3   C4   C6 
+        N6   H61  H62
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{CYT}                 !
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 P      P            1.500 !At. no., name, iac, charge
+         2 O1P    ON3         -0.800 !At. no., name, iac, charge
+         3 O2P    ON3         -0.800 !At. no., name, iac, charge
+         4 O5'    ON2         -0.550 !At. no., name, iac, charge
+         5 C5'    CN8         -0.080 !At. no., name, iac, charge
+         6 H5'    HN7          0.090 !At. no., name, iac, charge
+         7 H5''   HN7          0.090 !At. no., name, iac, charge
+         8 C4'    CN6          0.110 !At. no., name, iac, charge
+         9 H4'    HN6          0.090 !At. no., name, iac, charge
+        10 O4'    ON6         -0.400 !At. no., name, iac, charge
+        11 C1'    CN6B         0.110 !At. no., name, iac, charge
+        12 H1'    HN6          0.090 !At. no., name, iac, charge
+        13 N1     NN2         -0.160 !At. no., name, iac, charge
+        14 C6     CN3          0.110 !At. no., name, iac, charge
+        15 H6     HN3          0.050 !At. no., name, iac, charge
+        16 C2     CN1          0.530 !At. no., name, iac, charge
+        17 O2     ON1C        -0.480 !At. no., name, iac, charge
+        18 N3     NN3         -0.670 !At. no., name, iac, charge
+        19 C4     CN2          0.620 !At. no., name, iac, charge
+        20 N4     NN1         -0.580 !At. no., name, iac, charge
+        21 H41    HN1          0.310 !At. no., name, iac, charge
+        22 H42    HN1          0.270 !At. no., name, iac, charge
+        23 C5     CN3         -0.100 !At. no., name, iac, charge
+        24 H5     HN3          0.100 !At. no., name, iac, charge
+        25 C2'    CN6          0.110 !At. no., name, iac, charge
+        26 H2''   HN6          0.090 !At. no., name, iac, charge
+        27 O2'    ON5         -0.600 !At. no., name, iac, charge
+        28 H2'    HN5          0.400 !At. no., name, iac, charge
+        29 C3'    CN6          0.010 !At. no., name, iac, charge
+        30 H3'    HN6          0.090 !At. no., name, iac, charge
+        31 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       P    O1P               !connect i -- j
+       P    O2P               !connect i -- j
+       P    O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N1                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N1   C2                !connect i -- j
+       N1   C6                !connect i -- j
+       C2   O2                !connect i -- j
+       C2   N3                !connect i -- j
+       N3   C4                !connect i -- j
+       C4   N4                !connect i -- j
+       N4   H41               !connect i -- j
+       N4   H42               !connect i -- j
+       C4   C5                !connect i -- j
+       C5   C6                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C5   H5                !connect i -- j
+       C6   H6                !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+        O2     N1     N3     C2
+        N4     N3     C5     C4
+        H5     C4     C6     C5
+        H6     C5     N1     C6
+       H42     C4    H41     N4
+    [charge_groups] !charge groups, with switch atom first
+        P    O1P  O2P  O5'  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        N1   C6   H6 
+        C2   O2   N3   C4 
+        N4   H41  H42
+        C5   H5 
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{THY}                 !
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 P      P            1.500 !At. no., name, iac, charge
+         2 O1P    ON3         -0.800 !At. no., name, iac, charge
+         3 O2P    ON3         -0.800 !At. no., name, iac, charge
+         4 O5'    ON2         -0.550 !At. no., name, iac, charge
+         5 C5'    CN8         -0.080 !At. no., name, iac, charge
+         6 H5'    HN7          0.090 !At. no., name, iac, charge
+         7 H5''   HN7          0.090 !At. no., name, iac, charge
+         8 C4'    CN6          0.110 !At. no., name, iac, charge
+         9 H4'    HN6          0.090 !At. no., name, iac, charge
+        10 O4'    ON6         -0.400 !At. no., name, iac, charge
+        11 C1'    CN6B         0.110 !At. no., name, iac, charge
+        12 H1'    HN6          0.090 !At. no., name, iac, charge
+        13 N1     NN2         -0.300 !At. no., name, iac, charge
+        14 C6     CN3          0.170 !At. no., name, iac, charge
+        15 H6     HN3          0.130 !At. no., name, iac, charge
+        16 C2     CN1          0.570 !At. no., name, iac, charge
+        17 O2     ON1         -0.470 !At. no., name, iac, charge
+        18 N3     NN2U        -0.460 !At. no., name, iac, charge
+        19 H3     HN2          0.360 !At. no., name, iac, charge
+        20 C4     CN1          0.540 !At. no., name, iac, charge
+        21 O4     ON1         -0.490 !At. no., name, iac, charge
+        22 C5     CN3         -0.150 !At. no., name, iac, charge
+        23 C5M    CN9         -0.110 !At. no., name, iac, charge
+        24 H51    HN7          0.070 !At. no., name, iac, charge
+        25 H52    HN7          0.070 !At. no., name, iac, charge
+        26 H53    HN7          0.070 !At. no., name, iac, charge
+        27 C2'    CN6          0.110 !At. no., name, iac, charge
+        28 H2''   HN6          0.090 !At. no., name, iac, charge
+        29 O2'    ON5         -0.600 !At. no., name, iac, charge
+        30 H2'    HN5          0.400 !At. no., name, iac, charge
+        31 C3'    CN6          0.010 !At. no., name, iac, charge
+        32 H3'    HN6          0.090 !At. no., name, iac, charge
+        33 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       P    O1P               !connect i -- j
+       P    O2P               !connect i -- j
+       P    O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N1                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N1   C2                !connect i -- j
+       N1   C6                !connect i -- j
+       C2   O2                !connect i -- j
+       C2   N3                !connect i -- j
+       N3   H3                !connect i -- j
+       N3   C4                !connect i -- j
+       C4   O4                !connect i -- j
+       C4   C5                !connect i -- j
+       C5   C5M               !connect i -- j
+       C5   C6                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C6   H6                !connect i -- j
+       C5M  H51               !connect i -- j
+       C5M  H52               !connect i -- j
+       C5M  H53               !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+        O2     N1     N3     C2
+        H3     C2     C4     N3
+        O4     N3     C5     C4
+        H6     N1     C5     C6
+       C5M     C4     C6     C5
+    [charge_groups] !charge groups, with switch atom first
+        P    O1P  O2P  O5'  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        N1   C6   H6 
+        C2   O2   N3   H3 
+        C4   O4   C5   C5M  H51  H52  H53
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{URA}                 ! 
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 P      P            1.500 !At. no., name, iac, charge
+         2 O1P    ON3         -0.800 !At. no., name, iac, charge
+         3 O2P    ON3         -0.800 !At. no., name, iac, charge
+         4 O5'    ON2         -0.550 !At. no., name, iac, charge
+         5 C5'    CN8         -0.080 !At. no., name, iac, charge
+         6 H5'    HN7          0.090 !At. no., name, iac, charge
+         7 H5''   HN7          0.090 !At. no., name, iac, charge
+         8 C4'    CN6          0.110 !At. no., name, iac, charge
+         9 H4'    HN6          0.090 !At. no., name, iac, charge
+        10 O4'    ON6         -0.400 !At. no., name, iac, charge
+        11 C1'    CN6B         0.110 !At. no., name, iac, charge
+        12 H1'    HN6          0.090 !At. no., name, iac, charge
+        13 N1     NN2         -0.300 !At. no., name, iac, charge
+        14 C6     CN3          0.170 !At. no., name, iac, charge
+        15 H6     HN3          0.130 !At. no., name, iac, charge
+        16 C2     CN1          0.570 !At. no., name, iac, charge
+        17 O2     ON1         -0.470 !At. no., name, iac, charge
+        18 N3     NN2U        -0.460 !At. no., name, iac, charge
+        19 H3     HN2          0.360 !At. no., name, iac, charge
+        20 C4     CN1          0.540 !At. no., name, iac, charge
+        21 O4     ON1         -0.490 !At. no., name, iac, charge
+        22 C5     CN3         -0.150 !At. no., name, iac, charge
+        23 H5     HN3          0.100 !At. no., name, iac, charge
+        24 C2'    CN6          0.110 !At. no., name, iac, charge
+        25 H2''   HN6          0.090 !At. no., name, iac, charge
+        26 O2'    ON5         -0.600 !At. no., name, iac, charge
+        27 H2'    HN5          0.400 !At. no., name, iac, charge
+        28 C3'    CN6          0.010 !At. no., name, iac, charge
+        29 H3'    HN6          0.090 !At. no., name, iac, charge
+        30 O3'    ON2         -0.550 !At. no., name, iac, charge
+    [bonds]
+       P    O1P               !connect i -- j
+       P    O2P               !connect i -- j
+       P    O5'               !connect i -- j
+       O5'  C5'               !connect i -- j
+       C5'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  C3'               !connect i -- j
+       O4'  C1'               !connect i -- j
+       C1'  N1                !connect i -- j
+       C1'  C2'               !connect i -- j
+       N1   C2                !connect i -- j
+       N1   C6                !connect i -- j
+       C2   O2                !connect i -- j
+       C2   N3                !connect i -- j
+       N3   H3                !connect i -- j
+       N3   C4                !connect i -- j
+       C4   O4                !connect i -- j
+       C4   C5                !connect i -- j
+       C5   C6                !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       C2'  O2'               !connect i -- j
+       O2'  H2'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C2'  H2''               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C5'  H5'               !connect i -- j
+       C5'  H5''               !connect i -- j
+       C5   H5                !connect i -- j
+       C6   H6                !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+        O2     N1     N3     C2
+        H3     C2     C4     N3
+        H5     C4     C6     C5
+        O4     N3     C5     C4
+        H6     N1     C5     C6
+    [charge_groups] !charge groups, with switch atom first
+        P    O1P  O2P  O5'  C5'  H5'  H5''
+        C4'  H4'  O4'  C1'  H1'
+        N1   C6   H6 
+        C2   O2   N3   H3 
+        C4   O4   C5   H5 
+        C2'  H2''  O2'  H2'
+        C3'  H3'  O3'
+*-------------------------------------------------------------
+{DMPA}                 ! Dimethylphosphate
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 P1     P            1.500 !At. no., name, iac, charge
+         2 O3     ON3         -0.800 !At. no., name, iac, charge
+         3 O4     ON3         -0.800 !At. no., name, iac, charge
+         4 O1     ON2         -0.550 !At. no., name, iac, charge
+         5 O2     ON2         -0.550 !At. no., name, iac, charge
+         6 C1     CN9         -0.170 !At. no., name, iac, charge
+         7 H11    HN7          0.090 !At. no., name, iac, charge
+         8 H12    HN7          0.090 !At. no., name, iac, charge
+         9 H13    HN7          0.090 !At. no., name, iac, charge
+        10 C2     CN9         -0.170 !At. no., name, iac, charge
+        11 H21    HN7          0.090 !At. no., name, iac, charge
+        12 H22    HN7          0.090 !At. no., name, iac, charge
+        13 H23    HN7          0.090 !At. no., name, iac, charge
+    [bonds]
+       P1   O1                !connect i -- j
+       P1   O2                !connect i -- j
+       P1   O3                !connect i -- j
+       P1   O4                !connect i -- j
+       O1   C1                !connect i -- j
+       O2   C2                !connect i -- j
+       C1   H11               !connect i -- j
+       C1   H12               !connect i -- j
+       C1   H13               !connect i -- j
+       C2   H21               !connect i -- j
+       C2   H22               !connect i -- j
+       C2   H23               !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        P1   O3   O4   O1   O2   C1   H11  H12  H13  C2   H21  H22  H23
+*-------------------------------------------------------------
+{MP_0}                 ! Methylphosphate, neutral
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 C1     CN9         -0.170 !At. no., name, iac, charge
+         2 O1     ON2         -0.560 !At. no., name, iac, charge
+         3 P1     P            1.500 !At. no., name, iac, charge
+         4 O2     ON4         -0.630 !At. no., name, iac, charge
+         5 O3     ON4         -0.630 !At. no., name, iac, charge
+         6 O4     ON3         -0.640 !At. no., name, iac, charge
+         7 H11    HN7          0.090 !At. no., name, iac, charge
+         8 H12    HN7          0.090 !At. no., name, iac, charge
+         9 H13    HN7          0.090 !At. no., name, iac, charge
+        10 H2     HN4          0.430 !At. no., name, iac, charge
+        11 H3     HN4          0.430 !At. no., name, iac, charge
+    [bonds]
+       P1   O1                !connect i -- j
+       P1   O2                !connect i -- j
+       P1   O3                !connect i -- j
+       P1   O4                !connect i -- j
+       O1   C1                !connect i -- j
+       C1   H11               !connect i -- j
+       C1   H12               !connect i -- j
+       C1   H13               !connect i -- j
+       O2   H2                !connect i -- j
+       O3   H3                !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        C1   O1   P1   O2   O3   O4   H11  H12  H13  H2   H3 
+*-------------------------------------------------------------
+{MP_1}                 ! Methylphosphate, anionic
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 C1     CN9         -0.170 !At. no., name, iac, charge
+         2 O1     ON2         -0.620 !At. no., name, iac, charge
+         3 P1     P            1.500 !At. no., name, iac, charge
+         4 O2     ON4         -0.680 !At. no., name, iac, charge
+         5 O3     ON3         -0.820 !At. no., name, iac, charge
+         6 O4     ON3         -0.820 !At. no., name, iac, charge
+         7 H11    HN7          0.090 !At. no., name, iac, charge
+         8 H12    HN7          0.090 !At. no., name, iac, charge
+         9 H13    HN7          0.090 !At. no., name, iac, charge
+        10 H2     HN4          0.340 !At. no., name, iac, charge
+    [bonds]
+       P1   O1                !connect i -- j
+       P1   O2                !connect i -- j
+       P1   O3                !connect i -- j
+       P1   O4                !connect i -- j
+       O1   C1                !connect i -- j
+       C1   H11               !connect i -- j
+       C1   H12               !connect i -- j
+       C1   H13               !connect i -- j
+       O2   H2                !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        C1   O1   P1   O2   O3   O4   H11  H12  H13  H2 
+*-------------------------------------------------------------
+{MP_2}                 ! Methylphosphate, dianionic 
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 P1     P            1.100 !At. no., name, iac, charge
+         2 O1     ON2         -0.400 !At. no., name, iac, charge
+         3 O2     ON3         -0.900 !At. no., name, iac, charge
+         4 O3     ON3         -0.900 !At. no., name, iac, charge
+         5 O4     ON3         -0.900 !At. no., name, iac, charge
+         6 C1     CN9         -0.270 !At. no., name, iac, charge
+         7 H11    HN7          0.090 !At. no., name, iac, charge
+         8 H12    HN7          0.090 !At. no., name, iac, charge
+         9 H13    HN7          0.090 !At. no., name, iac, charge
+    [bonds]
+       P1   O1                !connect i -- j
+       P1   O2                !connect i -- j
+       P1   O3                !connect i -- j
+       P1   O4                !connect i -- j
+       O1   C1                !connect i -- j
+       C1   H11               !connect i -- j
+       C1   H12               !connect i -- j
+       C1   H13               !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        P1   O1   O2   O3   O4 
+        C1   H11  H12  H13
+*-------------------------------------------------------------
+{TIP3}                 ! TIPS3P WATER MODEL  
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 OH2    OT          -0.834 !At. no., name, iac, charge
+         2 H1     HT           0.417 !At. no., name, iac, charge
+         3 H2     HT           0.417 !At. no., name, iac, charge
+    [bonds]
+       OH2  H1                !connect i -- j
+       OH2  H2                !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        OH2  H1   H2 
+*-------------------------------------------------------------
+{WAT}                 ! tip3p water model, generate using noangle nodihedral (Kopierad från  aa.lib 030318/StT)
+    [info]
+        SYBYLtype  GROUP
+        solvent 1
+        density 0.0335
+    [atoms]
+         1 OH2    OT          -0.834
+         2 H1     HT           0.417
+         3 H2     HT           0.417
+    [bonds]
+       OH2  H1
+       OH2  H2
+       H1   H2 !for shake
+    [connections]
+        head     OH2
+        tail     H1
+    [impropers]
+    [charge_groups]
+        OH2  H1   H2
+*-------------------------------------------------------------
+{WAT1}                 ! TIPS3P WATER MODEL  (Ursprunglig i Karins .lib. Namn ändras från wat till wat1 030317/StT)
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 OW     OT          -0.834 !At. no., name, iac, charge
+         2 H1     HT           0.417 !At. no., name, iac, charge
+         3 H2     HT           0.417 !At. no., name, iac, charge
+    [bonds]
+       OW  H1                !connect i -- j
+       OW  H2                !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        OW  H1   H2 
+*-------------------------------------------------------------
+{SOD}                 ! Sodium Ion
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+         1 SOD    SOD          1.000 !At. no., name, iac, charge
+    [bonds]
+    [connections]   !how to bond to previous and next
+        head     
+        tail     
+    [impropers]
+    [charge_groups] !charge groups, with switch atom first
+       SOD
+*-------------------------------------------------------------
+{RIBT}                 ! RIBOSE, Wilma Olson's dihedral model, which has a 1'amino and a 5'methyl group (as in her paper)
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 C5'    CN9         -0.270 !At. no., name, iac, charge
+         2 H51    HN7          0.090 !At. no., name, iac, charge
+         3 H52    HN7          0.090 !At. no., name, iac, charge
+         4 H53    HN7          0.090 !At. no., name, iac, charge
+         5 N1     NN5         -0.200 !At. no., name, iac, charge
+         6 HN1    HN1          0.100 !At. no., name, iac, charge
+         7 HN2    HN1          0.100 !At. no., name, iac, charge
+         8 C2'    CN6          0.140 !At. no., name, iac, charge
+         9 H2''   HN6          0.090 !At. no., name, iac, charge
+        10 O2'    ON5         -0.660 !At. no., name, iac, charge
+        11 H2'    HN5          0.430 !At. no., name, iac, charge
+        12 C3'    CN6          0.140 !At. no., name, iac, charge
+        13 H3'    HN6          0.090 !At. no., name, iac, charge
+        14 O3'    ON5         -0.660 !At. no., name, iac, charge
+        15 H3T    HN5          0.430 !At. no., name, iac, charge
+        16 C1'    CN6B         0.110 !At. no., name, iac, charge
+        17 H1'    HN6          0.090 !At. no., name, iac, charge
+        18 C4'    CN6          0.110 !At. no., name, iac, charge
+        19 H4'    HN6          0.090 !At. no., name, iac, charge
+        20 O4'    ON6         -0.400 !At. no., name, iac, charge
+    [bonds]
+    [connections]   !how to bond to previous and next
+        head     
+        tail     
+    [impropers]
+    [charge_groups] !charge groups, with switch atom first
+        C5'  H51  H52  H53     
+        N1   HN1  HN2    
+        C2'  H2''  O2'  H2'    
+        C3'  H3'  O3'  H3T    
+        C1'  H1'  C4'  H4'  O4'    
+*-------------------------------------------------------------
+{DEOT}                 ! DEOXYRIBOSE, Wilma Olson's dihedral model
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 C5'    CN9         -0.270 !At. no., name, iac, charge
+         2 H51    HN7          0.090 !At. no., name, iac, charge
+         3 H52    HN7          0.090 !At. no., name, iac, charge
+         4 H53    HN7          0.090 !At. no., name, iac, charge
+         5 N1     NN5         -0.200 !At. no., name, iac, charge
+         6 HN1    HN1          0.100 !At. no., name, iac, charge
+         7 HN2    HN1          0.100 !At. no., name, iac, charge
+         8 C2'    CN6C        -0.180 !At. no., name, iac, charge
+         9 H2'    HN6          0.090 !At. no., name, iac, charge
+        10 H2''   HN6          0.090 !At. no., name, iac, charge
+        11 C3'    CN6          0.140 !At. no., name, iac, charge
+        12 H3'    HN6          0.090 !At. no., name, iac, charge
+        13 O3'    ON5         -0.660 !At. no., name, iac, charge
+        14 H3T    HN5          0.430 !At. no., name, iac, charge
+        15 C1'    CN6B         0.110 !At. no., name, iac, charge
+        16 H1'    HN6          0.090 !At. no., name, iac, charge
+        17 C4'    CN6          0.110 !At. no., name, iac, charge
+        18 H4'    HN6          0.090 !At. no., name, iac, charge
+        19 O4'    ON6         -0.400 !At. no., name, iac, charge
+    [bonds]
+       C1'  O4'               !connect i -- j
+       C1'  H1'               !connect i -- j
+       C1'  N1                !connect i -- j
+       N1   HN1               !connect i -- j
+       N1   HN2               !connect i -- j
+       C1'  C2'               !connect i -- j
+       C2'  H2'               !connect i -- j
+       C2'  H2''              !connect i -- j
+       C2'  C3'               !connect i -- j
+       C3'  H3'               !connect i -- j
+       C3'  O3'               !connect i -- j
+       O3'  H3T               !connect i -- j
+       C3'  C4'               !connect i -- j
+       C4'  O4'               !connect i -- j
+       C4'  H4'               !connect i -- j
+       C4'  C5'               !connect i -- j
+       C5'  H51               !connect i -- j
+       C5'  H52               !connect i -- j
+       C5'  H53               !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     
+        tail     
+    [impropers]
+    [charge_groups] !charge groups, with switch atom first
+        C5'  H51  H52  H53
+        N1   HN1  HN2
+        C2'  H2'  H2''
+        C3'  H3'  O3'  H3T
+        C1'  H1'  C4'  H4'  O4'
+*-------------------------------------------------------------
+{MG}                 !    
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+    1 MG     MG    2.00 
+    [charge_groups] !charge groups, with switch atom first
+        MG 
+*-------------------------------------------------------------
+{K}                 !    
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+    1 K      K     1.00 
+    [charge_groups] !charge groups, with switch atom first
+        K 
+*-------------------------------------------------------------
+{ZN}                 !    
+    [info]
+        SYBYLtype  GROUP     !SYBYL substructure type
+    [atoms]
+    1 ZN     ZN    2.00 
+    [charge_groups] !charge groups, with switch atom first
+        ZN 
+*-------------------------------------------------------------
