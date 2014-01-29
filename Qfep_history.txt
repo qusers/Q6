@@ -1,0 +1,32 @@
+Qfep version history
+* Release 4.00, 2000-02-08
+	Is identical to 3.75
+
+* Release 3.75, 2000-02-08
+	Average energies printed now reflect the skipping of data points. 
+	Previously, the averages were always over all the data in the energy 
+	file.
+	Improved the handling of read errors due to wrong number of off-
+	diagonal functions in the energy file.
+
+* Release 3.4, 99-04-15
+	Dynamic allocation of all large arrays avoids exessive memory usage and 
+	makes the program run faster (less swapping).
+
+* Release 3.32, 99-04-14
+	Added 'Bin-averaged summary'.
+
+* Release 3.31, 99-04-13
+	Removed hard-coded maximum number of energy files (=100). 
+
+* Release 3.3, 99-03-31
+	Changed format of output to be able to use the output as is in gnuplot
+	gnuplot index 0 = average energies (one long line for each state in each file)
+	gnuplot index 1 = FEP summary
+	gnuplot index 2 = reaction free energy
+	Writes prompts to standard error if possible. This means one can run
+	Qfep3 > fep.log  and still run the program interactively.
+
+* Release 3.2, 98-05-09
+	Changed format of offdiagonals in energy file to be same as old Qdyn/Qfep.
+	Now reports module versions.
