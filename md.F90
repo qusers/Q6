@@ -1967,7 +1967,7 @@ integer					:: nat3
 real(kind=wp8), allocatable		:: temp_lambda(:)
 integer, parameter                      ::maxint=2147483647
 real(kind=wp8), parameter                        ::maxreal=1E35
-integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop, nljtyp3
+integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 
 !external MPI_Address
 !external MPI_Bcast
@@ -1992,21 +1992,16 @@ integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop, nljtyp3
 !To check the size in bytes of the new types use
 !call MPI_SizeOf(MPI_AI_INTEGER,size,ierr)
 !call MPI_SizeOf(MPI_TINY_INTEGER,size,ierr)
+!***************************
 
-nljtyp3=3
 
 if (nodeid .eq. 0) call centered_heading('Distributing data to slave nodes', '-')
-!***************************
 
 ! --- mandatory data, first batch ---
 
 if (nodeid .eq. 0) write (*,'(80a)') 'MD data, first batch'
 
 ! Broadcast some initial variables
-blockcnt(:) = 1
-ftype(:) = MPI_INTEGER
-
-
 
 ! run control constants: natom, nwat, nsteps, NBmethod, NBcycle
 call MPI_Bcast(natom, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2068,10 +2063,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast put_solute_back_in_box')
 ! xpcent            from TOPO, needed for listgeneration
 call MPI_Bcast(xpcent, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast xpcent')
-ftype(20) = MPI_REAL8
-blockcnt(20) = 3
-call MPI_Get_Address (xpcent, fdisp(20), ierr)
-
 
 !**MN-> Behövs om shake ska parallelliseras
 ! shake/temperature parameters
@@ -4071,8 +4062,6 @@ end if
 #ifndef DUM
 do istep = 0, nsteps-1
 #endif
-!change volume
-
         if ( mod(istep, NBcycle) .eq. 0 ) then
 
 
@@ -4133,14 +4122,6 @@ do istep = 0, nsteps-1
 #endif
 
 
-
-		! do MC_volume step here, after NBupdate for consistency with LRFs and such.
-		! Implies a limitation in the volume_update interval, i.e. mod(volume_update,nb_update)=0
-				if( use_PBC .and. constant_pressure) then
-				   if( mod(istep, ivolume_cycle)==0 .and. istep>0 ) then
-					  call MC_volume
-				   end if
-				end if
 
         end if ! every NBcycle steps
 
@@ -4228,6 +4209,12 @@ profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 end if !if(nodeid .eq. 0)
 
 
+!change volume
+if( use_PBC .and. constant_pressure) then
+   if( mod(istep, ivolume_cycle)==0 .and. istep>0 ) then
+      call MC_volume
+   end if
+end if
 
 #if defined(USE_MPI)
 call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
@@ -13463,8 +13450,7 @@ start_loop_time1 = rtime()
 #endif
 call pot_energy_bonds
 #if defined (PROFILING)
-start_loop_time3 = rtime()
-profile(8)%time = profile(8)%time + start_loop_time3 - start_loop_time1
+profile(8)%time = profile(8)%time + rtime() - start_loop_time1
 #endif
 
 ! various restraints
@@ -13481,9 +13467,6 @@ if( .not. use_PBC ) then
         end if
 end if
 
-#if defined (PROFILING)
-profile(9)%time = profile(9)%time + rtime() - start_loop_time3
-#endif
 ! q-q nonbonded interactions
 if(.not. qq_use_library_charges) then
         if(ivdw_rule .eq. 1 ) then
@@ -13819,7 +13802,7 @@ subroutine make_shell
    end if
 	end do
 	write(*,105) nshellats, rexcl_i, rexcl_o
-105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,'Å)')
+105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,')')
 end subroutine make_shell
 
 !------------------------------------------------------------------------
@@ -15920,7 +15903,7 @@ end if
 call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('MC_volume/MPI_Bcast x')
 call MPI_Bcast(xx, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('MC_volume/MPI_Bcast x')
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 call MPI_Bcast(boxlength, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(inv_boxl, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 #endif
