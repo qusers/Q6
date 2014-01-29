@@ -9,16 +9,38 @@ Q is a set of Molecular Dynamics (MD) tools tailored to specific kinds of free e
 3. Linear Interaction Energies (LIE)
 
 ## Installation
-The current compilation works in Mac OSX 10.9.1 using gfortran via fink.
-So, in order for it to compile you will first have to make sure that
-gfortran is installed in your fink folder and also that fink has been started, i.e.:
-source /sw/bin/init.sh
+The current makefiles make it relatively easy to compile the code in a linux or mac OSX environment.
+You have to make sure first that gfortran is installed and if you want to compile the MPI version
+you also have to make sure that openmpi is installed.
 
+To install in a linux environment you have to move to the src/ folder and rename the correponding
+makefile.
+```bash
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+cp makefile.linux makefile
+make all
+make clean
+```
+
+Or for MPI compilation:
+```bash
+make mpi
+```
+
+As the included makefiles use gfortran and/or mpif90 one needs to use fink, macports or homebrew in Mac's
+OSX 10.9.1. We've tested with fink, but it should compile without major problems using the others.
+In order to compile in a MAC you should call the fink environment first, usually with:
+
+```bash
+source /sw/bin/init.sh
+```
+
+Then you proceed as in linux
 ```bash
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
 cp makefile.osx makefile
-source /sw/bin/init.sh
 make all
 make clean
 ```
@@ -54,10 +76,11 @@ Qprep>
 NOTES:
 =========
 
+29/01/2014
+Changed fortran source to Paul's current version.
+
 20/01/2014
 
 In order to compile using gfortran with Alexandre Barrozo's additional subroutine for angle constraints
-it's necessary to turn off the flush and iargc symbols.
-
-
+it was necessary to turn off the flush and iargc symbols.
 

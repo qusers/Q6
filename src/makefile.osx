@@ -38,8 +38,8 @@ debug:
 	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
 mpi:	
-	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
-	qdyn5p
+	@make FC_OPT=-'O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
+	qdyn5p 
 
 mpi_debug:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
@@ -210,7 +210,7 @@ move1:
 	mkdir ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdyn5p qdum5 qcalc5 ../bin/
 #
 ###
 

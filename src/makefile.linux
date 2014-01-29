@@ -209,7 +209,7 @@ move1:
 	mkdir ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdyn5p qdum5 qcalc5 ../bin/
 #
 ###
 
