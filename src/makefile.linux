@@ -45,10 +45,10 @@ mpi_debug:
 	qdyn5p
 
 clean:
-	-rm -f *.o *.F90 *.mod *.M *.kmo *.il
+	-rm -f *.o  *.mod *.M *.kmo *.il
 
 nuke:
-	-rm -f *.o *.F90 *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5
+	-rm -f *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5
 
 qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o 
 
