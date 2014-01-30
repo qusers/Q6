@@ -39,7 +39,7 @@ debug:
 
 mpi:	
 	@make FC_OPT=-'O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
-	qdyn5p move1 move2
+	qdyn5p move1 move3
 
 mpi_debug:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
@@ -207,10 +207,12 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
-	mkdir ../obj ; mv *.o *.mod ../obj/
+	mkdir -p ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdyn5p qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+move3:
+	mkdir -p ../bin ; mv qdyn5p ../bin/
 #
 ###
 
