@@ -1,0 +1,103 @@
+*------------------------------------------------
+*
+*Q-FF parameters: CHARMM27 parameters
+*------------------------------------------------
+[options] force-field options
+name            Q-charmm27 nucleic acids
+vdw_rule    arithmetic   ! vdW combination rule (geometric or arithmetic )
+scale_14         1.0         ! electrostatic 1-4 scaling factor
+switch_atoms  off	! on = use switch atom; off = use charge group
+improper_definition explicit ! improper representation by 2 or four atoms
+improper_potential	harmonic
+coulomb_constant 332.0716    ! Constant in electrostatic energy calculation; default = 332.
+force_field CHARMM           ! Force Field Type (GROMOS (default), AMBER or CHARMM)
+
+[atom_types] atom type definitions
+*-iac------Avdw1------Avdw2-----Bvdw1------Avdw3-----Bvdw2&3----mass---SYBYL-name-old-comment
+*--------------------------------------------------
+
+[bonds] types definitions
+*iaci iacj   force.c.  dist.
+*------------------------------------------------
+HCMM    CR         685.982   1.093
+HOR     OR        1121.810   0.972
+O2CM    PO4       1194.064   1.510
+OR      CR         726.428   1.418
+CR      CR         612.864   1.508
+PO4     OR         754.638   1.630
+*------------------------------------------------
+
+[angles] angle type definitions
+* iaci iacj iack  forceK angle0
+*------------------------------------------------
+CR      OR      CR        172.286 106.9260   0.00    0.00000
+OR      CR      OR        166.384 111.3680   0.00    0.00000
+OR      CR      HCMM      112.410 108.5770   0.00    0.00000
+OR      CR      CR        142.780 108.1330   0.00    0.00000
+HCMM    CR      CR        91.540 110.5490   0.00    0.00000
+CR      OR      PO4       157.604 115.5810   0.00    0.00000
+CR      CR      CR        122.486 109.6080   0.00    0.00000
+CR      OR      HOR       114.138 106.5030   0.00    0.00000
+HCMM    CR      HCMM      74.268 108.8360   0.00    0.00000
+OR      PO4     O2CM      216.040 109.6880   0.00    0.00000
+O2CM    PO4     O2CM      179.626 122.8570   0.00    0.00000
+*------------------------------------------------
+
+[torsions] torsion type definitions
+*iaci iacj iack iacl  forceK  #minima phase   #paths
+*------------------------------------------------
+OR      CR      OR      PO4        0.100   3.000    0.000     1
+OR      CR      CR      OR         0.204   1.000    0.000     1
+OR      CR      CR      OR         0.699   2.000  180.000     1
+OR      CR      CR      OR         0.480   3.000    0.000     1
+OR      CR      CR      HCMM       0.536   2.000  180.000     1
+OR      CR      CR      HCMM       0.140   3.000    0.000     1
+OR      CR      CR      CR         0.878   2.000  180.000     1
+OR      CR      CR      CR         0.238   3.000    0.000     1
+CR      OR      CR      CR         0.378   2.000  180.000     1
+CR      OR      CR      CR         0.378   3.000    0.000     1
+CR      OR      CR      HCMM       0.285   1.000    0.000     1
+CR      OR      CR      HCMM       0.160   2.000  180.000     1
+CR      OR      CR      HCMM       0.285   3.000    0.000     1
+CR      OR      PO4     O2CM       0.603   1.000    0.000     1
+CR      OR      PO4     O2CM       0.457   2.000  180.000     1
+CR      OR      PO4     O2CM       0.306   3.000    0.000     1
+CR      CR      OR      HOR        0.135   2.000  180.000     1
+CR      CR      OR      HOR        0.118   3.000    0.000     1
+CR      CR      CR      HCMM       0.320   1.000    0.000     1
+CR      CR      CR      HCMM       0.132   3.000    0.000     1
+CR      CR      CR      CR         0.051   1.000    0.000     1
+CR      CR      CR      CR         0.341   2.000  180.000     1
+CR      CR      CR      CR         0.166   3.000    0.000     1
+OR      CR      OR      CR         0.115   1.000    0.000     1
+OR      CR      OR      CR         0.361   3.000    0.000     1
+HCMM    CR      OR      PO4        0.030   3.000    0.000     1
+HCMM    CR      CR      HCMM       0.142   1.000    0.000     1
+HCMM    CR      CR      HCMM       0.157   3.000    0.000     1
+CR      CR      OR      PO4        0.100   3.000    0.000     1
+HCMM    CR      OR      HOR        0.298   1.000    0.000     1
+HCMM    CR      OR      HOR        0.173   3.000    0.000     1
+CR      OR      OR      CR         0.000   0.000    0.000     1
+CR      OR      OR      HCMM       0.000   0.000    0.000     1
+CR      CR      CR      OR         0.000   0.000    0.000     1
+CR      CR      CR      HCMM       0.000   0.000    0.000     1
+CR      CR      OR      CR         0.000   0.000    0.000     1
+CR      CR      OR      HCMM       0.000   0.000    0.000     1
+CR      OR      CR      HCMM       0.000   0.000    0.000     1
+CR      HCMM    CR      HCMM       0.000   0.000    0.000     1
+PO4     O2CM    OR      O2CM       0.000   0.000    0.000     1
+*------------------------------------------------
+
+[impropers] improper torsion type definitions
+*iaci iacj forceK   imp0
+*------------------------------------------------
+CR      OR      OR      CR         0.000    0.000
+CR      OR      OR      HCMM       0.000    0.000
+CR      CR      CR      OR         0.000    0.000
+CR      CR      CR      HCMM       0.000    0.000
+CR      CR      OR      CR         0.000    0.000
+CR      CR      OR      HCMM       0.000    0.000
+CR      OR      CR      HCMM       0.000    0.000
+CR      HCMM    CR      HCMM       0.000    0.000
+PO4     O2CM    OR      O2CM       0.000    0.000
+*------------------------------------------------

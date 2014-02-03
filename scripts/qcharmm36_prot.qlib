@@ -1,0 +1,86 @@
+*------------------------------------------------------------------
+*
+* Q residue library file: CHARMM36 library
+*
+*------------------------------------------------------------------
+{LIG}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 O0     OR          -0.560
+         2 C1     CR           0.560
+         3 O1     OR          -0.551
+         4 H1     HCMM         0.000
+         5 C2     CR           0.280
+         6 O2     OR          -0.680
+         7 H21    HCMM         0.000
+         8 H22    HOR          0.400
+         9 C3     CR           0.280
+        10 O3     OR          -0.680
+        11 H31    HCMM         0.000
+        12 H32    HOR          0.400
+        13 C4     CR           0.280
+        14 O4     OR          -0.680
+        15 H41    HCMM         0.000
+        16 H42    HOR          0.400
+        17 C5     CR           0.280
+        18 H5     HCMM         0.000
+        19 C6     CR           0.280
+        20 O6     OR          -0.680
+        21 H61    HCMM         0.000
+        22 H62    HCMM         0.000
+        23 HO6    HOR          0.400
+        24 PO1    PO4          1.371
+        25 O1P    O2CM        -1.033
+        26 O2P    O2CM        -1.033
+        27 O3P    O2CM        -1.033
+    [bonds]
+       H5   C5                !connect i -- j
+       HO6  O6                !connect i -- j
+       O3P  PO1               !connect i -- j
+       H61  C6                !connect i -- j
+       H1   C1                !connect i -- j
+       O2P  PO1               !connect i -- j
+       O6   C6                !connect i -- j
+       H31  C3                !connect i -- j
+       C5   C6                !connect i -- j
+       C5   O0                !connect i -- j
+       C5   C4                !connect i -- j
+       O4   H42               !connect i -- j
+       O4   C4                !connect i -- j
+       C6   H62               !connect i -- j
+       PO1  O1                !connect i -- j
+       PO1  O1P               !connect i -- j
+       C1   O0                !connect i -- j
+       C1   O1                !connect i -- j
+       C1   C2                !connect i -- j
+       C4   C3                !connect i -- j
+       C4   H41               !connect i -- j
+       C3   C2                !connect i -- j
+       C3   O3                !connect i -- j
+       O2   C2                !connect i -- j
+       O2   H22               !connect i -- j
+       C2   H21               !connect i -- j
+       O3   H32               !connect i -- j
+    [connections]   !how to bond to previous and next
+        head     P  
+        tail     O3'
+    [impropers]
+        C1     O1     O0     C2
+    [charge_groups] !charge groups, with switch atom first
+
+    O0    C1    O1    H1    C2    O2    H21    H22    C3    O3    H31    H32    C4    O4    H41    H42    C5    H5    C6    O6    H61    H62    HO6    PO1    O1P    O2P    O3P
+        C1     O1     O0     H1
+        C2     C3     C1     O2
+        C2     C3     C1    H21
+        C3     C4     C2     O3
+        C3     C4     C2    H31
+        C4     C5     C3     O4
+        C4     C5     C3    H41
+        C5     C4     O0     C6
+        C5     C6     O0     H5
+        C6     O6     C5    H61
+        C6    H61     C5    H62
+       PO1    O3P     O1    O2P
+       PO1    O3P     O1    O1P
+*------------------------------------------------------------------

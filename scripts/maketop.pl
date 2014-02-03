@@ -2,17 +2,17 @@
 use strict; 
 use warnings;
 
-if( @ARGV < 2) # is less than two arguments
-{
-    print "Usage: charmm36top_2_qtop.pl charmmtop qtop ";
-    exit 0;
-}
-else {
-#open IN , "<top_all36_prot.rtf" or die $!;
-open(IN,$ARGV[0])  || die "Cannot open file \"$ARGV[0]\"";
-open OUT , ">qcharmm36_prot.qlib" or die $!;
+#if( @ARGV < 2) # is less than two arguments
+#{
+#    print "Usage: charmm36top_2_qtop.pl charmmtop qtop ";
+#    exit 0;
+#}
+#else {
+open IN , "<G1P.rtf" or die $!;
+#open(IN,$ARGV[0])  || die "Cannot open file \"$ARGV[0]\"";
+open OUT , ">G1P.qlib" or die $!;
 #open(OUT,$ARGV[1]) || die "Cannot open file \"$ARGV[1]\"";
-}
+#}
 
 
 

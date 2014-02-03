@@ -827,3 +827,77 @@
     [charge_groups] !charge groups, with switch atom first
         ZN 
 *-------------------------------------------------------------
+{G1P}
+    [info]
+        SYBYLtype  RESIDUE     !SYBYL substructure type
+    [atoms]
+         1 O0     OG3C61      -0.390
+         2 C1     CG311        0.116
+         3 O1     OG303       -0.416
+         4 H1     HGA1         0.090
+         5 C2     CG311        0.154
+         6 O2     OG311       -0.657
+         7 H21    HGA1         0.090
+         8 H22    HGP1         0.419
+         9 C3     CG311        0.146
+        10 O3     OG311       -0.655
+        11 H31    HGA1         0.090
+        12 H32    HGP1         0.419
+        13 C4     CG311        0.148
+        14 O4     OG311       -0.655
+        15 H41    HGA1         0.090
+        16 H42    HGP1         0.419
+        17 C5     CG311        0.098
+        18 H5     HGA1         0.090
+        19 C6     CG321        0.055
+        20 O6     OG311       -0.651
+        21 H61    HGA2         0.090
+        22 H62    HGA2         0.090
+        23 HO6    HGP1         0.421
+        24 PO1    PG2          1.099
+        25 O1P    OG2P1       -0.900
+        26 O2P    OG2P1       -0.900
+        27 O3P    OG2P1       -0.900
+    [bonds]
+       H5   C5                !connect i -- j
+       HO6  O6                !connect i -- j
+       O3P  PO1               !connect i -- j
+       H61  C6                !connect i -- j
+       H1   C1                !connect i -- j
+       O2P  PO1               !connect i -- j
+       O6   C6                !connect i -- j
+       H31  C3                !connect i -- j
+       C5   C6                !connect i -- j
+       C5   O0                !connect i -- j
+       C5   C4                !connect i -- j
+       O4   H42               !connect i -- j
+       O4   C4                !connect i -- j
+       C6   H62               !connect i -- j
+       PO1  O1                !connect i -- j
+       PO1  O1P               !connect i -- j
+       C1   O0                !connect i -- j
+       C1   O1                !connect i -- j
+       C1   C2                !connect i -- j
+       C4   C3                !connect i -- j
+       C4   H41               !connect i -- j
+       C3   C2                !connect i -- j
+       C3   O3                !connect i -- j
+       O2   C2                !connect i -- j
+       O2   H22               !connect i -- j
+       C2   H21               !connect i -- j
+       O3   H32               !connect i -- j
+    [charge_groups] !charge groups, with switch atom first
+        C1     O1     O0     H1
+        C2     C3     C1     O2
+        C2     C3     C1    H21
+        C3     C4     C2     O3
+        C3     C4     C2    H31
+        C4     C5     C3     O4
+        C4     C5     C3    H41
+        C5     C4     O0     C6
+        C5     C6     O0     H5
+        C6     O6     C5    H61
+        C6    H61     C5    H62
+       PO1    O3P     O1    O2P
+       PO1    O3P     O1    O1P
+*------------------------------------------------------------------
