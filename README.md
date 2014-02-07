@@ -76,7 +76,14 @@ Qprep>
 NOTES:
 =========
 
+07/02/2014
+
+Checked that the code compiles in Mac OSX Mavericks natively using Xcode developer tools and compiled recent versions of gcc and gfortran from:
+
+http://goo.gl/pk5nq5
+
 29/01/2014
+
 Changed fortran source to Paul's current version.
 
 20/01/2014
