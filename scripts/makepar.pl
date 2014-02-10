@@ -2,21 +2,8 @@
 use strict;
 use warnings;
 
-if( @ARGV < 3) # is less than two arguments
-{
-    print "Usage: charmm36top_2_qpar.pl charmmtop charmmpar qpar ";
-    exit 0;
-}
-else {
-#open IN , "<top_all36_prot.rtf" or die $!;
-open(IN1,$ARGV[0])  || die "Cannot open file \"$ARGV[0]\"";
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
-open OUT , ">qcharmm36_prot.prm" or die $!;
-#open(OUT,$ARGV[1]) || die "Cannot open file \"$ARGV[1]\"";
-}
+open OUT , ">qG1P.prm" or die $!;
 
-#open OUT , ">qcharmm36_prot.prm" or die $!;
-#open OUT , "<>" or die $!;
 select OUT;
 
 print "*------------------------------------------------\n";
@@ -35,24 +22,25 @@ print "force_field CHARMM           ! Force Field Type (GROMOS (default), AMBER 
 print "[atom_types] atom type definitions\n";
 print "*-iac------Avdw1------Avdw2-----Bvdw1------Avdw3-----Bvdw2&3----mass---SYBYL-name-old-comment\n";
 
-#open IN1 , "<top_all36_prot.rtf" or die $!;
-open(IN1,$ARGV[0])  || die "Cannot open file \"$ARGV[0]\"";
+open IN1 , "<G1P.rtf" or die $!;
+#open(IN1,$ARGV[0])  || die "Cannot open file \"$ARGV[0]\"";
 
 my $counter1 = 0;
 my @atomtype;
 my @mass;
 
 while (<IN1>) {
-     if ($_ =~ /^(MASS)\s+[0-9]+\s+(\w+)\s+([0-9]+\.[0-9]+)/) {
+     if ($_ =~ /(MASS)\s+[0-9]+\s+(\w+)\s+([0-9]+\.[0-9]+)/) {
+#     if ($_ =~ /(MASS)\s+0\.0\s+(\-[0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)/) {	 
           $atomtype[$counter1] = $2;
           $mass[$counter1] = $3;
           $counter1++;
      }
 }
 
-#open IN2 , "<par_all36_prot.prm" or die $!;
+open IN2 , "<G1P.par" or die $!;
 #open IN2 , "<>" or die $!;
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+#open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
 
 while (<IN2>) {
       if ($_ =~ /^(\w+)\s+0\.0\s+(\-[0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)/) {
@@ -69,9 +57,9 @@ print "[bonds] types definitions\n";
 print "*iaci iacj   force.c.  dist.\n";
 print "*------------------------------------------------\n";
 
-#open IN2 , "<par_all36_prot.prm" or die $!;
+open IN2 , "<G1P.par" or die $!;
 #open IN2 , "<>" or die $!;
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+#open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
 
 while (<IN2>) {
       if ($_ =~ /^(\w+)\s+(\w+)\s+([0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)/) {
@@ -84,9 +72,9 @@ print "[angles] angle type definitions\n";
 print "* iaci iacj iack  forceK angle0\n";
 print "*------------------------------------------------\n";
 
-#open IN2 , "<par_all36_prot.prm" or die $!;
+open IN2 , "<G1P.par" or die $!;
 #open IN2 , "<>" or die $!;
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+#open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
 
 while (<IN2>) {
       if ($_ =~ /^(\w+)\s+(\w+)\s+(\w+)\s+([0-9]+\.[0-9]+)\s+([0-9]+\.[0-9]+)\s*([0-9]+\.[0-9]+)?\s*([0-9]+\.[0-9]+)?/) {
@@ -105,7 +93,8 @@ print "*iaci iacj iack iacl  forceK  #minima phase   #paths\n";
 print "*------------------------------------------------\n";
 
 #open IN2 , "<>" or die $!;
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+open IN2 , "<G1P.par" or die $!;
+#open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
 
 while (<IN2>) {
      if ($_ =~ /^(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+([0-9]+\.[0-9]+)\s+([0-9]+)\s+(\-?[0-9]+\.[0-9]+)/) {
@@ -125,7 +114,8 @@ print "*iaci iacj forceK   imp0\n";
 print "*------------------------------------------------\n";
 
 #open IN2 , "<>" or die $!;
-open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+#open(IN2,$ARGV[1])  || die "Cannot open file \"$ARGV[1]\"";
+open IN2 , "<G1P.par" or die $!;
 
 while (<IN2>) {
     if ($_ =~ /(\w+)\s+(\w+)\s+(\w+)\s+(\w+)\s+(\-?[0-9]+\.[0-9]+)\s+(0)\s+([0-9]+\.[0-9]+)/) {
