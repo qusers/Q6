@@ -10,8 +10,18 @@ Q is a set of Molecular Dynamics (MD) tools tailored to specific kinds of free e
 
 ## Installation
 The current makefiles make it relatively easy to compile the code in a linux or mac OSX environment.
+
 You have to make sure first that gfortran is installed and if you want to compile the MPI version
 you also have to make sure that openmpi is installed.
+
+If you're using gfortran make sure that you have version 4.9 or later. This applies both to compilation in mac and linux.
+To make sure that you have version 4.9 or later use:
+
+```bash
+gfortran -v
+```
+
+Right before issuing the "make all" command.
 
 To install in a linux environment you have to move to the src/ folder and rename the correponding
 makefile.
@@ -45,7 +55,7 @@ make all
 make clean
 ```
 
-This will take care of redirecting the binaries and object files to folders for code tidyness.
+This will take care of redirecting the binaries and object files to standard bin and obj folders for code tidyness.
 
 After this you have to add the program to your system path by modifying your shell initiation script, that is,
 if your shell is bash you can add the following line to your .bashrc file:
@@ -75,6 +85,12 @@ Qprep>
 
 NOTES:
 =========
+
+10/02/2014
+
+If one compiles with older versions of gfortran, say, 4.6, a compilation error will come up when compiling the qcalc program at the rdf file.
+This issue is not present in the ifortran compilation at all as the fortran code seemingly makes good use of intel fortran options.
+
 
 07/02/2014
 
