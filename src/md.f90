@@ -1967,7 +1967,7 @@ integer					:: nat3
 real(kind=wp8), allocatable		:: temp_lambda(:)
 integer, parameter                      ::maxint=2147483647
 real(kind=wp8), parameter                        ::maxreal=1E35
-integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop, nljtyp3
+integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 
 !external MPI_Address
 !external MPI_Bcast
@@ -1993,7 +1993,6 @@ integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop, nljtyp3
 !call MPI_SizeOf(MPI_AI_INTEGER,size,ierr)
 !call MPI_SizeOf(MPI_TINY_INTEGER,size,ierr)
 
-nljtyp3=3
 
 if (nodeid .eq. 0) call centered_heading('Distributing data to slave nodes', '-')
 !***************************
@@ -2003,10 +2002,6 @@ if (nodeid .eq. 0) call centered_heading('Distributing data to slave nodes', '-'
 if (nodeid .eq. 0) write (*,'(80a)') 'MD data, first batch'
 
 ! Broadcast some initial variables
-blockcnt(:) = 1
-ftype(:) = MPI_INTEGER
-
-
 
 ! run control constants: natom, nwat, nsteps, NBmethod, NBcycle
 call MPI_Bcast(natom, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2068,10 +2063,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast put_solute_back_in_box')
 ! xpcent            from TOPO, needed for listgeneration
 call MPI_Bcast(xpcent, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast xpcent')
-ftype(20) = MPI_REAL8
-blockcnt(20) = 3
-call MPI_Get_Address (xpcent, fdisp(20), ierr)
-
 
 !**MN-> Behövs om shake ska parallelliseras
 ! shake/temperature parameters
@@ -11295,13 +11286,8 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein energies
-!This section makes no sense at all, commenting it for now
-!What was supposed to be done with that???
-!Paul Bauer 2014-01-21
-!  if(i < 3173 .OR. i > 3180) then
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-!  end if
 end do ! istate
 
 end do
@@ -13466,8 +13452,7 @@ start_loop_time1 = rtime()
 #endif
 call pot_energy_bonds
 #if defined (PROFILING)
-start_loop_time3 = rtime()
-profile(8)%time = profile(8)%time + start_loop_time3 - start_loop_time1
+profile(8)%time = profile(8)%time + rtime() - start_loop_time1
 #endif
 
 ! various restraints
@@ -13484,9 +13469,6 @@ if( .not. use_PBC ) then
         end if
 end if
 
-#if defined (PROFILING)
-profile(9)%time = profile(9)%time + rtime() - start_loop_time3
-#endif
 ! q-q nonbonded interactions
 if(.not. qq_use_library_charges) then
         if(ivdw_rule .eq. 1 ) then
@@ -13822,7 +13804,7 @@ subroutine make_shell
    end if
 	end do
 	write(*,105) nshellats, rexcl_i, rexcl_o
-105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,'Å)')
+105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,')')
 end subroutine make_shell
 
 !------------------------------------------------------------------------
@@ -14668,8 +14650,8 @@ if(exclude_bonded) then
                 ('Eliminating torsions & impropers for excluded atoms', '-')
 end if
 
-10	format('Reduced number of ',a,t31,'from ',i5,' to ')
-12	format(i5)
+10	format('Reduced number of ',a,t31,'from ',i8,' to ')
+12	format(i8)
 
 i = 1
 removed = 0
@@ -15505,8 +15487,8 @@ write(*,'(80a)') '==============================================================
 
 22	format('type   st lambda',2A10)
 26	format('type   st lambda',6a10)
-32	format (a,T8,i2,1x,f6.4,2f10.2)
-36	format (a,T8,i2,1x,f6.4,6f10.2)
+32	format (a,T8,i2,f7.4,2f10.2)
+36	format (a,T8,i2,f7.4,6f10.2)
 37  format ('pair   Vwsum    Vwel    Vwvdw')
 38  format (3(i4,':Vel',i3,':Vvdw'))
 39  format (i2,f10.2,f8.2,f9.2)
@@ -16219,17 +16201,10 @@ end do
 	end do
 
 
-	! commented out because bonds are explicitly calculated now
-	!E%potential = old%p%bond + old%w%bond + old%p%angle + old%w%angle + old%p%torsion + &
-	!old%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
-	!E%ww%vdw + old%q%bond + old%q%angle + old%q%torsion + &
-	!old%q%improper + E%qx%el + E%qx%vdw + E%restraint%protein + E%LRF
-
-
-	E%potential = E%p%bond + E%w%bond + E%p%angle + E%w%angle + E%p%torsion + &
-	E%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
-	E%ww%vdw + E%q%bond + E%q%angle + E%q%torsion + &
-	E%q%improper + E%qx%el + E%qx%vdw + E%restraint%protein + E%LRF
+E%potential = old%p%bond + old%w%bond + old%p%angle + old%w%angle + old%p%torsion + &
+old%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
+E%ww%vdw + old%q%bond + old%q%angle + old%q%torsion + &
+old%q%improper + E%qx%el + E%qx%vdw + E%restraint%protein + E%LRF
 
 
 end if !(nodeid .eq. 0)
@@ -16260,10 +16235,6 @@ tag(1,i)=numnodes*100+i
 tag(2,i)=numnodes*200+i
 tag(3,i)=numnodes*300+i
 end do
-
-  blockcnt(1)=natom*3
-  blockcnt(2)=2*3+1
-  blockcnt(3)=4*nstates
 
 if (nodeid .eq. 0) then        !master
 
