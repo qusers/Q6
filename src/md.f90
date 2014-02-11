@@ -2621,6 +2621,9 @@ integer						::	mask_rows
 !  nrstr_dist, [rstdis] (allocating memory for rstdis)
 !  nrstr_wall, [rstwal] (allocating memory for rstwal)
 
+! external definition of iargc disabled for gfortran
+!integer(4) iargc
+!external iargc
 
 ! read name of input file from the command line
 num_args = command_argument_count()
