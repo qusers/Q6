@@ -2091,8 +2091,6 @@ call MPI_Bcast(nexlong, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nexlong')
 call MPI_Bcast(natyps, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast natyps')
-!call MPI_Bcast(nljtyp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nljtyp3')
 call MPI_Bcast(rexcl_o, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast rexcl')
 call MPI_Bcast(nmol, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2342,9 +2340,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 if(qvdw_flag) then
 !MN20030409-> Havn't tried with qvdw_flag == .true.
 ! qavdw and qbvdw share the same format: real(8) qxvdw(nqlib,nljtyp)
-call MPI_Bcast(qavdw, nljtyp, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qavdw, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qavdw')
-call MPI_Bcast(qbvdw, nljtyp, size(qbvdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qbvdw, size(qbvdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qbvdw')
 end if
 
