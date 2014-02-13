@@ -1074,7 +1074,9 @@ real                                    :: percent
 integer                                 :: master_sum
 !!!!Tmp vars för allokering
 integer,parameter			:: vars = 5
-integer :: i_loop
+integer     :: mpi_batch, i_loop
+integer     :: blockcnt(vars),type(vars)
+integer(8)  :: disp(vars)
 !!!
 
 
@@ -1327,6 +1329,8 @@ end if
 end if
 
 #if defined (USE_MPI)
+blockcnt(:) = 1
+type(:) = MPI_INTEGER
 call MPI_Bcast(totnbpp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(totnbpw, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(totnbqp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2002,7 +2006,12 @@ if (nodeid .eq. 0) call centered_heading('Distributing data to slave nodes', '-'
 
 if (nodeid .eq. 0) write (*,'(80a)') 'MD data, first batch'
 
-! Broadcast some initial variables
+! initialise custom MPI data type; default is an integer scalar
+! The variables below are sorted in modular order.
+! Make sure to add next variable to the right module and 
+! add +1 to 'vars'.
+blockcnt(:) = 1
+ftype(:) = MPI_INTEGER
 
 ! run control constants: natom, nwat, nsteps, NBmethod, NBcycle
 call MPI_Bcast(natom, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2319,7 +2328,7 @@ call check_alloc('Q-atom arrays')
 end if
 
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
-call MPI_Bcast(sc_lookup, size(sc_lookup), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(sc_lookup,  nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast sc_lookup')
 
 
@@ -2329,20 +2338,20 @@ call MPI_Bcast(iqseq, nqat, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iqseq')
 
 !  integer ::  qiac(nqat,nstates)
-call MPI_Bcast(qiac, size(qiac), MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qiac, nstates, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qiac')
 
 ! real(4) ::  qcrg(nqat,nstates)
-call MPI_Bcast(qcrg, size(qcrg), MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, nstates, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 
 
 if(qvdw_flag) then
 !MN20030409-> Havn't tried with qvdw_flag == .true.
 ! qavdw and qbvdw share the same format: real(8) qxvdw(nqlib,nljtyp)
-call MPI_Bcast(qavdw, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qavdw, nljtyp, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qavdw')
-call MPI_Bcast(qbvdw, size(qbvdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qbvdw, nljtyp, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qbvdw')
 end if
 
