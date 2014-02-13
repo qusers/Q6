@@ -1994,6 +1994,7 @@ integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 !call MPI_SizeOf(MPI_TINY_INTEGER,size,ierr)
 
 
+
 if (nodeid .eq. 0) call centered_heading('Distributing data to slave nodes', '-')
 !***************************
 
@@ -2090,6 +2091,8 @@ call MPI_Bcast(nexlong, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nexlong')
 call MPI_Bcast(natyps, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast natyps')
+!call MPI_Bcast(nljtyp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nljtyp3')
 call MPI_Bcast(rexcl_o, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast rexcl')
 call MPI_Bcast(nmol, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2339,9 +2342,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 if(qvdw_flag) then
 !MN20030409-> Havn't tried with qvdw_flag == .true.
 ! qavdw and qbvdw share the same format: real(8) qxvdw(nqlib,nljtyp)
-call MPI_Bcast(qavdw, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qavdw, nljtyp, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qavdw')
-call MPI_Bcast(qbvdw, size(qbvdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qbvdw, nljtyp, size(qbvdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qbvdw')
 end if
 
@@ -15772,7 +15775,7 @@ end if
 
 #if defined(USE_MPI)
 !Update modified coordinates  
-call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr) !this is already done in NB_update i think... need to check
+call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 #endif
 
@@ -15903,9 +15906,7 @@ end if
 #if defined(USE_MPI)
 !Update modified coordinates and boxlengths 
 call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('MC_volume/MPI_Bcast x')
-call MPI_Bcast(xx, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('MC_volume/MPI_Bcast x')
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 call MPI_Bcast(boxlength, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(inv_boxl, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 #endif
@@ -15954,23 +15955,12 @@ if (nodeid .eq. 0) then
 
 	volume_try = volume_try + 1
 	write(*,'(a)') '---------- After move' 
-end if !nodeid eq 0
-
-
-!broadcast acc to all nodes (this entire MC_volume is probably a rather slow parallel implementation)
-#if defined(USE_MPI)
-call MPI_Bcast(acc, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
-#endif
 
 if( acc ) then
-	if (nodeid .eq. 0) then
 		write(*,'(a)') 'Volume change accepted'
 		volume_acc = volume_acc + 1
-	end if !(nodeid .eq. 0)
 else
-	if (nodeid .eq. 0) then
 		write(*,'(a)') 'Volume change rejected'
-	end if !(nodeid .eq. 0)
 
         !put stuff back to what they were before
         x(:) = old_x(:)
@@ -16029,7 +16019,6 @@ else
 	end if
 end if
 
-if (nodeid .eq. 0) then
 	write(*,11) boxlength(1)*boxlength(2)*boxlength(3)
 	write(*,12) boxlength
 	write(*,13) sum(mass(:))/(boxlength(1)*boxlength(2)*boxlength(3)*1E-24*6.02E23)
