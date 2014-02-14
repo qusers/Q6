@@ -37,8 +37,8 @@ debug:
 	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
 mpi:	
-	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector ${FC_OPT} -DG95=1' \
-	qdyn5p
+	@make FC_OPT='-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector -DG95=1 -O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
+	qdyn5p move3
 
 mpi_debug:	
 	@make FC_OPT=-'O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -g'          \
@@ -206,10 +206,12 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
-	mkdir ../obj ; mv *.o *.mod ../obj/
+	mkdir -p ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdyn5p qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+move3:
+	mkdir -p ../bin ; mv qdyn5p ../bin
 #
 ###
 
