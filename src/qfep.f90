@@ -13,7 +13,7 @@ implicit none
 	character(*), parameter			::	MODULE_VERSION = '5.01'
 	character(*), parameter			::	MODULE_DATE = '2003-06-03'
 
-	integer,parameter ::mxpts=20000,mxbin=100,mxstates=4
+	integer,parameter ::mxpts=200000,mxbin=100,mxstates=4
 	character(80)      ::filnam, line
 	integer           ::i,j,ifile,ipt,istate,ibin,nfiles,nstates,ERR, &
 	                      nskip,nbins,nmin,idum,noffd,nnoffd,offel
