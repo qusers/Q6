@@ -19,6 +19,7 @@ FALSE='false'
 
 #If you just want to do the anaylsis again, set RERUN to true
 RERUN=${FALSE}
+#RERUN=${TRUE}
 #Path to Qfep binary, needed in any case
 qfep='/home/p/pabau/pfs/Q_PFS_MPIFIX/qfep5'
 #Function that generates the temporary awk file needed to get the distances
@@ -218,32 +219,41 @@ AFVALUE=0
 ASVALUE=0
 STFVALUE=0
 STSVALUE=0
+REDCOUNT=0
 for ((ncount=1;ncount<=${COUNTER};ncount++))
 do
+if [[ ${DGFREESTOR[${ncount}]} == 'fail' ]] || [[ ${DGSTARSTOR[${ncount}]} == 'fail' ]] || [[ ${DGFREESTOR[${ncount}]} == '' ]] || [[ ${DGSTARSTOR[${ncount}]} == '' ]]; then
+REDCOUNT=$(( ${REDCOUNT} + 1 ))
+fi
 echo "${ncount}	${DGFREESTOR[${ncount}]}		${DGSTARSTOR[${ncount}]}"
 done
-if [ ${COUNTER} -ge 2 ] ; then
+NEWCOUNTER=$(( ${COUNTER} - ${REDCOUNT} ))
+if [ ${NEWCOUNTER} -ge 2 ] ; then
 for ((ncount=1;ncount<=${COUNTER};ncount++))
 do
+if [[ ${DGFREESTOR[${ncount}]} != 'fail' ]] && [[ ${DGSTARSTOR[${ncount}]} != 'fail' ]] && [[ ${DGFREESTOR[${ncount}]} != '' ]] && [[ ${DGSTARSTOR[${ncount}]} != '' ]] ; then
 AFVALUE=$( echo "scale=2;${AFVALUE} + ${DGFREESTOR[${ncount}]} " | bc -q)
 ASVALUE=$( echo "scale=2;${ASVALUE} + ${DGSTARSTOR[${ncount}]} " | bc -q)
+fi
 done
-AFVALUE=$( echo "scale=2;${AFVALUE}/${COUNTER} " | bc -q)
-ASVALUE=$( echo "scale=2;${ASVALUE}/${COUNTER} " | bc -q)
+AFVALUE=$( echo "scale=2;${AFVALUE}/${NEWCOUNTER} " | bc -q)
+ASVALUE=$( echo "scale=2;${ASVALUE}/${NEWCOUNTER} " | bc -q)
 echo "Average free energy			=	${AFVALUE}"
 echo "Average activation energy		=	${ASVALUE}"
 fi
-if [ ${COUNTER} -ge 3 ] ; then
+if [ ${NEWCOUNTER} -ge 3 ] ; then
 for ((ncount=1;ncount<=${COUNTER};ncount++))
 do
+if [[ ${DGFREESTOR[${ncount}]} != 'fail' ]] && [[ ${DGSTARSTOR[${ncount}]} != 'fail' ]] && [[ ${DGFREESTOR[${ncount}]} != '' ]] && [[ ${DGSTARSTOR[${ncount}]} != '' ]] ; then
 TMPVALUE=$( echo "scale=5;${AFVALUE} - ${DGFREESTOR[${ncount}]} " | bc -q)
 TMPVALUE=$( echo "scale=5;${TMPVALUE} * ${TMPVALUE} " | bc -q)
 STFVALUE=$( echo "scale=5;${TMPVALUE} + ${STFVALUE} " | bc -q)
 TMPVALUE=$( echo "scale=5;${ASVALUE} - ${DGSTARSTOR[${ncount}]} " | bc -q)
 TMPVALUE=$( echo "scale=5;${TMPVALUE} * ${TMPVALUE} " | bc -q)
 STSVALUE=$( echo "scale=5;${TMPVALUE} + ${STSVALUE} " | bc -q)
+fi
 done
-DEGREEFREDOM=$(( ${COUNTER} - 1))
+DEGREEFREDOM=$(( ${NEWCOUNTER} - 1))
 STFVALUE=$( echo "scale=5;sqrt(${STFVALUE} / ${DEGREEFREDOM}) " | bc -q)
 STSVALUE=$( echo "scale=5;sqrt(${STSVALUE} / ${DEGREEFREDOM}) " | bc -q)
 echo "Free energy std. deviation		=	${STFVALUE}"
@@ -256,6 +266,7 @@ fi
 
 #To see how many files are plotted, needed to generate Gnuplot input later on
 COUNTER=0
+checknum=0
 for i in ${LIST} ;do
 if [[ ${LIST} != "empty" ]] ; then
 cp map_files.inp ${i}
@@ -271,7 +282,6 @@ echo "qfep is done, analysing data"
 if [ -f distances.dat ] ; then
 rm distances.dat
 fi
-checknum=0
 for ((num=100;num>=0;num--))
 do
 NEWMOD=$(( ${num}%2 ))
@@ -283,7 +293,10 @@ ENUM=0${num}
 else
 ENUM=00${num}
 fi
+if [ -f fep_${ENUM}.log ] ; then
 grep "dist. between Q-atoms" fep_${ENUM}.log |  awk 'NF { print ( $(NF) ) }' | nl >>distances.dat
+else echo "file fep_${ENUM}.log not found"
+fi
 sed -i s/"="//g distances.dat
 fi
 done
@@ -310,12 +323,18 @@ NUMMAX=`awk '($3=="maximas") {print $5}' summary_${i}.dat`
 for ((cc=1;cc<=${NUMMIN};cc++))
 do
 DGSTARSTOR[${COUNTER}]=`awk '(($2=="Minima") && ($4=="Maximum")) {print $7}' summary_${i}.dat | head -n 1 | tail -n 1`
+if [[ ${DGSTARSTOR[${COUNTER}]} == '' ]] ; then
+DGSTARSTOR[${COUNTER}]='fail'
+fi
 #echo "${COUNTER}	${cc}"
 #echo "${DGSTARSTOR[${COUNTER},${cc}]}"
 done
 for ((cc=1;cc<=${NUMMAX};cc++))
 do
 DGFREESTOR[${COUNTER}]=`awk '(($2=="Minimum") && ($4=="Minimum")) {print $7}' summary_${i}.dat | head -n 1 | tail -n 1`
+if [[ ${DGFREESTOR[${COUNTER}]} == '' ]] ; then
+DGFREESTOR[${COUNTER}]='fail'
+fi
 #echo "${COUNTER}        ${cc}"
 #echo "${DGFREESTOR[${COUNTER},${cc}]}"
 done
@@ -354,7 +373,7 @@ gnuplot_static ${plots}plot.gplt x11 1
 gnuplot_plot_distance ${plots}plot.gplt '0.0' '0.0' "${xlabel}" "${ylabel[1]}" ${plots}
 fi
 
-gnuplot -persist <${plots}plot.gplt &
+gnuplot -persist <${plots}plot.gplt 2>/dev/null &
 
 done
 
