@@ -10,3 +10,7 @@ obj/
 *.log
 .DS_Store
 *DS_Store
+*DS_Store*
+notes*
+alexstuff*
+beatstuff*
