@@ -1,6 +1,5 @@
 *.DS_Store
 bin/
-tests/
 examples/
 obj/
 *.pdf
@@ -15,3 +14,4 @@ notes*
 alexstuff*
 beatstuff*
 .gitignore*
+nogit/
