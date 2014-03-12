@@ -143,7 +143,7 @@ type(SHELL_TYPE), allocatable::	wshell(:)
 integer, parameter			::	itdis_update		= 100
 real,  parameter			::	wpolr_layer			= 3.0001
 real, parameter				::	drout				= 0.5
-real(8), parameter			::	tau_T_default		= 10.
+real(8), parameter			::	tau_T_default		= 100.
 real(8), parameter			::	rcpp_default		= 10.
 real(8), parameter			::	rcww_default		= 10.
 real(8), parameter			::	rcpw_default		= 10.
@@ -2791,7 +2791,7 @@ if(tau_T < dt) then
         initialize = .false.
 end if
 
-yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .false.)
+yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .true.)
 if(separate_scaling) then
 	   write(*,'(a)') 'Solute and solvent atoms coupled separately to heat bath.'
 else 
@@ -2831,7 +2831,7 @@ end if
 write(*,17) 'all bonds to hydrogen', onoff(shake_hydrogens)
 
 
-       yes = prm_get_logical_by_key('lrf', use_LRF, .false.)
+       yes = prm_get_logical_by_key('lrf', use_LRF, .true.)
        if(use_LRF) then
                write(*,20) 'LRF Taylor expansion outside cut-off'
        else 
@@ -2930,6 +2930,10 @@ if( .not. box ) then
                         fk_fix = fk_fix_default
                 end if
                 if(fk_fix > 0) then
+                        write(*,48) fk_fix
+                else
+                        fk_fix = fk_fix_default
+                        write(*,'(a)')'Shell restraint force constant can not be less-equal zero, set to default'
                         write(*,48) fk_fix
                 end if
 48              format('Excluded atom restraint force constant         =',f8.2)

@@ -33,8 +33,8 @@ default: what
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
-	@make FC_OPT='-O0 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector ${FC_OPT} -DG95=1'         \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5
+	@make FC_OPT='-g -O0 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector -DG95=1 -g -O0 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy'         \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 movedebug
 
 mpi:	
 	@make FC_OPT='-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector -DG95=1 -O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
@@ -42,7 +42,7 @@ mpi:
 
 mpi_debug:	
 	@make FC_OPT=-'O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -g'          \
-	qdyn5p
+	qdyn5p movempidebug
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
@@ -212,6 +212,10 @@ move2:
 	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin
+movedebug:
+	mkdir -p ../bin_debug ; mv *.o *.mod qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin_debug
+movempidebug:
+	mkdir -p ../bin_debug ; mv *.o *.mod qdyn5p ../bin_debug
 #
 ###
 
