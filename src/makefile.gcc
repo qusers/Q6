@@ -1,9 +1,11 @@
-###############################################################################
-#                       Q v.5 Makefile for Linux                              #
-###############################################################################
+################################################################################
+#  Q V.5 Makefile for compilation with gfortran                                #
+#  main code author: Johan Aqvist                                              #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
+#  latest update: January 29, 2014                                             #
+################################################################################
 
-### -i-static -static
-# Put your favorite compilers and flags here.
+#Compilers and flags here.
 FC=		gfortran
 CC=		gcc
 MPIFC=		mpif90

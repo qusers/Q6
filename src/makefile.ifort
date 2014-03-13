@@ -1,12 +1,10 @@
 ################################################################################
-#  Q V.5 Makefile for Mac OSX  10.9.1                                          #
+#  Q V.5 Makefile for compilation with ifortran                                #
 #  main code author: Johan Aqvist                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
 #  latest update: January 29, 2014                                             #
 ################################################################################
-
-### -i-static -static
-# Put your favorite compilers and flags here.
+#Compilers and flags here.
 FC=		ifort
 CC=		icc
 MPIFC=		mpif90
