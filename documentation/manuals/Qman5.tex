@@ -12,7 +12,8 @@
 \usepackage{tabularx} %fixar långa tabeller
 \usepackage{multirow} %fixar nested tables
 \usepackage{bigstrut}
-\usepackage[linkbordercolor=1 1 1]{hyperref}
+%\usepackage{hyperref}
+%\usepackage[linkbordercolor=1 1 1]{hyperref}
 %\usepackage{epsfig}
 \pagestyle{fancy} %\setlength{\headheight}{13.6pt}
 %\newcommand{\topcaption}{\setlength{\abovecaptionskip}{0pt}\setlength{\belowcaptionskip}{10pt}\caption}
@@ -38,7 +39,7 @@
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
-\resizebox{8cm}{!}{\includegraphics[scale=0.7]{Pictures/Q-logo_2.pdf}}
+\resizebox{8cm}{!}{\includegraphics[scale=0.7]{pictures/Q-logo_2.pdf}}
 \end{center}
 \end{figure}
 
@@ -154,7 +155,7 @@ outline of Q is shown in figure \ref{fig:overview}.
 
 \begin{figure}[h]
 \begin{center}
-\resizebox{15cm}{!}{\includegraphics*{Pictures/Q_overview_2.pdf}}
+\resizebox{15cm}{!}{\includegraphics*{pictures/Q_overview_2.pdf}}
 \caption{Overview of the procedure for free energy calculation
 with Q. The white boxes represent files and also show typical file
 name extensions. The black boxes are programs.}
@@ -1068,7 +1069,7 @@ topology number of the relevant atoms are given.
 
 \begin{figure}[h]
 \begin{center}
-\resizebox{10cm}{!}{\includegraphics*{Pictures/EVB_states_2.pdf}}
+\resizebox{10cm}{!}{\includegraphics*{pictures/EVB_states_2.pdf}}
 \caption{EVB states for a proton transfer reaction.}
 \label{fig:EVB-states}
 \end{center}
@@ -1198,7 +1199,7 @@ bonds as listed in the section [\textbf{soft{\_}pairs}]. For these
 atoms, it is more physical to use an exponential function for the
 repulsion than the normal 1/r$^{12}$ form which causes a too
 strong repulsion at very short distances. The vdW interaction
-between these pairs of atom are given by:
+between these pairs of atoms is given by:
 
 \[
 V_{soft} = C_{i}\cdot C_{j}\cdot e^{(-a_{i}\cdot a_{j}\cdot
@@ -1247,7 +1248,7 @@ q-atoms 2 and 8 with A=1.0 and $\mu $= 0.45.
 
 \subsubsection{Monitoring non-bonded interactions}
 In analysing the details of $e.g.$ receptor-ligand interactions, it
-is useful do define some groups of atoms and calculate the
+is useful to define some groups of atoms and calculate the
 non-bonded interactions between pairs of atom groups. The example
 FEP file below describes how to use this feature to get the
 non-bonded energies between the pterinine ring of a dihydrofolate
@@ -1358,7 +1359,7 @@ computers is best done by assigning one job per node.
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics*[scale=0.6]{Pictures/speedup.pdf}
+\includegraphics*[scale=0.6]{pictures/speedup.pdf}
 \caption{Speedup of the parallel version of Qdyn.}
 \label{fig:speedup}
 \end{center}
@@ -1366,7 +1367,7 @@ computers is best done by assigning one job per node.
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics*[scale=0.6]{Pictures/efficiency.pdf}
+\includegraphics*[scale=0.6]{pictures/efficiency.pdf}
 \caption{Efficiency of the nodes when running Qdyn in parallel.
 The efficiency decreases as the number of nodes increase due to
 more communication and longer summation of the forces.}
@@ -1604,7 +1605,7 @@ for more than two states.
 \begin{figure}[h]
 \caption{Example Qfep output file}
 \centering
-\includegraphics*[scale=1]{Pictures/Qfep_out.pdf}
+\includegraphics*[scale=1]{pictures/Qfep_out.pdf}
 \label{fig:Qfep-out}
 \end{figure}
 
@@ -2034,7 +2035,7 @@ there are any large changes in the energies throughout the
 simulation, see figure \ref{fig:tutorial_energies}.
 
 \begin{figure}[h]
-\centerline{\includegraphics*[width=5.92in,height=3.45in]{Pictures/tutorial_energies.pdf}}
+\centerline{\includegraphics*[width=5.92in,height=3.45in]{pictures/tutorial_energies.pdf}}
 \caption{Energies} \label{fig:tutorial_energies}
 \end{figure}
 
@@ -2101,7 +2102,7 @@ create their own special-purpose programs by re-using $e.g.$ the
 trajectory and topology modules.
 
 \begin{figure}[h]
-\centerline{\includegraphics*[scale=0.9]{Pictures/modules.pdf}}
+\centerline{\includegraphics*[scale=0.9]{pictures/modules.pdf}}
 \caption{The modules that build up Q.} \label{fig:modules}
 \end{figure}
 
@@ -2507,7 +2508,7 @@ in previous or next residue. \\
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics*[scale=0.8]{Pictures/lib_ex.pdf}
+\includegraphics*[scale=0.8]{pictures/lib_ex.pdf}
 \caption{The CHARMM library entry for alanine}
 \label{fig:lib_example}
 \end{center}
@@ -2715,7 +2716,7 @@ for pairs of atom types or for single atom types col. description \\
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics*[scale=0.8]{Pictures/prm_ex.pdf}
+\includegraphics*[scale=0.8]{pictures/prm_ex.pdf}
 \caption{Example of a parameter file.} \label{fig:prm_ex}
 \end{center}
 \end{figure}

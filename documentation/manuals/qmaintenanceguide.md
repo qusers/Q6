@@ -1,17 +1,26 @@
-Q Maintenance guide
+#Q Maintenance guide
 
-*John Marelius, August 29, 2000*
-
-\
+###### John Marelius, August 29, 2000
+###### Updated by: (Mauricio Esguerra, March 13, 2014)
 
 This document describes how to maintain the Q programs on the Åqvist
-group computers. 
+group.
 
-File locations
+Starting in December 2013 the source code for development of Q is
+kept at a private github repository located at:
+http://github.com/qusers
+
+The currently supported version has been tested in various Linux
+distributions (CentOS, Ubuntu) and on Mac OSX (Mavericks) compiled using
+both gfortran and ifortran compilers.
+
+
+###File locations
 
 The locations of the Q files are listed in the table below, where it is
-assumed that device g: is mapped to \\\\skalleper\\bin and device w: to
-\\\\skalleper\\inetpub\$.
+assumed that device
+g: is mapped to \\\\skalleper\\bin and device
+w: to \\\\skalleper\\inetpub\$.
 
 **whatwhere**source code, makefile, Windows project files, history
 filesg:\\src\\q4manualg:\\doc\\Qman4.doclicence
@@ -179,10 +188,9 @@ wwwroot\\Q\\download\\bin on the web server.
 
 Linux
 
-Ask Peter Vagedes \<vagedes@chemie.fu-berlin.de\> to build the
-executables.
+Ask Paul Bauer paul.bauer@icm.uu.se to build the executables.
 
-Updating the Q web site
+###Updating the Q web site
 
 The Åqvist group web site http://aqvist.bmc.uu.se and the Q web site
 http://aqvist.bmc.uu.se/Q can both be edited using VisualPage. The
@@ -191,10 +199,11 @@ in this project are all in the w:\\wwwdev directory. Edit the files
 there and then copy the modified files, or all files, to w:\\wwwroot
 which is the actual web server directory.
 
-The E-mail list
+###The E-mail list
 
 The home page of the list is http://Qusers.listbot.com. To see the
 member list etc, log in as list owner using the E-mail address
 John.Marelius@molbio.uu.se and the password agent007
 
 To send a message to the list, address it to Qusers@listbot.com
+
