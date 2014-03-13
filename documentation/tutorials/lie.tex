@@ -3,7 +3,7 @@
 %
 \documentclass[a4paper,12pt]{article}
 \usepackage{graphics}
-\usepackage[dvips]{graphicx}
+\usepackage[pdftex]{graphicx}
 \usepackage{times}\fontfamily{ptm}\selectfont
 \usepackage[activeacute,english]{babel}
 \usepackage{t1enc}
@@ -13,17 +13,17 @@
 \setlength{\topmargin}{-0.18in} \setlength{\oddsidemargin}{0in}
 \pagestyle{plain} \pagenumbering{arabic}
 \newcommand{\HR}{\rule{1em}{.4pt}}
-\newcommand{\sctn}[1]{\section{\large #1}}
-\newcommand{\subsctn}[1]{\subsection{#1}}
-\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
+%\newcommand{\sctn}[1]{\section{\large #1}}
+%\newcommand{\subsctn}[1]{\subsection{#1}}
+%\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
 \renewcommand{\theenumi}{\alph{enumi}}
 \renewcommand{\theenumii}{\arabic{enumii}}
 \newcommand{\dGb}{\ensuremath{\Delta G_{\rm bind}}}
 \newcommand{\dGel}{\ensuremath{\Delta G_{\rm el}}}
 \newcommand{\dGvdw}{\ensuremath{\Delta G_{\rm vdW}}}
-\newcommand{\qdyn}{\texttt{Qdyn5}}
-\newcommand{\qprep}{\texttt{Qprep5}}
-\newcommand{\qcalc}{\texttt{Qcalc5}}
+\newcommand{\qdyn}{\texttt{qdyn5}}
+\newcommand{\qprep}{\texttt{qprep5}}
+\newcommand{\qcalc}{\texttt{qcalc5}}
 \newcommand{\q}{\texttt{Q}}
 \newcommand{\grep}{\texttt{grep}}
 \newcommand{\sed}{\texttt{sed}}
@@ -33,7 +33,7 @@
 \author{Martin Almlöf, Martin And\'er, Sinisa Bjelic, Jens Carlsson, \\
 Hugo Guti\'errez de Ter\'an, Martin Nervall, Stefan Trobro and
 Fredrik Österberg}
-\date{18th August 2005}
+\date{18th August 2005\\ \footnotesize{updated:\today}}
 
 %
 % DOCUMENT
@@ -48,7 +48,7 @@ Fredrik Österberg}
 \newpage
 
 
-\sctn{Introduction}
+\section{Introduction}
 
 In this practical the free energy of binding will be calculated
 for two ligands, camphor (CAM) and camphane (CMA), to the P450cam
@@ -58,7 +58,7 @@ paper Almlöf {\it et al}, J. Comput. Chem., 25, 1242-1254,(2004),
 but with some simplifications and automation
 of the steps.\\
 
-\subsctn{Linear Interaction Energy method} The LIE method for the
+\subsection{Linear Interaction Energy method} The LIE method for the
 calculation of the {\emph {absolute}} free energy of binding
 ({\dGb}) was first proposed by Åqvist {\it et al} in 1994. It is a
 semi-empirical method, which is computationally less expensive
@@ -120,7 +120,7 @@ $\gamma=-4.5$ kcal/mol.
 %
 %%%%%%%%%%%% Methods (day 1)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\sctn{Methods: Prepare and run the MD simulations} Two separate MD
+\section{Methods: Prepare and run the MD simulations} Two separate MD
 simulations of the ligand ("water" and "protein" simulations) have
 to be carried out to get an estimate of the free energy of binding
 using LIE.
@@ -128,7 +128,7 @@ using LIE.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Protein simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\subsctn {Protein simulation}
+\subsection {Protein simulation}
 
 Go to the directory named "LIE/protein", where one directory for
 each of the ligands ("CAM" and "CMA") has been created. In each of
@@ -182,7 +182,7 @@ directory "results" for each ligand.
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Water simulation %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\subsctn {Water simulation} Now move to the directory "LIE/water",
+\subsection {Water simulation} Now move to the directory "LIE/water",
 where one directory for each ligand has been created. In these you
 will find
 
@@ -224,9 +224,9 @@ in the directory "results" for each ligand.
 %
 %%%%%%%%%%%% Results (day 2)%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\sctn {Results: Evaluating the simulations} Now we will evaluate
+\section {Results: Evaluating the simulations} Now we will evaluate
 energies from the MD simulations, the conformations of the system
-and specific ligand-protein interactions. \subsctn {Analysis of
+and specific ligand-protein interactions. \subsection {Analysis of
 P450cam binding of CAM and CMA}
 
 \begin {itemize}

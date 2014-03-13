@@ -1,5 +1,5 @@
 \documentclass[a4paper,12pt]{article}
-\usepackage{graphicx}
+\usepackage[pdftex]{graphicx}
 \usepackage{times}\fontfamily{ptm}\selectfont
 \usepackage[activeacute,english]{babel}
 \usepackage{t1enc}
@@ -20,18 +20,18 @@
 \def\myname{\textbf{Martin Nervall}}
 
 \newcommand{\HR}{\rule{1em}{.4pt}}
-\newcommand{\sctn}[1]{\section{\large #1}}
-\newcommand{\subsctn}[1]{\subsection{#1}}
-\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
+%\newcommand{\sctn}[1]{\section{\large #1}}
+%\newcommand{\subsctn}[1]{\subsection{#1}}
+%\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
 \renewcommand{\theenumi}{\alph{enumi}}
 \renewcommand{\theenumii}{\arabic{enumii}}
 \newcommand{\dGb}{\ensuremath{\Delta G_{\rm bind}}}
 \newcommand{\dGel}{\ensuremath{\Delta G_{\rm el}}}
 \newcommand{\dGvdw}{\ensuremath{\Delta G_{\rm vdW}}}
-\newcommand{\qdyn}{\texttt{Qdyn5}}
-\newcommand{\qprep}{\texttt{Qprep5}}
-\newcommand{\qcalc}{\texttt{Qcalc5}}
-\newcommand{\qfep}{\texttt{Qfep5}}
+\newcommand{\qdyn}{\texttt{qdyn5}}
+\newcommand{\qprep}{\texttt{qprep5}}
+\newcommand{\qcalc}{\texttt{qcalc5}}
+\newcommand{\qfep}{\texttt{qfep5}}
 \newcommand{\q}{\texttt{Q}}
 \newcommand{\grep}{\texttt{grep}}
 \newcommand{\sed}{\texttt{sed}}
@@ -42,7 +42,7 @@
 
 \title{4. Scoring of nine ligands in p450Cam}
 \author{Martin Alml\"{o}f, Martin And\'er, Sinisa Bjelic, Jens Carlsson, \\ Hugo Guti\'errez de Ter\'an, Martin Nervall, Stefan Trobro and Fredrik \"{O}sterberg}
-\date{18th August 2005}
+\date{18th August 2005\\ \footnotesize{updated:\today}}
 \begin{document}
 
 \maketitle
@@ -170,7 +170,7 @@ Move to the "SCORE" directory:\\
 \noindent The first ligand we will score interactively, the rest
 is already scripted and fast to run.
 
-\subsctn {ChemScore}
+\subsection {ChemScore}
 
 Move to the first ligand directory called "adm" and start {\qcalc}
 by
@@ -220,7 +220,7 @@ the whole trajectory of 50 ps with snapshots every 2 ps you have
 \texttt{mean} and finally exit the program by giving the
 \texttt{end} command.
 
-\subsctn {X-Score}
+\subsection {X-Score}
 
 Next we will take a look at {\xscore}. Start {\qcalc} again and
 define the same topology as before. Now choose the option
@@ -244,7 +244,7 @@ X-Score gives the result as p$K_{d}$). Then
 type \texttt{dc1.dcd} to score the trajectory, \texttt{mean} to
 get the average and \texttt{end} to stop the program.
 
-\subsctn {Scoring nine ligands}
+\subsection {Scoring nine ligands}
 
 In order to get some statistics for the comparison of scoring a
 snapshot versus a molecular dynamics trajectory we will now score

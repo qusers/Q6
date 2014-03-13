@@ -1,15 +1,12 @@
-%
-%
 % $Id: MD_lab.tex,v 1.14 2005/08/17 13:01:08 hteran Exp $
 %
-% latex MD_lab.tex ; dvips MD_lab.dvi -o MD_lab.ps; ps2pdf MD_lab.ps
+% pdflatex md.tex 
 %
 % PACKAGES
 %
 \documentclass[a4paper,12pt]{article}
-%\usepackage[a4paper,offset={0pt,0pt},hmargin={2cm,2cm},vmargin={2cm,2cm}]{geometry}
 \usepackage{graphics}
-\usepackage[dvips]{graphicx}
+\usepackage[pdftex]{graphicx}
 %% fonts
 \usepackage{times}\fontfamily{ptm}\selectfont
 \usepackage[activeacute,english]{babel}
@@ -23,7 +20,7 @@
 \def\myname{\textbf{Hugo G. de Ter\'an}}
 \title{1. Molecular Dynamics Simulations}
 \author{Martin Alml\"{o}f, Martin And\'er, Sinisa Bjelic, Jens Carlsson, \\ Hugo Guti\'errez de Ter\'an, Martin Nervall, Fredrik \"{O}sterberg and Stefan Trobro}
-\date{18th August 2005}
+\date{18th August 2005 \\ \footnotesize{updated:\today}}
 \setlength{\textheight}{9.1in}
 \setlength{\textwidth}{6.0in}
 \setlength{\topmargin}{-0.18in}
@@ -31,17 +28,17 @@
 \pagestyle{plain}
 \pagenumbering{arabic}
 \newcommand{\HR}{\rule{1em}{.4pt}}
-\newcommand{\sctn}[1]{\section{\large #1}}
-\newcommand{\subsctn}[1]{\subsection{#1}}
-\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
+%\newcommand{\sctn}[1]{\section{\large #1}}
+%\newcommand{\subsctn}[1]{\subsection{#1}}
+%\newcommand{\subsubsctn}[1]{\subsubsection{#1}}
 \renewcommand{\theenumi}{\alph{enumi}}
 \renewcommand{\theenumii}{\arabic{enumii}}
 \newcommand{\dGb}{\ensuremath{\Delta G_{\rm bind}}}
 \newcommand{\dGel}{\ensuremath{\Delta G_{\rm el}}}
 \newcommand{\dGvdw}{\ensuremath{\Delta G_{\rm vdW}}}
-\newcommand{\qdyn}{\texttt{Qdyn5}}
-\newcommand{\qprep}{\texttt{Qprep5}}
-\newcommand{\qcalc}{\texttt{Qcalc5}}
+\newcommand{\qdyn}{\texttt{qdyn5}}
+\newcommand{\qprep}{\texttt{qprep5}}
+\newcommand{\qcalc}{\texttt{qcalc5}}
 \newcommand{\q}{\texttt{Q}}
 \newcommand{\grep}{\texttt{grep}}
 \newcommand{\sed}{\texttt{sed}}
@@ -53,18 +50,15 @@
 % DOCUMENTO
 %
 \begin{document}
-
 \maketitle
-
 \tableofcontents
-
 \newpage
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  1  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 
 
-\sctn{Molecular Dynamics: theory}
+\section{Molecular Dynamics: theory}
 
 
 
@@ -185,7 +179,7 @@ given in the next practical.
 %
 %%%%%%%%%%%% Methods%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-\sctn{Methods: Prepare and run the MD simulations}
+\section{Methods: Prepare and run the MD simulations}
 In this practical you will see how to set up an MD simulation, in which the surrounding energies of a ligand, complexed with a protein, will be monitored.\\
 Two parts are needed in order to run a MD simulation:
 \begin {itemize}
@@ -194,11 +188,10 @@ Two parts are needed in order to run a MD simulation:
 \end {itemize}
 We will prepare topology and input files for the system of study, {\it cytochrome P450cam complexed with the inhibitor camphane}. The P450 enzymes, which receive this name because they absorb light maximally at 450 nm when they are complexed with CO, catalyze the hydroxylation of unactivated alkanes. This chemical reaction is used in the liver to increase the solubility of foreign substances (xenobiotic compounds), facilitating their detoxification. P450 enzymes are also involved in the synthesis of steroids and fatty acids, and in the metabolic activation of powerful carcinogens. The particular enzyme known as P450cam catalyzes specifically the hydroxylation of camphor.\\
 %Figure 1
-\begin{figure}[!ht]
-\begin{center}
-\includegraphics[width=10cm]{cam}
+\begin{figure}[ht]
+\centering
+\includegraphics[width=4cm]{camphane.png}
 \caption{\label{cam} chemical structure of camphane}
-\end{center}
 \end{figure}
 The system will be heated up and equilibrated through a series of
 short MD runs. All MD simulations will be done with the modified
@@ -212,7 +205,7 @@ program {\pymol}.
 %
 %%%%%%%%%% TOPOLOGY %%%%%%%%%%%%%%%%%%%%%%
 %
-\subsctn {Topology generation}
+\subsection {Topology generation}
 \begin {itemize}
 \item Login in to your personal account and go to the working directory:
     \begin {itemize}
@@ -300,7 +293,7 @@ you will get a nice view of the complex.
 %%%%%%%%%%% INPUT %%%%%%%%%%%%%%%%%%
 %
 
-\subsctn {Input file and running the MD simulation in {\qdyn}}
+\subsection {Input file and running the MD simulation in {\qdyn}}
 We have done half of the work. Now we need to prepare the input files for the MD simulation, with the specifications about the MD conditions.\\
 Any MD simulation with explicit solvent is divided in two phases:
     \begin {itemize}
@@ -375,7 +368,7 @@ Now you can launch the job. This can be easily done by running the shell script 
 {\texttt {tcsh run\_Q.sh qdyn eq}}\\
 and wait 5 minutes until the simulation has finished.\\
 
-\sctn {Analysis of the results}
+\section {Analysis of the results}
 \begin{itemize}
 \item Open the last log file {\texttt {eq5.log}} with your favourite text editor (\texttt{emacs, vi}). The file has a first part in which the input data and options are read, and a second part in which the information from the trajectory is prediodically stored.
     \begin{itemize}
