@@ -11,18 +11,15 @@
 FC=		gfortran
 CC=		gcc
 MPIFC=		mpif90
-#FC_OPT=	-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 FC_OPT=		-O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 CC_OPT=		-O3
-#MPIFLAGS=	-f90=${FC}
 OMPI_FC=	${FC}
-OMPI_CC=	${CC}	
+OMPI_CC=	${CC}
 FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 CCFLAGS=	${CC_OPT}
 OMPI_FCFLAGS=	${FFLAGS}
 OMPI_CXXFLAGS=	${CCFLAGS}
-#FLIBS=		-Vaxlib
-FPP_FLG=	-cpp  
+FPP_FLG=	-cpp
 
 ################################################################################
 # Display options

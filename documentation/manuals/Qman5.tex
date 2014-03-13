@@ -12,6 +12,7 @@
 \usepackage{tabularx} %fixar långa tabeller
 \usepackage{multirow} %fixar nested tables
 \usepackage{bigstrut}
+\newcommand{\dirfig}{./pictures}
 %\usepackage{hyperref}
 %\usepackage[linkbordercolor=1 1 1]{hyperref}
 %\usepackage{epsfig}
@@ -39,7 +40,7 @@
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
-\resizebox{8cm}{!}{\includegraphics[scale=0.7]{pictures/Q-logo_2.pdf}}
+\resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/Q-logo_2.pdf}}
 \end{center}
 \end{figure}
 
@@ -155,7 +156,7 @@ outline of Q is shown in figure \ref{fig:overview}.
 
 \begin{figure}[h]
 \begin{center}
-\resizebox{15cm}{!}{\includegraphics*{pictures/Q_overview_2.pdf}}
+\resizebox{15cm}{!}{\includegraphics*{\dirfig/Q_overview_2.pdf}}
 \caption{Overview of the procedure for free energy calculation
 with Q. The white boxes represent files and also show typical file
 name extensions. The black boxes are programs.}
@@ -1069,7 +1070,7 @@ topology number of the relevant atoms are given.
 
 \begin{figure}[h]
 \begin{center}
-\resizebox{10cm}{!}{\includegraphics*{pictures/EVB_states_2.pdf}}
+\resizebox{10cm}{!}{\includegraphics*{\dirfig/EVB_states_2.pdf}}
 \caption{EVB states for a proton transfer reaction.}
 \label{fig:EVB-states}
 \end{center}
@@ -1359,7 +1360,7 @@ computers is best done by assigning one job per node.
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics*[scale=0.6]{pictures/speedup.pdf}
+\includegraphics*[scale=0.6]{\dirfig/speedup.pdf}
 \caption{Speedup of the parallel version of Qdyn.}
 \label{fig:speedup}
 \end{center}
@@ -1367,7 +1368,7 @@ computers is best done by assigning one job per node.
 
 \begin{figure}[hbt]
 \begin{center}
-\includegraphics*[scale=0.6]{pictures/efficiency.pdf}
+\includegraphics*[scale=0.6]{\dirfig/efficiency.pdf}
 \caption{Efficiency of the nodes when running Qdyn in parallel.
 The efficiency decreases as the number of nodes increase due to
 more communication and longer summation of the forces.}
@@ -1605,7 +1606,7 @@ for more than two states.
 \begin{figure}[h]
 \caption{Example Qfep output file}
 \centering
-\includegraphics*[scale=1]{pictures/Qfep_out.pdf}
+\includegraphics*[scale=1]{\dirfig/Qfep_out.pdf}
 \label{fig:Qfep-out}
 \end{figure}
 
@@ -2035,7 +2036,7 @@ there are any large changes in the energies throughout the
 simulation, see figure \ref{fig:tutorial_energies}.
 
 \begin{figure}[h]
-\centerline{\includegraphics*[width=5.92in,height=3.45in]{pictures/tutorial_energies.pdf}}
+\centerline{\includegraphics*[width=5.92in,height=3.45in]{\dirfig/tutorial_energies.pdf}}
 \caption{Energies} \label{fig:tutorial_energies}
 \end{figure}
 
@@ -2102,7 +2103,7 @@ create their own special-purpose programs by re-using $e.g.$ the
 trajectory and topology modules.
 
 \begin{figure}[h]
-\centerline{\includegraphics*[scale=0.9]{pictures/modules.pdf}}
+\centerline{\includegraphics*[scale=0.9]{\dirfig/modules.pdf}}
 \caption{The modules that build up Q.} \label{fig:modules}
 \end{figure}
 
@@ -2508,7 +2509,7 @@ in previous or next residue. \\
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics*[scale=0.8]{pictures/lib_ex.pdf}
+\includegraphics*[scale=0.8]{\dirfig/lib_ex.pdf}
 \caption{The CHARMM library entry for alanine}
 \label{fig:lib_example}
 \end{center}
@@ -2716,7 +2717,7 @@ for pairs of atom types or for single atom types col. description \\
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics*[scale=0.8]{pictures/prm_ex.pdf}
+\includegraphics*[scale=0.8]{\dirfig/prm_ex.pdf}
 \caption{Example of a parameter file.} \label{fig:prm_ex}
 \end{center}
 \end{figure}
@@ -2981,14 +2982,14 @@ output from Qdyn. Sections with no required entries are optional.
 \hline steps & Number of MD steps. & Required.\\
 \hline stepsize & MD stepsize ($\Delta$t) (fs). & Required.\\
 \hline temperature & Target temperature (K). & Required.\\
-\hline bath\_coupling & Temperature bath relaxation time T (fs)\cite{Berendsen:1984}. & Optional, default 10 fs. Must be $\geq$ stepsize. \\
-\hline separate\_scaling & Enable (on) or disable (off) separate temperature scaling of solute and solvent. & Optional, default off. \\
+\hline bath\_coupling & Temperature bath relaxation time T (fs)\cite{Berendsen:1984}. & Optional, default 100 fs. Must be $\geq$ stepsize. \\
+\hline separate\_scaling & Enable (on) or disable (off) separate temperature scaling of solute and solvent. & Optional, default on. \\
 \hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
 \hline shake\_solvent & Enable (on) or disable (off) shake constraining of bonds and angles of water. & Optional, default on. We recommend the use of shake for water.\\
 \hline shake\_solute & Shake constraining of solute bonds on or off. & Optional, default off.\\
 \hline shake\_hydrogens & Shake constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default off. \\
-\hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default off.\\
+\hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 

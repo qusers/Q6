@@ -1,15 +1,18 @@
 ################################################################################
-#  Q V.5 Makefile for linux                                                    #
+#  Q V.5 Makefile for Mac OSX  10.9.1                                          #
 #  main code author: Johan Aqvist                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
 #  latest update: January 29, 2014                                             #
 ################################################################################
 
+################################################################################
 # Specify compilers and their options in the following variables.
+################################################################################
 FC=		gfortran
 CC=		gcc
 MPIFC=		mpif90
-FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
+#FC_OPT=	-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
+FC_OPT=		-O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 CC_OPT=		-O3
 #MPIFLAGS=	-f90=${FC}
 OMPI_FC=	${FC}
@@ -20,35 +23,35 @@ OMPI_FCFLAGS=	${FFLAGS}
 OMPI_CXXFLAGS=	${CCFLAGS}
 #FLIBS=		-Vaxlib
 FPP_FLG=	-cpp  
-# 
-###
 
-###
+################################################################################
 # Display options
+################################################################################
 default: what
-###
 
-###
+
+################################################################################
 # Targets
+################################################################################
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
-	@make FC_OPT='-g -O0 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector -DG95=1 -g -O0 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy'         \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 movedebug
+	@make FFLAGS='-debug -traceback -g -Wall'         \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
 mpi:	
-	@make FC_OPT='-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' FFLAGS='-fstack-protector -DG95=1 -O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
-	qdyn5p move3
+	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy' \
+	qdyn5p
 
 mpi_debug:	
-	@make FC_OPT=-'O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -g'          \
-	qdyn5p movempidebug
+	@make FFLAGS='-debug -traceback -g -Wall'         \
+	qdyn5p
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
 
 nuke:
-	-rm -f *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5
+	-rm -rf *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
 qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o 
 
@@ -84,8 +87,9 @@ qdum5 : md_dum.o
 qdyn5p : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-###
+################################################################################
 # Object modules
+################################################################################
 avetr.o: avetr.f90 prep.o
 	${FC} ${FFLAGS} -c $<
 
@@ -206,21 +210,15 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
-	mkdir -p ../obj ; mv *.o *.mod ../obj/
+	mkdir ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
-move3:
-	mkdir -p ../bin ; mv qdyn5p ../bin
-movedebug:
-	mkdir -p ../bin_debug ; mv *.o *.mod qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin_debug
-movempidebug:
-	mkdir -p ../bin_debug ; mv *.o *.mod qdyn5p ../bin_debug
-#
-###
+	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
-###
+
+################################################################################
 # Build instructions
+################################################################################
 what:
 	@echo "usage: make <target>"
 	@echo
@@ -230,5 +228,5 @@ what:
 	@echo "mpi              qdyn5p using a loaded mpi library"
 	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
 	@echo
-#
-###
+
+################################################################################
