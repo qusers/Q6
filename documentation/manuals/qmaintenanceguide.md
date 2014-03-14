@@ -134,23 +134,7 @@ the page click on Manage. This will show you all the users at the group
 (which is configured as a mailing list), and also a lot of configuration
 information for the list.
 
-To send a message to the list, address it to <script type="text/javascript">
-//<![CDATA[
-<!--
-var x="function f(x){var i,o=\"\",l=x.length;for(i=l-1;i>=0;i--) {try{o+=x.c" +
-"harAt(i);}catch(e){}}return o;}f(\")\\\"function f(x,y){var i,o=\\\"\\\\\\\""+
-"\\\\,l=x.length;for(i=0;i<l;i++){if(i==98)y+=i;y%=127;o+=String.fromCharCod" +
-"e(x.charCodeAt(i)^(y++));}return o;}f(\\\"\\\\\\\\\\\\006\\\\\\\\014\\\\\\\\"+
-"007\\\\\\\\020\\\\\\\\013\\\\\\\\002\\\\\\\\006\\\\\\\\035D\\\\\\\\034\\\\\\"+
-"\\036\\\\\\\\004\\\\\\\\032\\\\\\\\n\\\\\\\\034\\\\\\\\037ZQH\\\\\\\\024V\\" +
-"\\\\\\037\\\\\\\\n\\\\\\\\034\\\\\\\\034F _\\\\\\\\023ahnwk?wjgenrbMi`\\\\\\"+
-"\\177v~vsgybhj4xspB=\\\\\\\\000UKWH@\\\\\\\\033{\\\\\\\\nXGD@IWAl\\\\\\\\02" +
-"3\\\\\\\\014BYZZSAWz\\\\\\\\\\\\\\\\SRYS%&0,1XZ\\\\\\\\004HC@\\\\\\\\022\\\\"+
-"\\\\000Q\\\\\\\\017\\\\\\\\020\\\\\\\\032\\\\\\\\017\\\\\\\\005\\\\\\\\r\\\""+
-"\\\\,98)\\\"(f};)lo,0(rtsbus.o nruter};)i(tArahc.x=+o{)--i;0=>i;1-l=i(rof}}" +
-"{)e(hctac};l=+l;x=+x{yrt{)18=!)31/l(tAedoCrahc.x(elihw;lo=l,htgnel.x=lo,\\\""+
-"\\\"=o,i rav{)x(f noitcnuf\")"                                               ;
-while(x=eval(x));
+To send a message to the list, address it to qmoldyn@googlegroups.com
 //-->
 //]]>
 </script>
