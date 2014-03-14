@@ -37,26 +37,26 @@ You need to be a member of the owners team at the github repository. 
 
 NOTE CHANGE THIS TO GIT WAY
 
-After modifying any of the master source files in g:\\src\\q4:
+~~After modifying any of the master source files in g:\\src\\q4:
 
 -   Update the version number and last-modified-date of the file in
     question, e.g. md.f90, and in the main program, e.g. qdyn.f90.
 -   Run the script g:\\src\\tarQ4.csh to update the files on the web
-    server.
+    server.~~
 
 ###Updating force field files
 
 NOTE CHANGE THIS TO GIT WAY
 
-After modifying the master files in g:\\FF4, run the script
+~~After modifying the master files in g:\\FF4, run the script
 g:\\FF4\\ff2web.csh to update the files on the web server (both
-separated files and compressed archive files).
+separated files and compressed archive files).~~
 
 ###Updating the manual
 
 NOTE CHANGE THIS TO GIT WAY
 
-After making changes to the manual, update the PDF version on the web
+~~After making changes to the manual, update the PDF version on the web
 server as follows:
 
 -   Log on to Gem (outside Erling’s office).
@@ -65,7 +65,7 @@ server as follows:
     options to see that Letter size paper is used (so that our US users
     can print without problem).
 -   When the Adobe Acrobat window appears, save the PDF file as
-    Qman4.pdf in the wwwroot\\Q directory on the web server.
+    Qman4.pdf in the wwwroot\\Q directory on the web server.~~
 
 
 
@@ -78,7 +78,7 @@ the executables.
 
 -   Not supported for now, we need a developer here.
 
-###Linux (gfortran)
+###Linux Generic(gfortran)
 
 
 ###Mac OSX (mavericks)
@@ -103,7 +103,7 @@ make mpi
 
 This will create the parallel executable qdyn5p
 
-You should move it to the appropriate place where you have configured your environment variables.
+You should move it to the appropriate place where you have configured your environment variables to find the binary.
 
 Then you could, in principle, run the test with the run_test_mpi.sh script at the tests folder.
 You would only have to create a script for the slurm queue where you make sure to load the openmpi libraries with:
