@@ -33,7 +33,7 @@ github private organization located at https://github.com/qusers
 
 You need to be a member of the owners team at the github repository. 
 
-Updating source code on the web server
+###Updating source code on the web server
 
 NOTE CHANGE THIS TO GIT WAY
 
@@ -44,7 +44,7 @@ After modifying any of the master source files in g:\\src\\q4:
 -   Run the script g:\\src\\tarQ4.csh to update the files on the web
     server.
 
-Updating force field files
+###Updating force field files
 
 NOTE CHANGE THIS TO GIT WAY
 
@@ -52,7 +52,7 @@ After modifying the master files in g:\\FF4, run the script
 g:\\FF4\\ff2web.csh to update the files on the web server (both
 separated files and compressed archive files).
 
-Updating the manual
+###Updating the manual
 
 NOTE CHANGE THIS TO GIT WAY
 
@@ -66,6 +66,8 @@ server as follows:
     can print without problem).
 -   When the Adobe Acrobat window appears, save the PDF file as
     Qman4.pdf in the wwwroot\\Q directory on the web server.
+
+
 
 ##Building executables
 
