@@ -4,21 +4,18 @@
 
 #####Update:Mauricio Esguerra March 13, 2014*
 
-**\
 
 This document describes how to maintain the Q programs at the Åqvist
 group.  Recently the code, documentation, and some scripts have been
 added to version control using github, these documents still need some
 updating. 
 
-File locations
 
-\
+##File locations
 
 The current source code for Q and documentation has been pushed to a
 github private organization located at https://github.com/qusers
 
-\
 
 +--------------------------------------+--------------------------------------+
 | **What**                             | **Where**                            |
@@ -42,9 +39,9 @@ github private organization located at https://github.com/qusers
 | Q web site                           | pending                              |
 +--------------------------------------+--------------------------------------+
 
-\
 
-Updating Q
+
+##Updating Q
 
 You need to be a member of the owners team at the github repository. 
 
@@ -82,26 +79,26 @@ server as follows:
 -   When the Adobe Acrobat window appears, save the PDF file as
     Qman4.pdf in the wwwroot\\Q directory on the web server.
 
-Building executables
+##Building executables
 
 This section describes how to transfer source code, compile and package
 the executables.
 
-Windows
+###Windows
 
 -   Not supported for now, we need a developer here.
 
 \
 
-Mac OSX (mavericks)
+###Mac OSX (mavericks)
 
 \
 
-Linux CentOS 6.5 (triolith)
+###Linux CentOS 6.5 (triolith)
 
 \
 
-Linux (csb)
+###Linux (csb)
 
 -   Transfer the whole source code archive (update it first!) by ftp to
     a directory named q4 in your home directory on genome.ibg.uu.se.
@@ -128,15 +125,15 @@ Linux (csb)
     Q4\_IRIX6.2\_R4k.tar.gz by ftp to the directory
     wwwroot\\Q\\download\\bin on the web server.
 
-Linux (abisko)
+###Linux (abisko)
 
 \
 
-Linux (tintin)
+###Linux (tintin)
 
 \
 
-Updating the Q web site
+##Updating the Q web site
 
 The Åqvist group web site http://aqvist.bmc.uu.se and the Q web site
 http://aqvist.bmc.uu.se/Q can both be edited using VisualPage. The
