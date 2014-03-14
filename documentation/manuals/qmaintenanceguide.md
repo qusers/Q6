@@ -18,8 +18,8 @@ github private organization located at https://github.com/qusers
 
 
 |   What                               | Where                                        |
-| ------------------------------------ |:--------------------------------------------:| 
-| source code, makefile, history files |  qsource/src /  history/                     |
+| ------------------------------------ |:---------------------------------------------| 
+| source code, makefile, history files | qsource/src /  history/                      |
 | manual                               | qsource/documentation/manual/qman5.pdf       |
 | license agreement                    | qsource/documentation/license.pdf            |
 | this document                        | qsource/documentation/qmaintenanceguide.docx |
@@ -76,17 +76,17 @@ the executables.
 
 -   Not supported for now, we need a developer here.
 
+###Linux (gfortran)
 
 
 ###Mac OSX (mavericks)
-
 
 
 ###Linux CentOS 6.5 (triolith)
 
 
 
-###Linux CentOS release 6.3 (csb)
+###Linux CentOS 6.3 (csb)
 
 To compile at csb follow these steps:
 ```bash
@@ -109,11 +109,11 @@ You would only have to create a script for the slurm queue where you make sure t
 module load openmpi-x86_64
 ```
 
-###Linux (abisko)
+###Linux Ubuntu 12.04 (abisko)
 
 
 
-###Linux (tintin)
+###Linux Scientific Linux 6.5 (tintin)
 
 
 
