@@ -61,8 +61,8 @@ After this you have to add the program to your system path by modifying your she
 if your shell is bash you can add the following line to your .bashrc file:
 
 ```bash
-export Q5MD=$SOFT/qsource
-export PATH=$Q5MD/bin:$PATH  
+export QDIR=$SOFT/qsource
+export PATH=$QDIR/bin:$PATH  
 ```
 Where $SOFT will be the place where your software folder is located at, e.g. /Users/johndoe/software
 
