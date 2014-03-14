@@ -135,7 +135,5 @@ the page click on Manage. This will show you all the users at the group
 information for the list.
 
 To send a message to the list, address it to qmoldyn@googlegroups.com
-//-->
-//]]>
-</script>
+
 
