@@ -19,26 +19,14 @@ github private organization located at https://github.com/qusers
 
 
 | **What**                             | **Where**                           |
-| ------------------------------------ |:-----------------------------------:|
 | source code, makefile, history files |  qsource/src /  history/            |
-| ------------------------------------ |:-----------------------------------:|
-| manual                               | qsource/documentation/manual/qman5.p |
-|                                      | df                                   |
-| ------------------------------------ |:-----------------------------------:|
+| manual                               | qsource/documentation/manual/qman5.pdf |
 | license agreement                    | qsource/documentation/license.pdf    |
-| ------------------------------------ |:-----------------------------------:|
-| this document                        | qsource/documentation/qmaintenancegu |
-|                                      | ide.docx                             |
-| ------------------------------------ |:-----------------------------------:|
+| this document                        | qsource/documentation/qmaintenanceguide.docx |
 | force field files                    | qsource/ff/                          |
-| ------------------------------------ |:-----------------------------------:|
 | scripts                              | scripts/                             |
-| ------------------------------------ |:-----------------------------------:|
 | tests                                | qsource/tests/                       |
-| ------------------------------------ |:-----------------------------------:|
 | Q web site                           | pending                              |
-
-
 
 
 ##Updating Q
@@ -88,50 +76,46 @@ the executables.
 
 -   Not supported for now, we need a developer here.
 
-\
+
 
 ###Mac OSX (mavericks)
 
-\
+
 
 ###Linux CentOS 6.5 (triolith)
 
-\
 
-###Linux (csb)
 
--   Transfer the whole source code archive (update it first!) by ftp to
-    a directory named q4 in your home directory on genome.ibg.uu.se.
--   Log on to genome.ibg.uu.se with SSH.
--   Unpack the source code archive:\
-     gunzip -c Q4\_src.tar.gz | tar -xvf -
+###Linux CentOS release 6.3 (csb)
 
--   Alternatively, replace steps 1 and 2 by transferring individual
-    source files.
+To compile at csb follow these steps:
+```bash
+source /home/apps/intel/composer_xe_2013.5.192/bin/ifortvars.sh intel64
+export OMPI_FC=ifort
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+cp makefile.ifort makefile
+cp qdyn.F90_ifort_signals qdyn.f90
+make mpi
+```
 
--   Remove old object files:\
-     make clean
--   Build the executables for use on MIPS R10000 processors:\
-     make irix6.4
--   Package the executables:\
-     ./package\_R10k.csh (copy this script from ˜john/src/q4)
--   Remove object files\
-     make clean
--   Build the executables for use on MIPS R4000 processors:\
-     make irix6.2
--   Package the executables:\
-     ./package\_R4k.csh (copy this script from ˜john/src/q4)
--   Retrieve the archive files Q4\_IRIX6.4\_R10k.tar.gz and
-    Q4\_IRIX6.2\_R4k.tar.gz by ftp to the directory
-    wwwroot\\Q\\download\\bin on the web server.
+This will create the parallel executable qdyn5p
+
+You should move it to the appropriate place where you have configured your environment variables.
+
+Then you could, in principle, run the test with the run_test_mpi.sh script at the tests folder.
+You would only have to create a script for the slurm queue where you make sure to load the openmpi libraries with:
+```bash
+module load openmpi-x86_64
+```
 
 ###Linux (abisko)
 
-\
+
 
 ###Linux (tintin)
 
-\
+
 
 ##Updating the Q web site
 
@@ -144,13 +128,11 @@ which is the actual web server directory.
 
 The E-mail list
 
-The home page of the list is https://groups.google.com/d/forum/qmoldyn.
+The home page of the list is at: https://groups.google.com/d/forum/qmoldyn.
 To see the member list etc, log in to your google account, you should be
-a group owner, go to the group web page and at the upper right side of
+a group owner, go to the group web page and on the upper right side of
 the page click on Manage. This will show you all the users at the group
 (which is configured as a mailing list), and also a lot of configuration
 information for the list.
-
-\
 
 To send a message to the list, address it to qmoldyn@googlegroups.com
