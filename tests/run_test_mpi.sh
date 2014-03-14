@@ -1,16 +1,22 @@
-#!/bin/bash 
+#!/bin/bash
+##############################
+# NOTE:
+# Uncomment or modify the next line depending on your system
+# openmpi version.
+##############################
+#module load openmpi-x86_64
 
-if [ "x$Q_PATH" == "x" ]
+if [ "x$QDIR" == "x" ]
 then 
- echo "Please set the Q_PATH variable to point at the Q directory."
+ echo "Please set the QDIR variable to point at the Q directory."
  exit 1
-elif [ ! -x $Q_PATH/Qdyn5p ]
+elif [ ! -x $QDIR/qdyn5p ]
 then
- echo "Can't locate Qdyn5P in the Q_PATH, or you don't have 
+ echo "Can't locate Qdyn5P in the QDIR, or you don't have 
        execute permisson."
  exit 1
 else
- echo "Detected Qdyn5p in ${Q_PATH}"
+ echo "Detected qdyn5p in ${QDIR}"
 fi
 
 # How many cores on this machine?
@@ -33,7 +39,7 @@ FAILED="(\033[0;31m FAILED \033[0m)"
 for step in {1..5}
 do
  echo -n "Running equilibration step ${step} of 5                         "
- if mpirun -n $CORES $Q_PATH/Qdyn5p eq${step}.inp > eq${step}.log
+ if mpirun -n $CORES $QDIR/qdyn5p eq${step}.inp > eq${step}.log
  then echo -e "$OK"
  else 
   echo -e "$FAILED"
@@ -45,7 +51,7 @@ done
 for step in {1..5}
 do
  echo -n "Running production run step ${step} of 5                        "
- if mpirun -n $CORES $Q_PATH/Qdyn5p dc${step}.inp > dc${step}.log
+ if mpirun -n $CORES $QDIR/qdyn5p dc${step}.inp > dc${step}.log
   then echo -e "$OK"
  else 
   echo -e "$FAILED"
