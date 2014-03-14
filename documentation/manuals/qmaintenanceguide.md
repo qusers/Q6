@@ -121,14 +121,11 @@ module load openmpi-x86_64
 
 ##Updating the Q web site
 
-The Åqvist group web site http://aqvist.bmc.uu.se and the Q web site
-http://aqvist.bmc.uu.se/Q can both be edited using VisualPage. The
-VisualPage project file is w:\\aqvist\_dev.vpp. The HTML and other files
-in this project are all in the w:\\wwwdev directory. Edit the files
-there and then copy the modified files, or all files, to w:\\wwwroot
-which is the actual web server directory.
+The Q website page is now located at the url http://xray.bmc.uu.se/~aqwww/q, but 
+plans are underway to migrate it to a new address and keep it under version control.
 
-The E-mail list
+
+##The E-mail list
 
 The home page of the list is at: https://groups.google.com/d/forum/qmoldyn.
 To see the member list etc, log in to your google account, you should be
