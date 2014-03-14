@@ -2,13 +2,13 @@
 
 qbinary=$QDIR/bin/qdyn5
 
-if [ "x$QDIR" == "x" ]
+if [ "x$qbinary" == "x" ]
 then 
- echo "Please set the QDIR variable to point to the Q folder"
+ echo "Please set the qbinary variable to point to the Q folder"
  exit 1
 elif [ ! -x $qbinary ]
 then
- echo "Can't locate qdyn in the QDIR, or you don't have 
+ echo "Can't locate qdyn in the $qbinary variable, or you don't have 
        execute permisson."
  exit 1
 else
