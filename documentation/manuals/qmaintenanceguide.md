@@ -38,7 +38,6 @@ You need to be a member of the owners team at the github repository. 
 NOTE CHANGE THIS TO GIT WAY
 
 ~~After modifying any of the master source files in g:\\src\\q4:
-
 -   Update the version number and last-modified-date of the file in
     question, e.g. md.f90, and in the main program, e.g. qdyn.f90.
 -   Run the script g:\\src\\tarQ4.csh to update the files on the web
@@ -58,7 +57,6 @@ NOTE CHANGE THIS TO GIT WAY
 
 ~~After making changes to the manual, update the PDF version on the web
 server as follows:
-
 -   Log on to Gem (outside Erling’s office).
 -   Open the manual (g:\\doc\\Qman4.doc)
 -   Print it to the print driver called ‘Acrobat Distiller’. Check the
