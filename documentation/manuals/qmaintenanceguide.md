@@ -1,8 +1,8 @@
-Q Maintenance guide
+#Q Maintenance guide
 
-*John Marelius, August 29, 2000*
+####John Marelius, August 29, 2000*
 
-*Update:Mauricio Esguerra March 13, 2014*
+#####Update:Mauricio Esguerra March 13, 2014*
 
 **\
 
