@@ -17,8 +17,8 @@ The current source code for Q and documentation has been pushed to a
 github private organization located at https://github.com/qusers
 
 
-|   What                               | Where                                        |
-| ------------------------------------ |:---------------------------------------------| 
+| What                                 | Where                                        |
+|:------------------------------------ |:---------------------------------------------| 
 | source code, makefile, history files | qsource/src /  history/                      |
 | manual                               | qsource/documentation/manual/qman5.pdf       |
 | license agreement                    | qsource/documentation/license.pdf            |
