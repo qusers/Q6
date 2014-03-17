@@ -1,8 +1,7 @@
 #Q Maintenance guide
 
-####John Marelius, August 29, 2000*
-
-#####Update:Mauricio Esguerra March 13, 2014*
+####Update:Mauricio Esguerra March 17, 2014*
+######Original by: John Marelius, August 29, 2000*
 
 
 This document describes how to maintain the Q programs at the Åqvist
