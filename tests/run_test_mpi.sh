@@ -1,12 +1,12 @@
 #!/bin/bash -l
 #################################################################
 # NOTE:
-# Uncomment or modify the next line depending on your system
-# openmpi version.
+# Uncomment or modify the next two lines depending on your system
+# openmpi or impi version, and the path to your Q binaries.
 #################################################################
 module load openmpi-x86_64
-
 export bindir=/home/esguerra/software/qsource/bin
+
 
 if [ "x$bindir" == "x" ]
 then 
