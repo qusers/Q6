@@ -99,8 +99,18 @@ module load openmpi-x86_64
 ```
 
 ###Linux - Ubuntu 12.04 (abisko)
-
-
+To compile at abisko follow these steps:
+```bash
+module load intel/13.1.2.183
+export OMPI_FC=ifort
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+cp makefile.ifort makefile
+cp qdyn.F90_ifort_signals qdyn.f90
+make all
+module load impi/4.1.0.024
+make mpi
+```
 
 ###Linux - Scientific Linux 6.5 (tintin)
 
