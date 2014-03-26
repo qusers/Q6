@@ -116,13 +116,30 @@ make mpi
 
 To compile at tintin follow these steps:
 ```bash
+
+unset SSH_ASKPASS
+
+###USE YOUR USERNAME INSTEAD OF esguerra
+git clone https://esguerra@github.com/qusers/qsource.git 
+
+###It will ask for your password and download it showing something like:
+remote: Counting objects: 934, done.
+remote: Compressing objects: 100% (449/449), done.
+remote: Total 934 (delta 476), reused 934 (delta 476)
+Receiving objects: 100% (934/934), 16.79 MiB | 3.59 MiB/s, done.
+Resolving deltas: 100% (476/476), done.
+
+###If that works for you, hopefully, then go with:
+cd qsource/src/
 module load intel/14.0
 export OMPI_FC=ifort
-git clone https://github.com/qusers/qsource.git
-cd qsource/src
 cp makefile.ifort makefile
 cp qdyn.F90_ifort_signals qdyn.f90
 make all
+
+###And to compile the parallel version
+module load intelmpi/4.1
+make mpi
 ```
 
 ##Updating the Q web site
