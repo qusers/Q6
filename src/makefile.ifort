@@ -42,7 +42,7 @@ mpi:	qdyn5p move1 move3
 
 mpi_debug:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
-	Qdyn5p
+	qdyn5p
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
@@ -228,7 +228,7 @@ what:
 	@echo "<target> is one of:"
 	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
 	@echo "debug            'all' but with debug information (stacktraces etc)."
-	@echo "mpi              qdyn5p using a loaded mpi library"
+	@echo "mpi              qdyn5p using the currently loaded mpi library"
 	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
 	@echo
 ################################################################################
