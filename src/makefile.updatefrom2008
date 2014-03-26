@@ -32,102 +32,102 @@ OUTDIR="./"
 
 #F90FLG=-O2,unroll2,pipeline2 -dp -lmfastv
 
-cray-t3e:
-	@make F90="f90" \
-	F90FLG="-O1" \
-	F90LIBS= \
-	PP_SUFFIX=".F90" \
-	CPP_FLG= \
-	OBJ_FLG="-b"\
-	all
+#cray-t3e:
+	#@make F90="f90" \
+	#F90FLG="-O1" \
+	#F90LIBS= \
+	#PP_SUFFIX=".F90" \
+	#CPP_FLG= \
+	#OBJ_FLG="-b"\
+	#all
 
-cray-t3e-debug:
-	@make F90="f90" \
-	F90FLG="-O1" \
-	F90LIBS= \
-	PP_SUFFIX=".F90" \
-	CPP_FLG= \
-	OBJ_FLG="-b"\
-	all
+#cray-t3e-debug:
+	#@make F90="f90" \
+	#F90FLG="-O1" \
+	#F90LIBS= \
+	#PP_SUFFIX=".F90" \
+	#CPP_FLG= \
+	#OBJ_FLG="-b"\
+	#all
 
-cray-t3e-mpi:
-	@make F90="f90" \
-	F90FLG="-O1" \
-	F90LIBS= \
-	USE_MPI= \
-	PP_SUFFIX=".F90" \
-	CPP_FLG= \
-	OBJ_FLG="-b"\
-	all
+#cray-t3e-mpi:
+	#@make F90="f90" \
+	#F90FLG="-O1" \
+	#F90LIBS= \
+	#USE_MPI= \
+	#PP_SUFFIX=".F90" \
+	#CPP_FLG= \
+	#OBJ_FLG="-b"\
+	#all
 
 
 #
 # Digital alpha/OSF1
 #
-alpha-osf1-mpi:
-	@make F90="f90" \
-	F90FLG="-O1" \
-	F90LIBS="-L/usr/opt/MPI104/lib -lmpi -lfmpi -limc -lrt -threads" \
-	USE_MPI= \
-	CPP_FLG="-cpp" \
-	all
+#alpha-osf1-mpi:
+	#@make F90="f90" \
+	#F90FLG="-O1" \
+	#F90LIBS="-L/usr/opt/MPI104/lib -lmpi -lfmpi -limc -lrt -threads" \
+	#USE_MPI= \
+	#CPP_FLG="-cpp" \
+	#all
 
-alpha-osf1-ev5:
-	@make F90="f90" \
-	F90FLG="-arch ev5 -tune ev5 -O4 -fast -pipeline -speculate by_routine" \
-	F90LIBS= \
-	CPP_FLG="-cpp" \
-	all
+#alpha-osf1-ev5:
+	#@make F90="f90" \
+	#F90FLG="-arch ev5 -tune ev5 -O4 -fast -pipeline -speculate by_routine" \
+	#F90LIBS= \
+	#CPP_FLG="-cpp" \
+	#all
 
-alpha-osf1-ev6:
-	@make F90="f90" \
-	F90FLG="-arch ev6 -tune ev6 -O4 -fast -pipeline -speculate by_routine" \
-	F90LIBS= \
-	CPP_FLG="-cpp" \
-	all
+#alpha-osf1-ev6:
+	#@make F90="f90" \
+	#F90FLG="-arch ev6 -tune ev6 -O4 -fast -pipeline -speculate by_routine" \
+	#F90LIBS= \
+	#CPP_FLG="-cpp" \
+	#all
 
-alpha-osf1-ev5-i:
-	@make F90="f90" \
-	F90FLG="-arch ev5 -tune ev5 -O4 -fast -pipeline -speculate by_routine" \
-	F90LIBS= \
-	CPP_FLG="-cpp" \
-	CCFLG="-arch ev5 -fast" \
-	Qdyn5i
+#alpha-osf1-ev5-i:
+	#@make F90="f90" \
+	#F90FLG="-arch ev5 -tune ev5 -O4 -fast -pipeline -speculate by_routine" \
+	#F90LIBS= \
+	#CPP_FLG="-cpp" \
+	#CCFLG="-arch ev5 -fast" \
+	#Qdyn5i
 
 #
 # Sun Solaris 5.5
 #
-solaris:
-	@make F90="f90" \
-	F90FLG="-fast -xlibmopt" \
-	F90LIBS= \
-	PP_SUFFIX=".F90" \
-	CPP_FLG= \
-	all
+#solaris:
+	#@make F90="f90" \
+	#F90FLG="-fast -xlibmopt" \
+	#F90LIBS= \
+	#PP_SUFFIX=".F90" \
+	#CPP_FLG= \
+	#all
 
 #
 # IRIX 
 #
-irix6.4:
-	@make F90="f90" \
-	F90FLG="-O2 -OPT:Olimit=0,fast_sqrt=ON,rsqrt=ON -n32 -mips4 -TARG:platform=ip27" \
-	F90LIBS= \
-	CPP_FLG="-cpp" \
-	all
+#irix6.4:
+	#@make F90="f90" \
+	#F90FLG="-O2 -OPT:Olimit=0,fast_sqrt=ON,rsqrt=ON -n32 -mips4 -TARG:platform=ip27" \
+	#F90LIBS= \
+	#CPP_FLG="-cpp" \
+	#all
 
-irix6.3:
-	@make F90="f90" \
-	F90FLG="-O2 -OPT:fast_sqrt=ON:rsqrt=ON -n32 -TARG:processor=r4000" \
-	F90LIBS= \
-	CPP_FLG= \
-	all
+#irix6.3:
+	#@make F90="f90" \
+	#F90FLG="-O2 -OPT:fast_sqrt=ON:rsqrt=ON -n32 -TARG:processor=r4000" \
+	#F90LIBS= \
+	#CPP_FLG= \
+	#all
 
-irix6.2:
-	@make F90="f90" \
-	F90FLG="-O2 -OPT:fast_sqrt=ON -n32 -mips3 -TARG:platform=ip22" \
-	F90LIBS= \
-	CPP_FLG="-cpp" \
-	all
+#irix6.2:
+	#@make F90="f90" \
+	#F90FLG="-O2 -OPT:fast_sqrt=ON -n32 -mips3 -TARG:platform=ip22" \
+	#F90LIBS= \
+	#CPP_FLG="-cpp" \
+	#all
 
 #
 # Linux Portland pgi ia-32 compiler

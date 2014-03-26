@@ -98,17 +98,16 @@ You would only have to create a script for the slurm queue where you make sure t
 module load openmpi-x86_64
 ```
 
-###Linux - Ubuntu 12.04 (abisko)
+###Linux - Ubuntu 12.04 (abisko) AMD
 To compile at abisko follow these steps:
 ```bash
-module load intel/13.1.2.183
-export OMPI_FC=ifort
+module load openmpi/gcc/1.6.5
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.ifort makefile
-cp qdyn.F90_ifort_signals qdyn.f90
+cp makefile.gcc makefile
 make all
-module load impi/4.1.0.024
+
+module load ompi
 make mpi
 ```
 
@@ -151,9 +150,9 @@ plans are underway to migrate it to a new address and keep it under version cont
 ##The E-mail list
 
 The home page of the list is at: https://groups.google.com/d/forum/qmoldyn.
-To see the member list etc, log in to your google account, you should be
-a group owner, go to the group web page and on the upper right side of
-the page click on Manage. This will show you all the users at the group
+If you're in the google-group owners team then you can see the member list etc.
+Just log in to your google account, go to the group web page and on the upper right side of
+the page click on Manage. This will show you all the users on the group
 (which is configured as a mailing list), and also a lot of configuration
 information for the list.
 
