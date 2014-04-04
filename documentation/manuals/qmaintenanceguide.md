@@ -65,18 +65,46 @@ wwwroot\\Q directory on the web server.~~
 
 ##Building executables
 
-This section describes how to transfer source code, compile and package
-the executables.
+This sections describes how to compile the code using the makefile to
+select which pakages to compile and which compiler.
+In short, a new makefile updated to use te GNU fortran compilers, and
+the intel fortran compiler has been created.
+
+In general the use of the makefile is as follows:
+```bash
+make
+```
+
+The make alone command will show you the options which have to be specified at
+compilation depending on the compiler available in your machine and the set of
+programs you want to compile, for example, the [all] option stands for compilation
+of programs except for the parallel version of qdyn5.
+
+To compile using the Intel fortran compiler, and a debuggable version of the code
+you would give the following options to the make command:
+
+```bash
+make debug COMP=ifort
+```
 
 ###Windows
 
 -   Not supported for now, we need a developer here.
 
 ###Linux - Generic(gfortran)
-
+By default if a second COMP=[compilername] option is not given to the make command
+the make program will use as defaults the gfortran compiler
+```bash
+make all
+```
 
 ###Mac OSX (mavericks)
-
+The compilation of the Q set of programs using the gfortran compiler needs a few different
+options to those used in say, linux, so in order to compile in the most recent
+version of the Mac OSX, you need to use:
+```bash
+make all COMP=osx
+```
 
 ###Linux - CentOS 6.5 (triolith) Intel
 
@@ -99,19 +127,16 @@ source /home/apps/intel/composer_xe_2013.5.192/bin/ifortvars.sh intel64
 export OMPI_FC=ifort
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.ifort makefile
+cp makefile.new makefile
 cp qdyn.F90_ifort_signals qdyn.f90
-make all
-make mpi
+make all COMP=ifort
+make mpi COMP=ifort
 ```
 
 This will create the parallel executable qdyn5p
 
-You should move it to  the appropriate place where you have configured
-your environment variables to find the binary.
-
-Then you  could, in principle,  run the test with  the run_test_mpi.sh
-script at  the tests folder.  You  would only have to  create a script
+Once compilations is succesful you run the simple test in the /test folder
+with  the run_test_mpi.sh script.  You  would only have to  create another script
 for the slurm queue where you  make sure to load the openmpi libraries
 with:
 ```bash
@@ -124,11 +149,11 @@ To compile at abisko follow these steps:
 module load openmpi/gcc/1.6.5
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.gcc makefile
-make all
+cp makefile.new makefile
+make all COMP=gcc
 
 module load openmpi/gcc/1.6.5
-make mpi
+make mpi COMP=gcc
 ```
 
 ###Linux - Scientific Linux 6.5 (tintin) AMD
@@ -150,13 +175,13 @@ Resolving deltas: 100% (476/476), done.
 
 ###If that works for you, hopefully, then go with:
 cd qsource/src/
-cp makefile.gcc makefile
+cp makefile.new makefile
 module load gcc/4.8.2
-make all
+make all COMP=gcc
 
 ###And to compile the parallel version
 module load openmpi/1.4
-make mpi
+make mpi COMP=gcc
 ```
 
 ##Updating the Q web site
