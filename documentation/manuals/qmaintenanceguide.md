@@ -114,9 +114,9 @@ git clone https://github.com/qusers/qsource.git
 cd qsource/src
 cp makefile.ifort makefile
 cp qdyn.F90_ifort_signals qdyn.f90
-make all
+make all COMP=ifort
 module load impi/4.1.3.048
-make mpi
+make mpi COMP=ifort
 ```
 
 ###Linux - CentOS 6.3 (csb) Intel
