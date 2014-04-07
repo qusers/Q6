@@ -119,6 +119,22 @@ module load impi/4.1.3.048
 make mpi COMP=ifort
 ```
 
+###Linux - CentOS 6.5 (glenn) AMD Opteron 6220
+There is some issue with finding the path to linker libraries, so, I've used
+the compilation flags used in the mac in this case.
+Needs benchmarking against ifortran and pgi.
+
+```bash
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+cp makefile.new makefile
+module load  gcc/4.8/4.8.1
+make all COMP=osx
+module load openmpi/1.5.4
+make mpi COMP=gcc
+```                   
+
+
 ###Linux - CentOS 6.3 (csb) Intel
 
 To compile at csb follow these steps:
