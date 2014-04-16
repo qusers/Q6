@@ -1,9 +1,6 @@
 !	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
 !	qdyn.f90
 !	by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
-
-
 !	Qdyn molecular dynamics main program
 
 program Qdyn5

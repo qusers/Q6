@@ -1,19 +1,17 @@
 !	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
 !	qfep.f90
-!	by Johan Åqvist, Karin Kolmodin & John Marelius
-
+!	by Johan Ã…qvist, Karin Kolmodin & John Marelius
 !	Qfep free energy analysis program for FEP, EVB & umbrella sampling
 
 program qfep
-use NRGY	
+use NRGY
 use PARSE
 
 implicit none
-	character(*), parameter			::	MODULE_VERSION = '5.01'
+	character(*), parameter			::	MODULE_VERSION = '5.06'
 	character(*), parameter			::	MODULE_DATE = '2003-06-03'
 
-	integer,parameter ::mxpts=20000,mxbin=100,mxstates=4
+	integer,parameter ::mxpts=200000,mxbin=100,mxstates=4
 	character(80)      ::filnam, line
 	integer           ::i,j,ifile,ipt,istate,ibin,nfiles,nstates,ERR, &
 	                      nskip,nbins,nmin,idum,noffd,nnoffd,offel
@@ -22,13 +20,13 @@ implicit none
 
 	real(8) ::rt,gapmin,gapmax,sum,dv,gaprange, &
 			xint,dvg,veff1,veff2,dGa,dGb,dGg,alpha_B,scale_Hij, &
-			veff,min	  		
+			veff,min
 	real(8),dimension(mxbin)              ::sumg,sumg2,avdvg,avc1,avc2,avr
-										  
+
 	real(8),dimension(mxbin,4)            ::binsum
 	integer,dimension(mxbin)              ::nbinpts,ptsum
 
-	type(Q_ENERGIES), dimension(mxstates)	:: EQ 	
+	type(Q_ENERGIES), dimension(mxstates)	:: EQ
 	type(Q_ENERGIES), dimension(mxstates)	:: avEQ
 	real(8),dimension(mxstates)				:: dvv,dGv,alfa,coeff
 
@@ -45,16 +43,17 @@ implicit none
 	type(FEP_DATA_TYPE), allocatable	::	FEP(:) !index is file
 	type(FEP_DATA_TYPE)				::	FEPtmp !temporary storage for one file
 
-	real(8),dimension(mxstates,mxbin)     ::avdvv,sumv,sumv2 
+	real(8),dimension(mxstates,mxbin)     ::avdvv,sumv,sumv2
 
-	integer								::	f
-
+	integer								::	f,gas=0,error,dummyno !!!!!!!!!masoud
+	real								::	dummy
+	character(100)							::	iline !!!!!!! masoud
 	!header
 	write(*,100) MODULE_VERSION,  MODULE_DATE
 	write(*,*)
 100	format('# Qfep',t30,'version ',a,t50,'(modified on ',a,')')
-	
-	!------------------------------------------ 
+
+	!------------------------------------------
 	! INPUT OF PARAMETERS
 	!------------------------------------------
 	call prompt ('--> Number of energy files: ')
@@ -77,11 +76,33 @@ implicit none
 	end if
 
 	! Continue to read input
-	call prompt ('--> Give kT & no, of pts to skip: ')
-	read (*,*) rt,nskip
-	write (*,3) rt,nskip
+	call prompt ('--> Give kT & no, of pts to skip   & calculation mode: ')
+	read(*,'(a)') iline
+
+	!!!!!!!!!!!!!!  masoud reading an extra option for just calculating QQ energies
+	!print*, iline
+	do i=1,4
+		read (iline,*,iostat=error)(dummy,j=1,i)
+!		print*, error,"***",i,dummy
+		if (error .ne. 0) then
+			dummyno=i-1
+			exit
+		endif
+	enddo
+	if (dummyno .eq. 2) then
+		read (iline,*) rt,nskip
+	elseif (dummyno .eq. 3) then
+		read (iline,*) rt,nskip,gas
+	else
+		print*, "not correct argumets for KT, data points to skip or calculation mode"
+		stop
+	end if
+	!!!!!!!!!!!!!!  masoud
+
+!	read (*,*) rt,nskip
+	write (*,3) rt,nskip,gas
 3	format('# kT                              =',f6.3,/, &
-		   '# Number of data points to skip   =',i6)
+		   '# Number of data points to skip   =',i6,/, '# Only QQ interactions will be considered   = ',i3)
 
 	call prompt ('--> Give number of gap-bins: ')
 	read (*,*) nbins
@@ -112,7 +133,7 @@ implicit none
 		call prompt ('--> Number of off-diagonal elements:')
 		read (*,*) nnoffd
 		write (*,9) nnoffd
-		if(nnoffd >0) write(*,11) 
+		if(nnoffd >0) write(*,11)
 		do offel=1,nnoffd
 			call prompt ('--> i, j, A_ij, mu_ij, eta_ij, r_xy0: ')
 			read (*,*) i, j, A(i,j), mu(i,j), eta(i,j), rxy0(i,j)
@@ -120,12 +141,12 @@ implicit none
 		end do
 9	format('# Number of off-diagonal elements =',i6)
 11	format('#   i   j   A(i,j)  mu(i,j) eta(i,j) rxy0(i,j)')
-12	format('#',2i4,4f9.2) 
+12	format('#',2i4,4f9.2)
 	end if
 
 	call prompt ('--> linear combination of states defining reaction coord: ')
 	read (*,*) (coeff(i),i=1,nstates)
-	write(*,13) coeff(1:nstates)		
+	write(*,13) coeff(1:nstates)
 13	format('# Linear combination co-efficients=',8f6.2)
 
 	!allocate large arrays
@@ -171,7 +192,7 @@ implicit none
 
 		!read 1st record to get lambdas
 		idum = get_ene(f, EQ(:), offd, nstates,nnoffd)
-		if(idum /= 0) then 
+		if(idum /= 0) then
 			!we have a problem
 			write(*,'(a,a)') 'ERROR: Unexpected end-of-file in first record of ', &
 				trim(filnam)
@@ -188,7 +209,7 @@ implicit none
 				stop 'Qfep5 terminated abnormally: Failed to read off-diagonals.'
 			end if
 		end if
-								
+
 		FEP(ifile)%lambda(:) = EQ(:)%lambda
 
         rewind (f)
@@ -198,9 +219,21 @@ implicit none
 		FEPtmp%gap(:) = 0.
 		do while(get_ene(f, EQ(:), offd, nstates, nnoffd) == 0) !keep reading till EOF
 			ipt = ipt + 1
-			if(ipt > nskip) then
-				avEQ(:) = avEQ(:) + EQ(:) !use Qenergies + operator 
+	!!!!!!!!!!!!!!  masoud
+!if the gas flag is > 0 then total energy will be just q (bonded), qq(nonbonded) and restraint
+			if (gas .gt. 0 ) then
+			do i=1,nstates
+			EQ(i)%total=EQ(i)%q%bond+EQ(i)%q%angle+EQ(i)%q%torsion+EQ(i)%q%improper+EQ(i)%qq%el+EQ(i)%qq%vdw+EQ(i)%restraint
+!			print*, EQ(i)%total, EQ(i)%q,EQ(i)%qq,EQ(i)%restraint
+!			print*, "''''''''''"
+!			if (ipt > 10 ) stop
+			end do
 			end if
+	!!!!!!!!!!!!!!   masoud
+			if(ipt > nskip) then
+				avEQ(:) = avEQ(:) + EQ(:) !use Qenergies + operator
+			end if
+
 
 !-------------------------------------------
 ! Correct H_ii with alfa, and modify H_ij...
@@ -228,11 +261,11 @@ implicit none
 						else
  							if (A(i,j)==0.0) then
  								Hij(i,j) = A(j,i)*exp(-mu(j,i)*(offd(1)%rkl-rxy0(j,i)))* &
- 								exp(-eta(j,i)*(offd(1)%rkl-rxy0(j,i))**2)					 					
- 							else 
+ 								exp(-eta(j,i)*(offd(1)%rkl-rxy0(j,i))**2)
+ 							else
  								Hij(i,j) = A(i,j)*exp(-mu(i,j)*(offd(1)%rkl-rxy0(i,j)))* &
- 								exp(-eta(i,j)*(offd(1)%rkl-rxy0(i,j))**2)									 
- 							end if 
+ 								exp(-eta(i,j)*(offd(1)%rkl-rxy0(i,j))**2)
+ 							end if
 						end if
 					end do
  				end do
@@ -249,11 +282,11 @@ implicit none
 					FEPtmp%c1(ipt)=1./(1.+((FEPtmp%vg(ipt)-EQ(1)%total)/Hij(1,2))**2)
 					FEPtmp%c2(ipt)=1-FEPtmp%c1(ipt)
 				end if
-			else 
+			else
 				call tred2(Hij,nstates,nstates,d,e)
 				call tqli(d,e,nstates,nstates,Hij)
 				FEPtmp%vg(ipt)=MINVAL(d)
-			end if 
+			end if
 
 			do istate=1,nstates
 				FEPtmp%gap(ipt)=FEPtmp%gap(ipt)+FEPtmp%v(istate,ipt)*coeff(istate)
@@ -283,7 +316,7 @@ implicit none
 		FEP(ifile)%gap(:) = FEPtmp%gap(1:FEP(ifile)%npts)
 		FEP(ifile)%c1(:) = FEPtmp%c1(1:FEP(ifile)%npts)
 		FEP(ifile)%c2(:) = FEPtmp%c2(1:FEP(ifile)%npts)
-		if(nnoffd > 0) then 
+		if(nnoffd > 0) then
 			allocate(FEP(ifile)%r(nstates, FEP(ifile)%npts), STAT=ERR)
 			if(ERR /= 0) then
 				stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays.'
@@ -291,7 +324,7 @@ implicit none
 			FEP(ifile)%r(:,:) = FEPtmp%r(1:nstates, 1:FEP(ifile)%npts)
 		end if
 
-	
+
 		! Average energies for each file is calculated
 
 		if(ipt <= nskip) then !skipped all points in the file
@@ -365,8 +398,8 @@ implicit none
 			dgrsum(ifile-1)=dgrsum(ifile)+dgr(ifile)
 			sum=0.
 		end do
-		write(*,*) 
-		write(*,*) 
+		write(*,*)
+		write(*,*)
 		write(*,21)
 		write(*,22)
 21		format('# Part 1: Free energy perturbation summary:')
@@ -399,7 +432,7 @@ implicit none
 26		format(2x,f9.6,i5,2x,4f9.2,2x,i5,2f9.3)
 		gaprange=gapmax-gapmin      !Range of reaction coordinate
 		xint=gaprange/real(nbins)   !Divide R.C. into bins
-		do ifile=1,nfiles         
+		do ifile=1,nfiles
 			avdvv=0.
 			avdvg=0.
 			sumv=0.
@@ -424,18 +457,18 @@ implicit none
 	         	avc1(ibin)=avc1(ibin)+FEP(ifile)%c1(ipt)
                 avc2(ibin)=avc2(ibin)+FEP(ifile)%c2(ipt)
 				!Only gives first r_xy distance
-				if(nnoffd > 0)	avr(ibin)=avr(ibin)+FEP(ifile)%r(1,ipt)		 
+				if(nnoffd > 0)	avr(ibin)=avr(ibin)+FEP(ifile)%r(1,ipt)
 				nbinpts(ibin)=nbinpts(ibin)+1
 			end do          !ipt
 			do ibin=1,nbins
 				if ( nbinpts(ibin) .ne. 0 ) then
                     avc1(ibin)=avc1(ibin)/real(nbinpts(ibin))
                     avc2(ibin)=avc2(ibin)/real(nbinpts(ibin))
-					avr(ibin)=avr(ibin)/real(nbinpts(ibin))				
+					avr(ibin)=avr(ibin)/real(nbinpts(ibin))
 					avdvv(:,ibin)=avdvv(:,ibin)/nbinpts(ibin)
 					avdvg(ibin)=avdvg(ibin)/nbinpts(ibin)
 
-				end if 
+				end if
 			end do !ibin
 			do ipt=nskip+1,FEP(ifile)%npts
 				ibin=int((FEP(ifile)%gap(ipt)-gapmin)/xint)+1
@@ -457,7 +490,7 @@ implicit none
 				    binsum(ibin,2)=binsum(ibin,2)+avc1(ibin)*nbinpts(ibin)
 					binsum(ibin,3)=binsum(ibin,3)+avc2(ibin)*nbinpts(ibin)
 					binsum(ibin,4)=binsum(ibin,4)+avr(ibin)*nbinpts(ibin)  !Bin-averaged r_xy
-					sumv(:,ibin)=sumv(:,ibin)/real(nbinpts(ibin)) 
+					sumv(:,ibin)=sumv(:,ibin)/real(nbinpts(ibin))
 					sumg(ibin)=sumg(ibin)/real(nbinpts(ibin))
 
 			    	ptsum(ibin)=ptsum(ibin)+nbinpts(ibin)
@@ -465,9 +498,9 @@ implicit none
 					do istate=1,nstates
 						sumv2(istate,ibin)=-rt*dlog(sumv(istate,ibin))+avdvv(istate,ibin)
 					end do
-					sumg2(ibin)=-rt*dlog(sumg(ibin))+avdvg(ibin) 
+					sumg2(ibin)=-rt*dlog(sumg(ibin))+avdvg(ibin)
 					! These are the diabatic free energy curves
-					dGv(:)=dG(ifile)+sumv2(:,ibin) 
+					dGv(:)=dG(ifile)+sumv2(:,ibin)
 					! This is the reaction free energy
 					dGg=dG(ifile)+sumg2(ibin)
 
@@ -475,7 +508,7 @@ implicit none
 
 					write (*,26) FEP(ifile)%lambda(1),ibin, &
 						gapmin+real(ibin)*xint-xint/2., dGv(1),dGv(2),dGg, &
-						int(nbinpts(ibin)),avc1(ibin),avc2(ibin) 
+						int(nbinpts(ibin)),avc1(ibin),avc2(ibin)
 				end if
 			end do  !ibin
 		end do      !ifile
@@ -539,7 +572,7 @@ subroutine prompt (outtxt)
 	integer, parameter			::	f=6
 	!write (f2,'($,a)') outtxt
 #endif
-write (f,'(a,$)') outtxt	     
+write (f,'(a,$)') outtxt
 end subroutine prompt
 
 !------------------------------
@@ -552,14 +585,14 @@ SUBROUTINE TRED2(A,N,NP,D,E)
 ! These subroutines were copied by Karin Kolmodin 20 Nov. 1997
 ! from http://rsc.anu.au/HWS/COURSES/MATHMETH/node70.html
 ! and rewritten in f90.
-!------------------------------------------------------------ 
+!------------------------------------------------------------
 	  real(8),dimension(:)      ::D,E
 	  real(8),dimension(:,:)    ::A
       integer                   ::NP,I,J,K,L,N,ERR
 	  real(8)                   ::SCALE,F,G,H,HH
-	   
+
       IF(N.GT.1)THEN
-        DO I=N,2,-1  
+        DO I=N,2,-1
            L=I-1
            H=0.
            SCALE=0.
@@ -634,18 +667,18 @@ SUBROUTINE TRED2(A,N,NP,D,E)
           end do
         END IF
       end do
-END subroutine TRED2 
+END subroutine TRED2
 
 !-----------------------------------
 
 SUBROUTINE TQLI(D,E,N,NP,Z)
-!------------------------------------------------------------ 
-! This subroutine diagonalizes a tridiagonal matrix which has 
+!------------------------------------------------------------
+! This subroutine diagonalizes a tridiagonal matrix which has
 ! been prepared by the subroutine tred2.
 ! These subroutines were copied by Karin Kolmodin 20 Nov. 1997
 ! from http://rsc.anu.au/HWS/COURSES/MATHMETH/node70.html
 ! and rewritten in f90
-!------------------------------------------------------------  
+!------------------------------------------------------------
    implicit none
       real(8),dimension(:)               ::D,E
 	  real(8),dimension(:,:)             ::Z
@@ -686,7 +719,7 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
                 S=F/G
                 R=SQRT(S**2+1.)
                 E(I+1)=G*R
-                C=1./R  
+                C=1./R
                 S=S*C
               END IF
               G=D(I+1)-P

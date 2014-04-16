@@ -1,33 +1,88 @@
 ################################################################################
-#  Q V.5 Makefile for compilation with ifortran                                #
-#  main code author: Johan Aqvist                                              #
+#  Q V.5.06 Makefile                                                           #
+#  code author: Johan Aqvist                                                   #
 #  keeper of the code: Paul Bauer                                              #
-#  maintainers: Beat Amrein, Alexandre Barrozo, Mauricio Esguerra              #
-#  latest update to makefile: March 18, 2014                                   #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
+#  latest update: April 4, 2014                                                #
+#  make [option] [COMP=compiler]                                               #
 ################################################################################
 
 ################################################################################
-# Compilers and flags here.
+# Intel Fortran ifort ( tested in linux)
 ################################################################################
-FC=		ifort
-CC=		icc
-MPIFC=		mpif90
-FC_OPT=         -O3 -ip -ipo -unroll -i-static
-CC_OPT=		-O3
-MPIFLAGS=	-f90=${FC} -Nmpi
-MPI_FC=         ${FC}
-MPI_CC=         ${CC}
-FFLAGS=         -fstack-protector ${FC_OPT}
-CCFLAGS=	${CC_OPT}
-MPI_FCFLAGS=    ${FFLAGS}
-MPI_CXXFLAGS=   ${CCFLAGS}
-FPP_FLG=        -fpp
+ifeq ($(COMP),ifort)
+	FC=		ifort
+	CC=		icc
+	MPIFC=		mpif90
+	FC_OPT=		-O3 -ip -ipo -unroll -i-static
+	CC_OPT=		-O3
+	MPIFLAGS=	-f90=${FC} -Nmpi
+	MPI_FC=		${FC}
+	MPI_CC=		${CC}
+	FFLAGS=		-fstack-protector ${FC_OPT}
+	CCFLAGS=	${CC_OPT}
+	MPI_FCFLAGS=	${FFLAGS}
+	MPI_CXXFLAGS=	${CCFLAGS}
+	FPP_FLG=	-fpp
+
 ################################################################################
+# OSX Mavericks using gfortran
+################################################################################
+else ifeq ($(COMP),osx)
+	FC= gfortran
+	MPIFC= mpif90
+	FC_OPT= -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
+	-std=legacy -Wall -Wtabs
+	OMPI_FC= ${FC}
+	FFLAGS= -fstack-protector ${FC_OPT} -DG95=1
+	OMPI_FCFLAGS= ${FFLAGS}
+	FPP_FLG= -cpp 
+
+################################################################################
+# PGI Compiler -- untested
+################################################################################
+else ifeq ($(COMP),pgi)
+	FC=pgf90
+	FFLAGS=
+	OFLAGS=-mp
+
+################################################################################
+# IBM Compiler -- untested
+################################################################################
+else ifeq ($(COMP),ibm)
+	FC=xlf90
+	FFLAGS=
+	OFLAGS=-qsmp=omp
+
+################################################################################
+# GNU gcc-gfortran
+################################################################################
+else ifeq ($(COMP),gcc)
+	FC=		gfortran
+	CC=		gcc
+	MPIFC=		mpif90
+	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
+	CC_OPT=		-O3
+	#MPIFLAGS=	-f90=${FC}
+	OMPI_FC=	${FC}
+	OMPI_CC=	${CC}	
+	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
+	CCFLAGS=	${CC_OPT}
+	OMPI_FCFLAGS=	${FFLAGS}
+	OMPI_CXXFLAGS=	${CCFLAGS}
+	FPP_FLG=	-cpp
+
+else
+	FC=		gfortran
+	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
+	FPP_FLG=	-cpp
+endif
 
 ################################################################################
 # Display options
-default: what
 ################################################################################
+default: what
 
 ################################################################################
 # Targets
@@ -35,12 +90,26 @@ default: what
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
+	@make FFLAGS='-debug -traceback -g -Wall' \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5
+
+mpi:	
+	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer \
+	-fall-intrinsics -std=legacy' \
+	qdyn5p move1 move3
+
+mpi_debug:	
+	@make FFLAGS='-debug -traceback -g -Wall'         \
+	qdyn5p
+
+debugifort:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
-mpi:	qdyn5p move1 move3
+mpiifort:
+	@make qdyn5p move1 move3
 
-mpi_debug:	
+mpi_debugifort:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
 	qdyn5p
 
@@ -48,7 +117,7 @@ clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
 
 nuke:
-	-rm -f *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5
+	-rm -rf *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
 qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o 
 
@@ -71,8 +140,8 @@ qfep5: qfep.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
 qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
-        calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
-        calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o 
+	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
+	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
 qdyn5 : md.o
@@ -83,7 +152,6 @@ qdum5 : md_dum.o
 
 qdyn5p : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@ 
-
 
 ################################################################################
 # Object modules
@@ -132,9 +200,6 @@ calc_rmsf.o:calc_rmsf.f90 calc_base.o maskmanip.o
 
 eigen.o:eigen.f90
 	${FC} ${FFLAGS} -c $<
-
-invsqrt_q.o:invsqrt_q.c
-	$(CC) $(CCFLAGS) -c $<
 
 index.o:index.f90
 	${FC} ${FFLAGS} -c $<
@@ -223,13 +288,17 @@ move3:
 # Build instructions
 ################################################################################
 what:
-	@echo "usage: make <target>"
+	@echo "Use: make [target] [COMP=compiler]"
 	@echo
-	@echo "<target> is one of:"
+	@echo "[target] is one of:"
 	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
-	@echo "debug            'all' but with debug information (stacktraces etc)."
-	@echo "mpi              qdyn5p using the currently loaded mpi library"
-	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
-	@echo
+	@echo "debug            All with debug information (stacktraces etc)."
+	@echo "mpi              qdyn5p using a currently loaded MPI library"
+	@echo "mpidebug         MPI with debug information (stacktraces etc)."
+	@echo 
+	@echo "For compiler/os pick one of:"
+	@echo "ifort            "
+	@echo "osx              "
+	@echo "gcc              "
+	@echo 
 ################################################################################
-
