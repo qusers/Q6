@@ -1,8 +1,6 @@
 !	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
 !	trj.f90
 !	by John Marelius
-
 !	Q trajectory data, access and DCD format I/O
 
 module TRJ
@@ -11,8 +9,8 @@ use ATOM_MASK
 use MISC
 implicit none
 
-	character(*), private, parameter	:: MODULE_VERSION = '5.01'
-	character(*), private, parameter	:: MODULE_DATE = '2003-06-02'
+	character(*), private, parameter	:: MODULE_VERSION = '5.06'
+	character(*), private, parameter	:: MODULE_DATE    = '2014-04-21'
 
 	type, private :: REC1
 		sequence

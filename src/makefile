@@ -1,6 +1,8 @@
 ################################################################################
 #  Q V.5.06 Makefile                                                           #
-#  code author: Johan Aqvist                                                   #
+#  code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
+#  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          #
+#  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
 #  latest update: April 4, 2014                                                #
@@ -63,7 +65,6 @@ else ifeq ($(COMP),gcc)
 	MPIFC=		mpif90
 	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	CC_OPT=		-O3
-	#MPIFLAGS=	-f90=${FC}
 	OMPI_FC=	${FC}
 	OMPI_CC=	${CC}	
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
@@ -91,7 +92,7 @@ all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
 	@make FFLAGS='-debug -traceback -g -Wall' \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpi:	
 	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer \
@@ -100,11 +101,11 @@ mpi:
 
 mpi_debug:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
-	qdyn5p
+	qdyn5p move1 move3
 
 debugifort:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpiifort:
 	@make qdyn5p move1 move3

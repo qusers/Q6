@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	mask.f90
-!	by John Marelius
-
-!	atom selection mask
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! mask.f90
+! by John Marelius
+! atom selection mask
 
 module ATOM_MASK
 	use TOPO
@@ -11,8 +9,8 @@ module ATOM_MASK
 	implicit none
 
 	! version data
-	character(*), private, parameter::	MODULE_VERSION = '5.01'
-	character(*), private, parameter::	MODEULE_DATE = '2003-06-02'
+	character(*), private, parameter  ::	MODULE_VERSION = '5.06'
+	character(*), private, parameter  ::	MODULE_DATE    = '2014-04-21'
 
 	!private procedures
 	private update,update_pretop, set_solute, get_word, finalize_storage
@@ -36,7 +34,7 @@ module ATOM_MASK
 		integer							::	included
 		logical(1), pointer	::	mask(:)
 	end type MASK_TYPE
-				
+
 contains
 
 
@@ -53,7 +51,7 @@ end subroutine mask_shutdown
 subroutine mask_initialize(m)
 !arguments
 	type(MASK_TYPE)				::	m
-	
+
 	allocate(m%mask(nat_pro))
 	call mask_clear(m)
 	if(.not. allocated(solute)) then
@@ -65,7 +63,7 @@ end subroutine mask_initialize
 subroutine mask_finalize(m)
 !arguments
 	type(MASK_TYPE)				::	m
-	
+
 	if(associated(m%mask)) deallocate(m%mask)
 	m%included = 0
 end subroutine mask_finalize
@@ -139,7 +137,7 @@ integer function mask_add(m, line, pretop)
 	s%notflag = .false.
 	empty = .true.
 	mask_add = 0
-	
+
 	pos = 0
 	do while(get_word(line, word, pos))
 		call upcase(word)
@@ -175,7 +173,7 @@ integer function mask_add(m, line, pretop)
 		case ('SYBYL')
 			s%sybyl1 = .not. s%notflag
 			s%sybyl2 = .not. s%notflag
-			s%notflag = .false.			
+			s%notflag = .false.
 			if(.not. get_word(line, word, pos)) then	! get (potential) SYBYL name
 				write(*,800)
 800				format('>>>>> ERROR: no SYBYL name found')
@@ -223,15 +221,15 @@ integer function mask_add(m, line, pretop)
 					empty = .true.
 					exit
 				else
-					exit 
+					exit
 				end if
 			end if
 		end select
 	end do
-	if (.not. empty .and. present(pretop)) then 
+	if (.not. empty .and. present(pretop)) then
 		if(pretop) then
 		  mask_add=update_pretop(s, m)
-		else 
+		else
 		  mask_add=update(s, m)
 		end if
 	elseif (.not. empty) then
@@ -254,7 +252,7 @@ logical function get_word(line, word, pos)
 
 
 	get_word = .false.
-	
+
 	if(pos <= 1) then
 		pos = 1
 		linelen = len_trim(line)
@@ -280,14 +278,14 @@ logical function get_word(line, word, pos)
 	pos = pos +1 !update for next call
 	word = line(start_field:end_field)
 	get_word = .true.
-		
+
 end function get_word
 
 !*****************************************************
 ! Update mask from rules in s.
 ! if s%property1 and s%property2 are true, then that
 ! requested without "not". if both are false then it has
-! been requested with "not" flag. else it has not been requested 
+! been requested with "not" flag. else it has not been requested
 !*****************************************************
 integer function update(s, m)
 !arguments
@@ -299,7 +297,7 @@ integer function update(s, m)
 	logical(1), allocatable::	sybyl(:)
 
 	update = 0
-	
+
 	if(s%residue_numbering) then
 		s%first = res(s%first)%start
 		if(s%last == nres) then
@@ -337,7 +335,7 @@ integer function update(s, m)
 				update = update + 1
 			end if
 		end if
-	end do 
+	end do
 	m%included = m%included + update
 
 
@@ -356,9 +354,9 @@ integer function update_pretop(s, m)
 	type(MASK_TYPE)		::	m
 !locals
 	integer						::	i
-	
+
 	update_pretop = 0
-	
+
 	if(s%residue_numbering) then
 		s%first = res(s%first)%start
 		if(s%last == nres) then
@@ -367,7 +365,7 @@ integer function update_pretop(s, m)
 			s%last = res(s%last+1)%start - 1
 		endif
 	end if
-	
+
 	do i = s%first, s%last
 		if(((solute(i) .eqv. s%solute1) .or. (solute(i) .eqv. s%solute2)).and.&
 		   ((heavy(i) .eqv. s%heavy1) .or. (heavy(i) .eqv. s%heavy2))) then
@@ -376,7 +374,7 @@ integer function update_pretop(s, m)
 				update_pretop = update_pretop + 1
 			end if
 		end if
-	end do 
+	end do
 	m%included = m%included + update_pretop
 
 end function update_pretop
@@ -431,7 +429,7 @@ subroutine mask_get(m, x, xmasked)
 900		format('>>>>> ERROR: invalid coordinate array size.')
 		return
 	end if
-	
+
 	j=0
 	do i=1, nat_pro
 		if(m%mask(i)) then
@@ -443,7 +441,7 @@ end subroutine mask_get
 
 !***************************************************
 !transfer coords from masked atoms in 'xmasked'
-! to topology coord array 'x' 
+! to topology coord array 'x'
 !***************************************************
 subroutine mask_put(m, x, xmasked)
 	!arguments
@@ -457,7 +455,7 @@ subroutine mask_put(m, x, xmasked)
 900		format('>>>>> ERROR: invalid coordinate array size.')
 		return
 	end if
-	
+
 	j=0
 	do i=1, nat_pro
 		if(m%mask(i)) then

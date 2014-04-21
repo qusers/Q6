@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_kineticenergy.f90
-!	by Martin Almlöf
-
-!	calculates the kinetic energy of the center of mass of whatever atom mask is specified
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_kineticenergy.f90
+! by Martin Almlöf
+! calculates the kinetic energy of the center of mass of whatever atom mask is specified
 
 module CALC_COM_KE
 	use CALC_BASE

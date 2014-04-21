@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	maskmanip.f90
-!	by John Marelius
-
-!	atom mask manipulation functions
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! maskmanip.f90
+! by John Marelius
+! atom mask manipulation functions
 
 module MASKMANIP
 	use ATOM_MASK

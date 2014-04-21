@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_rmsf.f90
-!	by Martin Almlöf
-
-!	root mean square coordinate deviation
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_rmsf.f90
+! by Martin Almlöf
+! root mean square coordinate deviation
 
 module CALC_RMSF
 	use CALC_BASE

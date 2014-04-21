@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	sizez.f90
-!	by John Marelius
-
-!	data storage specifications for all Q programs
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! sizes.f90
+! by John Marelius
+! data storage specifications for all Q programs
 
 module	SIZES
 

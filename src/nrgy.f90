@@ -1,17 +1,15 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	nrgy.f90
-!	by John Marelius
-
-!	energy data and energy file I/O
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! nrgy.f90
+! by John Marelius
+! energy data and energy file I/O
 
 module NRGY
 use SIZES
 
 implicit none
 
-	character(*), parameter	::	NRGY_VERSION = '5.01'
-	character(*), parameter	::	NRGY_DATE = '2003-06-02'
+	character(*), parameter	::	NRGY_VERSION = '5.06'
+	character(*), parameter	::	NRGY_DATE    = '2014-04-21'
 
 	type BONDED_ENERGIES
 		sequence

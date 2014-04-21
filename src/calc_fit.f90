@@ -1,9 +1,8 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_fit.f90
-!	by John Marelius
-!	parts (C) 1979 W. F. van Gunsteren
-!	pair-wise superposition of coordidinate sets
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_fit.f90
+! by John Marelius
+! parts (C) 1979 W. F. van Gunsteren
+! pair-wise superposition of coordidinate sets
 
 module CALC_FIT
 	use CALC_BASE

@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_kineticenergy.f90
-!	by Martin Almlöf
-
-!	calculates the center of mass coordinates of whatever atom mask is specified
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_com.f90
+! by Martin Almlöf
+! calculates the center of mass coordinates of whatever atom mask is specified
 
 module CALC_COM
 	use CALC_BASE

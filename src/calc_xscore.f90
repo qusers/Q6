@@ -1,8 +1,6 @@
-! (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 ! calc_xscore.f90
 ! by Peter Hanspers & Martin Nervall
-
 ! Qcalc trajectory analysis main program
 
 module CALC_XSCORE

@@ -1,12 +1,9 @@
-! (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 ! calc_chemscore.f90
-
-!Kajsa Ljungberg 1998-06-11
-!Implementation of a scoring function by Eldridge et al.
-!JCAMD 11 (1997) 425-445.
-
-!Integration into QCalc5 by Peter Hanspers
+! Kajsa Ljungberg 1998-06-11
+! Implementation of a scoring function by Eldridge et al.
+! JCAMD 11 (1997) 425-445.
+! Integration into QCalc5 by Peter Hanspers
 
 module CALC_CHEMSCORE
 

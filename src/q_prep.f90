@@ -1,17 +1,15 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	q_prep.f90
-!	by Johan Åqvist & John Marelius
-
-!	Qprep topology preparation main program
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! q_prep.f90
+! by Johan Åqvist & John Marelius
+! Qprep topology preparation main program
 
 PROGRAM qprep5
 	use PREP
 	use AVETR
 	IMPLICIT none
 
-	character(*), parameter	::	PROGRAM_VERSION = '5.04'
-	character(*), parameter	::	PROGRAM_DATE = '2005-04-14'
+	character(*), parameter	::	PROGRAM_VERSION = '5.06'
+	character(*), parameter	::	PROGRAM_DATE    = '2014-04-21'
 	logical                 ::  use_inputfile
 	character(200)          ::  fileName=''
 !.......................................................................

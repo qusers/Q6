@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	mpiglob.f90
-!	by John Marelius & Anders Kaplan
-
-!	global variables for MPI parallell Qdyn
+! (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! mpiglob.f90
+! by John Marelius & Anders Kaplan
+! global variables for MPI parallell Qdyn
 
 module	MPIGLOB
 
@@ -35,7 +33,7 @@ use NRGY
 
   ! global MPI data
   integer                  :: nodeid, numnodes,ierr
-  integer,allocatable      :: mpi_status(:,:)  
+  integer,allocatable      :: mpi_status(:,:)
 
   !Used for gathering d,E,EQ
   real(kind=wp8),allocatable     :: d_recv(:,:)

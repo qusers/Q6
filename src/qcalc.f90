@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	qcalc.f90
-!	by John Marelius
-
-!	Qcalc trajectory analysis main program
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! qcalc.f90
+! by John Marelius
+! Qcalc trajectory analysis main program
 
 program QCALC
 	use TRJ
@@ -25,8 +23,8 @@ program QCALC
 	implicit none
 
 	! version data
-	character(*), parameter	::	PROGRAM_VERSION = '5.01'
-	character(*), parameter	::	PROGRAM_DATE = '2003-06-03'
+	character(*), parameter	::	PROGRAM_VERSION = '5.06'
+	character(*), parameter	::	PROGRAM_DATE    = '2014-01-01'
 
 	!constants
 	integer, parameter			::	MAX_CALCS = 99

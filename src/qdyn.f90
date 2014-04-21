@@ -1,7 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-!	qdyn.f90
-!	by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
-!	Qdyn molecular dynamics main program
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! qdyn.f90
+! by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
+! Qdyn molecular dynamics main program
 
 program Qdyn5
   use MD								
@@ -14,7 +14,7 @@ program Qdyn5
 
   ! version data
   character(10)					:: QDYN_VERSION = '5.06'
-  character(12)					:: QDYN_DATE = '2014-03-14'
+  character(12)					:: QDYN_DATE    = '2014-03-14'
 #if defined (USE_MPI)
   character(10)					:: QDYN_SUFFIX = '_parallel'
 #else

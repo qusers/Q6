@@ -1,17 +1,15 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	prefs.f90
-!	by John Marelius
-
-!	preference setting handler
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! prefs.f90
+! by John Marelius
+! preference setting handler
 
 module PREFS
 
 	implicit none
 
 !constants
-	character(*), private, parameter	::	MODULE_VERSION = '5.01'
-	character(*), private, parameter	::	MODULE_DATE = '2003-06-02'
+	character(*), private, parameter	::	MODULE_VERSION = '5.06'
+	character(*), private, parameter	::	MODULE_DATE    = '2014-01-01'
 
 	integer, private			::	max_prefs, nprefs
 	integer, parameter, private	::	default_max = 20

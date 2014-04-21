@@ -1,15 +1,9 @@
-!	(C) 2003 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-
-!	md.f90
-!	by Johan Åqvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlöf
-
-
-!	molecular dynamics
-
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! md.f90
+! by Johan Åqvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlöf
+! molecular dynamics
 
 module MD
-
 
 ! used modules
 !use PROFILING
@@ -34,9 +28,9 @@ include "mpif.h"
 !	Constants
 real(8)			::	pi, deg2rad	!set in sub startup
 character*(*), parameter	::	MD_VERSION = '5.06'
-character*(*), parameter	::	MD_DATE = '2007-07-27'
+character*(*), parameter	::	MD_DATE    = '2014-04-21'
 real, parameter		::  rho_wat = 0.0335  ! molecules / A**3
-real, parameter		::	Boltz = 0.001986
+real, parameter		::  Boltz = 0.001986
 
 !Read status
 integer                     :: stat
