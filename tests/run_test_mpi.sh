@@ -22,14 +22,16 @@ else
 fi
 
 # How many cores on this machine?
-# Ex:
-# grep processor /proc/cpuinfo  
-#	processor	: 0
-#	processor	: 1
-#	processor	: 2
-#	processor	: 3
-# Numer of lines is 4, so four cores in this case.
-CORES=`grep processor /proc/cpuinfo | wc -l`
+#  grep "cpu cores" /proc/cpuinfo  
+# cpu cores: 4
+# cpu cores: 4
+# cpu cores: 4
+# cpu cores: 4
+# The cores need then to be added to get the total number of cores available per node.
+# For now bc is doing the sum, but BEWARE, maybe bc is not installed in all
+# nodes.
+#CORES=`grep processor /proc/cpuinfo | wc -l`
+CORES=`grep cores /proc/cpuinfo | awk '{print $4}' | paste -sd+ | bc`
 echo "Running simulation on $CORES cores."
 
 rm eq{1..5}.log dc{1..5}.log >& /dev/null

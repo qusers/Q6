@@ -18,7 +18,7 @@ github private organization located at https://github.com/qusers
 
 | What                                 | Where                                        |
 |:------------------------------------ |:---------------------------------------------| 
-| source code, makefile, history files | qsource/src /  history/                      |
+| source code, makefile, history files | qsource/src /  qsource/history/                      |
 | manual                               | qsource/documentation/manual/qman5.pdf       |
 | license agreement                    | qsource/documentation/license.pdf            |
 | this document                        | qsource/documentation/qmaintenanceguide.docx |
@@ -80,8 +80,7 @@ compilation depending on the compiler available in your machine and the set of
 programs you want to compile, for example, the [all] option stands for compilation
 of programs except for the parallel version of qdyn5.
 
-To compile using the Intel fortran compiler, and a debuggable version of the code
-you would give the following options to the make command:
+To compile using the Intel fortran compiler, and a debuggable (via gdb) version of the code you would give the following options to the make command:
 
 ```bash
 make debug COMP=ifort
@@ -92,16 +91,13 @@ make debug COMP=ifort
 -   Not supported for now, we need a developer here.
 
 ###Linux - Generic(gfortran)
-By default if a second COMP=[compilername] option is not given to the make command
-the make program will use as defaults the gfortran compiler
+By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler
 ```bash
 make all
 ```
 
 ###Mac OSX (mavericks)
-The compilation of the Q set of programs using the gfortran compiler needs a few different
-options to those used in say, linux, so in order to compile in the most recent
-version of the Mac OSX, you need to use:
+The compilation of the Q set of programs using the gfortran compiler needs a few different options to those used in say, linux, so in order to compile in the most recent version of the Mac OSX, you need to use:
 ```bash
 make all COMP=osx
 ```
@@ -112,7 +108,6 @@ make all COMP=osx
 module load intel/14.0.2
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.ifort makefile
 cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 module load impi/4.1.3.048
@@ -127,7 +122,6 @@ Needs benchmarking against ifortran and pgi.
 ```bash
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.new makefile
 module load  gcc/4.8/4.8.1
 make all COMP=osx
 module load openmpi/1.5.4
@@ -143,7 +137,6 @@ source /home/apps/intel/composer_xe_2013.5.192/bin/ifortvars.sh intel64
 export OMPI_FC=ifort
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.new makefile
 cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 make mpi COMP=ifort
@@ -152,8 +145,7 @@ make mpi COMP=ifort
 This will create the parallel executable qdyn5p
 
 Once compilations is succesful you run the simple test in the /test folder
-with  the run_test_mpi.sh script.  You  would only have to  create another script
-for the slurm queue where you  make sure to load the openmpi libraries
+with  the run_test_mpi.sh script.  You  would only have to  create another script for the slurm queue where you  make sure to load the openmpi libraries
 with:
 ```bash
 module load openmpi-x86_64
@@ -165,7 +157,6 @@ To compile at abisko follow these steps:
 module load openmpi/gcc/1.6.5
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp makefile.new makefile
 make all COMP=gcc
 
 module load openmpi/gcc/1.6.5
@@ -191,7 +182,6 @@ Resolving deltas: 100% (476/476), done.
 
 ###If that works for you, hopefully, then go with:
 cd qsource/src/
-cp makefile.new makefile
 module load gcc/4.8.2
 make all COMP=gcc
 
