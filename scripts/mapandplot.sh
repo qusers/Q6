@@ -8,7 +8,7 @@
 #if the run is in only one directory, set the LIST to 'empty'
 #Iterate over the directories needed and fill the list
 LIST=""
-for ((dirnum=1;dirnum<=10;dirnum++))
+for ((dirnum=1;dirnum<=6;dirnum++))
 do
 LIST="${LIST} frame-${dirnum}"
 done
@@ -22,6 +22,19 @@ RERUN=${FALSE}
 #RERUN=${TRUE}
 #Path to Qfep binary, needed in any case
 qfep='/home/p/pabau/pfs/Q_PFS_MPIFIX/qfep5'
+#Name of the mapping file
+mapping_file='map_files'
+#Plotting mode, default is x11 (screen display, other possiblities are pdf and ps
+PLOTTING='pdf'
+#Flag to tell the script to don't write anything to the screen
+QUIET=${TRUE}
+#Number of the FEP file were the distance average will be calculated
+#Either reads this from the command line as argument 1 or sets the default below
+re='^[0-9]+$'
+if ! [[ $1 =~ $re ]] ; then
+FILENUM=50
+else FILENUM=$1
+fi
 #Function that generates the temporary awk file needed to get the distances
 #Currently five is the maximum, need to find a way to change this to be independent
 #Also generates the awk file for the mapping analysis and the energy printout
@@ -29,6 +42,13 @@ qfep='/home/p/pabau/pfs/Q_PFS_MPIFIX/qfep5'
 #Hacksih in the way I like it :D
 #So they don't have to be copied any more :P
 function make_temp_awk() {
+if [[ ${NUMDIST} != '' ]] ; then
+PRINTLINE="print \" \",MCOUNT"
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+PRINTLINE="${PRINTLINE},\" \",STORA[${cc}]"
+done
+PRINTLINE="${PRINTLINE},\" \",STORF"
 echo "#!/usr/bin/awk -f
 {
 
@@ -37,15 +57,16 @@ COUNT=1
 MCOUNT=0
 }
 
-        STOR[COUNT]=\$1
+        STORF=\$3
 	STORA[COUNT]=\$2
         if (COUNT==${NUMDIST}) {
                 COUNT=0
-                print \" \",MCOUNT,\" \",STORA[1],\" \",STORA[2],\" \",STORA[3],\" \",STORA[4],\" \",STORA[5]
+                ${PRINTLINE}
                 MCOUNT++
                 }
 	COUNT++
 }">$1
+fi
 echo "#!/usr/bin/awk -f
 
 {
@@ -78,6 +99,7 @@ echo "#!/usr/bin/awk -f
 }
 ">getlambda.awk
 #Now using the energies printed by getenergy.awk to get the reaction free enrgy and activation energy
+if [[ ${NUMDIST} != '' ]] ; then
 echo "#!/usr/bin/awk -f
 {
 	if (NR==1) {
@@ -123,17 +145,21 @@ END {
 		print \"dGFree Minimum \",tmpcount,\" Minimum \", tmpcount+1,\" = \", DGFREE[tmpcount]
 	}
 }">getdeltag.awk
+fi
 }
 #This function makes the static inputs that are always the same for all Gnuplot scripts
 #So we only need to write the stuff once and not a number of times
 #It takes the filename of the script as input to know where to write to and the terminal type
-#And also how many plots should be combined
+#And also how many plots should be combined, last argument is the plotting soze (terminal dependent)
 function gnuplot_static() {
 tnum=$( echo "scale=2;1/$3 " | bc -q)
-echo "set terminal $2 enhanced size 1920,1200
+echo "set terminal $2 enhanced size $4
 set size 1,1
-set origin 0.0, 0.0
-set multiplot layout $3,1
+set origin 0.0, 0.0">$1
+if [[ "$2" != "x11" ]] ; then
+echo "set output '$1.result_plot.$2'">>$1
+fi
+echo "set multiplot layout $3,1
 set size 1,${tnum}
 set style line 1 lt 1 lc 1 lw 5 pt 6
 set style line 2 lt 1 lc 2 lw 5 pt 6
@@ -141,7 +167,7 @@ set style line 3 lt 1 lc 3 lw 5 pt 6
 set style line 4 lt 1 lc 4 lw 5 pt 6
 set style line 5 lt 1 lc 5 lw 5 pt 6
 set style line 6 lt 1 lc 6 lw 5 pt 6
-set key inside left top enhanced autotitles box linetype -1 linewidth 1.000">$1
+set key bmargin left horizontal Right noreverse enhanced autotitles box linetype -1 linewidth 0.050">>$1
 }
 
 #This function will generate the plot of the energies of the run from the energy*dat files
@@ -195,11 +221,11 @@ else
 	for ((numc=1;numc<=${NUMDIST};numc++))
 	do
 	if [[ ${numc} -eq 1 ]] && [[ ${LINEC} -eq 1 ]] ; then
-	echo "plot '${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${numc}' ${LINES} ls ${LINEC} ,\\">>$1
+	echo "plot '${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${DISTONE[${numc}]} - ${DISTTWO[${numc}]}' ${LINES} ls ${LINEC} ,\\">>$1
 	elif [[ ${numc} -eq ${NUMDIST} ]] && [[ ${LINEN} -eq ${COUNTER} ]]; then
-	echo "'${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${numc}' ${LINES} ls ${LINEC}">>$1
+	echo "'${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${DISTONE[${numc}]} - ${DISTTWO[${numc}]}' ${LINES} ls ${LINEC}">>$1
 	else
-	echo "'${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${numc}' ${LINES} ls ${LINEC} ,\\">>$1
+	echo "'${6}_${i}.dat' using 1:$(( ${numc} + 1)) title '${i} distance ${DISTONE[${numc}]} - ${DISTTWO[${numc}]}' ${LINES} ls ${LINEC} ,\\">>$1
 	fi
 	LINEC=$(( ${LINEC} + 1 ))
 	done
@@ -207,6 +233,65 @@ fi
 LINEN=$(( ${LINEN} + 1 ))		
 done
 
+}
+#Function that parses the distance files and generates a table with average distances for a given fep file / fep state
+#Argument is the number of the file
+function makedistaverage() {
+if [[ ${1} -ge 100 ]] ; then
+ENUM=${1}
+elif [[ ${1} -ge 10 ]] ; then
+ENUM=0${1}
+else
+ENUM=00${1}
+fi
+#Initialising the distance array
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+ADISTVAL[${cc}]=0
+STDISTVAL[${cc}]=0
+done
+nc=1
+for i in ${LIST}
+do
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+DISTVAL[${cc},${nc}]=0
+#Counter that holds the real total number of points given to a array
+LARCOUNT=0
+
+ENDNUM=$(( ${NUMDIST} + 2))
+PRINTNUM=$(( ${cc} + 1))
+AWKCOM="awk '(\$${ENDNUM}==\"${ENUM}\") {print \$${PRINTNUM}}' distance_${i}.dat"
+for numbers in `eval $(echo ${AWKCOM})`
+do
+DISTVAL[${cc},${nc}]=$( echo "scale=2;${DISTVAL[${cc},${nc}]} + ${numbers}" | bc -q)
+LARCOUNT=$(( ${LARCOUNT} + 1 ))
+done
+DISTVAL[${cc},${nc}]=$( echo "scale=2;${DISTVAL[${cc},${nc}]} / ${LARCOUNT}" | bc -q)
+ADISTVAL[${cc}]=$( echo "scale=2;${ADISTVAL[${cc}]} + ${DISTVAL[${cc},${nc}]}" | bc -q)
+done
+nc=$(( ${nc} + 1))
+done
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+ADISTVAL[${cc}]=$( echo "scale=2;${ADISTVAL[${cc}]} / ${COUNTER}" | bc -q)
+done
+if [[ ${COUNTER} -gt 2 ]] ; then
+for ((nc=1;nc<=${COUNTER};nc++))
+do
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+TMPVALUE=$( echo "scale=5;${ADISTVAL[${cc}]} - ${DISTVAL[${cc},${nc}]} " | bc -q)
+TMPVALUE=$( echo "scale=5;${TMPVALUE} * ${TMPVALUE} " | bc -q)
+STDISTVAL[${cc}]=$( echo "scale=5;${TMPVALUE} + ${STDISTVAL[${cc}]} " | bc -q)
+done
+done
+DEGREEFREDOM=$(( ${COUNTER} - 1))
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+STDISTVAL[${cc}]=$( echo "scale=5;sqrt(${STDISTVAL[${cc}]} / ${DEGREEFREDOM}) " | bc -q)
+done
+fi
 }
 #This function generates the final result table for the free energies obtained from the mapping
 #It also does some statistics, depending on the number of replicas available
@@ -259,6 +344,17 @@ STSVALUE=$( echo "scale=5;sqrt(${STSVALUE} / ${DEGREEFREDOM}) " | bc -q)
 echo "Free energy std. deviation		=	${STFVALUE}"
 echo "Activation energy std. deviation	=	${STSVALUE}"
 fi
+if [ ${REDCOUNT} -ge 1 ] ;then
+echo "I had to remove ${REDCOUNT} of the replicas because of bad numbers, please check those yourself"
+fi
+if [[ ${NUMDIST} != "" ]] ; then
+echo "Average distances and std deviations for the reaction coordinates in file ${FILENUM}"
+echo "Coordinate #	Distance	Std.-dev."
+for ((cc=1;cc<=${NUMDIST};cc++))
+do
+echo "${DISTONE[${cc}]} - ${DISTTWO[${cc}]}	=	${ADISTVAL[${cc}]}	±	${STDISTVAL[${cc}]}"
+done
+fi
 }
 
 
@@ -267,16 +363,36 @@ fi
 #To see how many files are plotted, needed to generate Gnuplot input later on
 COUNTER=0
 checknum=0
+#Now comes the part where we do the actual mapping....
+#But first check if qfep exists and is executable
+#and if the mapping file is there...
+if [ ! -f ${mapping_file}.inp ] ; then
+echo "I need a mapping input file to work!"
+echo "Could not find the file ${mapping_file}.inp. Aborting!"
+exit 666
+fi
+if [[  "x${qfep}" == "x" ]] ; then
+echo "Qfep binary was not found, qfep=${qfep}"
+echo "Aborting!"
+exit 666
+elif [ ! -x ${qfep} ] ; then
+echo "Can not execute Qfep program ${qfep}. Aborting!"
+exit 666
+fi
 for i in ${LIST} ;do
 if [[ ${LIST} != "empty" ]] ; then
-cp map_files.inp ${i}
+cp ${mapping_file}.inp ${i}
 cd ${i}
 fi
 if [[ ${RERUN} == ${FALSE} ]] ; then
+if [[ ${QUIET} != ${TRUE} ]] ; then
 echo "Running qfep in ${PWD}"
-${qfep} <map_files.inp>map_files.out
 fi
+${qfep} <${mapping_file}.inp>${mapping_file}.out
+fi
+if [[ ${QUIET} != ${TRUE} ]] ; then
 echo "qfep is done, analysing data"
+fi
 #Hackish way to get the distances directly from the fep files by iterating over them
 #Same way as the iteration goes in the frame generation and running
 if [ -f distances.dat ] ; then
@@ -294,8 +410,13 @@ else
 ENUM=00${num}
 fi
 if [ -f fep_${ENUM}.log ] ; then
-grep "dist. between Q-atoms" fep_${ENUM}.log |  awk 'NF { print ( $(NF) ) }' | nl >>distances.dat
+grep "dist. between Q-atoms" fep_${ENUM}.log |  awk 'NF { print ( $(NF) ) }' | nl >tdistances.dat
+sed -i s/".*"/"&  ${ENUM}"/g tdistances.dat
+cat tdistances.dat >>distances.dat
+rm -f tdistances.dat
 else echo "file fep_${ENUM}.log not found"
+echo "Aborting!"
+exit 666
 fi
 sed -i s/"="//g distances.dat
 fi
@@ -303,21 +424,41 @@ done
 if [[ ${checknum} -eq 0 ]] ; then
 tail -50 fep_${ENUM}.log | grep "dist. between Q-atoms" |  awk 'NF { print ( $(NF) ) }' | nl >tdis.dat
 NUMDIST=`awk 'END { print $1 }' tdis.dat ` 
+CNUMDIST=1
+for ac in `tail -50 fep_${ENUM}.log | grep "dist. between Q-atoms"  |  awk 'NF { print ( $(NF-3) ) }'`
+do
+DISTONE[${CNUMDIST}]=${ac}
+CNUMDIST=$(( ${CNUMDIST} + 1 ))
+done
+CNUMDIST=1
+for ac in `tail -50 fep_${ENUM}.log | grep "dist. between Q-atoms"  |  awk 'NF { print ( $(NF-2) ) }'`
+do
+DISTTWO[${CNUMDIST}]=${ac}
+CNUMDIST=$(( ${CNUMDIST} + 1 ))
+done
 #echo "NUMDIST = ${NUMDIST}"
 checknum=1337
 rm tdis.dat
 fi
 make_temp_awk tmp.awk
+if [[ ${NUMDIST}  != '' ]] ; then
 awk -f tmp.awk <distances.dat>distance_${i}.dat
-awk -f getenergy.awk <map_files.out>energy_${i}.dat
-awk -f getlambda.awk <map_files.out>lambda_${i}.dat
+fi
+awk -f getenergy.awk <${mapping_file}.out>energy_${i}.dat
+awk -f getlambda.awk <${mapping_file}.out>lambda_${i}.dat
+if [[ ${NUMDIST} != '' ]] ; then
 awk -f getdeltag.awk <energy_${i}.dat>summary_${i}.dat
+fi
 
 
 
-rm distances.dat *.awk
+if [ -f distances.dat ] ; then
+rm distances.dat 
+fi
+rm *.awk
 #Moves the files back for plotting everything together
 COUNTER=$(( ${COUNTER} + 1 ))
+if [[ ${NUMDIST} != '' ]] ; then
 NUMMIN=`awk '($3=="minimas") {print $5}' summary_${i}.dat`
 NUMMAX=`awk '($3=="maximas") {print $5}' summary_${i}.dat`
 for ((cc=1;cc<=${NUMMIN};cc++))
@@ -338,11 +479,16 @@ fi
 #echo "${COUNTER}        ${cc}"
 #echo "${DGFREESTOR[${COUNTER},${cc}]}"
 done
+fi
 if [[ ${LIST} != "empty" ]] ; then
-mv energy_${i}.dat lambda_${i}.dat distance_${i}.dat ../
+mv energy_${i}.dat lambda_${i}.dat ../
+if [ -f distance_${i}.dat ] ; then
+mv distance_${i}.dat ../
+fi
 cd ..
 fi
 done
+makedistaverage ${FILENUM}
 #Now comes the real part, generating the Gnuplot scripts after making sure that no old files are there
 #Otherwise there might be problems with the new generated files...
 if [[ -f *plot*.gplt ]];then
@@ -365,11 +511,19 @@ ylabel[1]="Distance"
 ylabel[2]="Distance"
 fi
 if [[ ${plots} != "distance" ]] ; then
-gnuplot_static ${plots}plot.gplt x11 2
+if [[ ${PLOTTING} == 'x11' ]] ; then
+gnuplot_static ${plots}plot.gplt ${PLOTTING} 2 '1920,1200'
+else
+gnuplot_static ${plots}plot.gplt ${PLOTTING} 2 '5,4'
+fi
 gnuplot_plot ${plots}plot.gplt '0.0' '0.0' "${xlabel}" "${ylabel[1]}" '2' ${plots}
 gnuplot_plot ${plots}plot.gplt '0.0' '0.5' "${xlabel}" "${ylabel[2]}" '3' ${plots}
+elif [[ ${NUMDIST} != '' ]] ; then
+if [[ ${PLOTTING} == 'x11' ]] ; then
+gnuplot_static ${plots}plot.gplt ${PLOTTING} 1 '1920,1200'
 else
-gnuplot_static ${plots}plot.gplt x11 1
+gnuplot_static ${plots}plot.gplt ${PLOTTING} 1 '5,4'
+fi
 gnuplot_plot_distance ${plots}plot.gplt '0.0' '0.0' "${xlabel}" "${ylabel[1]}" ${plots}
 fi
 
@@ -377,7 +531,11 @@ gnuplot -persist <${plots}plot.gplt 2>/dev/null &
 
 done
 
+if [[ ${NUMDIST} != '' ]] ; then
+if [[ ${QUIET} != ${TRUE} ]] ; then
 make_energy_table
-
+fi
+make_energy_table >results.dat
+fi
 
 
