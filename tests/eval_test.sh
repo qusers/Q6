@@ -62,8 +62,8 @@ done
 
 echo -n "Checking initial energy consistency                         "
 
-INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./ p }' \
-            eq1.log`
+#INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./p }' eq1.log`
+INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ p' eq1.log | grep "Q-surr"` 
 INIT_QSURR_BM="Q-surr. 1 1.0000      3.12    139.43"
 
 if [ "$INIT_QSURR" == "$INIT_QSURR_BM" ]
@@ -81,10 +81,10 @@ fi
 # (Need not always be true, but in this case it is.)                          #
 ###############################################################################
 
-sed -n '/Energy summary at step      0/,/==/ { /SUM/ p }' dc{2..5}.log \
-    > step0.tmp
-sed -n '/FINAL  Energy summary/,/==/ { /SUM/ p }' dc{1..4}.log \
-    > final.tmp
+sed -n '/Energy summary at step      0/,/==/ p' dc{2..5}.log \
+ | grep "SUM"    > step0.tmp
+sed -n '/FINAL  Energy summary/,/==/ p' dc{1..4}.log \
+ | grep "SUM"   > final.tmp
 
 step=1
 paste -d' ' final.tmp step0.tmp | tr -s [:blank:] | \

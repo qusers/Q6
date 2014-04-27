@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	topo.f90
-!	by John Marelius & Johan Åqvist
-
-!	molecular topology data and I/O
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! topo.f90
+! by John Marelius & Johan Ã…qvist
+! molecular topology data and I/O
 
 module TOPO
 	use SIZES
@@ -12,10 +10,10 @@ module TOPO
 	implicit none
 
 ! constants
-	real, private, parameter			::	MODULE_VERSION = 5.03
-	character(*), private, parameter	::	MODULE_DATE = '2003-11-12'
+        real, private, parameter                ::      MODULE_VERSION = 5.06
+        character(*), private, parameter        ::      MODULE_DATE    = '2014-04-21'
 
-    integer, parameter			::	nljtyp = 3	!TINY
+        integer, parameter                      ::      nljtyp = 3	!TINY
 
 	integer, parameter			::	max_nbr_range	= 25
 
@@ -77,7 +75,7 @@ module TOPO
 !	Memory management
 integer, private			::	alloc_status
 !private subroutine
-private						::	topo_check_alloc 
+private						::	topo_check_alloc
 
 !topology information
 real						::	version
@@ -104,7 +102,7 @@ character(len=256)			::	prm_file
 
 !sphere information
 	!!sim. sphere & water sphere centres
-	real(8)						::	xpcent(3), xwcent(3) 
+	real(8)						::	xpcent(3), xwcent(3)
 	real(8)						::	rwat !solvation radius
 	real(8)						::	rexcl_o,rexcl_i
 	integer						::	nexats, nshellats, nexwat
@@ -116,7 +114,7 @@ character(len=256)			::	prm_file
 	real(8)						::	boxcentre(3) !center coordinates of the box
 	real(8)						::	inv_boxl(3)  !inverse of the boxedges
 
-!flag indication if simulation sphere (.false.) or periodic box (.true.)is used. 
+!flag indication if simulation sphere (.false.) or periodic box (.true.)is used.
 	logical						::	use_PBC = .false.
 
 !bond information
@@ -178,7 +176,7 @@ character(len=256)			::	prm_file
 	!listexlong may be reallocated to include special exclusions
 	integer(AI), pointer		::	listexlong(:,:)
 
-!Residue and molecule bookkeeping information 
+!Residue and molecule bookkeeping information
 	INTEGER						::	nres, nres_solute, max_res
 	type(RESIDUE_TYPE), allocatable	::	res(:)
 
@@ -218,10 +216,10 @@ subroutine topo_set_max(max, max_lib, max_nbr)
 
 	max_14long	= max_nbr
 	max_exlong	= max_nbr
-	max_cgp		= max 
+	max_cgp		= max
 
-	max_res		= max 
-	max_mol		= max 
+	max_res		= max
+	max_mol		= max
 
 end subroutine topo_set_max
 
@@ -296,7 +294,7 @@ subroutine topo_deallocate (keep_ff)
 	logical, optional, intent(in)::	keep_ff
 !locals
 	logical						::	keep
-	
+
 	keep = .false.
 
 	if(present(keep_ff)) then
@@ -343,7 +341,7 @@ subroutine topo_reallocate_xtop(atoms)
 	integer						::	nat3old_array(1), nat3old
 
 	nat3old_array = ubound(xtop)
-	nat3old = nat3old_array(1) 
+	nat3old = nat3old_array(1)
 	allocate(r8temp(nat3old), stat=alloc_status)
 	call topo_check_alloc('reallocating topology atom array')
 	r8temp(1:nat3old) = xtop(1:nat3old)
@@ -360,7 +358,7 @@ end subroutine topo_reallocate_xtop
 subroutine topo_reallocate(oldatoms, atoms, waters)
 !arguments
 	integer						::	oldatoms, atoms, waters
-!locals	
+!locals
 	integer						::	oldbonds, bonds
 	integer						::	oldangles, angles
 	real, allocatable			::	r4temp(:)
@@ -469,7 +467,7 @@ integer function topo_open(filename)
 
 !locals
 	integer					::	u, stat_out
-	
+
 	u = freefile()
 
 	open(unit = u, file=filename, status='old',form='formatted', &
@@ -508,7 +506,7 @@ logical function topo_read(u, require_version, extrabonds)
 
 	topo_read = .false.
 	! get rid of old topology
-	call topo_deallocate	
+	call topo_deallocate
 
 	!	This is the default / cutoffs based on switching atoms
 	iuse_switch_atom = 1
@@ -537,7 +535,7 @@ logical function topo_read(u, require_version, extrabonds)
 
 	read (u, '(a80)', err=1000) title
 	if(title == 'Q topology file') then !it's a file with header
-		do 
+		do
 			read(u,'(a256)') line
 			read(line,*) key
 			!workaround to allow / in strings
@@ -565,7 +563,7 @@ logical function topo_read(u, require_version, extrabonds)
 			case default
 				write(*,'(a,a)') '>>>WARNING: Unrecognised key in header: ', key
 			end select
-		end do 
+		end do
 	else
 		version = 2
 	end if
@@ -574,7 +572,7 @@ logical function topo_read(u, require_version, extrabonds)
 	if(version < require_version) goto 1100
 
   ! --> 2. nat_pro (no. of atoms in topology)
-  ! =========================================	
+  ! =========================================
 	read (u, '(a)', err=1000) line
 	read (line,*,err=1000) nat_pro !first read what must be there
 
@@ -582,7 +580,7 @@ logical function topo_read(u, require_version, extrabonds)
 	if (filestat .ne. 0) then
 	  nat_solute = nat_pro !default is nat_solute = nat_pro
 	end if
-	
+
 	write (*,20) nat_solute, nat_pro-nat_solute
 20	format ('No. of solute atoms     = ',i10,/,&
 			'No. of solvent atoms    = ',i10)
@@ -594,13 +592,13 @@ logical function topo_read(u, require_version, extrabonds)
 	if ( nat_pro .eq. 0 ) write (*,'(a)')  &
 	   '>>> WARNING: Zero topology atoms.'
 
-  
+
   ! --> 3. topology coordinates    ---->     xtop
   ! ===========================    ==============
    if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(rd),rd=1,3*nat_pro)
    write (*,40) 3*nat_pro
    40 format ('No. of coordinates      = ',i10)
-  
+
 
   ! --> 4. integer atom codes      ---->     iac
   ! =========================
@@ -608,8 +606,8 @@ logical function topo_read(u, require_version, extrabonds)
   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (iac(rd),rd=1,nat_pro)
   write (*,50) nat_pro
 50 format ('No. of atom type codes  = ',i10)
-  
-  
+
+
   ! --> 5. bond list and params    ---->     bnd, bondlib
   ! ===========================
 	read(u,'(a)',err=1000) line
@@ -628,7 +626,7 @@ logical function topo_read(u, require_version, extrabonds)
   if(nbonds > 0) read (unit=u, fmt=*, err=1000) (bnd(rd),rd=1,nbonds)
 
 	read(unit=u, fmt=*, err=1000) nbndcod
-  !allocate one extra for water bond 
+  !allocate one extra for water bond
   max_bondlib = nbndcod + 1 + extra
   allocate(bondlib(max_bondlib), SYBYL_bond_type(max_bondlib), &
 	stat=alloc_status)
@@ -681,7 +679,7 @@ logical function topo_read(u, require_version, extrabonds)
 		if(filestat > 0) goto 1000
 	end do
 
-	
+
 	! --> 7. torsion list and params    ---->     tor, torlib
 	! ==============================
 	read(u,'(a)',err=1000) line
@@ -696,12 +694,12 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(tor(max_tors), stat=alloc_status)
 	call topo_check_alloc('torsion list')
 	if(ntors > 0) read (unit=u, fmt=*, err=1000) (tor(si), si = 1,ntors)
- 
+
 	read (unit=u, fmt=*, err=1000) ntorcod
 	max_torlib = ntorcod + extra
 	allocate(torlib(max_torlib), stat=alloc_status)
 	call topo_check_alloc('torsion library')
-	
+
 	do i=1,ntorcod
 		read (unit=u, fmt=*, err=1000) j,torlib(i)%fk,torlib(i)%rmult, &
 			torlib(i)%deltor,torlib(i)%paths
@@ -721,7 +719,7 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(imp(max_imps), stat=alloc_status)
 	call topo_check_alloc('impoper torsion list')
 	if(nimps > 0) read (unit=u, fmt=*, err=1000) imp(1:nimps)
-	
+
 	read (unit=u, fmt=*, iostat=filestat) nimpcod, imp_type
 	if(filestat /= 0) then !water atom type data present
 		imp_type = 1 !default to harmonic
@@ -739,12 +737,12 @@ logical function topo_read(u, require_version, extrabonds)
 	! ==============================
 	read (unit=u, fmt='(a)', err=1000) line
 	read (unit=line, fmt=*, iostat=filestat) nat_pro
-  
+
 	if(nat_pro > 0) read (unit=u, fmt=*, err=1000) crg(1:nat_pro)
 	write (*,130) nat_pro
 130 format ('No. of atomic charges   = ',i10)
 
-	
+
 	! --> 10. charge groups					    ---->     cgp
 	! =====================
 	read(u,'(a)',err=1000) line
@@ -777,7 +775,7 @@ logical function topo_read(u, require_version, extrabonds)
 	end if
 142	format ('Charge group cut-off    : ',a)
 
-	
+
 
 	! --> 11. Masses and van der Waals params
 	! =======================================
@@ -830,8 +828,8 @@ logical function topo_read(u, require_version, extrabonds)
 161 format ('No. of LJ type 2 pairs  = ',i10)
 
 	!
-	!	flag heavy atoms for various reasons 
-	!	 
+	!	flag heavy atoms for various reasons
+	!
 	nhyds = 0
 	do i=1,nat_pro
 		if(iaclib(iac(i))%mass < 4.0) then     ! lighter than He = H
@@ -991,7 +989,7 @@ logical function topo_read(u, require_version, extrabonds)
 		write(*,'(a,3f10.3)') 'Box centre              = ', boxcentre(:)
                 excl(:) = .false.
                 shell(:) = .false.
- 
+
 	else
 		use_PBC = .false.
 		write(*,'(a)')'Boundary: sphere'
@@ -1007,25 +1005,25 @@ logical function topo_read(u, require_version, extrabonds)
 		  read(line, *, err=1000) rexcl_o, rwat
 		  write(*, '(a,f10.3)') 'Exclusion radius        = ', rexcl_o
 		  write(*, '(a,f10.3)') 'Eff. solvent radius     = ', rwat
-    end if 
+    end if
 		read(unit=u, fmt=*, err=1000) xpcent(:)
 		write(*, '(a,3f10.3)') 'Solute centre           = ', xpcent(:)
 		read(unit=u, fmt=*, err=1000) xwcent(:)
 		write(*, '(a,3f10.3)') 'Solvent centre          = ', xwcent(:)
-		
+
 		excl(:) = .false.
 		shell(:) = .false.
 		read(unit=u, fmt=*, err=1000, end=1000) nexats, nexwat
 		read(unit=u, fmt='(80l1)') excl(1:nat_pro)
 		WRITE(*, '(a,i10)') 'No. of excluded atoms   = ', nexats
 
-    endif 
+    endif
 900	WRITE(*, '(a,/)') 'Molecular topology read successfully.'
-	
+
 	topo_read = .true.
 	return
 
-1000 write(*,1001) 
+1000 write(*,1001)
 1001 format('>>>>> ERROR: Could not read topology file.')
 	return
 
@@ -1089,7 +1087,7 @@ subroutine topo_save(name)
 	write(*, 10, advance='no') 'solute bonds'
 	write(u, '(2i8,a)') nbonds, nbonds_solute, &
 		 ' = No. of bonds, no. of solute bonds. i - j - icode: (5 per line)'
-	if(nbonds>0) write(u, '(5(i5,1x,i5,1x,i3,1x))') ( bnd(si), si = 1,nbonds ) 
+	if(nbonds>0) write(u, '(5(i5,1x,i5,1x,i3,1x))') ( bnd(si), si = 1,nbonds )
 	write(*, 20) nbonds_solute
 	write(*, 10, advance='no') 'solvent bonds'
 	write(*, 20) nbonds-nbonds_solute
@@ -1160,7 +1158,7 @@ subroutine topo_save(name)
     if (use_PBC) then
       do i = 1, nat_solute
         crgtot = crgtot + crg(i)
-      end do	  
+      end do
 	write(*, 10, advance='no') 'total charge of system'
     else
       do i = 1, nat_solute
@@ -1232,7 +1230,7 @@ subroutine topo_save(name)
 	write(u, '(i8,a)') n14nbrs, ' = No. of 1-4 neighbours. nborlist (range=max_nbr_range): '
 
 	! work-around to preserve file format
-!	write(u, '(80i1)') list14(1:max_nbr_range, 1:nat_solute) 
+!	write(u, '(80i1)') list14(1:max_nbr_range, 1:nat_solute)
 	allocate(temp_list(max_nbr_range,nat_solute), stat=alloc_status)
 	call topo_check_alloc('temporary neighbor list')
 	temp_list(:,:) = 0
@@ -1241,7 +1239,7 @@ subroutine topo_save(name)
 		if (list14(i,j)) temp_list(i,j) = 1
 	  end do
 	end do
-	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute) 
+	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
 
 	write(*, 20) n14nbrs
 	write(*, 10, advance='no') 'long-range neighbour list'
@@ -1265,14 +1263,14 @@ subroutine topo_save(name)
 		if (listex(i,j)) temp_list(i,j) = 1
 	  end do
 	end do
-	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute) 
+	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
 	deallocate(temp_list)
 
 	write(*, 20) nexnbrs
 	write(*, 10, advance='no') 'long-range exclusions'
 	write(u, '(i8,a)') nexlong, &
 		' = No. of long exclusions (>max_nbr_range). pairlist: '
-	if(nexlong > 0) write(u, '(i5,1x,i5)') listexlong(1:2, 1:nexlong) 
+	if(nexlong > 0) write(u, '(i5,1x,i5)') listexlong(1:2, 1:nexlong)
 	write(*, 20) nexlong
 
 ! --- RESIDUE/MOLECULE BOOKKEEPING
@@ -1309,7 +1307,7 @@ subroutine topo_save(name)
 	!solvent type & atom types
 	write(u, '(i8,a)') solvent_type, &
 		' = solvent type (0=SPC,1=3-atom,2=general)'
-	
+
 	!boundary
 	!******PWedited this part
 	if( use_PBC ) then !use periodic box

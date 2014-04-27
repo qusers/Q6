@@ -1,6 +1,6 @@
-!  (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 !
-!  calc_pmfscore.f90
+! calc_pmfscore.f90
 !
 ! Implementation by Peter Hanspers
 

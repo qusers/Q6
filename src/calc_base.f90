@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_base.f90
-!	by John Marelius
-
-!	shared data for trajectory calculation modules
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_base.f90
+! by John Marelius
+! shared data for trajectory calculation modules
 
 module CALC_BASE
 	use TOPO

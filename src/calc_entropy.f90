@@ -1,5 +1,6 @@
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 ! calc_entropy.f90
-! By Jens Carlsson, phd 
+! By Jens Carlsson, PhD 
 ! Absolute entropies according to Quasiharmonic analysis, Schlitter's formula and RMS fluctuations
 
 module CALC_ENTROPY
@@ -144,7 +145,7 @@ subroutine construct_trajectory(t, Temp, startframe, endframe, no_atoms, Calc_ty
     type(trajectory)		 :: t
 	integer					 :: startframe, endframe, no_frames, no_atoms, i,j, Calc_type
     real(8)					 :: Temp
-	character(len=20)		 :: dcd, top
+	character(len=20)		         :: dcd, top
     
 	t%startframe = startframe						! Starting frame
     t%endframe = endframe							! Ending frame	

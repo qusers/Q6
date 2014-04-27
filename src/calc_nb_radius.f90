@@ -1,11 +1,10 @@
-!	(C) 2003 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_nb.f90
-!	by Martin Almlöf & Martin Nervall
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_nb.f90
+! by Martin Almlöf & Martin Nervall
 !       
-!	nonbonded potential calculation &
-!   calculation of nb interactions between 'q-atoms' and
-!   protein residues
+! nonbonded potential calculation &
+! calculation of nb interactions between 'q-atoms' and
+! protein residues
 
 module CALC_NB
 	use CALC_BASE

@@ -1,47 +1,48 @@
 ################################################################################
-#  Q V.5 Makefile for Mac OSX  10.9.1                                          #
+#  Q V.5 Makefile for compilation with ifortran                                #
 #  main code author: Johan Aqvist                                              #
-#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: January 29, 2014                                             #
+#  keeper of the code: Paul Bauer                                              #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Mauricio Esguerra              #
+#  latest update to makefile: March 18, 2014                                   #
 ################################################################################
 
-### -i-static -static
-# Put your favorite compilers and flags here.
+################################################################################
+# Compilers and flags here.
+################################################################################
 FC=		ifort
 CC=		icc
 MPIFC=		mpif90
 FC_OPT=         -O3 -ip -ipo -unroll -i-static
 CC_OPT=		-O3
 MPIFLAGS=	-f90=${FC} -Nmpi
-MPI_FC=        ${FC}
-MPI_CC=        ${CC}
+MPI_FC=         ${FC}
+MPI_CC=         ${CC}
 FFLAGS=         -fstack-protector ${FC_OPT}
 CCFLAGS=	${CC_OPT}
-MPI_FCFLAGS=   ${FFLAGS}
-MPI_CXXFLAGS=  ${CCFLAGS}
-FLIBS=          -Vaxlib
+MPI_FCFLAGS=    ${FFLAGS}
+MPI_CXXFLAGS=   ${CCFLAGS}
 FPP_FLG=        -fpp
-# 
-###
+################################################################################
 
-###
+################################################################################
 # Display options
 default: what
-###
+################################################################################
 
-###
+################################################################################
 # Targets
+################################################################################
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5
 
-mpi:	qdyn5p
+mpi:	qdyn5p move1 move3
 
 mpi_debug:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
-	Qdyn5p
+	qdyn5p
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
@@ -83,8 +84,10 @@ qdum5 : md_dum.o
 qdyn5p : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
-###
+
+################################################################################
 # Object modules
+################################################################################
 avetr.o: avetr.f90 prep.o
 	${FC} ${FFLAGS} -c $<
 
@@ -208,20 +211,25 @@ move1:
 	mkdir ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdyn5p qdum5 qcalc5 ../bin/
-#
-###
+	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
-###
+move3:
+	mv qdyn5p ../bin/
+
+################################################################################
+
+
+################################################################################
 # Build instructions
+################################################################################
 what:
 	@echo "usage: make <target>"
 	@echo
 	@echo "<target> is one of:"
 	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
 	@echo "debug            'all' but with debug information (stacktraces etc)."
-	@echo "mpi              qdyn5p using a loaded mpi library"
+	@echo "mpi              qdyn5p using the currently loaded mpi library"
 	@echo "mpi_debug        'mpi' but with debug information (stacktraces etc)."
 	@echo
-#
-###
+################################################################################
+

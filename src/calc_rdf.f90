@@ -1,10 +1,9 @@
-!	(C) 2006 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_rdf.f90
-!	by Martin Andér	and Martin Almlöf (multiple atoms in first mask and PBC)
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_rdf.f90
+! by Martin Andér and Martin Almlöf (multiple atoms in first mask and PBC)
 !       
-!	Calculates RDF for a center atom with respect to all atoms in
-!	target_mask, using Nbins bins from r=0 to r=rdf_radius
+! Calculates RDF for a center atom with respect to all atoms in
+! target_mask, using Nbins bins from r=0 to r=rdf_radius
 
 module CALC_RDF
 	use CALC_BASE

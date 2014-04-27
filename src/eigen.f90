@@ -1,5 +1,3 @@
-      SUBROUTINE EIGEN (A,R,N,MV) 
-!                                                                       
 !CCCCC W.F. VAN GUNSTEREN, CAMBRIDGE, JUNE 1979 CCCCCCCCCCCCCCCCCCCCCCCC
 !                                                                      C
 !     SUBROUTINE EIGEN (A,R,N,MV)                                      C
@@ -24,8 +22,10 @@
 !                                                                      C
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 !                                                                       
-	implicit double precision (A-H, O-Z)
-    DIMENSION A(1),R(1) 
+      SUBROUTINE EIGEN (A,R,N,MV) 
+
+      implicit double precision (A-H, O-Z)
+      DIMENSION A(1),R(1) 
 
 !                                                                       
 !*****GENERATE IDENTITY MATRIX                                          

@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	prmfile.f90
-!	by John Marelius
-
-!	parsing of data files with sections+keywords (input/parameter/library/FEP)
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! prmfile.f90
+! by John Marelius
+! parsing of data files with sections+keywords (input/parameter/library/FEP)
 
 module PRMFILE
 
@@ -61,8 +59,8 @@ module PRMFILE
 use MISC
 implicit none
 !constants
-	character(*), private, parameter	:: MODULE_VERSION = '5.01'
-	character(*), private, parameter	:: MODULE_DATE = '2003-06-02'
+	character(*), private, parameter	:: MODULE_VERSION = '5.06'
+	character(*), private, parameter	:: MODULE_DATE    = '2014-04-21'
 
 !types, NOTE: maximum length of 500 chars per line
 type LINE_TYPE

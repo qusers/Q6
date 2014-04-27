@@ -1,8 +1,7 @@
-!	(C) 2004 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!average co-ordinates from Qdyn trajectory files and write pdb-structure
-!Added to Qprep March 2004 by Martin Nervall
-!Tested to reproduce average structures from vmd
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! average co-ordinates from Qdyn trajectory files and write pdb-structure
+! Added to Qprep March 2004 by Martin Nervall
+! Tested to reproduce average structures from vmd
 
 module AVETR
   use PREP
@@ -44,7 +43,7 @@ subroutine avetr_calc
 	  do while(trj_read_masked(x_in))  !add from additional files
 		call add_coordinates
 	  end do
-	else 
+	else
 	  fin = .true.
 	end if
   end do

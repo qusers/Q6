@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_rms.f90
-!	by John Marelius
-
-!	root mean square coordinate deviation
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_rms.f90
+! by John Marelius
+! root mean square coordinate deviation
 
 module CALC_RMS
 	use CALC_BASE

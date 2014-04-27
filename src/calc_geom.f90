@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	calc_geom.f90
-!	by John Marelius
-
-!	geometry analysis functions
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! calc_geom.f90
+! by John Marelius
+! geometry analysis functions
 
 module CALC_GEOM
 	use CALC_BASE

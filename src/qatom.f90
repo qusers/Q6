@@ -1,9 +1,7 @@
-!	(C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-
-!	qatom.f90
-!	by John Marelius, Johan Åqvist & Martin Almlöf
-
-!	Q-atom force field data and FEP file reading
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! qatom.f90
+! by John Marelius, Johan Ã…qvist & Martin AlmlÃ¶f
+! Q-atom force field data and FEP file reading
 
 module QATOM
 use SIZES
@@ -17,9 +15,9 @@ use TOPO
 implicit none
 
 !constants
-	character(*), private, parameter	:: MODULE_NAME = 'Q-atom'
-	character(*), private, parameter	:: MODULE_VERSION = '5.01'
-	character(*), private, parameter	:: MODULE_DATE = '2003-06-02'
+	character(*), private, parameter	:: MODULE_NAME    = 'Q-atom'
+	character(*), private, parameter	:: MODULE_VERSION = '5.06'
+	character(*), private, parameter	:: MODULE_DATE    = '2014-01-01'
 
 !	Constants
 	real(8), private					:: pi, deg2rad	!set in sub startup
@@ -33,11 +31,11 @@ implicit none
 	integer, parameter			::	max_link		= 10
 
 	integer						::	nstates, nqat
-	
+
 	!******PWadded this variable
 	!Topology atom number of the switching atom of the Q-atoms
 	!Needed if periodic boundaries are used
-	integer						::  qswitch 
+	integer						::  qswitch
 
 	integer 	::	offset !offset number for topology atom numbers
 	logical						::	qvdw_flag
@@ -47,14 +45,14 @@ implicit none
 	character(len=KEYLENGTH), allocatable	::qtac(:)
 	integer																::	nqexpnb
 	integer(AI), allocatable							::	iqexpnb(:), jqexpnb(:)
-	
+
 	integer									::	nqlib
 	real(4), allocatable		::	qcrg(:,:)
 	real(8), allocatable		::	qmass(:)
 	real(8), allocatable		::	qavdw(:,:), qbvdw(:,:)
 
 	integer				::	nqbond
-	
+
 	type QBOND_TYPE
 		integer(AI)		::	i,j
 		integer(TINY)		::	cod(max_states)
@@ -62,11 +60,11 @@ implicit none
 
 	type QBONDLIB_TYPE
 		!Morse diss. en, Morse Alpha, Morse/Harm. r0
-		real(8)					::	Dmz, amz, r0 
+		real(8)					::	Dmz, amz, r0
 		!Harm. force const
 		real(8)					::	fk
 	end type QBONDLIB_TYPE
-	
+
 	type(QBOND_TYPE), allocatable	 :: qbnd(:)
 	type(QBONDLIB_TYPE), allocatable :: qbondlib(:)
 
@@ -126,7 +124,7 @@ implicit none
 	end type monitor_atom_group_TYPE
 
 	type (monitor_atom_group_TYPE), allocatable::monitor_atom_group(:)
-	
+
 	!the maximal number of atoms in a group to be monitored
 	!this is limited by the line length used in the prmfile module!
 
@@ -140,15 +138,15 @@ implicit none
 		real(8)          ::el_scale(max_states)! to hold the el_scale for different states "masoud Oct_2013"
 	end type qq_el_scale_TYPE
 
-	type(qq_el_scale_TYPE),allocatable             :: qq_el_scale(:) 
+	type(qq_el_scale_TYPE),allocatable             :: qq_el_scale(:)
 
 	integer               ::nel_scale !number of defined scale factors
-    
+
     	integer						::	tmpindex,numsoftlines,i2
     	real(8), allocatable				::	sc_lookup(:,:,:), alpha_max(:,:)
 		real(8)						::	sc_aq,sc_bq,sc_aj,sc_bj,alpha_max_tmp
 		logical						::  softcore_use_max_potential
-    	
+
 !-----------------------------------------------------------------------
 !	fep/evb energies
 !-----------------------------------------------------------------------
@@ -222,7 +220,7 @@ logical function qatom_old_load_atoms(fep_file)
   !allocate memory for qatom list
   allocate(iqseq(nqat))
 
-  
+
   read (4,*) (iqseq(i),i=1,nqat)
   write (*,40) (iqseq(i),i=1,nqat)
 40 format ('Atom nos.:',10i6)
@@ -249,7 +247,7 @@ logical function qatom_load_atoms(fep_file)
 	integer					::	offset_residue, max_res, resno
 	integer, allocatable	::  residues(:)
   !.......................................................................
-	
+
 	use_new_fep_format = .true.
 	qatom_load_atoms = .true.				!assume this for a start
 	softcore_use_max_potential = .false.	!default
@@ -278,7 +276,7 @@ logical function qatom_load_atoms(fep_file)
 		yes = prm_get_logical_by_key('qq_use_library_charges', qq_use_library_charges, .false.)
 		yes = prm_get_logical_by_key('softcore_use_max_potential', softcore_use_max_potential, .false.)
 
-		offset = -1 
+		offset = -1
 		!should an offset be applied to topology atom numbers?
 		if(prm_get_integer_by_key('offset', offset)) then
 			!got an atom number offset
@@ -341,12 +339,12 @@ logical function qatom_load_atoms(fep_file)
 	read(line, fmt=*, iostat=stat) word, i !read integer from value
 	if (stat == 0) then
 		read(word, fmt=*, iostat=stat) i !read integer from value
-		if (stat == 0) then 
+		if (stat == 0) then
 			icase = 1   !int_int
-		else 
+		else
 			icase = 2 !string_int
 		end if
-	else 
+	else
 		icase = 3  !string_string
 	end if
 
@@ -357,7 +355,7 @@ logical function qatom_load_atoms(fep_file)
 		allocate(iqseq(nqat))
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
-			if(prm_get_int_int(s, topno)) then    
+			if(prm_get_int_int(s, topno)) then
 				if(topno + offset < 1 .or. topno + offset > nat_solute) then
 					write(*, '(a,i5,a, i2)') '>>>>> ERROR: invalid topology atom number', &
 						topno + offset, ' for Q-atom',i
@@ -378,9 +376,9 @@ logical function qatom_load_atoms(fep_file)
 				'>>> WARNING: Offset can only be used when defining q-atoms with atom nubers. \n Offset will be set to zero.'
 				offset=0
 		end if
-	
-		max_res = prm_max_enum2('atoms', type_count) !count number of residues & get highest residue number  
-		if (max_res > nres_solute) then 
+
+		max_res = prm_max_enum2('atoms', type_count) !count number of residues & get highest residue number
+		if (max_res > nres_solute) then
 			write(*, '(a,i5)') '>>>>> ERROR: invalid topology solute residue number', max_res
 			qatom_load_atoms = .false.
 			return
@@ -388,13 +386,13 @@ logical function qatom_load_atoms(fep_file)
 		allocate(residues(type_count))
 		nqat=0
 		!Count number of q-atoms
-		do i = 1, type_count       		
-			if(prm_get_string_int(res_str, resno)) then  
+		do i = 1, type_count
+			if(prm_get_string_int(res_str, resno)) then
 				call upcase(res_str)
 				if(res_str == 'RES' .or. res_str == 'RESIDUE') then
 					residues(i)=resno
 					if (resno < nres_solute) then
-						nqat = nqat + (res(resno+1)%start - res(resno)%start)  
+						nqat = nqat + (res(resno+1)%start - res(resno)%start)
 					else
 						nqat = nqat + ((nat_solute +1) - res(resno)%start)
 					end if
@@ -416,7 +414,7 @@ logical function qatom_load_atoms(fep_file)
 			ires=residues(i)
 			if (ires < nres_solute) then
 				last=res(ires+1)%start-1
-				do iat = res(ires)%start,last 
+				do iat = res(ires)%start,last
 					iqseq(iatq)= iat
 					iatq=iatq+1
 				end do
@@ -429,9 +427,9 @@ logical function qatom_load_atoms(fep_file)
 		end do
 		offset = 0; !offset, offset not compatible with this definition
 		write (*,31) (residues(i),i=1,type_count)
-	
+
 	!it is string_string, 'all TYPE'
-    case(3) 
+    case(3)
 		yes = prm_open_section('atoms') !rewind
 		if (offset > 0) then
 			write(*,'(a)') &
@@ -452,7 +450,7 @@ logical function qatom_load_atoms(fep_file)
 					&section 'atoms': ",res_str
 				qatom_load_atoms = .false.
 				return
-			end if 
+			end if
 			call upcase(res_name)
 			names(i)=res_name
 		end do
@@ -460,7 +458,7 @@ logical function qatom_load_atoms(fep_file)
 		allocate(residues(nres_solute))  !allocate for worst case
 		do ires=1,nres_solute
 			do j=1,type_count
-				if(names(j) == res(ires)%name) then 
+				if(names(j) == res(ires)%name) then
 					add_res=add_res+1
 					residues(add_res)=ires
 					exit
@@ -473,10 +471,10 @@ logical function qatom_load_atoms(fep_file)
 			return
 		end if
 		!Count number of q-atoms
-		do i = 1, add_res       		
+		do i = 1, add_res
 			ires=residues(i)
 			if (ires < nres_solute) then
-				nqat = nqat + (res(ires+1)%start - res(ires)%start)  
+				nqat = nqat + (res(ires+1)%start - res(ires)%start)
 			else
 				nqat = nqat + (nat_solute +1 - res(ires)%start)
 			end if
@@ -488,7 +486,7 @@ logical function qatom_load_atoms(fep_file)
 			ires=residues(i)
 			if (ires < nres_solute) then
 				last=res(ires+1)%start-1
-				do iat = res(ires)%start,last 
+				do iat = res(ires)%start,last
 					iqseq(iatq)= iat
 					iatq=iatq+1
 				end do
@@ -508,10 +506,10 @@ logical function qatom_load_atoms(fep_file)
 		qatom_load_atoms = .false.
 		return
 	end select
-	
-  if (allocated(residues)) deallocate(residues)			
+
+  if (allocated(residues)) deallocate(residues)
   if (allocated(names)) deallocate(names)
-  			
+
   write (*,30) nqat
   write (*,40) (iqseq(i),i=1,nqat)
 
@@ -536,7 +534,7 @@ logical function qatom_old_load_fep()
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
 
-	qatom_old_load_fep  = .false. 
+	qatom_old_load_fep  = .false.
 
   call centered_heading('Reading fep/evb strategy','-')
 
@@ -547,7 +545,7 @@ logical function qatom_old_load_fep()
 	!qcrg may be allocated in MD to copy topology charges
 	if(.not. allocated(qcrg)) allocate(qcrg(nqat,nstates))
 
-  ! --- Set new charges 
+  ! --- Set new charges
   read (4,*) nqcrg
 	if(nqcrg > 0) then
 		write (*,60) nqcrg
@@ -566,7 +564,7 @@ logical function qatom_old_load_fep()
   read (4,*) iat
   if(iat > 0) qvdw_flag = .true.
   if(qvdw_flag) then
-	write (*,100) 
+	write (*,100)
 100 format (/,'Q-atom vdW parameters are to be redefined:')
 
 
@@ -575,7 +573,7 @@ logical function qatom_old_load_fep()
         read (4,*) iat,(qiac(iat,j),j=1,nstates)
         write (*,'(i6,8i8)') iat,(qiac(iat,j),j=1,nstates)
      end do
-  
+
   ! Read Qatom type library
      read (4,*) nqlib
      write (*,120) nqlib
@@ -589,7 +587,7 @@ logical function qatom_old_load_fep()
         read (4,*) j,qaname,(qavdw(j,k),qbvdw(j,k),k=1,3),qmass(j)
         write (*,140)j,qaname,(qavdw(j,k),qbvdw(j,k),k=1,3),qmass(j)
      end do
-140  format (i5,3x,a2,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)   
+140  format (i5,3x,a2,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)
      !
 
      read (4,*) nqexpnb
@@ -631,7 +629,7 @@ logical function qatom_old_load_fep()
 	qbondlib(:)%fk = 0. !clear Harmonic f.c, not available with old FEP file
   if ( nqcod .gt. 0 ) then
      write (*,*)
-     write (*,'(a)') 'Morse  E_diss   alpha      b0' 
+     write (*,'(a)') 'Morse  E_diss   alpha      b0'
      do i=1,nqcod
         read (4,*) qbondlib(i)%Dmz,qbondlib(i)%amz,qbondlib(i)%r0
         write (*,225) i,qbondlib(i)%Dmz,qbondlib(i)%amz,qbondlib(i)%r0
@@ -646,7 +644,7 @@ logical function qatom_old_load_fep()
   if(nqangle > 0) write (*,260) nqangle
 260 format (/,'No. of changing angles   = ',i5)
   allocate(qang(nqangle))
-  
+
   do i=1,nqangle
      read (4,*) qang(i)%i,qang(i)%j,qang(i)%k
      read (4,*) qflag(1:nstates)
@@ -727,7 +725,7 @@ logical function qatom_old_load_fep()
 	kqimp(nqimp), &
 	lqimp(nqimp), &
 	qimpcod(nqimp,nstates))
-  
+
   do i=1,nqimp
      read (4,*) iqimp(i),jqimp(i),kqimp(i),lqimp(i)
      read (4,*) (qflag(j),j=1,nstates)
@@ -743,7 +741,7 @@ logical function qatom_old_load_fep()
 
   read (4,*) nqcod
   allocate(qfkimp(nqcod), qimp0(nqcod))
-  
+
   if ( nqcod .gt. 0 ) then
      write (*,*)
      write (*,'(a)') ' Impr force-k    imp0'
@@ -792,7 +790,7 @@ logical function qatom_old_load_fep()
 560 format ('No. fep/evb shake contraints = ',i5)
   do i=1,nqshake
      read (4,*) iqshake(i),jqshake(i),(qshake_dist(i,j),j=1,nstates)
-     write (*,580) iqshake(i),jqshake(i),(qshake_dist(i,j),j=1,nstates) 
+     write (*,580) iqshake(i),jqshake(i),(qshake_dist(i,j),j=1,nstates)
   end do
 580 format ('i -- j, dist in state_1, state_2, ... : ',2i5,10f6.2)
 
@@ -837,7 +835,7 @@ logical function qatom_old_load_fep()
 				else if(exspectemp(j) == 1) then
 					exspec(i)%flag(j) = .true.
 				else
-					write(*,592) 
+					write(*,592)
 					return
 				end if
 			end do
@@ -864,15 +862,15 @@ logical function qatom_load_fep(fep_file)
   integer					::	type_count, filestat
   real(8)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
   integer                   ::  stat
-  	
+
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
 	character(len=keylength)	:: qtac_tmp(max_states)
-	
-	!temp array for reading special atom group members
-	integer                   ::  temp_atom(MAX_ATOMS_IN_SPECIAL_GROUP)		
 
-		
+	!temp array for reading special atom group members
+	integer                   ::  temp_atom(MAX_ATOMS_IN_SPECIAL_GROUP)
+
+
 	if(.not. use_new_fep_format) then
 		qatom_load_fep = qatom_old_load_fep()
 		return
@@ -900,7 +898,7 @@ logical function qatom_load_fep(fep_file)
 				qatom_load_fep = .false.
 			else
 				qswitch = qswitch + offset
-				write (*,'(a,i6,a)') 'Using topology atom number ',qswitch,' when creating q-atom based nonbond lists.'				
+				write (*,'(a,i6,a)') 'Using topology atom number ',qswitch,' when creating q-atom based nonbond lists.'
 			end if
 		end if
 	end if
@@ -918,7 +916,7 @@ logical function qatom_load_fep(fep_file)
 
 	!read flag for use of library charges in qq-nonbond
 	!assume section FEP is open
-	! --- Set new charges 
+	! --- Set new charges
 	section = 'change_charges'
 	nqcrg = prm_count(section)
 	if(nqcrg > 0) then
@@ -955,11 +953,11 @@ logical function qatom_load_fep(fep_file)
 		write(*,32) sum(qcrg(:,:), dim=1)
 
 	end if
-29	format('Effective Q-atom charges for all Q-atoms') 
+29	format('Effective Q-atom charges for all Q-atoms')
 30	format('Q atom    charge in',7(1x,a5,i2))
 31	format(     i6,t20,10f8.3)
 32	format(/,'   SUM',t20,10f8.3)
-	
+
 82	format('>>>>> ERROR: ',i2,' is not a valid q-atom number')
 
 	! Read Qatom type library only if iqvdw_flag is true
@@ -978,7 +976,7 @@ logical function qatom_load_fep(fep_file)
 120		format (/,'No. of Q-atom types  = ',i5)
 130		format('Name            Ai      Bi      Ci     ai Ai(1-4) Bi(1-4)    Mass')
 131		format('Name            R*i     ei      Ci     ai R*i(1-4)ei(1-4)    Mass')
-						
+
 		allocate(qmass(nqlib), qavdw(nqlib,nljtyp), qbvdw(nqlib,nljtyp))
 
 		do i=1,nqlib
@@ -990,11 +988,11 @@ logical function qatom_load_fep(fep_file)
 				qatom_load_fep = .false.
 			end if
 		end do
-140		format (a8,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)   
+140		format (a8,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)
 83		format ('>>>>> ERROR: Could not enumerate q-atom type ',a,' Duplicate name?')
 	end if
 
-	! --- Set new vdw params 
+	! --- Set new vdw params
 	section = 'change_atoms'
 	iat = prm_max_enum(section, type_count)
 	if(iat == 0) then
@@ -1003,9 +1001,9 @@ logical function qatom_load_fep(fep_file)
 		write(*,'(a)') '>>>>> ERROR: Atom types of Q-atoms must be given for every Q-atom!'
 		qatom_load_fep = .false.
 		return
-	else 
+	else
 		qvdw_flag = .true.
-		write (*,100) 
+		write (*,100)
 100		format (/,'Assigning Q-atom types to all Q atoms:')
 80		format('Q atom    atom type in',6(2x,a5,i2))
 		write (*,80) ('state',i,i=1,nstates)
@@ -1042,7 +1040,7 @@ logical function qatom_load_fep(fep_file)
 			else if(iqseq(j) == 0 .or. iqseq(k) == 0) then
 				write(*,148) j,k
 				qatom_load_fep = .false.
-				cycle !dont even try to read 
+				cycle !dont even try to read
 			end if
 			iqexpnb(i) = j
 			jqexpnb(i) = k
@@ -1071,7 +1069,7 @@ logical function qatom_load_fep(fep_file)
 			else if(iqseq(j) == 0 .or. iqseq(k) == 0) then
 				write(*,148) j,k
 				qatom_load_fep = .false.
-				cycle 
+				cycle
 			end if
             qq_el_scale(i)%iqat=j
             qq_el_scale(i)%jqat=k
@@ -1085,7 +1083,7 @@ logical function qatom_load_fep(fep_file)
 
 ! --- Read special exclusions among quantum atoms
 	section='excluded_pairs'
-	nexspec = prm_count(section) 
+	nexspec = prm_count(section)
     if(nexspec > 0) then
 		write (*,585) nexspec
 		write(*,586) ('state',i, i=1,nstates)
@@ -1104,7 +1102,7 @@ logical function qatom_load_fep(fep_file)
 				elseif(exspectemp(j) == 1) then
 					exspec(i)%flag(j) = .true.
 				else
-					write(*,592) 
+					write(*,592)
 					qatom_load_fep = .false.
 				end if
 			end do
@@ -1123,8 +1121,8 @@ logical function qatom_load_fep(fep_file)
 	type_read(:) = .false.
 		allocate(qbondlib(nqcod))
 		write (*,150)
-		write (*,'(a)') 'type #  Morse E_diss    alpha       b0  Harmonic force_k ' 
-		
+		write (*,'(a)') 'type #  Morse E_diss    alpha       b0  Harmonic force_k '
+
 		do i=1,type_count
 			if(.not. prm_get_line(line)) goto 1000
 			read(line, *, iostat=filestat) j, qbondlib(j)%Dmz,qbondlib(j)%amz, &
@@ -1209,7 +1207,7 @@ logical function qatom_load_fep(fep_file)
 				if(i == 1) write(*,'(a)') '  Urey-Bradley force-k      r0'
 				type_read(j) = .true.
 				write (*,230) j,qanglib(j)
-			elseif(filestat < 0) then 
+			elseif(filestat < 0) then
 				if(i == 1) write(*,*)
 				type_read(j) = .true.
 				write (*,225) j,qanglib(j)%fk, qanglib(j)%ang0
@@ -1230,7 +1228,7 @@ logical function qatom_load_fep(fep_file)
 260		format (/,'No. of changing angles   = ',i5)
 		write(*,261) ('state',i,i=1,nstates)
 		allocate(qang(nqangle))
-  
+
 		do i=1,nqangle
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) qang(i)%i,qang(i)%j,qang(i)%k, qang(i)%cod(1:nstates)
@@ -1319,7 +1317,7 @@ logical function qatom_load_fep(fep_file)
 	if (allocated(type_read)) then
 	    deallocate(type_read)
 	end if
-	
+
 	! --- Set new impropers
 	section='improper_types'
 	nqcod=prm_max_enum(section, type_count)
@@ -1350,7 +1348,7 @@ logical function qatom_load_fep(fep_file)
 			kqimp(nqimp), &
 			lqimp(nqimp), &
 			qimpcod(nqimp,nstates))
-  
+
 		do i=1,nqimp
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) iqimp(i),jqimp(i),kqimp(i),lqimp(i),qimpcod(i,:)
@@ -1487,7 +1485,7 @@ logical function qatom_load_fep(fep_file)
 			read(line,*, err=1000) iqshake(i),jqshake(i),qshake_dist(i,1:nstates)
 			iqshake(i) = iqshake(i) + offset
 			jqshake(i) = jqshake(i) + offset
-			write (*,580) iqshake(i),jqshake(i),qshake_dist(i,1:nstates) 
+			write (*,580) iqshake(i),jqshake(i),qshake_dist(i,1:nstates)
 		end do
 580		format (i6,1x,i6,t29,5f8.2)
 	end if
@@ -1496,7 +1494,7 @@ logical function qatom_load_fep(fep_file)
 	section = 'off_diagonals'
 	noffd = prm_count(section)
 	!always allocate (needed for energy file writing)
-	allocate(offd(noffd), offd2(noffd)) 
+	allocate(offd(noffd), offd2(noffd))
 	if(noffd > 0) then
 		write (*,600) noffd
 600		format (/,'No. of offdiagonal (Hij) functions = ',i5)
@@ -1509,7 +1507,7 @@ logical function qatom_load_fep(fep_file)
 			return
 		end if
 		write (*,'(a)') 'state_i state_j atom_k atom_l     Aij mu_ij'
-	
+
 		do i=1,noffd
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) offd(i)%i,offd(i)%j,offd2(i)%k, &
@@ -1547,7 +1545,7 @@ logical function qatom_load_fep(fep_file)
 	section = 'softcore'
 	if(.not. prm_open_section(section)) then
 		write (*,1630)
-	else 
+	else
 		write(*,'(a)') 'Reading softcore section'
 		if(.not. qvdw_flag) then
 			write(*,'(a)') '>>>>> ERROR: Q-atom types must be redefined in "change_atoms" section'
@@ -1561,11 +1559,11 @@ logical function qatom_load_fep(fep_file)
 			qatom_load_fep = .false.
 			return
 		else
-			write (*,1625) 
+			write (*,1625)
 1625			format (/,'Assigning softcore to all Q atoms:')
 1626			format('Q atom    softcore alpha in',6(2x,a5,i2))
 1627			format('Q atom      max potenial in',6(2x,a5,i2))
-			
+
 			if (softcore_use_max_potential) then
 				write (*,'(a)') ('Using values in FEP file as desired maximum vdW potentials at r=0')
 				write (*,1627) ('state',i,i=1,nstates)
@@ -1573,20 +1571,20 @@ logical function qatom_load_fep(fep_file)
 				write (*,'(a)') ('Using values in FEP file as explicit alphas')
 				write (*,1626) ('state',i,i=1,nstates)
 			end if
-				
+
 			do i=1,nqat   !read all the softcore max_alphas
 				!reading should not fail at this stage - get_line was called by prm_count!
 				if(.not. prm_get_line(line)) goto 1000
 				read (line,*, err=1000) tmpindex, alpha_max(tmpindex,1:nstates)
-				
+
 				write (*,'(i6,t25,6(f8.2,1x))') tmpindex, alpha_max(tmpindex,1:nstates)
 
 			end do
 
 			do i=1,nqat  !make the sc_lookup table
-				do i2=1,nstates   
+				do i2=1,nstates
 					do j=1,natyps !do q-surroundings first
- 
+
 						if (softcore_use_max_potential) then
 							sc_aq = qavdw(qiac(i,i2),1)
 							sc_bq = qbvdw(qiac(i,i2),1)
@@ -1594,12 +1592,12 @@ logical function qatom_load_fep(fep_file)
 							sc_bj = iaclib(j)%bvdw(1)
 							if (alpha_max(i,i2) /= 0) then
 								if (ivdw_rule == 1) then !geometric vdw rule
-									sc_lookup(i,j,i2) = (-sc_bq*sc_bj+sqrt(sc_bq*sc_bq*sc_bj* & 
+									sc_lookup(i,j,i2) = (-sc_bq*sc_bj+sqrt(sc_bq*sc_bq*sc_bj* &
 										sc_bj+4*alpha_max(i,i2)*sc_aq*sc_aj))/(2*alpha_max(i,i2))
 								else !arithmetic vdw rule. OBS some epsilons (q atom epsilons, sc_bq)
 										!	have not been square rooted yet. We'll take this into account
 										!   when calculating the sc_lookup
-									sc_lookup(i,j,i2) = (-2*sqrt(sc_bq)*sc_bj+2*sqrt(sc_bq*sc_bj**2+ & 
+									sc_lookup(i,j,i2) = (-2*sqrt(sc_bq)*sc_bj+2*sqrt(sc_bq*sc_bj**2+ &
 									alpha_max(i,i2)*sqrt(sc_bq)*sc_bj))*(sc_aq+sc_aj)**6/(2*alpha_max(i,i2))
 								end if
 							end if
@@ -1624,8 +1622,8 @@ logical function qatom_load_fep(fep_file)
 									alpha_max_tmp = max ( alpha_max(i,i2), alpha_max(j,i2) )
 								end if
 
-									
-								
+
+
 							else  !use the largest alpha_max if we're using plain alphas
 								alpha_max_tmp = max ( alpha_max(i,i2), alpha_max(j,i2) )
 							end if
@@ -1634,14 +1632,14 @@ logical function qatom_load_fep(fep_file)
 							if (softcore_use_max_potential) then
 
 								if (ivdw_rule == 1) then !geometric vdw rule
-									sc_lookup(i,j+natyps,i2) = (-sc_bq*sc_bj+ & 
-										sqrt(sc_bq*sc_bq*sc_bj*sc_bj+ & 
+									sc_lookup(i,j+natyps,i2) = (-sc_bq*sc_bj+ &
+										sqrt(sc_bq*sc_bq*sc_bj*sc_bj+ &
 										4*alpha_max_tmp*sc_aq*sc_aj))/(2*alpha_max_tmp)
 								else !arithmetic vdw rule   OBS some epsilons (q atom epsilons, sc_bq and sc_bj)
 										!	have not been square-rooted yet. We'll take this into account
 										!   when calculating the sc_lookup
-									sc_lookup(i,j+natyps,i2) = (-2*sqrt(sc_bq*sc_bj)+ & 
-										2*sqrt(sc_bq*sc_bj+alpha_max_tmp*sqrt(sc_bq*sc_bj)))* & 
+									sc_lookup(i,j+natyps,i2) = (-2*sqrt(sc_bq*sc_bj)+ &
+										2*sqrt(sc_bq*sc_bj+alpha_max_tmp*sqrt(sc_bq*sc_bj)))* &
 										(sc_aq+sc_aj)**6/(2*alpha_max_tmp)
 								end if
 
@@ -1652,7 +1650,7 @@ logical function qatom_load_fep(fep_file)
 						end if
 
 
-					end do 
+					end do
 
 
 
@@ -1664,8 +1662,8 @@ logical function qatom_load_fep(fep_file)
 			end do !softcore lookup table
 		end if
 	end if  !prm_open_section(section)   softcore
-		
-	
+
+
 1630		format('No softcore section found. Using normal LJ potentials.')
 1631		format('>>>>> Erroneous softcore section.')
 
@@ -1673,8 +1671,8 @@ logical function qatom_load_fep(fep_file)
 
 	!load atom groups whose non-bonded interactions are to be monitored
 	section='monitor_groups'
-	monitor_groups=prm_count(section)   
-	allocate(monitor_atom_group(monitor_groups)) 
+	monitor_groups=prm_count(section)
+	allocate(monitor_atom_group(monitor_groups))
 	if (monitor_groups>0) then
 			write (*,650) monitor_groups
 			do i=1,monitor_groups
@@ -1683,13 +1681,13 @@ logical function qatom_load_fep(fep_file)
 						k=k+1
 						read(line,*) temp_atom(k)   !read line med fritt format
 					end do
-					allocate(monitor_atom_group(i)%atom(k))   !k är antal element i array nr i
-					monitor_atom_group(i)%atom(:)=temp_atom(1:k) + offset! kopiera temp_atom arrayens element med index 1-k till 
+					allocate(monitor_atom_group(i)%atom(k))   !k Ã¤r antal element i array nr i
+					monitor_atom_group(i)%atom(:)=temp_atom(1:k) + offset! kopiera temp_atom arrayens element med index 1-k till
 					monitor_atom_group(i)%n=k
 					write (*,660,advance='no') i
 					write (*,670) monitor_atom_group(i)%atom(:)
-			end do			
-	end if 
+			end do
+	end if
 650	format (/,'No. atom groups to monitor   = ',i5)
 660	format ('group' ,i2, ':')
 670	format (7i8)
@@ -1702,9 +1700,9 @@ logical function qatom_load_fep(fep_file)
 			write (*,630) monitor_group_pairs
 			write (*,'(a)') 'group_i group_j'
 			do i=1,monitor_group_pairs
-				if (.not. prm_get_int_int(monitor_group_pair(i)%i, monitor_group_pair(i)%j)) goto 1000   !läser in i arrayen monitor_group_pair
-				write (*,640)  monitor_group_pair(i)%i, monitor_group_pair(i)%j		    	
-			end do      
+				if (.not. prm_get_int_int(monitor_group_pair(i)%i, monitor_group_pair(i)%j)) goto 1000   !lÃ¤ser in i arrayen monitor_group_pair
+				write (*,640)  monitor_group_pair(i)%i, monitor_group_pair(i)%j
+			end do
 	end if
 630	format (/,'No. of group pairs to monitor= ',i5)
 640	format (i7,1x,i7)
@@ -1717,7 +1715,7 @@ logical function qatom_load_fep(fep_file)
 1000	write(*,1900) i,section
 	call prm_close
 	qatom_load_fep = .false.
-1900	format('>>>>> ERROR: Read error at line ',i2,' of section [',a,']')	
+1900	format('>>>>> ERROR: Read error at line ',i2,' of section [',a,']')
   !.......................................................................
 end function qatom_load_fep
 
@@ -1737,7 +1735,7 @@ logical function bond_harmonic_in_any_state(k)
 			end if
 		end if
 	end do
-547 format('>>>>> ERROR: Bond',i3,' is harmonic in state',i2)	
+547 format('>>>>> ERROR: Bond',i3,' is harmonic in state',i2)
 end function bond_harmonic_in_any_state
 
 end module QATOM
