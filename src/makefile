@@ -5,7 +5,7 @@
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: April 4, 2014                                                #
+#  latest update: April 28, 2014                                                #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
@@ -14,17 +14,12 @@
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=		ifort
-	CC=		icc
 	MPIFC=		mpif90
 	FC_OPT=		-O3 -ip -ipo -unroll -i-static
-	CC_OPT=		-O3
 	MPIFLAGS=	-f90=${FC} -Nmpi
 	MPI_FC=		${FC}
-	MPI_CC=		${CC}
 	FFLAGS=		-fstack-protector ${FC_OPT}
-	CCFLAGS=	${CC_OPT}
-	MPI_FCFLAGS=	${FFLAGS}
-	MPI_CXXFLAGS=	${CCFLAGS}
+	MPI_FCFLAGS=	${FFLAGS}	
 	FPP_FLG=	-fpp
 
 ################################################################################
@@ -45,8 +40,12 @@ else ifeq ($(COMP),osx)
 ################################################################################
 else ifeq ($(COMP),pgi)
 	FC=pgf90
-	FFLAGS=
-	OFLAGS=-mp
+	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
+	FFLAGS=		${FC_OPT}
+	FPP_FLG=	-Mpreprocess
+	MPIFC=		mpif90
+	MPIFLAGS=	-lmpi#-f90=${FC}
+	MPI_FC=		${FC}
 
 ################################################################################
 # IBM Compiler -- untested
@@ -63,7 +62,7 @@ else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	CC=		gcc
 	MPIFC=		mpif90
-	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
+	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -std=legacy -fall-intrinsics -Wall
 	CC_OPT=		-O3
 	OMPI_FC=	${FC}
 	OMPI_CC=	${CC}	
@@ -91,15 +90,45 @@ default: what
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 debug:	
+	@if  [[ "$(COMP)" == "ifort" ]] ; then \
+        echo "making debug for ifort" ; make debugifort ;\
+        elif [[ "$(COMP)" == "gcc" ]] ; then \
+        echo "making debug for gcc" ; make debuggcc ;\
+        elif [[ "$(COMP)" == "pgi" ]] ; then \
+        echo "making debug for pgi" ; make debugpgi ;\
+        else echo "defaulting debug to gcc" ; make debuggcc ;\
+        fi
+
+debuggcc:	
 	@make FFLAGS='-debug -traceback -g -Wall' \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpi:	
+	@if  [[ "$(COMP)" == "ifort" ]] ; then \
+	echo "making mpi for ifort" ; make mpiifort ;\
+	elif [[ "$(COMP)" == "gcc" ]] ; then \
+	echo "making mpi for gcc" ; make mpigcc ;\
+	elif [[ "$(COMP)" == "pgi" ]] ; then \
+	echo "making mpi for pgi" ; make mpipgi ;\
+	else echo "defaulting mpi to gcc" ; make mpigcc ;\
+	fi
+
+mpi_debug:
+	@if  [[ "$(COMP)" == "ifort" ]] ; then \
+        echo "making debug mpi for ifort" ; make mpi_debugifort ;\
+        elif [[ "$(COMP)" == "gcc" ]] ; then \
+        echo "making debug mpi for gcc" ; make mpi_debuggcc ;\
+        elif [[ "$(COMP)" == "pgi" ]] ; then \
+        echo "making debug mpi for pgi" ; make mpi_debugpgi ;\
+        else echo "defaulting debug mpi to gcc" ; make mpi_debuggcc ;\
+        fi
+
+mpigcc:	
 	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer \
-	-fall-intrinsics -std=legacy' \
+	 -std=legacy -fall-intrinsics' \
 	qdyn5p move1 move3
 
-mpi_debug:	
+mpi_debuggcc:	
 	@make FFLAGS='-debug -traceback -g -Wall'         \
 	qdyn5p move1 move3
 
@@ -113,6 +142,8 @@ mpiifort:
 mpi_debugifort:	
 	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
 	qdyn5p
+mpipgi:
+	@make qdyn5p move1 move3
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il
@@ -134,7 +165,7 @@ qcalc5 qprep5: maskmanip.o
 
 qdyn5 qdum5: qdyn.o
 
-qprep5: q_prep.o prefs.o prep.o avetr.o
+qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
 
 qfep5: qfep.o 
@@ -274,13 +305,13 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
-	mkdir ../obj ; mv *.o *.mod ../obj/
+	mkdir -p ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
 move3:
-	mv qdyn5p ../bin/
+	mkdir -p ../bin ; mv qdyn5p ../bin/
 
 ################################################################################
 

@@ -27,7 +27,7 @@ module CALC_RDF
 		real(8),pointer							::	bins(:)					! RDF bins
 	end type RDF_CALC_TYPE
 
-	type(RDF_CALC_TYPE), private				::  rdf_calcs(MAX_MASKS)	! stores data for indivdual RDF calcs
+	type(RDF_CALC_TYPE), private, save				::  rdf_calcs(MAX_MASKS)	! stores data for indivdual RDF calcs
 	real(8)										::	pi
 
 	type RDF_LIST_TYPE
