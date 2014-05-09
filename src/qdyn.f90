@@ -1,14 +1,14 @@
 ! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 ! qdyn.f90
 ! Initial date: 2000
-! by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
+! by Johan Ã…qvist, John Marelius, Anders Kaplan & Martin Nervall
 ! Qdyn molecular dynamics main program
 
 program Qdyn5
-  use MD								
+  use MD
   use MPIGLOB ! use MPI global data
 #if defined (_DF_VERSION_)
-  use dfport							!	portability lib for signals, used by Compaq Visual Fortran compiler
+  use dfport  ! portability lib for signals, used by Compaq Visual Fortran compiler
 #endif
 
   implicit none
@@ -33,9 +33,18 @@ program Qdyn5
 #if defined (_DF_VERSION_)
   ! nothing
 #else
-  integer(4), parameter			:: SIGINT = 2	! CTRL-C signal
-  integer(4), parameter			:: SIGKILL = 9	! kill/CTRL-BREAK signal
-  integer(4), parameter			:: SIGABRT = 6	! kill/CTRL-BREAK signal
+  integer(4), parameter			:: SIGINT  = 2 ! CTRL-C signal
+  integer(4), parameter			:: SIGKILL = 9 ! kill/CTRL-BREAK signal
+  integer(4), parameter			:: SIGABRT = 6 ! kill/CTRL-BREAK signal
+#if defined (USE_MPI)
+  interface
+    integer(4) function signal( signum, proc, flag )
+       integer(4) signum, flag
+       external proc
+    end function
+  end interface
+#endif
+
 #endif
   external sigint_handler
   external sigkill_handler
@@ -52,10 +61,12 @@ program Qdyn5
 	numnodes = 1
 #endif
 
+#if defined (USE_MPI)
   ! initialize signal handlers
-  sigret = qsignal(SIGINT, sigint_handler, -1_4)
-  sigret = qsignal(SIGKILL, sigkill_handler, -1_4)
-  sigret = qsignal(SIGABRT, sigabrt_handler, -1_4)
+  sigret = SIGNAL(SIGINT, sigint_handler, -1_4)
+  sigret = SIGNAL(SIGKILL, sigkill_handler, -1_4)
+  sigret = SIGNAL(SIGABRT, sigabrt_handler, -1_4)
+#endif
 
   ! initialise static data, display banner etc
   call startup
@@ -134,7 +145,7 @@ subroutine startup
 	write(*,'(a,a,a,a)') 'QDyn version ', trim(QDYN_VERSION), trim(QDYN_SUFFIX),' initialising'
 #endif
 	call date_and_time(values=datum)
-	write(*,130) datum(1),datum(2),datum(3),datum(5),datum(6),datum(7)  
+	write(*,130) datum(1),datum(2),datum(3),datum(5),datum(6),datum(7)
 130	format('Current date ',i4,'-',i2,'-',i2,' and time ',i2,':',i2,':',i2)
   end if
 
@@ -163,13 +174,6 @@ subroutine shutdown
 end subroutine shutdown
 
 !-----------------------------------------------------------------------
-INTEGER(4) FUNCTION qsignal( signum, proc, sigflag )
-!       use MD
-       implicit none
-       INTEGER(4)                               :: signum, sigflag
-       external proc
-       qsignal = 1
-END FUNCTION qsignal
 
 end program Qdyn5
 
