@@ -22,6 +22,7 @@ ifeq ($(COMP),ifort)
 	MPIFLAGS=	-f90=${FC} -Nmpi
 	MPI_FC=		${FC}
 	MPI_FCFLAGS=	${FFLAGS}
+	MPI=		${MPI_FCFLAGS}
 
 	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
@@ -39,6 +40,7 @@ else ifeq ($(COMP),osx)
 	MPIFC=          mpif90
 	OMPI_FC=        ${FC}
 	OMPI_FCFLAGS=   ${FFLAGS}
+	MPI=		${OMPI_FCFLAGS}
 
 	DEBUG=          -debug  -g ${FC_OPT}
 	DEBUGMPI=       -debug  -g ${FC_OPT}
@@ -51,9 +53,9 @@ else ifeq ($(COMP),pgi)
 	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
 	FFLAGS=		${FC_OPT}
 	FPP_FLG=	-Mpreprocess
-	
 	MPIFC=		mpif90
-	MPIFLAGS=	-lmpi #-f90=${FC}
+	MPIFLAGS=	-lmpi#-f90=${FC}
+	MPI=		${MPIFLAGS} ${FFLAGS}
 	MPI_FC=		${FC}
 
 ################################################################################
@@ -76,6 +78,7 @@ else ifeq ($(COMP),gcc)
 	MPIFC=		mpif90
 	OMPI_FC=	${FC}
 	OMPI_FCFLAGS=	${FFLAGS}
+	MPI=		${OMPI_FCFLAGS}
 
 	DEBUG=          -debug -fbacktrace -g ${FC_OPT}	
 	DEBUGMPI=       -debug -fbacktrace -g ${FC_OPT}
@@ -85,6 +88,7 @@ else
 	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
+	MPI=		${FFLAGS}
 endif
 
 ################################################################################
@@ -170,7 +174,7 @@ calc_fit.o:calc_fit.f90 calc_base.o maskmanip.o
 calc_geom.o:calc_geom.f90 calc_base.o
 	${FC} ${FFLAGS} -c $<
 
-calc_nb.o:calc_nb.f90 calc_base.o maskmanip.o parse.o
+calc_nb.o:calc_nb.f90 calc_base.o maskmanip.o parse.o qatom.o prmfile.o
 	${FC} ${FFLAGS} -c $<
 
 calc_pmfscore.o: calc_pmfscore.f90 calc_base.o maskmanip.o trj.o topo.o prmfile.o index.o qatom.o misc.o
@@ -269,13 +273,13 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
-	mkdir ../obj ; mv *.o *.mod ../obj/
+	mkdir -p ../obj ; mv *.o *.mod ../obj/
 
 move2:
-	mkdir ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
 move3:
-	mv qdyn5p ../bin/
+	mkdir -p ../bin ; mv qdyn5p ../bin/
 
 ################################################################################
 

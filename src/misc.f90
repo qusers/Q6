@@ -140,5 +140,62 @@ end function rtime
 !-----------------------------------------------------------------------
 !-----------------------------------------------------------------------
 
+subroutine check_alloc_general(alloc_stat_gen,message)
+
+! argument
+character(*),intent(in) :: message
+integer,intent(in) 	:: alloc_stat_gen
+! local var
+character(120) allocmsg
+
+if (alloc_stat_gen .ne. 0) then
+allocmsg = '>>> Out of memory trying to allocate '//message
+call die_general(allocmsg)
+end if
+end subroutine check_alloc_general
+
+subroutine die_general(cause)
+! args
+character(*), optional          :: cause
+
+
+!
+! exit with an error message
+!
+
+
+! local vars
+integer                                         :: i
+! flush stuff
+integer(4), parameter                   :: stdout_unit = 6
+! external flush disabled for gfortran
+! external flush
+
+        write(*,*)
+        call centered_heading('ABNORMAL TERMINATION', '!')
+        write(*,'(79a)') 'Terminating due to ', cause
+
+end subroutine die_general
+
+!stole this subroutine from stackoverflo
+!page https://stackoverflow.com/questions/13495388/converting-arbitrary-floating-point-string-to-real-in-fortran-95
+!written by abbot
+!all credit goes to this guy
+!i hate FORTRAN for missing a basic function like this
+real function strtod(s)
+!  real(kind=8) :: strtod
+  character(len=*), intent(in) :: s
+  character(len=32) :: fmt
+  integer :: dot
+  dot = index(s, ".")
+  if(dot < 1) then
+     write(fmt, '("(F",I0,".0)")'), len_trim(s)
+  else
+     write(fmt, '("(F",I0,".",I0,")")'), len_trim(s), len_trim(s)-dot
+  end if
+  read(s,fmt), strtod
+end function strtod
+
+
 end module MISC
 
