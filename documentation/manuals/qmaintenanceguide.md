@@ -1,6 +1,6 @@
 #Q Maintenance guide
 
-####Update:Mauricio Esguerra March 26, 2014*
+####Update:Mauricio Esguerra May 13, 2014*
 ######Original by: John Marelius, August 29, 2000*
 
 
@@ -88,10 +88,18 @@ make debug COMP=ifort
 
 ###Windows
 
--   Not supported for now, we need a developer here.
+Compiling in Windows XP has been tested to work for the serial version of the code, not the parallel one yet.
+
+The successful compilation was done using MinGW to be able to use the GCC (Gnu Compiler Collection), therefore you will have to first install MinGW, then make sure that the location of it is in your path (C:\MinGW\bin) and then you can compile in the command prompt in the same way it's done in unix flavors, that is:
+
+```bat
+make all COMP=gcc
+```
+
+It is quite possible that the compilation will go trough without issues with the intel compiler, but this has not been tested yet.
 
 ###Linux - Generic(gfortran)
-By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler
+By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler options:
 ```bash
 make all
 ```
