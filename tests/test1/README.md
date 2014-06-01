@@ -108,10 +108,9 @@ Benchmarks
 --------------------------------------------------------------------------------
 
 
-|  Machine       | Compiler    | Comp. time (min)  | Num Proc.  |    Date    |
-|: ------------- |:-----------:| ---------------- :| ---------- |:----------:|
-| csb            | ifort       | 79.00             |   8        | 2014-05-22 |
-| triolith       | ifort       | 00.00             |   X        | 2014-XX-XX |
-| tintin         | ifort       | 00.00             |   X        | 2014-XX-XX |
-
+|  Machine     | Compiler    | Comp. time (min) | Num Proc. |    Date    |
+|:-------------|:-----------:|:----------------:|:---------:|:----------:|
+| csb          | ifort       | 79.00            |   8       | 2014-05-22 |
+| triolith     | ifort       | 00.00            |   X       | 2014-XX-XX |
+| tintin       | ifort       | 00.00            |   X       | 2014-XX-XX |
 
