@@ -63,54 +63,36 @@ Equilibration (Heating)
 Short Production Run
 --------------------------------------------------------------------------------
 
-### Step1
+### Step1 through Step5 (identical steps total 200ps)
  - 20000 steps / 2.0 fs ea. = 40ps
  - temp = 300
  - bath coupling 100
  - hydrogen shake on
  - Local Reaction Field as Taylor expansion = on
-
-
-### Step2
- - 20000 steps / 2.0 fs ea. = 40ps
- - temp = 300
- - bath coupling 100
- - hydrogen shake on
- - Local Reaction Field as Taylor expansion = on
-
-
-### Step3
- - 20000 steps / 2.0 fs ea. = 40ps
- - temp = 300
- - bath coupling 100
- - hydrogen shake on
- - Local Reaction Field as Taylor expansion = on
-
-
-### Step4
- - 20000 steps / 2.0 fs ea. = 40ps
- - temp = 300
- - bath coupling 100
- - hydrogen shake on
- - Local Reaction Field as Taylor expansion = on
-
-
-### Step5
- - 20000 steps / 2.0 fs ea. = 40ps
- - temp = 300
- - bath coupling 100
- - hydrogen shake on
- - Local Reaction Field as Taylor expansion = on
-
 
 
 Benchmarks
 --------------------------------------------------------------------------------
 
 
-|  Machine     | Compiler    | Comp. time (min) | Num Proc. |    Date    |
-|:-------------|:-----------:|:----------------:|:---------:|:----------:|
-| csb          | ifort       | 79.00            |   8       | 2014-05-22 |
-| triolith     | ifort       | 00.00            |   X       | 2014-XX-XX |
-| tintin       | ifort       | 00.00            |   X       | 2014-XX-XX |
+|  Machine     | Compiler    | Comp. time (min) | Sim. time (ns) | Num Proc. |    Date    |
+|:-------------|:-----------:|:----------------:|:--------------:|:---------:|:----------:|
+| csb          | ifort       | 79.00            |      0.20      |   8       | 2014-05-22 |
+| triolith     | ifort       | 00.00            |      0.20      |   8       | 2014-XX-XX |
+| tintin       | ifort       | 00.00            |      0.20      |   8       | 2014-XX-XX |
+| csb          | gcc         | 00.00            |      0.20      |   8       | 2014-XX-XX |
+| triolith     | gcc         | 00.00            |      0.20      |   8       | 2014-XX-XX |
+| tintin       | gcc         | 00.00            |      0.20      |   8       | 2014-XX-XX |
 
+
+TODO
+--------------------------------------------------------------------------------
+
+The following to-do list highlights what needs to be done for expanding the benchmark into
+something userful.
+
+- [ ] Make a script that will send runs of 1, 2, 3, 4, 5ns runs to different cluster nodes
+      at the same time.
+- [ ] Make number of processors gradient script.
+- [x] Make a markdown document describing the test.
+- [ ] Make a general R script for plotting and making statistics with the benchmarks.
