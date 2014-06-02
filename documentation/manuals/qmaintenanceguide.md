@@ -5,9 +5,9 @@
 
 
 This document describes how to maintain the Q programs at the Åqvist
-group.  Recently the code, documentation, and some scripts have been
+group. Recently the code, documentation, and some scripts have been
 added to version control using github, these documents still need some
-updating. 
+updating.
 
 
 ##File locations
@@ -18,19 +18,19 @@ github private organization located at https://github.com/qusers
 
 | What                                 | Where                                        |
 |:------------------------------------ |:---------------------------------------------| 
-| source code, makefile, history files | qsource/src /  qsource/history/                      |
+| source code, makefile, history files | qsource/src / qsource/history/               |
 | manual                               | qsource/documentation/manual/qman5.pdf       |
 | license agreement                    | qsource/documentation/license.pdf            |
 | this document                        | qsource/documentation/qmaintenanceguide.docx |
 | force field files                    | qsource/ff/                                  |
 | scripts                              | scripts/                                     |
 | tests                                | qsource/tests/                               |
-| Q web site                           | pending                                      |
+| Q web site                           | pending                                      |
 
 
 ##Updating Q
 
-You need to be a member of the owners team at the github repository. 
+You need to be a member of the owners team at the github repository.
 
 ###Updating source code on the web server
 
@@ -116,7 +116,6 @@ make all COMP=osx
 module load intel/14.0.2
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 module load impi/4.1.3.048
 make mpi COMP=ifort
@@ -145,7 +144,6 @@ source /home/apps/intel/composer_xe_2013.5.192/bin/ifortvars.sh intel64
 export OMPI_FC=ifort
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 make mpi COMP=ifort
 ```
