@@ -534,7 +534,7 @@ integer function nb_qp_add(desc)
 	character(*)				:: desc
 	character(len=200)			:: line
 	character*80				:: lambda !name of fep_file if loaded
-	integer						:: ires, ats1, ats2, fstat
+	integer						:: ires, ats1, ats2, ats3, fstat
 	logical					:: use_fep
 	integer					:: str_start, str_end, totlen
 
@@ -570,6 +570,7 @@ integer function nb_qp_add(desc)
 	if ((fep_file.eq.'.').or.(fep_file.eq.'')) then
 		write(*,*) 'No FEP file loaded'
 		use_fep = .false.
+                nqat=0
 	else
 	        if(.not. prm_open(fep_file)) then
                 write(*,'(a,a)') '>>>>> ERROR: Could not open fep file ',trim(fep_file)
@@ -621,6 +622,14 @@ integer function nb_qp_add(desc)
 !with integers
 		write(line, '(a,i6,i6)') 'residue ', ires, ires
 		ats1 = mask_add(masks(1), line)
+                !Make size of array needed to store all interactions
+                !use largest number to make sure that everything can be stored
+                !Needs a lot of memory!
+                if(ats1.ge.ats2) then
+                ats3=ats1*ats1
+                else
+                ats3=ats2*ats2
+                end if
 		allocate(nb_list_res(ires)%atom1(ats1*ats2))
 		allocate(nb_list_res(ires)%atom2(ats1*ats2))
 		allocate(nb_list_res(ires)%AA(ats1*ats2))
@@ -632,11 +641,11 @@ integer function nb_qp_add(desc)
                 nb_list_res(ires)%BB(:)=0
                 nb_list_res(ires)%qq(:)=0
         if (use_fep) then
-		allocate(nbq_list_res(ires)%atom1(ats1*nqat))
-		allocate(nbq_list_res(ires)%atom2(ats1*nqat))
-		allocate(nbq_list_res(ires)%AA(max_states,ats1*nqat))
-		allocate(nbq_list_res(ires)%BB(max_states,ats1*nqat))
-		allocate(nbq_list_res(ires)%qq(max_states,ats1*nqat))
+		allocate(nbq_list_res(ires)%atom1(ats3))
+		allocate(nbq_list_res(ires)%atom2(ats3))
+		allocate(nbq_list_res(ires)%AA(max_states,ats3))
+		allocate(nbq_list_res(ires)%BB(max_states,ats3))
+		allocate(nbq_list_res(ires)%qq(max_states,ats3))
                 nbq_list_res(ires)%atom1(:)=0
                 nbq_list_res(ires)%atom2(:)=0
                 nbq_list_res(ires)%AA(:,:)=0

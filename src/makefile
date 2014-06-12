@@ -15,6 +15,7 @@
 ifeq ($(COMP),ifort)
 	FC=		ifort
 	FC_OPT=         -O3 -ip -ipo -unroll -i-static
+	FC_DEBUG=	-unroll -i-static
 	FFLAGS=         -fstack-protector ${FC_OPT}
 	FPP_FLG=	-fpp
 
@@ -24,7 +25,7 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
 	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 
 ################################################################################
