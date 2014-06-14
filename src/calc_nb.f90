@@ -51,7 +51,7 @@ module CALC_NB
 	integer(TINY), allocatable              ::      iqatom(:)
 	integer                                         ::      alloc_stat_gen
 	character(80)					:: fep_file
-
+	logical						::use_fep
 contains
 
 !*******************************************************************
@@ -228,7 +228,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 				do tmpstates=1,nstates
                                 NB_Vlj = NB_Vlj + (lamda(tmpstates) * (nbq_list%AA(tmpstates,j)*invr12 - nbq_list%BB(tmpstates,j)*invr6))
 				end do
-            else !arithmetic
+		        else !arithmetic
 				do tmpstates=1,nstates
                                 NB_Vlj = NB_Vlj + (lamda(tmpstates) * (sqrt(nbq_list%BB(tmpstates,j)) * (nbq_list%AA(tmpstates,j))**6 * invr6 * ((nbq_list%AA(tmpstates,j))**6 * invr6 - 2.0)))
 				end do
@@ -255,6 +255,8 @@ subroutine nb_make_list(mask1, mask2, nb_list, nbq_list)
 	type(MASK_TYPE), intent(in) :: mask1, mask2
 	type(NB_LIST_TYPE)			:: nb_list
 	type(NBQ_LIST_TYPE)			:: nbq_list
+!new real for scaling factor
+        real*8                                  :: fullscale=0
 
 	l = 1
 	m = 1
@@ -343,7 +345,7 @@ subroutine nb_make_list(mask1, mask2, nb_list, nbq_list)
 
 
 				if (NB) then
-					if ((iqatom(atomj).ne.0).or.(iqatom(atomk).ne.0)) then
+					if (use_fep) then
 					nbq_list%atom1(mq) = atomj
 					nbq_list%atom2(mq) = atomk
 					else
@@ -377,139 +379,297 @@ subroutine nb_make_list(mask1, mask2, nb_list, nbq_list)
 							endif
 						end do
 					endif	!kolla 1-4 interaktioner
-	
-					if(ivdw_rule==1) then !geometric comb. rule
+
+!Only troll iqatom list if use_fep is specified and atomj and atomk .le. nprot
+                                        if(ivdw_rule==1) then !geometric comb. rule
 						!iaclib() from topo.f90, contains atom parameters.
 						!argument is "integer atom code"
-						if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
-							if (iqatom(atomk).ne.0) then !other atom is also a Q atom
-							do tmpstates=1,nstates
-							nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-							end do
-							else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom instead of possible 2
-							do tmpstates=1,nstates
-								if (LJ_code .eq. 2) then
-								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%avdw(LJ_code)
-								else 
-								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
-								end if
-							end do
-							end if
-						else if (iqatom(atomk).ne.0) then !other atom is a Q atom
-						do tmpstates=1,nstates
-							if (LJ_code .eq. 2) then
-                       	                        	nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),1)
-							else 
-							nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-							end if
-                                                end do
-						else !none of the atoms are Q atoms, using default stuff
-						nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
-						end if
-				    else !arithmetic
-                                       		if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
-                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
-                                                        do tmpstates=1,nstates
-                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-                                                        end do
-                                                        else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
-                                                        do tmpstates=1,nstates
-								if (LJ_code .eq. 2) then
-                                                       		nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)+iaclib(iac(atomk))%avdw(LJ_code)
-								else
-								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
-								end if
-                                                        end do
-							end if
-                                                else if (iqatom(atomk).ne.0) then !other atom is a Q atom
-                                                do tmpstates=1,nstates
-							if (LJ_code .eq. 2) then
-                                                	nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),1)
-							else 
-							nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-                                                	end if
-						end do
-                                                else !none of the atoms are Q atoms, using default stuff
-						nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
-						end if
-					endif	!geometric / arithmetric		
-
-                                        if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
-	                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
-                                                do tmpstates=1,nstates
-                                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-                                                end do
-                                                else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
-                                                do tmpstates=1,nstates
-							if (LJ_code .eq. 2) then
-                	                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%bvdw(LJ_code)
-							else	
-							nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
-							end if
-                                                end do
-						end if
-                                        else if (iqatom(atomk).ne.0) then !other atom is a Q atom
-                                        do tmpstates=1,nstates
-						if (LJ_code .eq. 2) then
-                                       		nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),1)
-						else 
-						nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
-						end if
-                                        end do
-					else
-					nb_list%BB(m) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
-					end if ! Q atom or not
-
-					if (LJ_code .eq. 3) then
-						if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
-		                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
-        	                                        do tmpstates=1,nstates
-							nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*qcrg(iqatom(atomk),tmpstates)*el14_scale
-							end do
-							else !other atom is not a Q atom
-							do tmpstates=1,nstates
-							nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*coulomb_constant*el14_scale
-							end do
-							end if
-						else if (iqatom(atomk).ne.0) then !other atom is a Q atom
-                                                do tmpstates=1,nstates
-						nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)*el14_scale
-                                                end do
-						else
-						nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant*el14_scale !coulombconstant from topo.f90
-						end if
-					else
-                                                if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
-                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
-                                                        do tmpstates=1,nstates
-                                                        nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*qcrg(iqatom(atomk),tmpstates)
-                                                        end do
-                                                        else !other atom is not a Q atom
-                                                        do tmpstates=1,nstates
-                                                        nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*coulomb_constant
-                                                        end do
-                                                        end if
-                                                else if (iqatom(atomk).ne.0) then !other atom is a Q atom
-                                                do tmpstates=1,nstates
-                                                nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)
-                                                end do
-                                                else
-                                                nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant !coulombconstant from topo.f90
+                                                if (use_fep) then
+                                                        if (atomj.le.nat_solute) then
+                                                                if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                                        if (atomk.le.nat_solute) then
+                                                                                if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                                                        do tmpstates=1,nstates
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                        end do
+                                                                                else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom instead of possible 2
+                                                                                        do tmpstates=1,nstates
+                                                                                        if (LJ_code .eq. 2) then
+                                                                                                nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        else 
+                                                                                                nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        end if
+                                                                                        end do
+                                                                                end if
+                                                                         else !other atom most likely water, not in original topology, so not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                if (LJ_code .eq. 2) then
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                else 
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end if
+                                                                                end do
+                                                                        end if
+                                                                else
+                                                                        if  (atomk.le.nat_solute) then
+                                                                                if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                                        do tmpstates=1,nstates
+                                                                                        if (LJ_code .eq. 2) then
+                                                                                                nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),1)
+                                                                                        else 
+                                                                                                nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                        end if
+                                                                                        end do
+                                                                                else !not a qatom
+                                                                                        do tmpstates=1,nstates
+                                                                                        nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        end do
+                                                                                end if
+                                                                        else !other atom most likely water, not in original topology, so not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end do
+                                                                        end if
+                                                                end if
+                                                        else !atom is not in original topology, not a qatom
+                                                                if  (atomk.le.nat_solute) then
+                                                                        if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                if (LJ_code .eq. 2) then
+                                                                                        nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),1)
+                                                                                else 
+                                                                                        nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                end if
+                                                                                end do
+                                                                        else !not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end do
+                                                                        end if
+                                                                else !other atom most likely water, not in original topology, so not a qatom
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+                                                                        end do
+                                                                end if
+                                                        end if !topology atom or not
+                                                else !use_fep
+                                                        nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
                                                 end if
-					end if
-					if ((iqatom(atomj).ne.0).or.(iqatom(atomk).ne.0)) then
-					mq = mq+1  !increase index
-					else
-					m = m+1 !increase Q index
-					end if
-				else !
+                                        else !arithmetic
+                                                if (use_fep) then
+                                                        if (atomj.le.nat_solute) then
+                                                                if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                                        if (atomk.le.nat_solute) then
+                                                                                if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                                                        do tmpstates=1,nstates
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                        end do
+                                                                                else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
+                                                                                        do tmpstates=1,nstates
+                                                                                        if (LJ_code .eq. 2) then
+                                                                                                nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        else
+                                                                                                nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        end if
+                                                                                        end do
+                                                                                end if
+                                                                        else !other atom most likely water, not in original topology, so not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                if (LJ_code .eq. 2) then
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                else
+                                                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end if
+                                                                                end do
+                                                                        end if
+                                                                else 
+                                                                        if  (atomk.le.nat_solute) then
+                                                                                if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                                        do tmpstates=1,nstates
+                                                                                        if (LJ_code .eq. 2) then
+                                                                                                nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),1)
+                                                                                        else 
+                                                                                                nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                        end if
+                                                                                        end do
+                                                                                else !not a qatom
+                                                                                        do tmpstates=1,nstates
+                                                                                                nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                        end do
+                                                                                end if
+                                                                        else !other atom most likely water, not in original topology, so not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                        nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end do
+                                                                        end if
+                                                                end if !first atom qatom yes no 
+                                                        else !first atom not in orig topology
+                                                                if  (atomk.le.nat_solute) then
+                                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                end do
+                                                                        else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                        nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                                end do
+                                                                        end if
+                                                                else !other atom most likely water, not in original topology, so not a qatom
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%AA(tmpstates,mq) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                                        end do
+                                                                end if
+                                                        end if !topology or not
+                                                else ! use_fep
+                                                        nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+                                                end if
+                                        endif	!geometric / arithmetric
+                                        if (use_fep) then
+                                                if (atomj.le.nat_solute) then
+                                                        if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                                if (atomk.le.nat_solute) then
+                                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                end do
+                                                                        else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                if (LJ_code .eq. 2) then
+                                                                                        nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                                else
+                                                                                        nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                                end if
+                                                                                end do
+                                                                        end if
+                                                                else !atom not in original topology
+                                                                        do tmpstates=1,nstates
+                                                                        if (LJ_code .eq. 2) then
+                                                                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                        else
+                                                                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                        end if
+                                                                        end do
+                                                                end if
+                                                        else 
+                                                                if (atomk.le.nat_solute) then!first atom not qatom
+                                                                        if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                if (LJ_code .eq. 2) then
+                                                                                        nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),1)
+                                                                                else 
+                                                                                        nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                                end if
+                                                                                end do
+                                                                        else !not a qatom
+                                                                                do tmpstates=1,nstates
+                                                                                        nbq_list%BB(tmpstates,mq) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                                end do
+                                                                        end if
+                                                                else !atom not in orig topology
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%BB(tmpstates,mq) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                        end do
+                                                                end if
+                                                        end if
+                                                else !atom not in orig topology
+                                                        if (atomk.le.nat_solute) then
+                                                                if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                        do tmpstates=1,nstates
+                                                                        if (LJ_code .eq. 2) then
+                                                                                nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),1)
+                                                                        else 
+                                                                                nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                                        end if
+                                                                        end do
+                                                                else !not qatom
+                                                                        do tmpstates=1,nstates
+                                                                                nbq_list%BB(tmpstates,mq) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                        end do
+                                                                end if
+                                                        else  !atom not in orig topology
+                                                                do tmpstates=1,nstates
+                                                                nbq_list%BB(tmpstates,mq) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                                                end do
+                                                        end if
+                                                end if !in topology or not
+                                        else !not use_fep
+                                                nb_list%BB(m) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+                                        end if
+                                        if (LJ_code .eq. 3) then
+                                                fullscale=coulomb_constant*el14_scale
+                                        else
+                                                fullscale=coulomb_constant
+                                        end if
+                                        if(use_fep) then
+                                                if (atomj.le.nat_solute) then
+                                                        if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                                if (atomk.le.nat_solute) then
+                                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                        nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*qcrg(iqatom(atomk),tmpstates)*fullscale
+                                                                                end do
+                                                                        else !other atom is not a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*fullscale
+                                                                                end do
+                                                                        end if
+                                                                else !atom not in orig topology
+                                                                        do tmpstates=1,nstates
+                                                                                nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*fullscale
+                                                                        end do
+                                                                end if
+                                                        else
+                                                                if (atomk.le.nat_solute) then
+                                                                        if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)*fullscale
+                                                                                end do
+                                                                        else
+                                                                                do tmpstates=1,nstates
+                                                                                nbq_list%qq(tmpstates,mq) = crg(atomj)*crg(atomk)*fullscale !coulombconstant from topo.f90
+                                                                                end do
+                                                                        end if
+                                                                else !not in topology
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%qq(tmpstates,mq) = crg(atomj)*crg(atomk)*fullscale !coulombconstant from topo.f90
+                                                                        end do
+                                                                end if
+                                                        end if
+                                                else !first atom not in topology
+                                                        if (atomk.le.nat_solute) then
+                                                                if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)*fullscale
+                                                                        end do
+                                                                else
+                                                                        do tmpstates=1,nstates
+                                                                        nbq_list%qq(tmpstates,mq) = crg(atomj)*crg(atomk)*fullscale !coulombconstant from topo.f90
+                                                                        end do
+                                                                end if
+                                                        else !not in topology
+                                                                do tmpstates=1,nstates
+                                                                nbq_list%qq(tmpstates,mq) = crg(atomj)*crg(atomk)*fullscale !coulombconstant from topo.f90
+                                                                end do
+                                                        end if
+                                                end if
+                                        else !not use_fep
+                                                nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant*el14_scale
+                                        end if !use_fep
+                                        if (use_fep) then
+                                                mq = mq+1  !increase Q index
+                                        else
+                                                m = m+1 !increase index
+                                        end if
+				else !NB
 				endif
 
 		end do
 	end do
-
-	nb_list%number_of_NB = m-1
+	if (use_fep) then
 	nbq_list%number_of_NB = mq-1
+	else
+	nb_list%number_of_NB = m-1
+	end if
 end subroutine nb_make_list
 
 !*******************************************************************
@@ -535,7 +695,6 @@ integer function nb_qp_add(desc)
 	character(len=200)			:: line
 	character*80				:: lambda !name of fep_file if loaded
 	integer						:: ires, ats1, ats2, fstat
-	logical					:: use_fep
 	integer					:: str_start, str_end, totlen
 
 	use_fep = .false.
@@ -621,6 +780,7 @@ integer function nb_qp_add(desc)
 !with integers
 		write(line, '(a,i6,i6)') 'residue ', ires, ires
 		ats1 = mask_add(masks(1), line)
+	if (.not.use_fep) then
 		allocate(nb_list_res(ires)%atom1(ats1*ats2))
 		allocate(nb_list_res(ires)%atom2(ats1*ats2))
 		allocate(nb_list_res(ires)%AA(ats1*ats2))
@@ -631,12 +791,12 @@ integer function nb_qp_add(desc)
                 nb_list_res(ires)%AA(:)=0
                 nb_list_res(ires)%BB(:)=0
                 nb_list_res(ires)%qq(:)=0
-        if (use_fep) then
-		allocate(nbq_list_res(ires)%atom1(ats1*nqat))
-		allocate(nbq_list_res(ires)%atom2(ats1*nqat))
-		allocate(nbq_list_res(ires)%AA(max_states,ats1*nqat))
-		allocate(nbq_list_res(ires)%BB(max_states,ats1*nqat))
-		allocate(nbq_list_res(ires)%qq(max_states,ats1*nqat))
+        else
+		allocate(nbq_list_res(ires)%atom1(ats1*ats2))
+		allocate(nbq_list_res(ires)%atom2(ats1*ats2))
+		allocate(nbq_list_res(ires)%AA(max_states,ats1*ats2))
+		allocate(nbq_list_res(ires)%BB(max_states,ats1*ats2))
+		allocate(nbq_list_res(ires)%qq(max_states,ats1*ats2))
                 nbq_list_res(ires)%atom1(:)=0
                 nbq_list_res(ires)%atom2(:)=0
                 nbq_list_res(ires)%AA(:,:)=0
