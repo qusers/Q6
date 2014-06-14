@@ -1,5 +1,5 @@
 [MD]
-steps                   100
+steps                    100
 stepsize                   0.1
 initial_temperature        0.1
 random_seed                1

@@ -21,6 +21,7 @@ ifeq ($(COMP),ifort)
 
 	MPIFC=		mpif90
 	MPIFLAGS=	-f90=${FC} -Nmpi
+	OMPI_FC=	${FC}
 	MPI_FC=		${FC}
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
@@ -54,6 +55,7 @@ else ifeq ($(COMP),pgi)
 	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
 	FFLAGS=		${FC_OPT}
 	FPP_FLG=	-Mpreprocess
+
 	MPIFC=		mpif90
 	MPIFLAGS=	-lmpi#-f90=${FC}
 	MPI=		${MPIFLAGS} ${FFLAGS}
@@ -89,6 +91,7 @@ else
 	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
+
 	MPI=		${FFLAGS}
 endif
 
@@ -298,8 +301,9 @@ what:
 	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
 	@echo
 	@echo "For compiler/os pick one of:"
-	@echo "ifort            "
-	@echo "osx              "
-	@echo "gcc              "
-	@echo "pgi              "
+	@echo "ifort            Intel Fortran compiler"
+	@echo "osx              Gnu Compiler Collection (GCC) in mac"
+	@echo "gcc              GCC in linux"
+	@echo "pgi              Portland Group compiler"
 ################################################################################
+
