@@ -1,13 +1,13 @@
 #Q Maintenance guide
 
-####Update:Mauricio Esguerra March 26, 2014*
+####Update:Mauricio Esguerra May 13, 2014*
 ######Original by: John Marelius, August 29, 2000*
 
 
 This document describes how to maintain the Q programs at the Åqvist
-group.  Recently the code, documentation, and some scripts have been
+group. Recently the code, documentation, and some scripts have been
 added to version control using github, these documents still need some
-updating. 
+updating.
 
 
 ##File locations
@@ -18,19 +18,19 @@ github private organization located at https://github.com/qusers
 
 | What                                 | Where                                        |
 |:------------------------------------ |:---------------------------------------------| 
-| source code, makefile, history files | qsource/src /  qsource/history/                      |
+| source code, makefile, history files | qsource/src / qsource/history/               |
 | manual                               | qsource/documentation/manual/qman5.pdf       |
 | license agreement                    | qsource/documentation/license.pdf            |
 | this document                        | qsource/documentation/qmaintenanceguide.docx |
 | force field files                    | qsource/ff/                                  |
 | scripts                              | scripts/                                     |
 | tests                                | qsource/tests/                               |
-| Q web site                           | pending                                      |
+| Q web site                           | pending                                      |
 
 
 ##Updating Q
 
-You need to be a member of the owners team at the github repository. 
+You need to be a member of the owners team at the github repository.
 
 ###Updating source code on the web server
 
@@ -88,10 +88,18 @@ make debug COMP=ifort
 
 ###Windows
 
--   Not supported for now, we need a developer here.
+Compiling in Windows XP has been tested to work for the serial version of the code, not the parallel one yet.
+
+The successful compilation was done using MinGW to be able to use the GCC (Gnu Compiler Collection), therefore you will have to first install MinGW, then make sure that the location of it is in your path (C:\MinGW\bin) and then you can compile in the command prompt in the same way it's done in unix flavors, that is:
+
+```bat
+make all COMP=gcc
+```
+
+It is quite possible that the compilation will go trough without issues with the intel compiler, but this has not been tested yet.
 
 ###Linux - Generic(gfortran)
-By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler
+By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler options:
 ```bash
 make all
 ```
@@ -108,7 +116,6 @@ make all COMP=osx
 module load intel/14.0.2
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 module load impi/4.1.3.048
 make mpi COMP=ifort
@@ -137,7 +144,6 @@ source /home/apps/intel/composer_xe_2013.5.192/bin/ifortvars.sh intel64
 export OMPI_FC=ifort
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
-cp qdyn.F90_ifort_signals qdyn.f90
 make all COMP=ifort
 make mpi COMP=ifort
 ```

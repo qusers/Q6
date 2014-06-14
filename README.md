@@ -37,12 +37,10 @@ make all COMP=gcc
 
 Or for MPI compilation (after loading a proper MPI compiler library):
 ```bash
-cp qdyn.F90_ifort_signals qdyn.f90
 make mpi COMP=gcc
 ```
 
-As the included makefiles use gfortran and/or mpif90 one needs to use fink, macports or homebrew in Mac's OSX 10.9.2. We've tested with fink, but it should compile without major problems using the others.
-In order to compile in a MAC you should call the fink environment first, usually with:
+To compile in Mac OSX 10.9.2 you can use native gfortran binaries which you can download from  (https://gcc.gnu.org/wiki/GFortranBinaries#MacOS) or you can also compile using the GCC (Gnu Compiler Collection) distributions available to fink, macports or homebrew. In order to compile in a MAC you should call the fink environment first, usually with:
 
 ```bash
 source /sw/bin/init.sh
@@ -57,16 +55,17 @@ make all COMP=osx
 
 This will take care of redirecting the binaries and object files to standard bin and obj folders for code tidyness.
 
-After this you have to add the program to your system path by modifying your shell initiation script, that is, if your shell is bash, you can add the following line to your .bashrc file:
+After this you have to add the program to your system path by modifying your shell initiation script, that is, if your shell is bash, you can add the following lines to your .bashrc file using a text editor:
 
 ```bash
+SOFT=/Users/johndoe/software
 export QDIR=$SOFT/qsource
 export PATH=$QDIR/bin:$PATH  
 ```
 Where $SOFT will be the place where your software folder is located at, e.g. /Users/johndoe/software
 
 Once the q binaries are declared in your path you should be able to call all q binaries from your terminal.
-
+To test that the path to your compiled Q binaries has been correctly assigned you can issue the following commands in the terminal:
 ```bash
 source .bashrc
 echo $path | grep qsource

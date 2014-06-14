@@ -5,78 +5,93 @@
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: April 28, 2014                                                #
+#  latest update: May 9, 2014                                                  #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
 ################################################################################
-# Intel Fortran ifort ( tested in linux)
+# Intel Fortran ifort ( tested in linux and osx)
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=		ifort
-	MPIFC=		mpif90
-	FC_OPT=		-O3 -ip -ipo -unroll -i-static
-	MPIFLAGS=	-f90=${FC} -Nmpi
-	MPI_FC=		${FC}
-	FFLAGS=		-fstack-protector ${FC_OPT}
-	MPI_FCFLAGS=	${FFLAGS}	
+	FC_OPT=         -O3 -ip -ipo -unroll -i-static
+	FFLAGS=         -fstack-protector ${FC_OPT}
 	FPP_FLG=	-fpp
+
+	MPIFC=		mpif90
+	MPIFLAGS=	-f90=${FC} -Nmpi
+	OMPI_FC=	${FC}
+	MPI_FC=		${FC}
+	MPI_FCFLAGS=	${FFLAGS}
+	MPI=		${MPI_FCFLAGS}
+
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 
 ################################################################################
 # OSX Mavericks using gfortran
 ################################################################################
 else ifeq ($(COMP),osx)
 	FC= gfortran
-	MPIFC= mpif90
-	FC_OPT= -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
-	-std=legacy -Wall -Wtabs
-	OMPI_FC= ${FC}
-	FFLAGS= -fstack-protector ${FC_OPT} -DG95=1
-	OMPI_FCFLAGS= ${FFLAGS}
-	FPP_FLG= -cpp 
+	FC_OPT=         -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
+	                -std=legacy -Wall -Wtabs
+	FFLAGS=         -fstack-protector ${FC_OPT} -DG95=1
+	FPP_FLG=        -cpp
+
+	MPIFC=          mpif90
+	OMPI_FC=        ${FC}
+	OMPI_FCFLAGS=   ${FFLAGS}
+	MPI=		${OMPI_FCFLAGS}
+
+	DEBUG=          -debug  -g ${FC_OPT}
+	DEBUGMPI=       -debug  -g ${FC_OPT}
 
 ################################################################################
-# PGI Compiler -- untested
+# PGI Compiler -- compiles at csb
 ################################################################################
 else ifeq ($(COMP),pgi)
-	FC=pgf90
+	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
 	FFLAGS=		${FC_OPT}
 	FPP_FLG=	-Mpreprocess
+
 	MPIFC=		mpif90
 	MPIFLAGS=	-lmpi#-f90=${FC}
+	MPI=		${MPIFLAGS} ${FFLAGS}
 	MPI_FC=		${FC}
 
 ################################################################################
 # IBM Compiler -- untested
 ################################################################################
 else ifeq ($(COMP),ibm)
-	FC=xlf90
+	FC=             xlf90
+	FC_OPT=         -qsmp=omp
 	FFLAGS=
-	OFLAGS=-qsmp=omp
 
 ################################################################################
 # GNU gcc-gfortran
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	CC=		gcc
-	MPIFC=		mpif90
-	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -std=legacy -fall-intrinsics -Wall
-	CC_OPT=		-O3
-	OMPI_FC=	${FC}
-	OMPI_CC=	${CC}	
+	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall	
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
-	CCFLAGS=	${CC_OPT}
-	OMPI_FCFLAGS=	${FFLAGS}
-	OMPI_CXXFLAGS=	${CCFLAGS}
 	FPP_FLG=	-cpp
+
+	MPIFC=		mpif90
+	OMPI_FC=	${FC}
+	OMPI_FCFLAGS=	${FFLAGS}
+	MPI=		${OMPI_FCFLAGS}
+
+	DEBUG=          -debug -fbacktrace -g ${FC_OPT}	
+	DEBUGMPI=       -debug -fbacktrace -g ${FC_OPT}
 
 else
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
+
+	MPI=		${FFLAGS}
 endif
 
 ################################################################################
@@ -89,101 +104,57 @@ default: what
 ################################################################################
 all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
-debug:	
-	@if  [[ "$(COMP)" == "ifort" ]] ; then \
-        echo "making debug for ifort" ; make debugifort ;\
-        elif [[ "$(COMP)" == "gcc" ]] ; then \
-        echo "making debug for gcc" ; make debuggcc ;\
-        elif [[ "$(COMP)" == "pgi" ]] ; then \
-        echo "making debug for pgi" ; make debugpgi ;\
-        else echo "defaulting debug to gcc" ; make debuggcc ;\
-        fi
-
-debuggcc:	
-	@make FFLAGS='-debug -traceback -g -Wall' \
+debug:
+	@make FFLAGS="${DEBUG}" \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
-mpi:	
-	@if  [[ "$(COMP)" == "ifort" ]] ; then \
-	echo "making mpi for ifort" ; make mpiifort ;\
-	elif [[ "$(COMP)" == "gcc" ]] ; then \
-	echo "making mpi for gcc" ; make mpigcc ;\
-	elif [[ "$(COMP)" == "pgi" ]] ; then \
-	echo "making mpi for pgi" ; make mpipgi ;\
-	else echo "defaulting mpi to gcc" ; make mpigcc ;\
-	fi
-
-mpi_debug:
-	@if  [[ "$(COMP)" == "ifort" ]] ; then \
-        echo "making debug mpi for ifort" ; make mpi_debugifort ;\
-        elif [[ "$(COMP)" == "gcc" ]] ; then \
-        echo "making debug mpi for gcc" ; make mpi_debuggcc ;\
-        elif [[ "$(COMP)" == "pgi" ]] ; then \
-        echo "making debug mpi for pgi" ; make mpi_debugpgi ;\
-        else echo "defaulting debug mpi to gcc" ; make mpi_debuggcc ;\
-        fi
-
-mpigcc:	
-	@make FC_OPT=-'O3 -unroll -ffree-line-length-none -fcray-pointer \
-	 -std=legacy -fall-intrinsics' \
+mpi:
+	@make FFLAGS="${MPI}" \
 	qdyn5p move1 move3
 
-mpi_debuggcc:	
-	@make FFLAGS='-debug -traceback -g -Wall'         \
+mpidebug:
+	@make FFLAGS="${DEBUGMPI}" \
 	qdyn5p move1 move3
-
-debugifort:	
-	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
-
-mpiifort:
-	@make qdyn5p move1 move3
-
-mpi_debugifort:	
-	@make FFLAGS="-debug -traceback -g -Wcheck -lVT -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS}"         \
-	qdyn5p
-mpipgi:
-	@make qdyn5p move1 move3
 
 clean:
-	-rm -f *.o  *.mod *.M *.kmo *.il
+	-rm -f *.o  *.mod *.M *.kmo *.il *.oo
 
 nuke:
-	-rm -rf *.o  *.mod *.M *.kmo *.il qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
+	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
-qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o 
+qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o 
+qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qfep5: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p: qatom.o  
+qcalc5 qdyn5 qdum5 qdyn5p: qatom.o
 
-qcalc5 qprep5 qfep5: parse.o 
+qcalc5 qprep5 qfep5: parse.o
 
-qcalc5 qprep5: maskmanip.o 
+qcalc5 qprep5: maskmanip.o
 
 qdyn5 qdum5: qdyn.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qfep5: qfep.o 
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
+qfep5: qfep.o
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
-	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o 
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
+	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5 : md.o
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdum5 : md_dum.o 
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@ 
+qdum5 : md_dum.o
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5p : md_mpi.o qdyn_mpi.o
-	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@ 
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
 # Object modules
@@ -206,7 +177,7 @@ calc_fit.o:calc_fit.f90 calc_base.o maskmanip.o
 calc_geom.o:calc_geom.f90 calc_base.o
 	${FC} ${FFLAGS} -c $<
 
-calc_nb.o:calc_nb.f90 calc_base.o maskmanip.o parse.o
+calc_nb.o:calc_nb.f90 calc_base.o maskmanip.o parse.o qatom.o prmfile.o
 	${FC} ${FFLAGS} -c $<
 
 calc_pmfscore.o: calc_pmfscore.f90 calc_base.o maskmanip.o trj.o topo.o prmfile.o index.o qatom.o misc.o
@@ -242,15 +213,15 @@ mask.o:	mask.f90 topo.o
 maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
-md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o 
+md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 
 md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o 
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o
 
 md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
-	-c md.f90 -o md_mpi.o 
+	-c md.f90 -o md_mpi.o
 
 misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
@@ -267,7 +238,7 @@ parse.o: parse.f90 misc.o
 prefs.o: prefs.f90
 	${FC} ${FFLAGS} -c $<
 
-prep.o: prep.f90 maskmanip.o sizes.o parse.o prmfile.o trj.o index.o prefs.o 
+prep.o: prep.f90 maskmanip.o sizes.o parse.o prmfile.o trj.o index.o prefs.o
 	${FC} ${FFLAGS} -c $<
 
 prmfile.o: prmfile.f90 misc.o mpiglob.o
@@ -286,7 +257,7 @@ qdyn.o: qdyn.f90 md.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qdyn.f90
 
 qdyn_dum.o: qdyn.f90 md.o mpiglob.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c qdyn.f90 -o qdyn_dum.o 
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c qdyn.f90 -o qdyn_dum.o
 
 qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
@@ -301,7 +272,7 @@ sizes.o: sizes.f90
 topo.o:  topo.f90 misc.o mpiglob.o sizes.o
 	${FC} ${FFLAGS} -c $<
 
-trj.o:  trj.f90 mask.o misc.o 
+trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 move1:
@@ -324,13 +295,14 @@ what:
 	@echo
 	@echo "[target] is one of:"
 	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
-	@echo "debug            All with debug information (stacktraces etc)."
+	@echo "debug            All with debug information (stacktraces)."
 	@echo "mpi              qdyn5p using a currently loaded MPI library"
-	@echo "mpidebug         MPI with debug information (stacktraces etc)."
-	@echo 
+	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
+	@echo
 	@echo "For compiler/os pick one of:"
-	@echo "ifort            "
-	@echo "osx              "
-	@echo "gcc              "
-	@echo 
+	@echo "ifort            Intel Fortran compiler"
+	@echo "osx              Gnu Compiler Collection (GCC) in mac"
+	@echo "gcc              GCC in linux"
+	@echo "pgi              Portland Group compiler"
 ################################################################################
+

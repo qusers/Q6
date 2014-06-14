@@ -11,8 +11,8 @@ module CALC_NB
 	use MASKMANIP
 	use PARSE
 	use ATOM_MASK
+	use QATOM
 	implicit none
-
 !constants
 	integer, parameter					::	MAX_LISTS = 20
 	integer, parameter					::  MAX_NB_QP = 1
@@ -25,10 +25,16 @@ module CALC_NB
 		integer, pointer				::	atom1(:), atom2(:)
 		real, pointer					::  AA(:), BB(:), qq(:)
 	end type NB_LIST_TYPE
+	type NBQ_LIST_TYPE
+		integer						:: number_of_NB
+		integer, pointer				:: atom1(:), atom2(:)
+		real, pointer					:: AA(:,:), BB(:,:), qq(:,:)
+	end type NBQ_LIST_TYPE
 	type(NB_LIST_TYPE), private, allocatable::  nb_listan(:)
 	type(NB_LIST_TYPE), private, allocatable::  nb_list_res(:)
+	type(NBQ_LIST_TYPE), private, allocatable:: nbq_list_res(:)
 	type AVERAGES
-		real							:: lj, el
+		real(8)							:: lj, el
 	end type AVERAGES
 	type(AVERAGES),allocatable			::  aves(:)
 	type(AVERAGES),allocatable			::  qp_aves(:)
@@ -39,6 +45,12 @@ module CALC_NB
 	integer								:: p_first, p_last,q_first, q_last
 	end type NB_QP_TYPE
 	type(NB_QP_TYPE), private					:: qp_calc
+!for new FEP file loading routine
+	integer								:: states=0
+	real(8)								:: lamda(max_states)
+	integer(TINY), allocatable              ::      iqatom(:)
+	integer                                         ::      alloc_stat_gen
+	character(80)					:: fep_file
 
 contains
 
@@ -127,7 +139,7 @@ integer function nb_add(desc)
 	allocate(nb_listan(Nlists)%BB(ats1*ats2))
 	allocate(nb_listan(Nlists)%qq(ats1*ats2))
 
-	call nb_make_list(masks(1), masks(2),nb_listan(Nlists))
+	call nb_make_list(masks(1), masks(2),nb_listan(Nlists),nbq_list_res(Nlists))
 
 	nb_add = Nlists
 	write(desc, 20) nb_listan(Nlists)%number_of_NB
@@ -143,7 +155,7 @@ subroutine nb_calc(i)
 integer :: i
 real(8) :: NB_Vlj, NB_Vel
 
-	call nb_calc_lists(NB_Vlj, NB_Vel, nb_listan(i))
+	call nb_calc_lists(NB_Vlj, NB_Vel, nb_listan(i),nbq_list_res(i))
  	write(*,99, advance='no') NB_Vlj
  	write(*,100, advance='no') NB_Vel
 99  format(f9.2)
@@ -159,21 +171,23 @@ end subroutine nb_calc
 
 !*******************************************************************
 
-subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list)
+subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 	!arguments
 	real(8), intent(out)		::  NB_Vlj, NB_Vel
 	type(NB_LIST_TYPE), intent(in) :: nb_list
+	type(NBQ_LIST_TYPE),intent(in)  :: nbq_list
 
 	!locals
 	real(8)						::	r, x1, x2, y1, y2, z1, z2, invr, invr6, invr12
-	integer						::  j,k,storleken
+	integer						::  j,k,length,lengthq,tmpstates
 
 	NB_Vlj = 0
 	NB_Vel = 0 
 
-	storleken = nb_list%number_of_NB
+	length = nb_list%number_of_NB
+	lengthq = nbq_list%number_of_NB
 
-	do j=1,storleken
+	do j=1,length
 		x1 = xin(3*nb_list%atom1(j)-2)
 		x2 = xin(3*nb_list%atom2(j)-2)
 		y1 = xin(3*nb_list%atom1(j)-1)
@@ -196,6 +210,34 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list)
 			NB_Vel = NB_Vel + nb_list%qq(j)*invr
 		end if
 	end do
+        do j=1,lengthq
+                x1 = xin(3*nbq_list%atom1(j)-2)
+                x2 = xin(3*nbq_list%atom2(j)-2)
+                y1 = xin(3*nbq_list%atom1(j)-1)
+                y2 = xin(3*nbq_list%atom2(j)-1)
+                z1 = xin(3*nbq_list%atom1(j))
+                z2 = xin(3*nbq_list%atom2(j))
+                r = sqrt((x1-x2)**2+(y1-y2)**2+(z1-z2)**2)
+                if (r /= 0) then
+                        invr = 1/r
+                        invr6 = invr*invr*invr*invr*invr*invr
+                        invr12 = invr6*invr6
+
+
+                        if(ivdw_rule==1) then !geometric comb. rule
+				do tmpstates=1,nstates
+                                NB_Vlj = NB_Vlj + (lamda(tmpstates) * (nbq_list%AA(tmpstates,j)*invr12 - nbq_list%BB(tmpstates,j)*invr6))
+				end do
+            else !arithmetic
+				do tmpstates=1,nstates
+                                NB_Vlj = NB_Vlj + (lamda(tmpstates) * (sqrt(nbq_list%BB(tmpstates,j)) * (nbq_list%AA(tmpstates,j))**6 * invr6 * ((nbq_list%AA(tmpstates,j))**6 * invr6 - 2.0)))
+				end do
+                        endif
+			do tmpstates=1,nstates
+                        NB_Vel = NB_Vel + (lamda(tmpstates) * (nbq_list%qq(tmpstates,j)*invr))
+			end do
+                end if
+        end do
 
 end subroutine nb_calc_lists
 
@@ -203,19 +245,20 @@ end subroutine nb_calc_lists
 ! Make pair lists of interacting atoms in mask1 and mask2
 !*******************************************************************
 
-subroutine nb_make_list(mask1, mask2, nb_list)
-	integer						::	j, k, l, m, nat1, nat2, LJ_code, nl, qq_pair, atomj, atomk, b
-	integer						::  size_groupm
+subroutine nb_make_list(mask1, mask2, nb_list, nbq_list)
+	integer						::	j, k, l, m, mq, nat1, nat2, LJ_code, nl, qq_pair, atomj, atomk, b
+	integer						::  size_groupm,tmpstates
 	integer, allocatable	::	group1(:), group2(:)
-	integer						::  ljcod(255,255), groupm(nat_pro)
+	integer						::  ljcod(255,255)
+	integer,allocatable				::  groupm(:)
 	logical						::	NB
 	type(MASK_TYPE), intent(in) :: mask1, mask2
 	type(NB_LIST_TYPE)			:: nb_list
-!	type(NB_LIST_TYPE), private	::  temp_list
+	type(NBQ_LIST_TYPE)			:: nbq_list
 
 	l = 1
 	m = 1
-
+	allocate(groupm(nat_pro))
 	!make the list of atoms in first mask
 	nat1 = mask1%included 
 	allocate(group1(nat1))
@@ -256,10 +299,12 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 	end do
 
 	m=1
+        mq=1
 
 	do j = 1, nat1
 		do k = 1, nat2
-
+                        atomj=0
+                        atomk=0
 			atomj = group1(j)
 			atomk = group2(k)
 
@@ -273,7 +318,6 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 					end if
 				end do
 			end if
-
 
 			!check if the atoms are in a mutual angle
 			!if so, they're 1-2 or 1-3 neighbors and no NB terms should be calculated
@@ -299,8 +343,13 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 
 
 				if (NB) then
+					if ((iqatom(atomj).ne.0).or.(iqatom(atomk).ne.0)) then
+					nbq_list%atom1(mq) = atomj
+					nbq_list%atom2(mq) = atomk
+					else
 					nb_list%atom1(m) = atomj
 					nb_list%atom2(m) = atomk
+					end if
 
 					LJ_code = ljcod(iac(atomj),iac(atomk)) !iac is from topo.f90 "integer atom code"
 
@@ -332,20 +381,127 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 					if(ivdw_rule==1) then !geometric comb. rule
 						!iaclib() from topo.f90, contains atom parameters.
 						!argument is "integer atom code"
+						if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+							if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+							do tmpstates=1,nstates
+							nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+							end do
+							else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom instead of possible 2
+							do tmpstates=1,nstates
+								if (LJ_code .eq. 2) then
+								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%avdw(LJ_code)
+								else 
+								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+								end if
+							end do
+							end if
+						else if (iqatom(atomk).ne.0) then !other atom is a Q atom
+						do tmpstates=1,nstates
+							if (LJ_code .eq. 2) then
+                       	                        	nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),1)
+							else 
+							nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)*qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+							end if
+                                                end do
+						else !none of the atoms are Q atoms, using default stuff
 						nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)*iaclib(iac(atomk))%avdw(LJ_code)
+						end if
 				    else !arithmetic
+                                       		if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                        do tmpstates=1,nstates
+                                                        nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                        end do
+                                                        else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
+                                                        do tmpstates=1,nstates
+								if (LJ_code .eq. 2) then
+                                                       		nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),1)+iaclib(iac(atomk))%avdw(LJ_code)
+								else
+								nbq_list%AA(tmpstates,mq)=qavdw(qiac(iqatom(atomj),tmpstates),LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
+								end if
+                                                        end do
+							end if
+                                                else if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                do tmpstates=1,nstates
+							if (LJ_code .eq. 2) then
+                                                	nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),1)
+							else 
+							nbq_list%AA(tmpstates,mq)=iaclib(iac(atomj))%avdw(LJ_code)+qavdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                	end if
+						end do
+                                                else !none of the atoms are Q atoms, using default stuff
 						nb_list%AA(m) = iaclib(iac(atomj))%avdw(LJ_code)+iaclib(iac(atomk))%avdw(LJ_code)
-					endif			
-		
-					nb_list%BB(m) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
-					if (LJ_code == 3) then
-						nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant*el14_scale !coulombconstant from topo.f90
-					else
-						nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant !el14_scale from topo.f90
-					end if
-					
-					m = m+1  !increase index
+						end if
+					endif	!geometric / arithmetric		
 
+                                        if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+	                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                do tmpstates=1,nstates
+                                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+                                                end do
+                                                else !other atom is not a Q atom, have to use LJ_code = 1 for Q atom
+                                                do tmpstates=1,nstates
+							if (LJ_code .eq. 2) then
+                	                                nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),1)*iaclib(iac(atomk))%bvdw(LJ_code)
+							else	
+							nbq_list%BB(tmpstates,mq)=qbvdw(qiac(iqatom(atomj),tmpstates),LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+							end if
+                                                end do
+						end if
+                                        else if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                        do tmpstates=1,nstates
+						if (LJ_code .eq. 2) then
+                                       		nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),1)
+						else 
+						nbq_list%BB(tmpstates,mq)=iaclib(iac(atomj))%bvdw(LJ_code)*qbvdw(qiac(iqatom(atomk),tmpstates),LJ_code)
+						end if
+                                        end do
+					else
+					nb_list%BB(m) = iaclib(iac(atomj))%bvdw(LJ_code)*iaclib(iac(atomk))%bvdw(LJ_code)
+					end if ! Q atom or not
+
+					if (LJ_code .eq. 3) then
+						if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+		                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+        	                                        do tmpstates=1,nstates
+							nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*qcrg(iqatom(atomk),tmpstates)*el14_scale
+							end do
+							else !other atom is not a Q atom
+							do tmpstates=1,nstates
+							nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*coulomb_constant*el14_scale
+							end do
+							end if
+						else if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                do tmpstates=1,nstates
+						nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)*el14_scale
+                                                end do
+						else
+						nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant*el14_scale !coulombconstant from topo.f90
+						end if
+					else
+                                                if (iqatom(atomj).ne.0) then !atom is a Q atom from the FEP file
+                                                        if (iqatom(atomk).ne.0) then !other atom is also a Q atom
+                                                        do tmpstates=1,nstates
+                                                        nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*qcrg(iqatom(atomk),tmpstates)
+                                                        end do
+                                                        else !other atom is not a Q atom
+                                                        do tmpstates=1,nstates
+                                                        nbq_list%qq(tmpstates,mq)=qcrg(iqatom(atomj),tmpstates)*crg(atomk)*coulomb_constant
+                                                        end do
+                                                        end if
+                                                else if (iqatom(atomk).ne.0) then !other atom is a Q atom
+                                                do tmpstates=1,nstates
+                                                nbq_list%qq(tmpstates,mq)=crg(atomj)*qcrg(iqatom(atomk),tmpstates)
+                                                end do
+                                                else
+                                                nb_list%qq(m) = crg(atomj)*crg(atomk)*coulomb_constant !coulombconstant from topo.f90
+                                                end if
+					end if
+					if ((iqatom(atomj).ne.0).or.(iqatom(atomk).ne.0)) then
+					mq = mq+1  !increase index
+					else
+					m = m+1 !increase Q index
+					end if
 				else !
 				endif
 
@@ -353,6 +509,7 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 	end do
 
 	nb_list%number_of_NB = m-1
+	nbq_list%number_of_NB = mq-1
 end subroutine nb_make_list
 
 !*******************************************************************
@@ -376,7 +533,12 @@ integer function nb_qp_add(desc)
 	!arguments
 	character(*)				:: desc
 	character(len=200)			:: line
-	integer						:: ires, ats1, ats2
+	character*80				:: lambda !name of fep_file if loaded
+	integer						:: ires, ats1, ats2, fstat
+	logical					:: use_fep
+	integer					:: str_start, str_end, totlen
+
+	use_fep = .false.
 
 	nb_qp_add = -1
 	if (N_nb_qp .ge. MAX_NB_QP) then
@@ -386,6 +548,9 @@ integer function nb_qp_add(desc)
 10	format('Sorry, the maximum number of residue nonbond calculations is ',i2)
 	Nlists = nres
 	allocate (qp_aves(nres), nb_list_res(nres))
+	allocate (nbq_list_res(nres))
+        allocate(iqatom(nat_solute))
+        iqatom(:)=0
 	qp_aves(:)%lj = 0.
 	qp_aves(:)%el = 0.
 	call mask_initialize(masks(1))
@@ -399,6 +564,43 @@ integer function nb_qp_add(desc)
 	write(*,*) ''
 	write(*,*) 'Last residue of protein:   ',qp_calc%p_last
 
+!changed Paul Bauer to allow FEP file loading
+	write(*,*) 'Enter the name of a FEP file if wanted, or terminate with a .'
+	call getlin(fep_file,'')
+	if ((fep_file.eq.'.').or.(fep_file.eq.'')) then
+		write(*,*) 'No FEP file loaded'
+		use_fep = .false.
+	else
+	        if(.not. prm_open(fep_file)) then
+                write(*,'(a,a)') '>>>>> ERROR: Could not open fep file ',trim(fep_file)
+                stop
+	        end if
+		use_fep = .true.
+		call get_fep
+	end if
+!changed Paul Bauer to allow FEP file loading
+	if (use_fep) then
+!added line for lambda reading, will check with FEP file number of states
+!to read the maximum number of states for this kind of FEP calculation
+!code from md.f90 file initialisation
+	write(*,*)'Give a value for the reaction coordinate (lambda values)'
+	call getlin(lambda,'')
+!        write(*,*) lambda	
+        str_start = 1
+        totlen = len_trim(lambda)
+        do while(str_start < totlen)
+                str_end = string_part(lambda, ' ', str_start)
+		states=states+1
+                lamda(states)=strtod(lambda(str_start:str_end))
+                str_start = str_end + 2
+        end do
+!	write(*,*)(lamda(str_start),str_start=1,states)
+	if (states.ne.nstates) then
+		write(*,*)'Number of lambda values not equal to states in FEP file'
+		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
+	end if
+	end if
+
 	write(*, *) 'Enter mask for q-atoms (e.g. <residue  xx yy>.)'
 	write(*, *) 'Finalize with end.'
  	ats2 =  maskmanip_make(masks(2))
@@ -411,8 +613,12 @@ integer function nb_qp_add(desc)
 	write(*, 13) masks(2)%included
 13	format('Q-atom mask contains ',i6,' atoms')
 
+
 	do ires = qp_calc%p_first, qp_calc%p_last
 		call mask_clear(masks(1))
+!Done like that to have the resdue numbers in the buffer
+!because F90 is to stupid to have strings allocated
+!with integers
 		write(line, '(a,i6,i6)') 'residue ', ires, ires
 		ats1 = mask_add(masks(1), line)
 		allocate(nb_list_res(ires)%atom1(ats1*ats2))
@@ -420,12 +626,29 @@ integer function nb_qp_add(desc)
 		allocate(nb_list_res(ires)%AA(ats1*ats2))
 		allocate(nb_list_res(ires)%BB(ats1*ats2))
 		allocate(nb_list_res(ires)%qq(ats1*ats2))
-		call nb_make_list(masks(1), masks(2), nb_list_res(ires))
+                nb_list_res(ires)%atom1(:)=0
+                nb_list_res(ires)%atom2(:)=0
+                nb_list_res(ires)%AA(:)=0
+                nb_list_res(ires)%BB(:)=0
+                nb_list_res(ires)%qq(:)=0
+        if (use_fep) then
+		allocate(nbq_list_res(ires)%atom1(ats1*nqat))
+		allocate(nbq_list_res(ires)%atom2(ats1*nqat))
+		allocate(nbq_list_res(ires)%AA(max_states,ats1*nqat))
+		allocate(nbq_list_res(ires)%BB(max_states,ats1*nqat))
+		allocate(nbq_list_res(ires)%qq(max_states,ats1*nqat))
+                nbq_list_res(ires)%atom1(:)=0
+                nbq_list_res(ires)%atom2(:)=0
+                nbq_list_res(ires)%AA(:,:)=0
+                nbq_list_res(ires)%BB(:,:)=0
+                nbq_list_res(ires)%qq(:,:)=0
+        end if
+		call nb_make_list(masks(1), masks(2), nb_list_res(ires), nbq_list_res(ires))
 	end do
 	call mask_finalize(masks(1))
 	call mask_finalize(masks(2))
 	nb_qp_add = 1
-
+        deallocate(iqatom)
 end function nb_qp_add
 
 
@@ -442,7 +665,7 @@ subroutine nb_qp_calc()
 	total_qp_frames = total_qp_frames + 1
 	
 	do ires = qp_calc%p_first, qp_calc%p_last
-		call nb_calc_lists(vdw, el, nb_list_res(ires))
+		call nb_calc_lists(vdw, el, nb_list_res(ires),nbq_list_res(ires))
 		qp_aves(ires)%lj = (qp_aves(ires)%lj*(total_qp_frames-1)+vdw)/(total_qp_frames)
 		qp_aves(ires)%el = (qp_aves(ires)%el*(total_qp_frames-1)+el)/(total_qp_frames)
 	end do
@@ -466,9 +689,193 @@ integer :: ires
 		write (*,703) ires, qp_aves(ires)%lj, qp_aves(ires)%el
 	end do
 703	format(i15,f15.2,f15.2)
-	deallocate(qp_aves, nb_list_res)  
+	deallocate(qp_aves, nb_list_res, nbq_list_res)  
 end subroutine nb_qp_finalize
 
 !*******************************************************************
+
+subroutine get_fep
+! local variables
+character					::	libtext*80,qaname*2
+integer					::	i,j,k,iat
+!temp. array for reallocating long-range exclusion list
+integer(AI), pointer	::	tempexlong(:,:)
+
+! --- # states, # q-atoms
+if(.not. qatom_load_atoms(fep_file)) then
+        call die_general('failure to load Q-atoms from FEP file.')
+end if
+! set flags
+do i=1,nqat
+        if(iqseq(i) > 0 .and. iqseq(i) .le. nat_solute)  then
+                iqatom(iqseq(i)) = i
+        else if(iqseq(i) == 0) then
+                write(*,10) i
+        else
+                write(*,20) i, iqseq(i)
+                call die_general('invalid q-atom data')
+        end if
+end do
+10	format('>>> WARNING: Q-atom no. ',i2,' is not associated with a topology atom.')
+20	format('>>>>> ERROR: Q-atom no. ',i2,' has invalid topology number ',i5)
+!allocate memory for qatom charges
+
+
+allocate(qcrg(nqat,nstates), stat=alloc_stat_gen)
+call check_alloc_general(alloc_stat_gen,'Qatom charges')
+
+! --- copy topology charges
+
+do i=1,nqat
+        do j=1,nstates
+                qcrg(i,j)=crg(iqseq(i))
+        end do
+end do
+
+
+!initialize softcore lookup array
+allocate (sc_lookup(nqat,natyps+nqat,nstates))
+sc_lookup(:,:,:)=0.0
+
+!load rest of fep file
+if(.not. qatom_load_fep(fep_file)) then
+        call die_general('failure to load FEP file.')
+end if
+
+!Adapt LJ parameters to topology
+!If arithmetic combination rule take sqrt(epsilon) now
+if (qvdw_flag .and. ivdw_rule .eq. 2 ) then
+        qbvdw(:,1) = sqrt( qbvdw(:,1) )
+        qbvdw(:,3) = sqrt( qbvdw(:,3) )
+end if
+
+!remove redefined bonded interactions from topology
+if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
+        write(*,*)
+        call centered_heading('Removing redefined interactions from topology','-')
+230		format('type',t10,' atom1 atom2 atom3 atom4')
+        write(*,230)
+231		format(a,t10,4i6)
+        !remove bonds that were redefined
+        do i=1,nbonds
+                do j=1,nqbond
+                        if ( (bnd(i)%i==qbnd(j)%i .and. bnd(i)%j==qbnd(j)%j) .or. &
+                                (bnd(i)%i==qbnd(j)%j .and. bnd(i)%j==qbnd(j)%i) ) then
+                                bnd(i)%cod = 0
+                                write (*,231) 'bond',bnd(i)%i,bnd(i)%j
+                        end if
+                end do
+        end do
+
+        !remove angles that were redefined
+        do i=1,nangles
+                do j=1,nqangle
+                        if((ang(i)%i.eq.qang(j)%i .and. ang(i)%j.eq.qang(j)%j .and. &
+                                ang(i)%k.eq.qang(j)%k)                          .or. &
+                                (ang(i)%i.eq.qang(j)%k .and. ang(i)%j.eq.qang(j)%j .and. &
+                                ang(i)%k.eq.qang(j)%i) )                         then
+
+                                ang(i)%cod = 0
+                                write (*,231) 'angle',ang(i)%i,ang(i)%j,ang(i)%k
+                        end if
+                end do
+        end do
+
+        !remove torsions that were redefined
+        do i=1,ntors
+                do j=1,nqtor
+						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
+						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
+                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
+								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
+                                tor(i)%cod /= 0) then
+                                tor(i)%cod = 0
+                                write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
+						end if
+                end do
+        end do
+
+
+        !remove impropers that were redefined
+        select case(ff_type)
+        case(FF_CHARMM) !special code for CHARMM
+                do i=1,nimps
+                        do j=1,nqimp
+                                if(((imp(i)%i .eq. iqimp(j)) .or. &
+                                        (imp(i)%i .eq. lqimp(j)) .or. &
+                                        (imp(i)%l .eq. iqimp(j)) .or. &
+                                        (imp(i)%l .eq. lqimp(j))) .and. &
+                                        ((imp(i)%j .eq. iqimp(j)) .or. &
+                                        (imp(i)%j .eq. jqimp(j))  .or. &
+                                        (imp(i)%j .eq. kqimp(j))  .or. &
+                                        (imp(i)%j .eq. lqimp(j))) .and. &
+                                        ((imp(i)%k .eq. iqimp(j)) .or. &
+                                        (imp(i)%k .eq. jqimp(j)) .or. &
+                                        (imp(i)%k .eq. kqimp(j)) .or. &
+                                        (imp(i)%k .eq. lqimp(j))) .and. &
+                                        imp(i)%cod /= 0) then
+                                        imp(i)%cod = 0
+                                        write (*,231) &
+                                        'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
+                                end if
+                        end do
+                end do
+
+        case default
+        do i=1,nimps
+                do j=1,nqimp
+                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
+                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+                                imp(i)%cod /= 0) then
+                                imp(i)%cod = 0
+                                write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
+                        end if
+                end do
+        end do
+        end select
+end if
+
+!check special exclusions
+!modify exclusion lists to inclue special exclusions between Q and non-Q
+if(nexspec > 0) then
+        allocate(tempexlong(2,nexlong+nexspec))
+        tempexlong(:, 1:nexlong) = listexlong(:, 1:nexlong)
+        deallocate(listexlong)
+        listexlong => tempexlong
+end if
+
+do k = 1, nexspec
+        i = exspec(k)%i
+        j = exspec(k)%j
+        if(i < 1 .or. i > nat_pro .or. j < 1 .or. j > nat_pro) then
+                write(*, 592) k, i, j
+                call die_general('invalid special exclusion data')
+        end if
+        !if one or more non-Q-atoms modify exclusion lists
+        if(iqatom(i)==0 .or. iqatom(j)==0) then
+                !With non-Q-atoms involved only accept all or no states
+                if(any(exspec(k)%flag(1:nstates))) then
+                        if(.not. all(exspec(k)%flag(1:nstates))) then
+                                write(*,594) k
+                                call die_general('invalid special exclusion data')
+                        else !exlcude in all states
+                                if(abs(j-i) <= max_nbr_range) then
+                                        if(i < j) then
+                                                listex(j-i,i) = .true.
+                                        else
+                                                listex(i-j,j) = .true.
+                                        end if
+                                else
+                                        nexlong = nexlong + 1
+                                        listexlong(1, nexlong) = i
+                                        listexlong(2, nexlong) = j
+                                end if
+                        end if
+                end if
+        end if
+end do
+592	format('>>>>> ERROR: Special exclusion pair ',i2,' (',i5,1x,i5,') is invalid')
+594	format('>>>>> ERROR: Non-Q-atom special excl. pair ',i2,' must be on in all or no states')
+end subroutine get_fep
 
 end module CALC_NB
