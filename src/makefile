@@ -75,6 +75,7 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	DEBUG_FC=	--static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -83,8 +84,8 @@ else ifeq ($(COMP),gcc)
 	OMPI_FCFLAGS=	${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
-	DEBUG=          -debug -fbacktrace -g ${FC_OPT}	
-	DEBUGMPI=       -debug -fbacktrace -g ${FC_OPT}
+	DEBUG=          -fbacktrace -g ${DEBUG_FC}	
+	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}
 
 else
 	FC=		gfortran
@@ -129,13 +130,13 @@ qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qfep5: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p: qatom.o
+qcalc5 qdyn5 qdum5 qdyn5p: qatom.o exc.o
 
 qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
-qdyn5 qdum5: qdyn.o exc.o
+qdyn5 qdum5: qdyn.o 
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@

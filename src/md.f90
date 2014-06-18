@@ -2624,7 +2624,9 @@ logical						::	yes
 logical						::	need_restart
 character(len=80)			::	instring
 logical						::	inlog
-integer						::	mask_rows
+integer						::	mask_rows, number
+integer,parameter				:: maxmaskrows=30
+character					:: gc_mask_tmp(maxmaskrows)
 
 ! this subroutine will init:
 !  nsteps, stepsize, dt
@@ -3237,25 +3239,42 @@ if ( ngroups_gc .gt. 0 ) then
 778 format ('groupno	contains')
 	write (*,778)
 	do i=1,ngroups_gc
-		yes = prm_get_line(text)
-		if ((scan(text,'residue').eq.0 )) then
-		if ((scan(text,'atom').eq.0)) then
-779 format (/,'Could not understand name of the selection , ',a)
-		write (*,779) text
-		initialize = .false.
-		else
-		!Selected individual atoms
-		ST_gc(i)%seltype = 'atom'
-		end if
-                else
-                !Selected whole residues
-                ST_gc(i)%seltype = 'residue'
-                end if
+!		yes = prm_get_line(text)
+!		if ((scan(text,'residue').eq.0 )) then
+!		if ((scan(text,'atom').eq.0)) then
+!779 format (/,'Could not understand name of the selection , ',a)
+!		write (*,779) text
+!		initialize = .false.
+!		else
+!		!Selected individual atoms
+!		ST_gc(i)%seltype = 'atom'
+!		end if
+!                else
+!                !Selected whole residues
+!                ST_gc(i)%seltype = 'residue'
+!                end if
 
-		!read number mask, stolen from trajectory mask ...
-		mask_rows = prm_count(ST_gc(i)%seltype)
+		!read numbers from string
+		number = 0
+		do while (prm_get_field(instring))
+			number = number + 1
+			read(instring, *, iostat=fstat) gc_mask_tmp(number)
+	                if(fstat /= 0) then
+        	                write(*,'(a)') '>>> ERROR: Invalid mask.'
+                	        initialize = .false.
+                        	exit
+                	end if
+		end do
+
+		mask_rows = number - 1
+		ST_gc(i)%seltype = gc_mask_tmp(1)
+		if ((ST_gc(i)%seltype /= 'atom' ).and. (ST_gc(i)%seltype /= 'residue')) then
+779 format (/,'Could not understand name of the selection , ',a)
+			write (*,779) text
+                	initialize = .false.
+		end if
 		if(iene_cycle > 0) then
-        	if(mask_rows == 0) then
+        	if(mask_rows < 2) then
 !You are not as funny as you think ...
                 	write(*,780) i
 780 format (/,'No atoms excluded for group ',i10)
@@ -3266,9 +3285,8 @@ if ( ngroups_gc .gt. 0 ) then
 			allocate(ST_gc(i)%maskarray(mask_rows),stat=alloc_status)
 			call check_alloc('gc maskarray')
 			
-	                do ii=1,mask_rows
-        	                yes = prm_get_line(text)
-                	        yes = gc_store_mask(ST_gc(i),text)
+	                do ii=2,mask_rows+1
+                	        yes = gc_store_mask(ST_gc(i),gc_mask_tmp(ii))
 	                end do
 			use_excluded_groups = .true.
 			ST_gc(i)%fileunit=freefile()
@@ -3276,7 +3294,7 @@ if ( ngroups_gc .gt. 0 ) then
 			ST_gc(i)%filename=trim(instring)//'_'
 			ST_gc(i)%filename=ST_gc(i)%filename//trim(ene_file)
 	        end if
-		elseif(mask_rows == 0) then
+		elseif(mask_rows < 2) then
 		        write(*,'(a)') 'Ignoring section for excluding atoms.'
 		end if
 	end do
