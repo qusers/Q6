@@ -26,10 +26,11 @@ implicit none
 		character*80		:: seltype
 		integer			:: count
 		integer			:: curcount=0
-		character,allocatable	:: maskarray(:)
-		type(MASK_TYPE)		:: gcmask
+		character*80,allocatable	:: maskarray(:)
+		type(MASK_TYPE)         :: gcmask
+!                type(MASK_TYPE),pointer :: p_gcmask
 		integer			:: fileunit
-		character		:: filename
+		character*80		:: filename
 	end type EXC_PARAMS
 
 	type(EXC_PARAMS),allocatable		:: ST_gc(:)
@@ -53,10 +54,11 @@ subroutine gc_alloc_array(atoms)
 
 end subroutine gc_alloc_array
 
-logical function gc_store_mask(ST_gc_local,line)
+logical function gc_store_mask(ST_gc_local,line)!,p_mask)
 	!arguments
-	type(EXC_PARAMS)			::	ST_gc_local
+	type(EXC_PARAMS)        	::	ST_gc_local
 	character(*)				::	line
+!        type(MASK_TYPE),pointer         :: p_mask
 	
 	if(ST_gc_local%curcount < ST_gc_local%count) then
 		ST_gc_local%curcount = ST_gc_local%curcount + 1
@@ -70,14 +72,15 @@ logical function gc_store_mask(ST_gc_local,line)
 end function gc_store_mask
 
 
-subroutine gc_make_array(ST_gc_local)
+subroutine gc_make_array(ST_gc_local,p_mask)
 	!arguments
-	type(EXC_PARAMS)				:: ST_gc_local
+	type(EXC_PARAMS)			:: ST_gc_local
 	!locals
 	integer						:: i,j,length,stat,alloc_status
 	integer,parameter				:: max_length=80
 	character*80,allocatable			:: tmp(:)
 	character*80					:: str1,str2
+        type(MASK_TYPE)                                 :: p_mask
 !	type(MASK_TYPE)				        ::      masks
 !Here we make the real magic, telling the program what atoms we want
 !to have in the different groups to be excluded
@@ -91,18 +94,23 @@ subroutine gc_make_array(ST_gc_local)
 	length=(len_trim(ST_gc_local%seltype)+len_trim(ST_gc_local%maskarray(i))+1)
 	if ( length.lt.max_length) then
 		str1 = trim(ST_gc_local%seltype)//' '
-		write(str2,'(i10)') ST_gc_local%maskarray(i)
-		tmp(i) = str1//trim(str2)
+		str2 = trim(ST_gc_local%maskarray(i))
+                if ( trim(str1) == 'atom' ) then
+                        tmp(i) = trim(str2)
+                else
+		        tmp(i) = trim(str1)//' '//trim(str2)
+                end if
 	end if
 	end do
+        call mask_initialize(p_mask)
 	do i=1,ST_gc_local%count
-		stat=mask_add(ST_gc_local%gcmask,tmp(i))
+		stat=mask_add(p_mask,tmp(i))
 	end do
 
 !	call mask_initialize(ST_gc_local%gcmask)
 
 	do i=1,nat_pro
-		if (ST_gc_local%gcmask%MASK(i)) then
+		if (p_mask%MASK(i)) then
 			gc_mask_array(i)=1
 		end if
 	end do	
@@ -113,16 +121,16 @@ subroutine set_gc_energies(atom,ngroups,Vel,VvdW,EQtot,EQ_exc,ST_local)
 	!parameters
 	integer				:: atom, ngroups
 	real*8				:: Vel, VvdW
-	type(EXC_PARAMS)		:: ST_local(:)
-	type(Q_ENERGIES)		:: EQtot
-	type(Q_ENERGIES)		:: EQ_exc(:)
+	type(EXC_PARAMS)	:: ST_local(:)
+	type(Q_ENERGIES)	:: EQtot
+	type(Q_ENERGIES)	:: EQ_exc(:)
 	!locals
-	integer				:: iii,jjj,maskatoms
+	integer				:: iii,jjj!,maskatoms
         do iii=1,ngroups
                 EQ_exc(iii)%qp%el         =       EQtot%qp%el
                 EQ_exc(iii)%qp%vdw        =       EQtot%qp%vdw
                 if (gc_mask_array(atom).eq.1) then
-                        maskatoms = ST_local(iii)%gcmask%included
+!                        maskatoms = ST_local(iii)%gcmask%included
                         if(ST_local(iii)%gcmask%MASK(atom)) then
                                 EQ_exc(iii)%qp%el         = EQ_exc(iii)%qp%el  - Vel
                                 EQ_exc(iii)%qp%vdw        = EQ_exc(iii)%qp%vdw - VvdW
