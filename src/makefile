@@ -73,7 +73,7 @@ else ifeq ($(COMP),ibm)
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall	
+	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -134,7 +134,7 @@ qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
-qdyn5 qdum5: qdyn.o
+qdyn5 qdum5: qdyn.o exc.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -204,6 +204,9 @@ calc_rmsf.o:calc_rmsf.f90 calc_base.o maskmanip.o
 eigen.o:eigen.f90
 	${FC} ${FFLAGS} -c $<
 
+exc.o:exc.f90 misc.o qatom.o maskmanip.o
+	${FC} ${FFLAGS} -c $<
+
 index.o:index.f90
 	${FC} ${FFLAGS} -c $<
 
@@ -213,13 +216,13 @@ mask.o:	mask.f90 topo.o
 maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
-md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o
+md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 
 md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 exc.o -o md_dum.o
 
-md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o
+md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c md.f90 -o md_mpi.o
 

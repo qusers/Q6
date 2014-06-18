@@ -151,6 +151,8 @@ implicit none
 !	fep/evb energies
 !-----------------------------------------------------------------------
 	type(Q_ENERGIES), allocatable::	EQ(:)
+!New arrays for excluded groups in group contribution calculation
+	type(Q_ENERGIES), allocatable:: EQ_gc(:,:)
 	real(8)						::	Hij(max_states,max_states)
 	real(8)						::	EMorseD(max_qat)
 	real(8)						::	dMorse_i(3,max_qat)
@@ -180,6 +182,9 @@ end subroutine qatom_startup
 subroutine qatom_shutdown
 	integer						::	alloc_status
 	deallocate(EQ, stat=alloc_status)
+	if (allocated(EQ_gc)) then
+		deallocate(EQ_gc,stat=alloc_status)
+	end if
 	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status)
 	deallocate(qmass, stat=alloc_status)
 	deallocate(qavdw, qbvdw, stat=alloc_status)
