@@ -11,6 +11,7 @@ use SIZES
 use TRJ
 use MPIGLOB
 use QATOM
+use EXC
 #if defined (_DF_VERSION_)
 use DFPORT
 use DFLIB
@@ -172,6 +173,9 @@ character(len=200)			::	ene_file
 character(len=200)			::	exrstr_file
 character(len=200)			::	xwat_file
 
+! --- Excluded groups, added 2014 Paul Bauer
+integer					:: ngroups_gc
+logical					:: use_excluded_groups
 
 ! --- Restraints
 integer						::	implicit_rstr_from_file
@@ -599,6 +603,9 @@ deallocate(rstpos, stat=alloc_status)
 deallocate(rstdis, stat=alloc_status)
 deallocate(rstang, stat=alloc_status)
 deallocate(rstwal, stat=alloc_status)
+
+! excluded groups
+deallocate(ST_gc, stat=alloc_status)
 
 #if defined (USE_MPI)
 !MPI arrays
@@ -1401,6 +1408,7 @@ end subroutine close_output_files
 !-----------------------------------------------------------------------
 
 subroutine open_files
+	integer :: iii
 ! --> restart file (2)
 if(restart) then
 open (unit=2, file=restart_file, status='old', form='unformatted', action='read', err=2)
@@ -1412,6 +1420,11 @@ open (unit=3, file=xfin_file, status='unknown', form='unformatted', action='writ
 ! --> energy output file (11)
 if ( iene_cycle .gt. 0 ) then
 open (unit=11, file=ene_file, status='unknown', form='unformatted', action='write', err=11)
+	if (use_excluded_groups) then
+		do iii=1,ngroups_gc
+		open (unit=ST_gc(iii)%fileunit,file=ST_gc(iii)%filename,status='unknown',form='unformatted',action='write',err=11)
+		end do
+	end if
 end if
 
 ! --> external file for implicit position restraints (12)
@@ -2596,8 +2609,8 @@ end subroutine initial_shaking
 !-----------------------------------------------------------------------
 logical function initialize()                  
 ! local variables
-character					:: text*80
-integer						:: i,j,length
+character					:: text*80,str*80
+integer						:: i,j,length,ii
 real(8)						:: stepsize
 real(8)						:: lamda_tmp(max_states)
 integer						:: fu, fstat
@@ -3206,6 +3219,80 @@ if(nstates > 0 ) then
 98			format ('lambda-values      = ',10f8.5)
         end if
 end if
+
+!Option to make additional calculation with atom groups excluded from the
+!energy calculation to provide 'real' group contribution
+!Added Paul Bauer 2014
+use_excluded_groups = .false.
+ngroups_gc = prm_count('exclude_groups')
+write (*,'(/,a)') 'List of excluded atom groups'
+if ( ngroups_gc .gt. 0 ) then
+!allocate new EQ arrays for each group
+777 format (/,'No of excluded group calculations =',i10)
+	write (*,777) ngroups_gc
+	allocate(ST_gc(ngroups_gc), stat=alloc_status)
+	call check_alloc('gc param store')
+	allocate(EQ_gc(ngroups_gc,nstates), stat=alloc_status)
+	call check_alloc('gc excluded list')
+778 format ('groupno	contains')
+	write (*,778)
+	do i=1,ngroups_gc
+		yes = prm_get_line(text)
+		if ((scan(text,'residue').eq.0 )) then
+		if ((scan(text,'atom').eq.0)) then
+779 format (/,'Could not understand name of the selection , ',a)
+		write (*,779) text
+		initialize = .false.
+		else
+		!Selected individual atoms
+		ST_gc(i)%seltype = 'atom'
+		end if
+                else
+                !Selected whole residues
+                ST_gc(i)%seltype = 'residue'
+                end if
+
+		!read number mask, stolen from trajectory mask ...
+		mask_rows = prm_count(ST_gc(i)%seltype)
+		if(iene_cycle > 0) then
+        	if(mask_rows == 0) then
+!You are not as funny as you think ...
+                	write(*,780) i
+780 format (/,'No atoms excluded for group ',i10)
+                	ST_gc(i)%count=0
+        	else
+			call mask_initialize(ST_gc(i)%gcmask)
+			ST_gc(i)%count=mask_rows
+			allocate(ST_gc(i)%maskarray(mask_rows),stat=alloc_status)
+			call check_alloc('gc maskarray')
+			
+	                do ii=1,mask_rows
+        	                yes = prm_get_line(text)
+                	        yes = gc_store_mask(ST_gc(i),text)
+	                end do
+			use_excluded_groups = .true.
+			ST_gc(i)%fileunit=freefile()
+			write (str,'(i10)') i
+			ST_gc(i)%filename=trim(instring)//'_'
+			ST_gc(i)%filename=ST_gc(i)%filename//trim(ene_file)
+	        end if
+		elseif(mask_rows == 0) then
+		        write(*,'(a)') 'Ignoring section for excluding atoms.'
+		end if
+	end do
+
+	if (use_excluded_groups) then
+		call gc_alloc_array(natom)
+		do i=1,ngroups_gc
+			call gc_make_array(ST_gc(i))
+		end do
+	end if
+end if
+
+		
+		
+		
+
 
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
@@ -4006,7 +4093,7 @@ end subroutine temperature
 subroutine md_run
 
 ! local variables
-integer				:: i,j,k,niter
+integer				:: i,j,k,niter,iii
 
 integer				:: i3
 real(8)				:: Temp,Tlast
@@ -4265,6 +4352,12 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
                 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
                 ! nrgy_put_ene(unit, e2, OFFD): print 'e2'=EQ and OFFD to unit 'unit'=11
                         call put_ene(11, EQ, OFFD)
+		! for new excluded groups, write more files for each group
+			if(use_excluded_groups) then
+				do iii=1,ngroups_gc
+				call put_ene(ST_gc(iii)%fileunit,EQ_gc(:,iii),OFFD)
+				end do
+			end if
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
@@ -10978,6 +11071,11 @@ do ip = 1, nbqq_pair(istate)
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        if (use_excluded_groups) then
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+        end if
+
+
   end if
 end do
 end do
@@ -11085,6 +11183,10 @@ do ip = 1, nbqq_pair(istate)
   else  ! j is not a qatom
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        if (use_excluded_groups) then
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+        end if
+
   end if
 end do
 end do
@@ -11155,6 +11257,11 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        if (use_excluded_groups) then
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+        end if
+
+
 end do ! istate
 
 end do
@@ -11244,6 +11351,10 @@ subroutine nonbond_qp_box
 	  ! update q-protein energies
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        if (use_excluded_groups) then
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+        end if
+
 	end do ! istate
 
   end do
@@ -11314,6 +11425,11 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+	end if
+
 end do ! istate
 
 end do
@@ -11408,6 +11524,10 @@ subroutine nonbond_qp_qvdw_box
 	  ! update q-protein energies
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        if (use_excluded_groups) then
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(istate,:),ST_gc)
+        end if
+
 	end do ! istate
 
   end do
