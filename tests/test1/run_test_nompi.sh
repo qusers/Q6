@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-qbinary=$QDIR/bin/qdyn5
+qbinary=/home/acmnpv/data/work/q_source/bin/qdyn5
 
 if [ "x$qbinary" == "x" ]
 then 
