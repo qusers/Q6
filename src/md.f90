@@ -530,11 +530,21 @@ if(nodeid .eq. 0) then
          EQ_recv(nstates,numnodes-1), &
          stat=alloc_status)
  call check_alloc('MPI data arrays')
+ if (use_excluded_groups) then
+	allocate(EQ_gc_recv(ngroups_gc,nstates,numnodes-1), &
+        stat=alloc_status)
+	call check_alloc('MPI data array excluded groups')
+ end if
 else
  allocate(E_send(1), &
           EQ_send(nstates), &
           stat=alloc_status)
  call check_alloc('MPI data arrays')
+ if (use_excluded_groups) then
+	allocate(EQ_gc_send(ngroups_gc,nstates), &
+	stat=alloc_status)
+	call check_alloc('MPI data array excluded groups')
+ end if
 end if
 end subroutine allocate_mpi
 #endif
@@ -620,9 +630,15 @@ if(nodeid .eq. 0) then
    deallocate(d_recv, stat=alloc_status)
    deallocate(E_recv, stat=alloc_status)
    deallocate(EQ_recv, stat=alloc_status)
+   if (allocated(EQ_gc_recv)) then
+	deallocate(EQ_gc_recv,stat=alloc_status)
+   end if
 else
    deallocate(E_send, stat=alloc_status)
    deallocate(EQ_send, stat=alloc_status)
+   if (allocated(EQ_gc_send)) then
+	deallocate(EQ_gc_send,stat=alloc_status)
+   end if
 end if
 #endif
 
@@ -1975,7 +1991,7 @@ integer, parameter			:: vars = 40    !increment this var when adding data to bro
 integer				   	:: blockcnt(vars), ftype(vars)
 integer(kind=MPI_ADDRESS_KIND)			   	:: fdisp(vars)
 integer					:: mpitype_batch,mpitype_batch2
-integer					:: nat3
+integer					:: nat3,j
 real(kind=wp8), allocatable		:: temp_lambda(:)
 integer, parameter                      ::maxint=2147483647
 real(kind=wp8), parameter                        ::maxreal=1E35
@@ -2119,6 +2135,10 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nat_pro')
 !vars from QATOM
 call MPI_Bcast(nstates, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nstates')
+if (use_excluded_groups) then
+	call MPI_Bcast(ngroups_gc, 1, MPI_INTEGER, 0,MPI_COMM_WORLD,ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ngroups_gc')
+end if
 call MPI_Bcast(nqat, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nqat')
 call MPI_Bcast(qvdw_flag, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
@@ -2333,8 +2353,11 @@ EQ(nstates), &
 sc_lookup(nqat,natyps+nqat,nstates), &
 stat=alloc_status)
 call check_alloc('Q-atom arrays')
+	if (use_excluded_groups) then
+		allocate(EQ_gc(ngroups_gc,nstates),stat=alloc_status)
+		call check_alloc('Q-atom arrays excluded groups')
+	end if
 end if
-
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
 call MPI_Bcast(sc_lookup, size(sc_lookup), MPI_REAL8, 0, MPI_COMM_WORLD,ierr)
@@ -2390,6 +2413,11 @@ call MPI_Bcast(temp_lambda, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast EQ%lambda')
 if (nodeid .ne. 0) EQ(1:nstates)%lambda = temp_lambda(1:nstates)
 deallocate(temp_lambda)
+	if (use_excluded_groups) then
+		do j=1,ngroups_gc
+		EQ_gc(j,1:nstates)%lambda = EQ(1:nstates)%lambda
+		end do
+	end if
 end if
 
 if (nodeid .eq. 0) then 
@@ -9693,9 +9721,15 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qq%el,EQ_gc(:,istate)%qq%vdw,ST_gc)
+	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
+	end if
   end if
 end do ! ip
 
@@ -9801,9 +9835,15 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qq%el,EQ_gc(:,istate)%qq%vdw,ST_gc)
+	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
+	end if
   end if
 end do ! ip
 
@@ -11070,11 +11110,14 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qq%el,EQ_gc(:,istate)%qq%vdw,ST_gc)
+	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
         if (use_excluded_groups) then
-                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
         end if
 
 
@@ -11182,11 +11225,14 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
+	if (use_excluded_groups) then
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qq%el,EQ_gc(:,istate)%qq%vdw,ST_gc)
+	end if
   else  ! j is not a qatom
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
         if (use_excluded_groups) then
-                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
         end if
 
   end if
@@ -11260,7 +11306,7 @@ do istate = 1, nstates
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
         if (use_excluded_groups) then
-                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
         end if
 
 
@@ -11354,7 +11400,7 @@ subroutine nonbond_qp_box
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
         if (use_excluded_groups) then
-                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
         end if
 
 	end do ! istate
@@ -11429,7 +11475,7 @@ do istate = 1, nstates
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
 
 	if (use_excluded_groups) then
-		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+		call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
 	end if
 
 end do ! istate
@@ -11527,7 +11573,7 @@ subroutine nonbond_qp_qvdw_box
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
         if (use_excluded_groups) then
-                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ(istate),EQ_gc(:,istate),ST_gc)
+                call set_gc_energies(i,ngroups_gc,Vel,(V_a-V_b),EQ_gc(:,istate)%qp%el,EQ_gc(:,istate)%qp%vdw,ST_gc)
         end if
 
 	end do ! istate
@@ -13670,8 +13716,37 @@ do i=1,numnodes-1
   EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
   EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
   EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
+
+if (use_excluded_groups) then
+	do j=1,ngroups_gc
+	EQ_gc(j,1:nstates)%qp%el = EQ_gc(j,1:nstates)%qp%el + EQ_gc_recv(j,1:nstates,i)%qp%el
+	EQ_gc(j,1:nstates)%qp%vdw = EQ_gc(j,1:nstates)%qp%vdw + EQ_gc_recv(j,1:nstates,i)%qp%vdw
+	end do
+end if
 end do
 #endif
+
+if (use_excluded_groups) then
+	do j=1,ngroups_gc
+	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
+	EQ_gc(j,1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
+!	EQ_gc(j,1:nstates)%qq%el = EQ(1:nstates)%qq%el
+!	EQ_gc(j,1:nstates)%qq%vdw = EQ(1:nstates)%qq%vdw
+	EQ_gc(j,1:nstates)%q = EQ(1:nstates)%q
+	do istate=1,nstates
+	EQ_gc(j,istate)%qx%el = EQ_gc(j,istate)%qq%el + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
+	EQ_gc(j,istate)%qx%vdw = EQ_gc(j,istate)%qq%vdw + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
+	EQ_gc(j,istate)%q%bond = EQ(istate)%q%bond
+	EQ_gc(j,istate)%q%angle = EQ(istate)%q%angle
+	EQ_gc(j,istate)%q%torsion = EQ(istate)%q%torsion
+	EQ_gc(j,istate)%q%improper = EQ(istate)%q%improper
+	EQ_gc(j,istate)%restraint = EQ(istate)%restraint
+	EQ_gc(j,istate)%total = EQ_gc(j,istate)%q%bond + EQ_gc(j,istate)%q%angle &
+ + EQ_gc(j,istate)%q%torsion + EQ_gc(j,istate)%q%improper + EQ_gc(j,istate)%qx%el &
+ + EQ_gc(j,istate)%qx%vdw + EQ_gc(j,istate)%restraint
+	end do
+	end do
+end if
 
 ! q-atom energy summary
 do istate = 1, nstates
@@ -13703,6 +13778,8 @@ E%potential = E%p%bond + E%w%bond + E%p%angle + E%w%angle + E%p%torsion + &
 E%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
 E%ww%vdw + E%q%bond + E%q%angle + E%q%torsion + &
 E%q%improper + E%qx%el + E%qx%vdw + E%restraint%total + E%LRF
+
+
 end if
 
 end subroutine pot_energy
@@ -16359,6 +16436,7 @@ end subroutine new_potential
 !***********************
 ! Use the global vars
 !  request_recv, E_send,EQ_send,E_recv,EQ_Recv,d_recv
+! and now also the EQ_gc variables from the group contributions
 ! Allocate  - status
 
 
@@ -16369,7 +16447,7 @@ integer,dimension(3,numnodes-1)         :: tag
 integer,dimension(vars)	                :: blockcnt,ftype 
 integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
 integer                                 :: mpitype_package,mpitype_send
-integer                                 :: i,istate
+integer                                 :: i,j,istate
 
 do i=1,numnodes-1
 tag(1,i)=numnodes*100+i
@@ -16393,6 +16471,10 @@ do i = 1,numnodes-1
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
   call MPI_IRecv(EQ_recv(1,i), nstates*2*2, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
        request_recv(i,3),ierr)
+  if (use_excluded_groups) then
+	call MPI_IRecv(EQ_gc_recv(i,1,i), nstates*2*2*ngroups_gc, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
+        request_recv(i,3),ierr)
+  end if
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
 
@@ -16415,6 +16497,9 @@ if (ierr .ne. 0) call die('gather_nonbond/Send d')
 call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
 call MPI_Send(EQ_send, nstates*2*2, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
+if (use_excluded_groups) then
+	call MPI_Send(EQ_gc_send(j,1),nstates*2*2*ngroups_gc, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr)
+end if
 if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
 
 end if

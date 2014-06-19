@@ -117,23 +117,24 @@ subroutine gc_make_array(ST_gc_local,p_mask)
 	deallocate(tmp, stat=alloc_status)
 end subroutine gc_make_array		
 		
-subroutine set_gc_energies(atom,ngroups,Vel,VvdW,EQtot,EQ_exc,ST_local)
+subroutine set_gc_energies(atom,ngroups,Vel,VvdW,totVel,totVvdW,ST_local)
 	!parameters
 	integer				:: atom, ngroups
 	real*8				:: Vel, VvdW
 	type(EXC_PARAMS)	:: ST_local(:)
-	type(Q_ENERGIES)	:: EQtot
-	type(Q_ENERGIES)	:: EQ_exc(:)
+	real*8			:: totVel(:),totVvdw(:)
+!	type(Q_ENERGIES)	:: EQ_exc(:)
 	!locals
 	integer				:: iii,jjj!,maskatoms
         do iii=1,ngroups
-                EQ_exc(iii)%qp%el         =       EQtot%qp%el
-                EQ_exc(iii)%qp%vdw        =       EQtot%qp%vdw
+                totVel         =       totVel + Vel
+                totVvdW        =       totVvdW + VvdW
+		
                 if (gc_mask_array(atom).eq.1) then
 !                        maskatoms = ST_local(iii)%gcmask%included
                         if(ST_local(iii)%gcmask%MASK(atom)) then
-                                EQ_exc(iii)%qp%el         = EQ_exc(iii)%qp%el  - Vel
-                                EQ_exc(iii)%qp%vdw        = EQ_exc(iii)%qp%vdw - VvdW
+                                totVel = totVel  - Vel
+                                totVvdW = totVvdW - VvdW
                         end if
                 end if
         end do
