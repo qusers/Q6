@@ -27,6 +27,7 @@ implicit none
 		integer			:: count
 		integer			:: curcount=0
 		character*80,allocatable	:: maskarray(:)
+                character*80            :: sendtomask(30)
 		type(MASK_TYPE)         :: gcmask
 !                type(MASK_TYPE),pointer :: p_gcmask
 		integer			:: fileunit
@@ -34,31 +35,14 @@ implicit none
 	end type EXC_PARAMS
 
 	type(EXC_PARAMS),allocatable		:: ST_gc(:)
-
-	integer,allocatable			:: gc_mask_array(:)
-!	integer,allocatable			:: gc_mask_map(:)
-
-
-
+        logical,allocatable             :: tempmask(:,:)
 contains
 
-
-subroutine gc_alloc_array(atoms)
-	!arguments
-	integer					:: atoms,alloc_status
-
-	allocate(gc_mask_array(atoms),stat=alloc_status)
-	call check_alloc_general(alloc_status,'gc mmain array')
-	gc_mask_array(:)=0
-	
-
-end subroutine gc_alloc_array
 
 logical function gc_store_mask(ST_gc_local,line)!,p_mask)
 	!arguments
 	type(EXC_PARAMS)        	::	ST_gc_local
 	character(*)				::	line
-!        type(MASK_TYPE),pointer         :: p_mask
 	
 	if(ST_gc_local%curcount < ST_gc_local%count) then
 		ST_gc_local%curcount = ST_gc_local%curcount + 1
@@ -72,22 +56,14 @@ logical function gc_store_mask(ST_gc_local,line)!,p_mask)
 end function gc_store_mask
 
 
-subroutine gc_make_array(ST_gc_local,p_mask)
+subroutine gc_make_array(ST_gc_local)
 	!arguments
 	type(EXC_PARAMS)			:: ST_gc_local
 	!locals
 	integer						:: i,j,length,stat,alloc_status
 	integer,parameter				:: max_length=80
-	character*80,allocatable			:: tmp(:)
+!	character*80            			:: tmp(30)
 	character*80					:: str1,str2
-        type(MASK_TYPE)                                 :: p_mask
-!	type(MASK_TYPE)				        ::      masks
-!Here we make the real magic, telling the program what atoms we want
-!to have in the different groups to be excluded
-!        call mask_initialize(masks)
-
-	allocate(tmp(ST_gc_local%count),stat=alloc_status)
-	call check_alloc_general(alloc_status,'gc tmp mask arrays')
 
 	do i=1,ST_gc_local%count
 !to prevent overflow
@@ -96,48 +72,31 @@ subroutine gc_make_array(ST_gc_local,p_mask)
 		str1 = trim(ST_gc_local%seltype)//' '
 		str2 = trim(ST_gc_local%maskarray(i))
                 if ( trim(str1) == 'atom' ) then
-                        tmp(i) = trim(str2)
+                        ST_gc_local%sendtomask(i) = trim(str2)
                 else
-		        tmp(i) = trim(str1)//' '//trim(str2)
+		        ST_gc_local%sendtomask(i) = trim(str1)//' '//trim(str2)
                 end if
 	end if
 	end do
-        call mask_initialize(p_mask)
-	do i=1,ST_gc_local%count
-		stat=mask_add(p_mask,tmp(i))
-	end do
+end subroutine gc_make_array
 
-!	call mask_initialize(ST_gc_local%gcmask)
-
-	do i=1,nat_pro
-		if (p_mask%MASK(i)) then
-			gc_mask_array(i)=1
-		end if
-	end do	
-	deallocate(tmp, stat=alloc_status)
-end subroutine gc_make_array		
 		
-subroutine set_gc_energies(atom,ngroups,Vel,VvdW,totVel,totVvdW,ST_local)
+subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask)
 	!parameters
-	integer				:: atom, ngroups
+	integer				:: atomi,atomj
 	real*8				:: Vel, VvdW
-	type(EXC_PARAMS)	:: ST_local(:)
-	real*8			:: totVel(:),totVvdw(:)
-!	type(Q_ENERGIES)	:: EQ_exc(:)
+!	type(MASK_TYPE)         	:: mask
+        logical(1),pointer                 :: mask(:)
+	real*8			        :: totVel,totVvdw
 	!locals
-	integer				:: iii,jjj!,maskatoms
-        do iii=1,ngroups
-                totVel         =       totVel + Vel
-                totVvdW        =       totVvdW + VvdW
-		
-                if (gc_mask_array(atom).eq.1) then
-!                        maskatoms = ST_local(iii)%gcmask%included
-                        if(ST_local(iii)%gcmask%MASK(atom)) then
-                                totVel = totVel  - Vel
-                                totVvdW = totVvdW - VvdW
-                        end if
-                end if
-        end do
+	integer				:: iii,jjj
+        totVel         =       totVel + Vel
+        totVvdW        =       totVvdW + VvdW
+	
+        if((mask(atomi)).or.(mask(atomj))) then
+                totVel = totVel  - Vel
+                totVvdW = totVvdW - VvdW
+        end if
 end subroutine set_gc_energies
 
 end module EXC

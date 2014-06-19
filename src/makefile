@@ -231,10 +231,10 @@ md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o
 misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
 
-mpiglob.o: mpiglob.f90 sizes.o nrgy.o
+mpiglob.o: mpiglob.f90 sizes.o nrgy.o 
 	${FC} ${FFLAGS} -c $<
 
-nrgy.o: nrgy.f90 sizes.o
+nrgy.o: nrgy.f90 sizes.o 
 	${FC} ${FFLAGS} -c $<
 
 parse.o: parse.f90 misc.o
