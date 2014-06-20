@@ -525,7 +525,7 @@ subroutine allocate_mpi
 
 if(nodeid .eq. 0) then
  allocate(mpi_status(MPI_STATUS_SIZE,numnodes-1), & 
-         request_recv(numnodes-1,3), &
+         request_recv(numnodes-1,4), &
          d_recv(natom*3,numnodes-1), &
          E_recv(numnodes-1), &
          EQ_recv(nstates,numnodes-1), &
@@ -2144,6 +2144,12 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nstates')
 call MPI_Bcast(use_excluded_groups,1,MPI_LOGICAL, 0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast use_excluded_groups')
 
+!first time force syncing so that everyone knows and has all parameters to this
+!point, should give no hits to performance
+!Paul Bauer 2014
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+
 
 if (use_excluded_groups) then
 	call MPI_Bcast(ngroups_gc, 1, MPI_INTEGER, 0,MPI_COMM_WORLD,ierr)
@@ -2188,6 +2194,9 @@ Ndegf=maxint
 Ndegfree=maxint
 xwcent(:)=maxreal 
 end if
+
+!first part completed, syncing again
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 ! --- MD data, second batch ---
 
@@ -2249,6 +2258,8 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 ! ADD CODE HERE to broadcast shake data
 !end if
 
+!and syncing again
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- lrf data ---
 
 if (use_LRF) then
@@ -2288,6 +2299,8 @@ call MPI_Type_free(mpitype_batch, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Type_free')
 end if !(use_LRF)
 
+!sync to make sure everything is there
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- data from the TOPO module ---
 
 if (nodeid .eq. 0) write (*,'(80a)') 'TOPO data'
@@ -2370,6 +2383,9 @@ call MPI_Bcast(list14long, 2*n14long, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(A
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
+
+!end of part -> sync
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 ! --- data from the QATOM module ---
 
@@ -2457,6 +2473,9 @@ if (nodeid .eq. 0) then
 call centered_heading('End of initiation', '-')
 print *
 end if
+
+!and we sync again
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 !Finally allocate for  slaves:E_send, EQ_send
 !For master :E_recv,d_recv
@@ -13786,10 +13805,12 @@ else  !Slave nodes
 call gather_nonbond
 #endif
 end if
-
+#if defined(USE_MPI)
+call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-do i = 1, 3
+do i = 1, 4
     call MPI_WaitAll(numnodes-1,request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -13868,7 +13889,9 @@ E%q%improper + E%qx%el + E%qx%vdw + E%restraint%total + E%LRF
 
 
 end if
-
+#if (USE_MPI)
+call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
 end subroutine pot_energy
 
 !-----------------------------------------------------------------------
@@ -16479,7 +16502,7 @@ end if
 
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-do i = 1, 3
+do i = 1, 4
     call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -16537,7 +16560,7 @@ end subroutine new_potential
 subroutine gather_nonbond()
 
 integer,parameter                       :: vars=3
-integer,dimension(3,numnodes-1)         :: tag
+integer,dimension(4,numnodes-1)         :: tag
 integer,dimension(vars)	                :: blockcnt,ftype 
 integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
 integer                                 :: mpitype_package,mpitype_send
@@ -16547,6 +16570,7 @@ do i=1,numnodes-1
 tag(1,i)=numnodes*100+i
 tag(2,i)=numnodes*200+i
 tag(3,i)=numnodes*300+i
+tag(4,i)=numnodes*400+i
 end do
 
 if (nodeid .eq. 0) then        !master
@@ -16566,8 +16590,8 @@ do i = 1,numnodes-1
   call MPI_IRecv(EQ_recv(1,i), nstates*2*2, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
        request_recv(i,3),ierr)
   if (use_excluded_groups) then
-	call MPI_IRecv(EQ_gc_recv(1,1,i), nstates*2*2*ngroups_gc, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
-        request_recv(i,3),ierr)
+	call MPI_IRecv(EQ_gc_recv(1,1,i), nstates*2*2*ngroups_gc, MPI_REAL8, i, tag(4,i), MPI_COMM_WORLD, &
+        request_recv(i,4),ierr)
   end if
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
@@ -16597,7 +16621,7 @@ call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
 call MPI_Send(EQ_send, nstates*2*2, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
 if (use_excluded_groups) then
-	call MPI_Send(EQ_gc_send(1,1),nstates*2*2*ngroups_gc, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr)
+	call MPI_Send(EQ_gc_send(1,1),nstates*2*2*ngroups_gc, MPI_REAL8, 0, tag(4,nodeid), MPI_COMM_WORLD,ierr)
 end if
 if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
 
