@@ -85,17 +85,12 @@ subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask)
 	!parameters
 	integer				:: atomi,atomj
 	real*8				:: Vel, VvdW
-!	type(MASK_TYPE)         	:: mask
         logical(1),pointer                 :: mask(:)
 	real*8			        :: totVel,totVvdw
-	!locals
-	integer				:: iii,jjj
-        totVel         =       totVel + Vel
-        totVvdW        =       totVvdW + VvdW
 	
-        if((mask(atomi)).or.(mask(atomj))) then
-                totVel = totVel  - Vel
-                totVvdW = totVvdW - VvdW
+        if(.not.((mask(atomi)).or.(mask(atomj)))) then
+                totVel = totVel  + Vel
+                totVvdW = totVvdW + VvdW
         end if
 end subroutine set_gc_energies
 

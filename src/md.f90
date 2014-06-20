@@ -2388,7 +2388,7 @@ stat=alloc_status)
 call check_alloc('Q-atom arrays')
 	if (use_excluded_groups) then
 		allocate(EQ_gc(ngroups_gc,nstates),stat=alloc_status)
-		call check_alloc('Q-atom arrays excluded groups')
+		call check_alloc('Q-energy arrays excluded groups')
 	end if
 end if
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
@@ -13809,10 +13809,12 @@ do i=1,numnodes-1
   EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
 
 if (use_excluded_groups) then
-	do j=1,ngroups_gc
-	EQ_gc(j,1:nstates)%qp%el = EQ_gc(j,1:nstates)%qp%el + EQ_gc_recv(j,1:nstates,i)%qp%el
-	EQ_gc(j,1:nstates)%qp%vdw = EQ_gc(j,1:nstates)%qp%vdw + EQ_gc_recv(j,1:nstates,i)%qp%vdw
-	end do
+!	do j=1,ngroups_gc
+	EQ_gc(1:ngroups_gc,1:nstates)%qp%el = EQ_gc(1:ngroups_gc,1:nstates)%qp%el + &
+						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%el
+	EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw + &
+						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%vdw
+!	end do
 end if
 end do
 #endif
@@ -13821,17 +13823,11 @@ if (use_excluded_groups) then
 	do j=1,ngroups_gc
 	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
 	EQ_gc(j,1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
-!	EQ_gc(j,1:nstates)%qq%el = EQ(1:nstates)%qq%el
-!	EQ_gc(j,1:nstates)%qq%vdw = EQ(1:nstates)%qq%vdw
 	EQ_gc(j,1:nstates)%q = EQ(1:nstates)%q
+	EQ_gc(j,1:nstates)%restraint = EQ(1:nstates)%restraint
 	do istate=1,nstates
 	EQ_gc(j,istate)%qx%el = EQ_gc(j,istate)%qq%el + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
-	EQ_gc(j,istate)%qx%vdw = EQ_gc(j,istate)%qq%vdw + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
-	EQ_gc(j,istate)%q%bond = EQ(istate)%q%bond
-	EQ_gc(j,istate)%q%angle = EQ(istate)%q%angle
-	EQ_gc(j,istate)%q%torsion = EQ(istate)%q%torsion
-	EQ_gc(j,istate)%q%improper = EQ(istate)%q%improper
-	EQ_gc(j,istate)%restraint = EQ(istate)%restraint
+	EQ_gc(j,istate)%qx%vdw = EQ_gc(j,istate)%qq%vdw + EQ_gc(j,istate)%qp%vdw + EQ_gc(j,istate)%qw%vdw
 	EQ_gc(j,istate)%total = EQ_gc(j,istate)%q%bond + EQ_gc(j,istate)%q%angle &
  + EQ_gc(j,istate)%q%torsion + EQ_gc(j,istate)%q%improper + EQ_gc(j,istate)%qx%el &
  + EQ_gc(j,istate)%qx%vdw + EQ_gc(j,istate)%restraint
@@ -14293,7 +14289,6 @@ if(nqat > 0) then
         qcrg(:,:) = qcrg(:,:) * sqrt(coulomb_constant)
 end if
 if (use_excluded_groups) then
-!        call gc_alloc_array(natom)
         do i=1,ngroups_gc
                 call mask_initialize(ST_gc(i)%gcmask)
                 call gc_make_array(ST_gc(i))
