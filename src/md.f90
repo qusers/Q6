@@ -651,11 +651,14 @@ subroutine reallocate_nonbondlist_pp
 
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max
+integer						:: old_max,temp_max
 
 ! copy
+!make it safer and add some padding
+!memory is cheap
 old_max = calculation_assignment%pp%max
-allocate(old_nbxx(old_max), stat=alloc_status)
+temp_max = int(calculation_assignment%pp%max * 1.05) + 200
+allocate(old_nbxx(temp_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpp(1:old_max)
 
@@ -683,13 +686,15 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpp_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
+!making some padding already here
+new_max = int( old_max*1.05) + 200
+allocate(old_nbxx(new_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpp_cgp)
-new_max = int( old_max*1.05) + 200
+!new_max = int( old_max*1.05) + 200
 allocate(nbpp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -711,13 +716,15 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpw_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
+!again, giving some padding
+new_max = int( old_max*1.05) + 200
+allocate(old_nbxx(new_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpw_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpw_cgp)
-new_max = int( old_max*1.05) + 200
+!new_max = int( old_max*1.05) + 200
 allocate(nbpw_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpw_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -739,13 +746,14 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbqp_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
+new_max = int( old_max*1.05) + 200
+allocate(old_nbxx(new_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbqp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbqp_cgp)
-new_max = int( old_max*1.05) + 200
+!new_max = int( old_max*1.05) + 200
 allocate(nbqp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbqp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -764,11 +772,12 @@ end subroutine reallocate_nbqp_cgp
 subroutine reallocate_nonbondlist_pw
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max
+integer						:: old_max,temp_max
 
 ! copy
 old_max = calculation_assignment%pw%max
-allocate(old_nbxx(old_max), stat=alloc_status)
+temp_max = int(calculation_assignment%pw%max * 1.05) + 200
+allocate(old_nbxx(temp_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpw(1:old_max)
 
@@ -793,11 +802,12 @@ end subroutine reallocate_nonbondlist_pw
 subroutine reallocate_nonbondlist_qp
 ! variables
 type(NBQP_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max
+integer						:: old_max,temp_max
 
 ! copy
 old_max = calculation_assignment%qp%max
-allocate(old_nbxx(old_max), stat=alloc_status)
+temp_max = int(old_max * 1.05 ) +200
+allocate(old_nbxx(temp_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbqp(1:old_max)
 
@@ -822,13 +832,15 @@ end subroutine reallocate_nonbondlist_qp
 subroutine reallocate_nonbondlist_ww
 ! variables
 integer(AI), allocatable		:: old_nbxx(:)
-integer						:: old_max
+integer						:: old_max,temp_max
 
 ! copy
-allocate(old_nbxx(calculation_assignment%ww%max), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:calculation_assignment%ww%max) = nbww(1:calculation_assignment%ww%max)
 old_max = calculation_assignment%ww%max
+temp_max = int(old_max * 1.05 ) + 200
+allocate(old_nbxx(temp_max), stat=alloc_status)
+call check_alloc('reallocating non-bonded interaction list')
+old_nbxx(1:old_max) = nbww(1:old_max)
+!old_max = calculation_assignment%ww%max
 
 ! deallocate and copy back
 deallocate(nbww)
@@ -13659,7 +13671,7 @@ subroutine pot_energy
 ! local variables
 
 
-integer					:: istate, i, nat3
+integer					:: istate, i, nat3, numrequest
 integer					:: is, j
 #if defined (PROFILING)
 real(8)					:: start_loop_time1
@@ -13810,7 +13822,12 @@ call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 #endif
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-do i = 1, 4
+if (use_excluded_groups) then
+        numrequest = 4
+else
+        numrequest = 3
+end if
+do i = 1, numrequest
     call MPI_WaitAll(numnodes-1,request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -16395,7 +16412,7 @@ end subroutine MC_volume
 subroutine new_potential( old )
 
 type(ENERGIES), intent(in)		:: old	
-integer							:: istate,i
+integer							:: istate,i, numrequest
 
 !zero all energies
 E%potential = 0.0
@@ -16502,7 +16519,12 @@ end if
 
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-do i = 1, 4
+if (use_excluded_groups) then
+        numrequest = 4
+else
+        numrequest = 3
+end if
+do i = 1, numrequest
     call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
 end do
 
