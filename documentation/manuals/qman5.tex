@@ -1,16 +1,16 @@
 \documentclass[a4paper,11pt]{article}
 \usepackage[latin1]{inputenc}
 \usepackage[dvips,pdftex]{graphicx}
-\usepackage [small]{caption2} %Fixar bildtext
-\usepackage{parskip} %ger noindent och snygga styckeavstånd
+\usepackage [small]{caption2} %Set text in Figure captions
+\usepackage{parskip}          %ger noindent och snygga styckeavstånd
 \usepackage{fancyhdr}
-\usepackage{subfigure} %fixar att stapla bilder
+\usepackage{subfigure}        %fixar att stapla bilder
 \usepackage{amsmath}
 \usepackage{courier}
-\usepackage{longtable} %fixar långa tabeller över flera sidor
+\usepackage{longtable}        %fix long tables over various pages.
 \usepackage{supertabular}
-\usepackage{tabularx} %fixar långa tabeller
-\usepackage{multirow} %fixar nested tables
+\usepackage{tabularx}         %fix long tables
+\usepackage{multirow}         %fix nested tables
 \usepackage{bigstrut}
 \newcommand{\dirfig}{./pictures}
 \usepackage{hyperref}
@@ -2618,7 +2618,7 @@ example on page \pageref{fig:prm_ex}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% Ändrar numreringen på tabellerna%%%%%%%%
+%%%%%% Change Table Numbering          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \setcounter{table}{8}
 
@@ -2629,15 +2629,12 @@ example on page \pageref{fig:prm_ex}.
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline \bf{col.} & \bf{description} \\
 \hline 1 & atom type name, max 8 characters \\
-\hline 2 &  Lennard-Jones A parameter for type 1 pairs
-(kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{-6}$)
-for geometric combination or R$^*$ (Å) for arithmetic combination) \\
-\hline 3 & LJ A parameter type 2 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{-6}$) or R$^*$ (Å) \\
-\hline 4 &  LJ B parameter type 1 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{-3}$) or $\varepsilon$ (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$)\\
-\hline 5 & LJ A parameter type 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{-6}$) or R$^*$ (Å) \\
-\hline 6  & LJ B parameter type 2 and 3 (kcal$^{1/2}$ $\cdot$
-mol$^{-1/2}$
-$\cdot$ Å$^{-3}$) or $\varepsilon$(kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$)\\
+\hline 2 &  Lennard-Jones A parameter for type 1 pairs (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$)
+for geometric combination or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$) for arithmetic combination) \\
+\hline 3 & LJ A parameter type 2 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$)\\
+\hline 4 &  LJ B parameter type 1 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{3}$) or $\varepsilon$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$)\\
+\hline 5 & LJ A parameter type 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$)\\
+\hline 6  & LJ B parameter type 2 and 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}\cdot$Å$^{3}$) or $\varepsilon$(kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$)\\
 \hline 7 & mass of (extended) atom (u) \\
 \hline 8  & SYBYL atom type (5 character string), optional\\
 \hline
