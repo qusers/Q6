@@ -11,7 +11,7 @@ module CALC_NB
 	use MASKMANIP
 	use PARSE
 	use ATOM_MASK
-	use QATOM
+!	use QATOM
 	implicit none
 !constants
 	integer, parameter					::	MAX_LISTS = 20
@@ -21,12 +21,12 @@ module CALC_NB
 	integer, private					::	Nlists = 0
 	integer, private                    ::  N_nb_qp = 0
 	type NB_LIST_TYPE
-		integer							::  number_of_NB
+		integer							::  number_of_NB=0
 		integer, pointer				::	atom1(:), atom2(:)
 		real, pointer					::  AA(:), BB(:), qq(:)
 	end type NB_LIST_TYPE
 	type NBQ_LIST_TYPE
-		integer						:: number_of_NB
+		integer						:: number_of_NB=0
 		integer, pointer				:: atom1(:), atom2(:)
 		real, pointer					:: AA(:,:), BB(:,:), qq(:,:)
 	end type NBQ_LIST_TYPE
@@ -45,13 +45,6 @@ module CALC_NB
 	integer								:: p_first, p_last,q_first, q_last
 	end type NB_QP_TYPE
 	type(NB_QP_TYPE), private					:: qp_calc
-!for new FEP file loading routine
-	integer								:: states=0
-	real(8)								:: lamda(max_states)
-	integer(TINY), allocatable              ::      iqatom(:)
-	integer                                         ::      alloc_stat_gen
-	character(80)					:: fep_file
-	logical						::use_fep
 contains
 
 !*******************************************************************
@@ -186,7 +179,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 
 	length = nb_list%number_of_NB
 	lengthq = nbq_list%number_of_NB
-
+	if(.not.use_fep) then
 	do j=1,length
 		x1 = xin(3*nb_list%atom1(j)-2)
 		x2 = xin(3*nb_list%atom2(j)-2)
@@ -210,6 +203,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 			NB_Vel = NB_Vel + nb_list%qq(j)*invr
 		end if
 	end do
+	else
         do j=1,lengthq
                 x1 = xin(3*nbq_list%atom1(j)-2)
                 x2 = xin(3*nbq_list%atom2(j)-2)
@@ -238,7 +232,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 			end do
                 end if
         end do
-
+	end if
 end subroutine nb_calc_lists
 
 !*******************************************************************
@@ -697,7 +691,7 @@ integer function nb_qp_add(desc)
 	integer						:: ires, ats1, ats2, fstat
 	integer					:: str_start, str_end, totlen
 
-	use_fep = .false.
+!	use_fep = .false.
 
 	nb_qp_add = -1
 	if (N_nb_qp .ge. MAX_NB_QP) then
@@ -708,8 +702,8 @@ integer function nb_qp_add(desc)
 	Nlists = nres
 	allocate (qp_aves(nres), nb_list_res(nres))
 	allocate (nbq_list_res(nres))
-        allocate(iqatom(nat_solute))
-        iqatom(:)=0
+!        allocate(iqatom(nat_solute))
+!        iqatom(:)=0
 	qp_aves(:)%lj = 0.
 	qp_aves(:)%el = 0.
 	call mask_initialize(masks(1))
@@ -724,6 +718,7 @@ integer function nb_qp_add(desc)
 	write(*,*) 'Last residue of protein:   ',qp_calc%p_last
 
 !changed Paul Bauer to allow FEP file loading
+	if(.not.use_fep) then
 	write(*,*) 'Enter the name of a FEP file if wanted, or terminate with a .'
 	call getlin(fep_file,'')
 	if ((fep_file.eq.'.').or.(fep_file.eq.'')) then
@@ -759,7 +754,7 @@ integer function nb_qp_add(desc)
 		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
 	end if
 	end if
-
+	end if
 	write(*, *) 'Enter mask for q-atoms (e.g. <residue  xx yy>.)'
 	write(*, *) 'Finalize with end.'
  	ats2 =  maskmanip_make(masks(2))
@@ -808,7 +803,6 @@ integer function nb_qp_add(desc)
 	call mask_finalize(masks(1))
 	call mask_finalize(masks(2))
 	nb_qp_add = 1
-        deallocate(iqatom)
 end function nb_qp_add
 
 
@@ -853,189 +847,4 @@ integer :: ires
 end subroutine nb_qp_finalize
 
 !*******************************************************************
-
-subroutine get_fep
-! local variables
-character					::	libtext*80,qaname*2
-integer					::	i,j,k,iat
-!temp. array for reallocating long-range exclusion list
-integer(AI), pointer	::	tempexlong(:,:)
-
-! --- # states, # q-atoms
-if(.not. qatom_load_atoms(fep_file)) then
-        call die_general('failure to load Q-atoms from FEP file.')
-end if
-! set flags
-do i=1,nqat
-        if(iqseq(i) > 0 .and. iqseq(i) .le. nat_solute)  then
-                iqatom(iqseq(i)) = i
-        else if(iqseq(i) == 0) then
-                write(*,10) i
-        else
-                write(*,20) i, iqseq(i)
-                call die_general('invalid q-atom data')
-        end if
-end do
-10	format('>>> WARNING: Q-atom no. ',i2,' is not associated with a topology atom.')
-20	format('>>>>> ERROR: Q-atom no. ',i2,' has invalid topology number ',i5)
-!allocate memory for qatom charges
-
-
-allocate(qcrg(nqat,nstates), stat=alloc_stat_gen)
-call check_alloc_general(alloc_stat_gen,'Qatom charges')
-
-! --- copy topology charges
-
-do i=1,nqat
-        do j=1,nstates
-                qcrg(i,j)=crg(iqseq(i))
-        end do
-end do
-
-
-!initialize softcore lookup array
-allocate (sc_lookup(nqat,natyps+nqat,nstates))
-sc_lookup(:,:,:)=0.0
-
-!load rest of fep file
-if(.not. qatom_load_fep(fep_file)) then
-        call die_general('failure to load FEP file.')
-end if
-
-!Adapt LJ parameters to topology
-!If arithmetic combination rule take sqrt(epsilon) now
-if (qvdw_flag .and. ivdw_rule .eq. 2 ) then
-        qbvdw(:,1) = sqrt( qbvdw(:,1) )
-        qbvdw(:,3) = sqrt( qbvdw(:,3) )
-end if
-
-!remove redefined bonded interactions from topology
-if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
-        write(*,*)
-        call centered_heading('Removing redefined interactions from topology','-')
-230		format('type',t10,' atom1 atom2 atom3 atom4')
-        write(*,230)
-231		format(a,t10,4i6)
-        !remove bonds that were redefined
-        do i=1,nbonds
-                do j=1,nqbond
-                        if ( (bnd(i)%i==qbnd(j)%i .and. bnd(i)%j==qbnd(j)%j) .or. &
-                                (bnd(i)%i==qbnd(j)%j .and. bnd(i)%j==qbnd(j)%i) ) then
-                                bnd(i)%cod = 0
-                                write (*,231) 'bond',bnd(i)%i,bnd(i)%j
-                        end if
-                end do
-        end do
-
-        !remove angles that were redefined
-        do i=1,nangles
-                do j=1,nqangle
-                        if((ang(i)%i.eq.qang(j)%i .and. ang(i)%j.eq.qang(j)%j .and. &
-                                ang(i)%k.eq.qang(j)%k)                          .or. &
-                                (ang(i)%i.eq.qang(j)%k .and. ang(i)%j.eq.qang(j)%j .and. &
-                                ang(i)%k.eq.qang(j)%i) )                         then
-
-                                ang(i)%cod = 0
-                                write (*,231) 'angle',ang(i)%i,ang(i)%j,ang(i)%k
-                        end if
-                end do
-        end do
-
-        !remove torsions that were redefined
-        do i=1,ntors
-                do j=1,nqtor
-						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-                                tor(i)%cod /= 0) then
-                                tor(i)%cod = 0
-                                write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
-						end if
-                end do
-        end do
-
-
-        !remove impropers that were redefined
-        select case(ff_type)
-        case(FF_CHARMM) !special code for CHARMM
-                do i=1,nimps
-                        do j=1,nqimp
-                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-                                        (imp(i)%i .eq. lqimp(j)) .or. &
-                                        (imp(i)%l .eq. iqimp(j)) .or. &
-                                        (imp(i)%l .eq. lqimp(j))) .and. &
-                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-                                        (imp(i)%j .eq. jqimp(j))  .or. &
-                                        (imp(i)%j .eq. kqimp(j))  .or. &
-                                        (imp(i)%j .eq. lqimp(j))) .and. &
-                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-                                        (imp(i)%k .eq. jqimp(j)) .or. &
-                                        (imp(i)%k .eq. kqimp(j)) .or. &
-                                        (imp(i)%k .eq. lqimp(j))) .and. &
-                                        imp(i)%cod /= 0) then
-                                        imp(i)%cod = 0
-                                        write (*,231) &
-                                        'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
-                                end if
-                        end do
-                end do
-
-        case default
-        do i=1,nimps
-                do j=1,nqimp
-                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
-                                imp(i)%cod /= 0) then
-                                imp(i)%cod = 0
-                                write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
-                        end if
-                end do
-        end do
-        end select
-end if
-
-!check special exclusions
-!modify exclusion lists to inclue special exclusions between Q and non-Q
-if(nexspec > 0) then
-        allocate(tempexlong(2,nexlong+nexspec))
-        tempexlong(:, 1:nexlong) = listexlong(:, 1:nexlong)
-        deallocate(listexlong)
-        listexlong => tempexlong
-end if
-
-do k = 1, nexspec
-        i = exspec(k)%i
-        j = exspec(k)%j
-        if(i < 1 .or. i > nat_pro .or. j < 1 .or. j > nat_pro) then
-                write(*, 592) k, i, j
-                call die_general('invalid special exclusion data')
-        end if
-        !if one or more non-Q-atoms modify exclusion lists
-        if(iqatom(i)==0 .or. iqatom(j)==0) then
-                !With non-Q-atoms involved only accept all or no states
-                if(any(exspec(k)%flag(1:nstates))) then
-                        if(.not. all(exspec(k)%flag(1:nstates))) then
-                                write(*,594) k
-                                call die_general('invalid special exclusion data')
-                        else !exlcude in all states
-                                if(abs(j-i) <= max_nbr_range) then
-                                        if(i < j) then
-                                                listex(j-i,i) = .true.
-                                        else
-                                                listex(i-j,j) = .true.
-                                        end if
-                                else
-                                        nexlong = nexlong + 1
-                                        listexlong(1, nexlong) = i
-                                        listexlong(2, nexlong) = j
-                                end if
-                        end if
-                end if
-        end if
-end do
-592	format('>>>>> ERROR: Special exclusion pair ',i2,' (',i5,1x,i5,') is invalid')
-594	format('>>>>> ERROR: Non-Q-atom special excl. pair ',i2,' must be on in all or no states')
-end subroutine get_fep
-
 end module CALC_NB

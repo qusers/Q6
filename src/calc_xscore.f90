@@ -14,9 +14,9 @@ module CALC_XSCORE
 	use MASKMANIP
 	use TRJ
 	use	TOPO
-	use PRMFILE
+!	use PRMFILE
 	use INDEXER
-	use QATOM
+!	use QATOM
 	use MISC
 
 	implicit none
@@ -499,13 +499,13 @@ module CALC_XSCORE
 		integer						:: a,b					! topology indecies of bond atoms
 	end type heavybond
 
-	character*80		:: top_file, fep_file
+	character*80		:: top_file!, fep_file
 	character*80		:: atom_data_file
 	character*80		:: coord_file	
 
 	type(q_atom),private,allocatable,target	::	q_atoms(:)		! atoms in ligand
 	type(q_bond),private,allocatable,target	::	q_bonds(:)		! bonds in ligand
-	integer, allocatable					::	iqatom(:)		!one element per atom, 0 if not Q-atom, 
+!	integer, allocatable					::	iqatom(:)		!one element per atom, 0 if not Q-atom, 
 	
 	type(q_atom),private,allocatable,target	::	aHQ(:)			! heavy atoms in ligand
 	type(q_bond),private,allocatable,target	::	aHB(:)			! heavy bonds in ligand

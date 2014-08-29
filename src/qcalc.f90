@@ -47,7 +47,6 @@ program QCALC
 	type(CALC_KIND_TYPE)		::	cdef(MAX_CALC_KINDS)
 	type(CALC_TYPE)				::	calcs(MAX_CALCS)
 
-
 	!register the calculation kinds
 	call add_kind(desc='RMS coord. deviation',		key='rmsd', output=.true.)
 	call add_kind(desc='Least squares fit',				key='fit', output=.false.)
@@ -73,6 +72,7 @@ program QCALC
 
 	if(get_topology()) then		! attempt to load topology (req. user input)
 														! reads bnd(:) among other things
+		if (get_fepfile()) then
 		
 		call initialize			! initialize modules, mostly allocating arrays and def.ing constants
 		call add_calcs			! display calc menu and add calcs
@@ -85,6 +85,10 @@ program QCALC
                                
 		call finalize_topology
 		call finalize
+		else
+		write(*,901)
+901             format('>>>>> ERROR: Failed to load FEP file. Dieing')
+		end if
 	else
 		write(*,900)
 900		format('>>>>> ERROR: Failed to load topology. Exiting')
@@ -120,7 +124,38 @@ logical function get_topology()
 	get_topology = topo_load(topfile, require_version=4.)
 end function get_topology
 
-
+logical function get_fepfile()
+integer					:: str_start, str_end, totlen
+character*80				:: lambda 
+	write(*,*) 'To load a fep file, enter the name, or enter . for no FEP file'
+	call getlin(fep_file, '--> FEP file: ')
+	fep_file=trim(fep_file)
+	if ((fep_file.eq.'.').or.(fep_file.eq.'')) then
+		write(*,*) 'No FEP file loaded'
+		use_fep = .false.
+		get_fepfile=.true.
+	else
+		get_fepfile=prm_open(fep_file)
+		use_fep=.true.
+		call get_fep
+	write(*,*)'Give a value for the reaction coordinate (lambda values)'
+	call getlin(lambda,'')
+!        write(*,*) lambda	
+        str_start = 1
+        totlen = len_trim(lambda)
+        do while(str_start < totlen)
+                str_end = string_part(lambda, ' ', str_start)
+		states=states+1
+                lamda(states)=strtod(lambda(str_start:str_end))
+                str_start = str_end + 2
+        end do
+!	write(*,*)(lamda(str_start),str_start=1,states)
+	if (states.ne.nstates) then
+		write(*,*)'Number of lambda values not equal to states in FEP file'
+		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
+	end if
+	end if
+end function get_fepfile
 subroutine initialize
 	allocate(xin(3*nat_pro))   ! contains all coordinates, 3*no_atoms
 	call rms_initialize
@@ -175,6 +210,9 @@ subroutine finalize
 			case('nb_prot_qatom')
 			    call nb_qp_finalize()
 			case('dist', 'angle', 'torsion', 'improper')
+				if (use_fep) then
+				call geom_finalize()
+				end if
 				!nothing needed
 				
 			case('chemscore')
