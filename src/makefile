@@ -25,8 +25,8 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
 
 ################################################################################
 # OSX Mavericks using gfortran
@@ -73,7 +73,8 @@ else ifeq ($(COMP),ibm)
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy 
+	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	DEBUG_FC=	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -82,8 +83,8 @@ else ifeq ($(COMP),gcc)
 	OMPI_FCFLAGS=	${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
-	DEBUG=          -fbacktrace -g ${FC_OPT} -Wall	
-	DEBUGMPI=       -fbacktrace -g ${FC_OPT} -Wall
+	DEBUG=          -fbacktrace -g ${DEBUG_FC}	
+	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}
 
 else
 	FC=		gfortran
@@ -128,7 +129,7 @@ qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qfep5: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p: qatom.o
+qcalc5 qdyn5 qdum5 qdyn5p: qatom.o exc.o
 
 qcalc5 qprep5 qfep5: parse.o
 
@@ -204,6 +205,9 @@ calc_rmsf.o:calc_rmsf.f90 calc_base.o maskmanip.o
 eigen.o:eigen.f90
 	${FC} ${FFLAGS} -c $<
 
+exc.o:exc.f90 misc.o qatom.o maskmanip.o
+	${FC} ${FFLAGS} -c $<
+
 index.o:index.f90
 	${FC} ${FFLAGS} -c $<
 
@@ -213,13 +217,13 @@ mask.o:	mask.f90 topo.o
 maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
-md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o
+md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 
 md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o
+	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 exc.o -o md_dum.o
 
-md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o
+md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c md.f90 -o md_mpi.o
 
