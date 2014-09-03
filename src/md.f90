@@ -1677,8 +1677,10 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case default
         do i=1,nimps
                 do j=1,nqimp
-                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+                        if(((imp(i)%i.eq.iqimp(j) .and.  imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j) .and. imp(i)%l.eq.lqimp(j)) .or. &
+                                (imp(i)%i.eq.iqimp(j) .and. imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.lqimp(j) .and. imp(i)%l.eq.kqimp(j)) .or. &
+                                (imp(i)%i.eq.lqimp(j) .and. imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j) .and. imp(i)%l.eq.iqimp(j)) .or. &
+                                (imp(i)%i.eq.lqimp(j) .and. imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.iqimp(j) .and. imp(i)%l.eq.jqimp(j))) .and. &
                                 imp(i)%cod /= 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
