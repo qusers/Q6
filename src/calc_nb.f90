@@ -708,15 +708,34 @@ integer function nb_qp_add(desc)
 	qp_aves(:)%el = 0.
 	call mask_initialize(masks(1))
 	call mask_initialize(masks(2))
-
+!Added error handling if the user wants to be smart
 	write(*,*) ''
 	qp_calc%p_first = get_int_arg("Enter first residue of protein:")
 	write(*,*) ''
 	write(*,*) 'First residue of protein:   ',qp_calc%p_first
+	if (qp_calc%p_first .lt. 1) then
+		write(*,*) 'First residue not valid as ', qp_calc%p_first
+		write(*,*) 'First residue set to 1'
+		qp_calc%p_first = 1
+	elseif(qp_calc%p_first.gt.nres) then
+		write(*,*) 'First residue is larger than number of residues in the topology'
+		write(*,*) 'First residue set to ', nres
+		qp_calc%p_first = nres
+	endif
 	qp_calc%p_last = get_int_arg("Enter last residue of protein:")
 	write(*,*) ''
 	write(*,*) 'Last residue of protein:   ',qp_calc%p_last
-
+	if (qp_calc%p_last .gt. nres ) then
+		write(*,*) 'Last residue is larger than number of residues in the topology'
+		write(*,*) 'Last residue set to ',nres
+		qp_calc%p_last = nres
+	elseif(qp_calc%p_last.lt.qp_calc%p_first) then
+		write(*,*) 'Last residue is smaller than first residue'
+		write(*,*) 'Last residue set to first residue'
+		qp_calc%p_last = qp_calc%p_first
+	end if
+	write(*,*) 'First residue ', qp_calc%p_first
+	write(*,*) 'Last residue ', qp_calc%p_last
 !changed Paul Bauer to allow FEP file loading
 	if(.not.use_fep) then
 	write(*,*) 'Enter the name of a FEP file if wanted, or terminate with a .'
