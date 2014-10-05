@@ -771,6 +771,15 @@ integer function nb_qp_add(desc)
 	if (states.ne.nstates) then
 		write(*,*)'Number of lambda values not equal to states in FEP file'
 		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
+		stop 666
+	end if
+	do states = 1, nstates
+		totlambda = totlambda + lamda(states)
+	end do
+	if(( 1-totlambda).gt.eps)  then
+		write(*,*) 'Lambda values do not add up to one, aborting'
+		write(*,*) 'Total value is ',totlambda
+		stop 666
 	end if
 	end if
 	end if

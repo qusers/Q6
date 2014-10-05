@@ -18,6 +18,9 @@ module CALC_BASE
 	integer					:: states
 	character(80)					:: fep_file
 	logical						::use_fep
+        real*8                                  :: totlambda=0
+        real*8,parameter                        :: eps=0.000001
+
    ! place FEP file loading routine here so all processes can use it
 
 contains

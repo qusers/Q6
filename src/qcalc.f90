@@ -150,10 +150,23 @@ character*80				:: lambda
                 str_start = str_end + 2
         end do
 !	write(*,*)(lamda(str_start),str_start=1,states)
-	if (states.ne.nstates) then
-		write(*,*)'Number of lambda values not equal to states in FEP file'
-		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
-	end if
+        if (states.ne.nstates) then
+                write(*,*)'Number of lambda values not equal to states in FEP file'
+                write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
+                stop 666
+        end if
+        do states = 1, nstates
+                totlambda = totlambda + lamda(states)
+		write(*,666) 'Lambda in state ', states, ' = ', lamda(states)
+666	format(a,i2,a,f10.3)
+        end do
+        if(( abs(1._8 - totlambda)).gt.eps)  then
+                write(*,*) 'Lambda values do not add up to one, aborting'
+667	format(a,f10.3)
+                write(*,667) 'Total value is ',totlambda
+                stop 666
+        end if
+
 	end if
 end function get_fepfile
 subroutine initialize

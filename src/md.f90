@@ -4296,7 +4296,7 @@ do istep = 0, nsteps-1
                         time_completion = int(time_per_step*(nsteps-istep)/60000)
                         time0 = time1
                         write(*,222) time_per_step, time_completion
-222    format('Milliseconds per step (wall-clock): ',f5.2,&
+222    format('Milliseconds per step (wall-clock): ',f6.3,&
                                 ' Estimated completion in',i6,' minutes')
                 end if
 
