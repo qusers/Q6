@@ -28,6 +28,7 @@ include "mpif.h"
 !-----------------------------------------------------------------------
 !	Constants
 real(8)			::	pi, deg2rad	!set in sub startup
+real(8)			::	zero = 0.0
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
 real, parameter		::  rho_wat = 0.0335  ! molecules / A**3
@@ -85,13 +86,15 @@ real(8)						:: new_boxl(3)
 
 
 ! --- MD parameters
+! friction, gkT, randf and randv are variables to be used for the Langevin thermostat - A. Barrozo
 integer						::	nsteps, istep
 integer						::	iseed
 logical						::	restart
-real(8)						::	dt, Temp0, Tmaxw, tau_T
+real(8)						::	dt, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv
 logical						::	shake_solvent, shake_solute
 logical						::	shake_hydrogens
 logical						::	separate_scaling
+character(len=20)				::	thermostat
 
 ! --- Non-bonded strategy
 logical						::	use_LRF
@@ -2874,15 +2877,17 @@ write (*,10) nsteps, stepsize
 ! convert to internal time units once and for all.
 dt=0.020462*stepsize
 
-! --- Temperature etc.
+! --- Temperature, Thermostat etc.
 if(.not. prm_get_real8_by_key('temperature', Temp0)) then
         write(*,*) '>>> ERROR: temperature not specified (section MD)'
         initialize = .false.
 end if
+
 if(.not. prm_get_real8_by_key('bath_coupling', tau_T)) then
         write(*,*) 'Temperature bath relaxation time tau_T set to default'
         tau_T = tau_T_default
 end if
+
 write (*,15) Temp0,tau_T
 tau_T=0.020462*tau_T
 if(Temp0 <= 0) then
@@ -2893,6 +2898,24 @@ end if
 if(tau_T < dt) then
         write(*,'(a)') '>>> Error: tau_t must be >= stepsize.'
         initialize = .false.
+end if
+
+if(.not. prm_get_string_by_key('thermostat', thermostat)) then
+        write(*,*) 'No thermostat chosen. Berendsen thermostat will be used.'
+        thermostat = 'berendsen'
+
+else if( thermostat == 'langevin' ) then
+	write(*,*) 'Thermostat chosen: ', thermostat
+	if(.not. prm_get_real8_by_key('langevin_friction', friction)) then
+		friction = 1/tau_T !***according to GROMACS manual, this is their default value. Need to check - A. Barrozo
+		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
+		write(*,*) 'Langevin thermostat friction constant set to default: 1/tau_T'
+	end if
+else if( thermostat /= 'berendsen' .and. thermostat /= 'langevin' ) then
+	write(*,*) '>>> ERROR: this thermostat does not exist in Q'
+	initialize = .false.
+else
+        write(*,*) 'Thermostat chosen: ', thermostat
 end if
 
 yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .true.)
@@ -4070,10 +4093,9 @@ end subroutine make_pair_lists
 subroutine maxwell
 ! *** local variables
 integer						:: i,j,k
-real(8)						:: zero,sd,vg,kT
+real(8)						:: sd,vg,kT
 
 !	Generate Maxwellian velocities 
-zero  = 0.0
 kT = Boltz*Tmaxw
 
 do i=1,natom
@@ -4167,18 +4189,18 @@ if (detail_temps) then
 	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent)
 end if
 
-
-if (separate_scaling) then
-	if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - 1.0
-	Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
-	if ( Tfree_solute .ne. 0 ) Tscale_solute = Temp0/Tfree_solute - 1.0
-	Tscale_solute = sqrt ( 1 + dt/tau_T * Tscale_solute )
-else
-	if ( Tfree .ne. 0 ) Tscale_solvent = Temp0/Tfree - 1.0
-	Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
-	Tscale_solute = Tscale_solvent
+if (thermostat == 'berendsen') then
+	if (separate_scaling) then
+		if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - 1.0
+		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
+		if ( Tfree_solute .ne. 0 ) Tscale_solute = Temp0/Tfree_solute - 1.0
+		Tscale_solute = sqrt ( 1 + dt/tau_T * Tscale_solute )
+	else
+		if ( Tfree .ne. 0 ) Tscale_solvent = Temp0/Tfree - 1.0
+		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
+		Tscale_solute = Tscale_solvent
+	end if
 end if
-
 
 180 format ('>>> WARNING: hot atom, i =',i10,' Temp(i)=',f10.2)
 
@@ -4376,6 +4398,9 @@ if(nodeid .eq. 0) then
 start_loop_time1 = rtime()
 #endif
 
+! if Berendsen thermostat was chosen, applied here
+if( thermostat == 'berendsen' ) then
+
 		!solute atoms first
         do i=1,nat_solute
                 i3=i*3-3
@@ -4407,6 +4432,32 @@ start_loop_time1 = rtime()
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
         end do
+! --- end of the velocity reescaling for the Berendsen ---
+! if Langevin thermostat was chosen, applied here
+else if( thermostat == 'langevin' ) then
+                !solute atoms first
+        do i=1,natom
+                i3=i*3-3
+		randv= sqrt (gkT/winv(i))
+                call gauss(zero,randv,randf,iseed)
+                v(i3+1)= v(i3+1)*(1-friction*dt)-(d(i3+1)-randf)*winv(i)*dt
+                xx(i3+1) = x(i3+1)
+                x(i3+1) = x(i3+1) + v(i3+1)*dt
+
+                call gauss(zero,randv,randf,iseed)
+                v(i3+2)= v(i3+2)*(1-friction*dt)-(d(i3+2)-randf)*winv(i)*dt
+                xx(i3+2) = x(i3+2)
+                x(i3+2) = x(i3+2) + v(i3+2)*dt
+
+                call gauss(zero,randv,randf,iseed)
+                v(i3+3)= v(i3+3)*(1-friction*dt)-(d(i3+3)-randf)*winv(i)*dt
+                xx(i3+3) = x(i3+3)
+                x(i3+3) = x(i3+3) + v(i3+3)*dt
+        end do
+end if
+! --- end of the Langevin dynamics ---
+! --- end of thermostat section ---
+
 #if defined (PROFILING)
 profile(11)%time = profile(11)%time + rtime() - start_loop_time1
 #endif
@@ -4429,7 +4480,6 @@ profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 #endif
 
 end if !if(nodeid .eq. 0)
-
 
 
 #if defined(USE_MPI)

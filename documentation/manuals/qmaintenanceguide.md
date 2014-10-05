@@ -80,7 +80,9 @@ compilation depending on the compiler available in your machine and the set of
 programs you want to compile, for example, the [all] option stands for compilation
 of programs except for the parallel version of qdyn5.
 
-To compile using the Intel fortran compiler, and a debuggable (via gdb) version of the code you would give the following options to the make command:
+To compile  using the  Intel fortran compiler,  and a  debuggable (via
+gdb) version of  the code you would give the  following options to the
+make command:
 
 ```bash
 make debug COMP=ifort
@@ -90,22 +92,31 @@ make debug COMP=ifort
 
 Compiling in Windows XP has been tested to work for the serial version of the code, not the parallel one yet.
 
-The successful compilation was done using MinGW to be able to use the GCC (Gnu Compiler Collection), therefore you will have to first install MinGW, then make sure that the location of it is in your path (C:\MinGW\bin) and then you can compile in the command prompt in the same way it's done in unix flavors, that is:
+The successful compilation was done using  MinGW to be able to use the
+GCC  (Gnu  Compiler Collection),  therefore  you  will  have to  first
+install MinGW, then make sure that  the location of it is in your path
+(C:\MinGW\bin) and then  you can compile in the  command prompt in the
+same way it's done in unix flavors, that is:
 
 ```bat
 make all COMP=gcc
 ```
 
-It is quite possible that the compilation will go trough without issues with the intel compiler, but this has not been tested yet.
+It  is quite  possible that  the  compilation will  go trough  without
+issues with the intel compiler, but this has not been tested yet.
 
 ###Linux - Generic(gfortran)
-By default if a second COMP=[compilername] option is not given to the make command the make program will use as defaults the gfortran compiler options:
+By default if a second  COMP=[compilername] option is not given to the
+make  command the  make  program  will use  as  defaults the  gfortran
+compiler options:
 ```bash
 make all
 ```
 
 ###Mac OSX (mavericks)
-The compilation of the Q set of programs using the gfortran compiler needs a few different options to those used in say, linux, so in order to compile in the most recent version of the Mac OSX, you need to use:
+The compilation of  the Q set of programs  using the gfortran compiler
+needs a few different options to those used in say, linux, so in order
+to compile in the most recent version of the Mac OSX, you need to use:
 ```bash
 make all COMP=osx
 ```
@@ -150,9 +161,10 @@ make mpi COMP=ifort
 
 This will create the parallel executable qdyn5p
 
-Once compilations is succesful you run the simple test in the /test folder
-with  the run_test_mpi.sh script.  You  would only have to  create another script for the slurm queue where you  make sure to load the openmpi libraries
-with:
+Once compilations  is succesful you run  the simple test  in the /test
+folder with the run_test_mpi.sh script.  You would only have to create
+another script  for the slurm  queue where you  make sure to  load the
+openmpi libraries with:
 ```bash
 module load openmpi-x86_64
 ```
@@ -171,7 +183,11 @@ make mpi COMP=gcc
 
 ###Linux - Scientific Linux 6.5 (tintin) AMD
 
-To compile at tintin follow these steps:
+At tintin both gcc and intel fotran compilers are available.
+The architecture of the computer nodes is of the AMD family.
+Each node has two Opteron 6220 cpu's having 8 nodes each.
+
+To compile at tintin using gcc use these recipe:
 ```bash
 
 unset SSH_ASKPASS
@@ -179,7 +195,8 @@ unset SSH_ASKPASS
 ###USE YOUR USERNAME INSTEAD OF esguerra
 git clone https://esguerra@github.com/qusers/qsource.git 
 
-###It will ask for your password and download it showing something like:
+###It will ask for your password and download the full qsource repository 
+###containing code and documentation showing something like:
 remote: Counting objects: 934, done.
 remote: Compressing objects: 100% (449/449), done.
 remote: Total 934 (delta 476), reused 934 (delta 476)
@@ -195,6 +212,14 @@ make all COMP=gcc
 module load openmpi/1.4
 make mpi COMP=gcc
 ```
+For compilation using the ifortran compiler:
+
+```bash
+module load intel openmpi
+make all COMP=ifort
+make mpi COMP=ifort
+```
+
 
 ##Updating the Q web site
 
