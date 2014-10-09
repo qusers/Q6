@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash  -l
 
 #make benchmark
 #run 20 different random seeds to get some variation
@@ -8,12 +8,12 @@
 #as always, beer-ware license
 
 set -e
-QDIR=/data/work/q_source
+QDIR=/data/work/q_source/bin
 BENCHMARKS=20
 PARALLEL=4
 RUNNING=0
 wd=`pwd`
-qbinary=$QDIR/bin/qdyn5
+qbinary=$QDIR/qdyn5
 # Useful vars
 OK="(\033[0;32m   OK   \033[0m)"
 FAILED="(\033[0;31m FAILED \033[0m)"
@@ -32,11 +32,10 @@ fi
 
 
 function run_test() {
-rm eq{1..5}.log dc{1..5}.log >& /dev/null
-
+rm -f eq{1..5}.log dc{1..5}.log >& /dev/null
 for step in {1..5}
 do
- echo -n "Running equilibration step ${step} of 5                         "
+ echo -n "Running equilibration step ${step} of 5"
  if $qbinary eq${step}.inp > eq${step}.log
  then echo -e "$OK"
  else
@@ -48,7 +47,7 @@ done
 
 for step in {1..5}
 do
- echo -n "Running production run step ${step} of 5                        "
+ echo -n "Running production run step ${step} of 5"
  if $qbinary dc${step}.inp > dc${step}.log
   then echo -e "$OK"
  else
@@ -59,24 +58,7 @@ do
 done
 }
 
-function wait_forend() {
-sleep 60
-for ((checkrun=$RUNNING;checkrun>=0;checkrun--)) ; do
-if [ ! -d /proc/${RARRAY[${checkrun}]} ] ; then
-#job has finished
-#change array to account for jobs above
-
-	for ((move=$checkrun;move<$RUNNING;move++)) ; do
-		before=$(( $move + 1  ))
-		RARRAY[$move]=${RAARRAY[$before]}
-	done
-	RUNNING=$(( $RUNNING -1 ))	
-fi
-done
-}
-
 for ((run=1;run<=$BENCHMARKS;run++)) ; do
-
 rm -rf $wd/run-$run
 mkdir $wd/run-$run
 cp *inp $wd/run-$run
@@ -90,13 +72,13 @@ sed -i s/"random_seed.*1"/"random_seed                $RANDOM"/g $wd/run-$run/eq
 
 cd $wd/run-$run
 
-run_test &>logfile &
+run_test &>logfile & 
 RARRAY[$RUNNING]=$$
 RUNNING=$(( ${RUNNING} + 1 ))
 cd $wd
 
 if [ $RUNNING -eq $PARALLEL ] ; then
-wait
+wait 
 for ((testr=$run;testr>=$(($run - $RUNNING + 1));testr--)) ; do
 	err=`grep "terminated normally" $wd/run-$testr/dc5.log | wc -l`
 	if [ $err -eq 0 ] ; then
@@ -105,6 +87,9 @@ for ((testr=$run;testr>=$(($run - $RUNNING + 1));testr--)) ; do
 	exit 666
 	fi
 done
+sleep 120
+exit
+
 RUNNING=0
 fi
 

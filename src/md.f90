@@ -2935,6 +2935,7 @@ if(.not. prm_get_string_by_key('thermostat', name_thermostat)) then
 
 else if( name_thermostat == 'langevin' ) then
 	write(*,*) 'Thermostat chosen: ', name_thermostat
+	thermostat = LANGEVIN
 	if(.not. prm_get_real8_by_key('langevin_friction', friction)) then
 		friction = 1/tau_T !***according to GROMACS manual, this is their default value. Need to check - A. Barrozo
 		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
