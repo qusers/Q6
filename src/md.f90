@@ -1592,11 +1592,16 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         !remove torsions that were redefined
         do i=1,ntors
                 do j=1,nqtor
-						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-                                tor(i)%cod /= 0) then
+			if(( (tor(i)%i.eq.qtor(j)%i .and. tor(i)%j.eq.qtor(j)%j .and. &
+				tor(i)%k.eq.qtor(j)%k .and. tor(i)%l.eq.qtor(j)%l) .or. &
+				(tor(i)%i.eq.qtor(j)%l .and. tor(i)%j.eq.qtor(j)%k .and. &
+				tor(i)%k.eq.qtor(j)%j .and. tor(i)%l.eq.qtor(j)%i )) .and. &
+				tor(i)%cod .ne. 0) then
+!			if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
+!			        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
+!                               (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
+!				tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
+!                                tor(i)%cod /= 0) then
                                 tor(i)%cod = 0
                                 write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
 						end if
@@ -1609,19 +1614,31 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case(FF_CHARMM) !special code for CHARMM
                 do i=1,nimps
                         do j=1,nqimp
-                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-                                        (imp(i)%i .eq. lqimp(j)) .or. &
-                                        (imp(i)%l .eq. iqimp(j)) .or. &
-                                        (imp(i)%l .eq. lqimp(j))) .and. &
-                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-                                        (imp(i)%j .eq. jqimp(j))  .or. &
-                                        (imp(i)%j .eq. kqimp(j))  .or. &
-                                        (imp(i)%j .eq. lqimp(j))) .and. &
-                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-                                        (imp(i)%k .eq. jqimp(j)) .or. &
-                                        (imp(i)%k .eq. kqimp(j)) .or. &
-                                        (imp(i)%k .eq. lqimp(j))) .and. &
-                                        imp(i)%cod /= 0) then
+				if ( ((	(imp(i)%i.eq.qimp(j)%i) .or. &
+					(imp(i)%i.eq.qimp(j)%l) .or. &
+					(imp(i)%l.eq.qimp(j)%i)) .and. &
+				     (	(imp(i)%j.eq.qimp(j)%l) .or. &
+					(imp(i)%j.eq.qimp(j)%i) .or. &
+					(imp(i)%j.eq.qimp(j)%j) .or. &
+					(imp(i)%j.eq.qimp(j)%k)) .and. &
+				     (	(imp(i)%k.eq.qimp(j)%i) .or. &
+					(imp(i)%k.eq.qimp(j)%j) .or. &
+					(imp(i)%k.eq.qimp(j)%k) .or. &
+					(imp(i)%k.eq.qimp(j)%l))) .and. &
+				     (	imp(i)%cod .ne. 0)) then
+!                                if(((imp(i)%i .eq. iqimp(j)) .or. &
+!                                        (imp(i)%i .eq. lqimp(j)) .or. &
+!                                        (imp(i)%l .eq. iqimp(j)) .or. &
+!                                        (imp(i)%l .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%j .eq. iqimp(j)) .or. &
+!                                        (imp(i)%j .eq. jqimp(j))  .or. &
+!                                        (imp(i)%j .eq. kqimp(j))  .or. &
+!                                        (imp(i)%j .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%k .eq. iqimp(j)) .or. &
+!                                        (imp(i)%k .eq. jqimp(j)) .or. &
+!                                        (imp(i)%k .eq. kqimp(j)) .or. &
+!                                        (imp(i)%k .eq. lqimp(j))) .and. &
+!                                        imp(i)%cod /= 0) then
                                         imp(i)%cod = 0
                                         write (*,231) &
                                         'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
@@ -1632,9 +1649,19 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case default
         do i=1,nimps
                 do j=1,nqimp
-                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
-                                imp(i)%cod /= 0) then
+                        if(( (imp(i)%i.eq.qimp(j)%i) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%l) .and. (imp(i)%l.eq.qimp(j)%i)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%k)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%i))) then
+!                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
+!                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+!                                imp(i)%cod ne. 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
                         end if
@@ -14296,7 +14323,8 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqimp
 
-ic = qimpcod(ip,istate)
+ic = qimp(ip)%cod(istate)
+!ic = qimpcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14314,11 +14342,14 @@ do im = 1, nimp_coupl
 end do
 
 
-
-i  = iqimp(ip)
-j  = jqimp(ip)
-k  = kqimp(ip)
-l  = lqimp(ip)
+i = qimp(ip)%i
+j = qimp(ip)%j
+k = qimp(ip)%k
+l = qimp(ip)%l
+!i  = iqimp(ip)
+!j  = jqimp(ip)
+!k  = kqimp(ip)
+!l  = lqimp(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -14354,9 +14385,11 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = phi - qimp0(ic)
+arg = phi - qimplib(ic)%imp0
+!arg = phi - qimp0(ic)
 arg = arg - 2.*pi*nint(arg/(2.*pi))
-dv  = qfkimp(ic)*arg
+dv = qimplib(ic)%fk*arg
+!dv  = qfkimp(ic)*arg
 pe  = 0.5*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
@@ -14442,7 +14475,8 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqtor
 
-ic = qtorcod(ip,istate)
+ic = qtor(ip)%cod(istate)
+!ic = qtorcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14459,10 +14493,14 @@ do im = 1, ntor_coupl
    end if
 end do
 
-i  = iqtor(ip)
-j  = jqtor(ip)
-k  = kqtor(ip)
-l  = lqtor(ip)
+i = qtor(ip)%i
+j = qtor(ip)%j
+k = qtor(ip)%k
+l = qtor(ip)%l
+!i  = iqtor(ip)
+!j  = jqtor(ip)
+!k  = kqtor(ip)
+!l  = lqtor(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -14501,10 +14539,13 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = qrmult(ic)*phi-qdeltor(ic)
-pe  = qfktor(ic)*(1.0+cos(arg))
+arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
+pe = qtorlib(ic)%fk*(1.0+cos(arg))
+!arg = qrmult(ic)*phi-qdeltor(ic)
+!pe  = qfktor(ic)*(1.0+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
+dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
+!dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
