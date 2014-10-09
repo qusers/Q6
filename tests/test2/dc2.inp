@@ -18,8 +18,8 @@ non_bond                  25
 output                    50
 
 [files]
-topology                  prep/lig_w.top
-fep                       prep/lig_w.fep
+topology                  lig_w.top
+fep                       lig_w.fep
 restart                   dc1.re
 final                     dc2.re
 

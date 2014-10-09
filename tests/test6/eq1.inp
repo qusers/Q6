@@ -1,19 +1,20 @@
 [MD]
 steps                    100
 stepsize                   0.1
-initial_temperature        0.1
-random_seed                1
 temperature                0.1
 bath_coupling              1
+thermostat	langevin
+separate_scaling        on
+random_seed		1
+initial_temperature        0.1
 shake_hydrogens           off
 lrf                       on
-separate_scaling		off
 
-[sphere]
-shell_radius              16
-shell_force               20
+[PBC]
 
-[cut_offs]
+[cut-offs]
+q_atom			12
+lrf			12
 
 [intervals]
 non_bond                  25

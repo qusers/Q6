@@ -62,9 +62,9 @@ done
 
 echo -n "Checking initial energy consistency                         "
 
-INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./ p }' \
-            eq1.log`
-INIT_QSURR_BM="Q-surr. 1 1.0000      3.12    139.43"
+#INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./p }' eq1.log`
+INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ p' eq1.log | grep "Q-surr"` 
+INIT_QSURR_BM="Q-surr. 1 1.0000    -14.07      3.11"
 
 if [ "$INIT_QSURR" == "$INIT_QSURR_BM" ]
 then echo -e "$OK"
@@ -81,10 +81,10 @@ fi
 # (Need not always be true, but in this case it is.)                          #
 ###############################################################################
 
-sed -n '/Energy summary at step      0/,/==/ { /SUM/ p }' dc{2..5}.log \
-    > step0.tmp
-sed -n '/FINAL  Energy summary/,/==/ { /SUM/ p }' dc{1..4}.log \
-    > final.tmp
+sed -n '/Energy summary at step      0/,/==/ p' dc{2..5}.log \
+ | grep "SUM"    > step0.tmp
+sed -n '/FINAL  Energy summary/,/==/ p' dc{1..4}.log \
+ | grep "SUM"   > final.tmp
 
 step=1
 paste -d' ' final.tmp step0.tmp | tr -s [:blank:] | \
@@ -117,9 +117,12 @@ rm {final,step0}.tmp
 # expected to be. The further the simulation runs, the more random these      #
 # energies become. The compilation should reproduce the energies in the       #
 # first few steps and then fall somewhere in the ball park of the benchmark   #
-# bounds. (Benchmark bounds were generated from a 'trusted' version of        #
-# Q by taking the average +/- std dev from ten runs with different random     #
-# seeds. Hence this is a statistical figure of measure.)                      #
+# bounds. (Benchmark bounds were generated from a version of Q tested         #
+# with the old benchmark by taking the average +/- std dev from twenty  runs  #
+# with different random seeds. Hence this is a statistical figure of measure.)#
+# you can make your own benchmark for a trusted version using the             #
+# run_test_serial_benchmark.sh script. It will run 20 different seeds by      #
+# default and generate a new qsurr_benchmark.en file from them                #
 ###############################################################################
 
 echo -n "Checking that benchmark energies are present                "

@@ -12,3 +12,4 @@ obj/
 *DS_Store*
 *.DS_Store
 slurm*
+tests/test*/run-*
