@@ -233,12 +233,12 @@ integer function torsion_add(desc)
         if ((geom(Nmeas)%i.le.nat_solute).and.(geom(Nmeas)%j.le.nat_solute) .and. &
 		(geom(Nmeas)%k.le.nat_solute).and.(geom(Nmeas)%l.le.nat_solute)) then
                 do b = 1, nqtor
-                if((iqtor(b) == i .and. jqtor(b) == j .and. &
-                        kqtor(b) == k .and. lqtor(b) == l) .or. &
-                   (iqtor(b) == l .and. jqtor(b) == k .and. &
-                        kqtor(b) == j .and. lqtor(b) == i)) then
+                if((qtor(b)%i == i .and. qtor(b)%j == j .and. &
+                        qtor(b)%k == k .and. qtor(b)%l == l) .or. &
+                   (qtor(b)%i == l .and. qtor(b)%j == k .and. &
+                        qtor(b)%k == j .and. qtor(b)%l == i)) then
                         do states = 1, nstates
-                        geom(Nmeas)%qcod(states) = qtorcod(b,states)
+                        geom(Nmeas)%qcod(states) = qtor(b)%cod(states)
                         end do
                         geom(Nmeas)%cod = 0
                         geom(Nmeas)%is_fep = .true.
@@ -376,9 +376,9 @@ subroutine torsion_calc(i)
         elseif (geom(i)%is_fep) then !calc q energy
                 do states = 1 , nstates
                         if(geom(i)%qcod(states)>0) then
-			arg = qrmult(geom(i)%qcod(states))*phi-qdeltor(geom(i)%qcod(states))
+			arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
                         V = V + (lamda(states) * &
-                                qfktor(geom(i)%qcod(states))*(1.0+cos(arg)))
+                                qtorlib(ic)%fk*(1.0+cos(arg)))
                         end if
                 end do
                 write(*,100, advance='no') V

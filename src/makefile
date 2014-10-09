@@ -25,8 +25,8 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 
 ################################################################################
 # OSX Mavericks using gfortran
@@ -74,7 +74,6 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	DEBUG_FC=	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 

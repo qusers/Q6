@@ -627,7 +627,6 @@ deallocate(rstwal, stat=alloc_status)
 
 ! excluded groups
 deallocate(ST_gc, stat=alloc_status)
-
 #if defined (USE_MPI)
 !MPI arrays
 deallocate(nbpp_per_cgp ,stat=alloc_status)
@@ -1442,6 +1441,7 @@ integer :: iii
 close (3)
 if ( itrj_cycle .gt. 0 ) close (10)
 if ( iene_cycle .gt. 0 ) close (11)
+
 if (use_excluded_groups) then
         do iii=1,ngroups_gc
         close (ST_gc(iii)%fileunit)
@@ -1647,11 +1647,16 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         !remove torsions that were redefined
         do i=1,ntors
                 do j=1,nqtor
-						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-                                tor(i)%cod /= 0) then
+			if(( (tor(i)%i.eq.qtor(j)%i .and. tor(i)%j.eq.qtor(j)%j .and. &
+				tor(i)%k.eq.qtor(j)%k .and. tor(i)%l.eq.qtor(j)%l) .or. &
+				(tor(i)%i.eq.qtor(j)%l .and. tor(i)%j.eq.qtor(j)%k .and. &
+				tor(i)%k.eq.qtor(j)%j .and. tor(i)%l.eq.qtor(j)%i )) .and. &
+				tor(i)%cod .ne. 0) then
+!			if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
+!			        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
+!                               (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
+!				tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
+!                                tor(i)%cod /= 0) then
                                 tor(i)%cod = 0
                                 write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
 						end if
@@ -1664,19 +1669,31 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case(FF_CHARMM) !special code for CHARMM
                 do i=1,nimps
                         do j=1,nqimp
-                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-                                        (imp(i)%i .eq. lqimp(j)) .or. &
-                                        (imp(i)%l .eq. iqimp(j)) .or. &
-                                        (imp(i)%l .eq. lqimp(j))) .and. &
-                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-                                        (imp(i)%j .eq. jqimp(j))  .or. &
-                                        (imp(i)%j .eq. kqimp(j))  .or. &
-                                        (imp(i)%j .eq. lqimp(j))) .and. &
-                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-                                        (imp(i)%k .eq. jqimp(j)) .or. &
-                                        (imp(i)%k .eq. kqimp(j)) .or. &
-                                        (imp(i)%k .eq. lqimp(j))) .and. &
-                                        imp(i)%cod /= 0) then
+				if ( ((	(imp(i)%i.eq.qimp(j)%i) .or. &
+					(imp(i)%i.eq.qimp(j)%l) .or. &
+					(imp(i)%l.eq.qimp(j)%i)) .and. &
+				     (	(imp(i)%j.eq.qimp(j)%l) .or. &
+					(imp(i)%j.eq.qimp(j)%i) .or. &
+					(imp(i)%j.eq.qimp(j)%j) .or. &
+					(imp(i)%j.eq.qimp(j)%k)) .and. &
+				     (	(imp(i)%k.eq.qimp(j)%i) .or. &
+					(imp(i)%k.eq.qimp(j)%j) .or. &
+					(imp(i)%k.eq.qimp(j)%k) .or. &
+					(imp(i)%k.eq.qimp(j)%l))) .and. &
+				     (	imp(i)%cod .ne. 0)) then
+!                                if(((imp(i)%i .eq. iqimp(j)) .or. &
+!                                        (imp(i)%i .eq. lqimp(j)) .or. &
+!                                        (imp(i)%l .eq. iqimp(j)) .or. &
+!                                        (imp(i)%l .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%j .eq. iqimp(j)) .or. &
+!                                        (imp(i)%j .eq. jqimp(j))  .or. &
+!                                        (imp(i)%j .eq. kqimp(j))  .or. &
+!                                        (imp(i)%j .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%k .eq. iqimp(j)) .or. &
+!                                        (imp(i)%k .eq. jqimp(j)) .or. &
+!                                        (imp(i)%k .eq. kqimp(j)) .or. &
+!                                        (imp(i)%k .eq. lqimp(j))) .and. &
+!                                        imp(i)%cod /= 0) then
                                         imp(i)%cod = 0
                                         write (*,231) &
                                         'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
@@ -1687,11 +1704,19 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case default
         do i=1,nimps
                 do j=1,nqimp
-                        if(((imp(i)%i.eq.iqimp(j) .and.  imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j) .and. imp(i)%l.eq.lqimp(j)) .or. &
-                                (imp(i)%i.eq.iqimp(j) .and. imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.lqimp(j) .and. imp(i)%l.eq.kqimp(j)) .or. &
-                                (imp(i)%i.eq.lqimp(j) .and. imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j) .and. imp(i)%l.eq.iqimp(j)) .or. &
-                                (imp(i)%i.eq.lqimp(j) .and. imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.iqimp(j) .and. imp(i)%l.eq.jqimp(j))) .and. &
-                                imp(i)%cod /= 0) then
+                        if(( (imp(i)%i.eq.qimp(j)%i) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%l) .and. (imp(i)%l.eq.qimp(j)%i)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%k)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%i))) then
+!                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
+!                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+!                                imp(i)%cod ne. 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
                         end if
@@ -2209,7 +2234,6 @@ if (use_excluded_groups) then
         deallocate(tempmask,stat=alloc_status)
 end if
 
-
 !Setting all vars not sent to slaves to 2147483647. To avoid hidden bugs.
 if (nodeid .ne. 0) then 
 shake_constraints=maxint 
@@ -2218,7 +2242,6 @@ Ndegf=maxint
 Ndegfree=maxint
 xwcent(:)=maxreal 
 end if
-
 !first part completed, syncing again
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
@@ -2408,7 +2431,6 @@ call MPI_Bcast(list14long, 2*n14long, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(A
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
-
 !end of part -> sync
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
@@ -2430,7 +2452,7 @@ call check_alloc('Q-atom arrays')
 	if (use_excluded_groups) then
 		allocate(EQ_gc(ngroups_gc,nstates),stat=alloc_status)
 		call check_alloc('Q-energy arrays excluded groups')
-	end if
+    end if
 end if
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
@@ -2501,7 +2523,6 @@ end if
 
 !and we sync again
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
 !Finally allocate for  slaves:E_send, EQ_send
 !For master :E_recv,d_recv
 call allocate_mpi  
@@ -3347,7 +3368,6 @@ if(nstates > 0 ) then
 98			format ('lambda-values      = ',10f8.5)
         end if
 end if
-
 !Option to make additional calculation with atom groups excluded from the
 !energy calculation to provide 'real' group contribution
 !Added Paul Bauer 2014
@@ -3415,11 +3435,6 @@ if ( ngroups_gc .gt. 0 ) then
 	end do
 
 end if
-
-		
-		
-		
-
 
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
@@ -10077,7 +10092,6 @@ do istate = 1, nstates
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do 
         end if
-
 end do ! istate
 
 end do
@@ -10189,7 +10203,6 @@ subroutine nonbon2_qp_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
 	end do ! istate
 
   end do
@@ -11275,8 +11288,6 @@ do ip = 1, nbqq_pair(istate)
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
-
   end if
 end do
 end do
@@ -11396,7 +11407,6 @@ do ip = 1, nbqq_pair(istate)
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
   end if
 end do
 end do
@@ -11473,8 +11483,6 @@ do istate = 1, nstates
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
-
 end do ! istate
 
 end do
@@ -11570,7 +11578,6 @@ subroutine nonbond_qp_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
 	end do ! istate
 
   end do
@@ -11641,14 +11648,12 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-
 	if (use_excluded_groups) then
                 do jj = 1, ngroups_gc
                 call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
 	end if
-
 end do ! istate
 
 end do
@@ -11749,7 +11754,6 @@ subroutine nonbond_qp_qvdw_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do 
         end if
-
 	end do ! istate
 
   end do
@@ -13877,9 +13881,7 @@ else  !Slave nodes
 call gather_nonbond
 #endif
 end if
-#if defined(USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
+
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
 if (use_excluded_groups) then
@@ -13905,7 +13907,6 @@ do i=1,numnodes-1
   EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
   EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
   EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
-
 if (use_excluded_groups) then
 !	do j=1,ngroups_gc
 	EQ_gc(1:ngroups_gc,1:nstates)%qp%el = EQ_gc(1:ngroups_gc,1:nstates)%qp%el + &
@@ -13916,7 +13917,6 @@ if (use_excluded_groups) then
 end if
 end do
 #endif
-
 if (use_excluded_groups) then
 	do j=1,ngroups_gc
 	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
@@ -13963,12 +13963,8 @@ E%potential = E%p%bond + E%w%bond + E%p%angle + E%w%angle + E%p%torsion + &
 E%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
 E%ww%vdw + E%q%bond + E%q%angle + E%q%torsion + &
 E%q%improper + E%qx%el + E%qx%vdw + E%restraint%total + E%LRF
-
-
 end if
-#if (USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
+
 end subroutine pot_energy
 
 !-----------------------------------------------------------------------
@@ -14401,7 +14397,6 @@ if (use_excluded_groups) then
 
         end do
 end if
-
 end subroutine prep_sim
 
 !-----------------------------------------------------------------------
@@ -14646,7 +14641,8 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqimp
 
-ic = qimpcod(ip,istate)
+ic = qimp(ip)%cod(istate)
+!ic = qimpcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14665,10 +14661,14 @@ end do
 
 
 
-i  = iqimp(ip)
-j  = jqimp(ip)
-k  = kqimp(ip)
-l  = lqimp(ip)
+i = qimp(ip)%i
+j = qimp(ip)%j
+k = qimp(ip)%k
+l = qimp(ip)%l
+!i  = iqimp(ip)
+!j  = jqimp(ip)
+!k  = kqimp(ip)
+!l  = lqimp(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -14704,9 +14704,11 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = phi - qimp0(ic)
+arg = phi - qimplib(ic)%imp0
+!arg = phi - qimp0(ic)
 arg = arg - 2.*pi*nint(arg/(2.*pi))
-dv  = qfkimp(ic)*arg
+dv = qimplib(ic)%fk*arg
+!dv  = qfkimp(ic)*arg
 pe  = 0.5*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
@@ -14792,7 +14794,8 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqtor
 
-ic = qtorcod(ip,istate)
+ic = qtor(ip)%cod(istate)
+!ic = qtorcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14809,10 +14812,14 @@ do im = 1, ntor_coupl
    end if
 end do
 
-i  = iqtor(ip)
-j  = jqtor(ip)
-k  = kqtor(ip)
-l  = lqtor(ip)
+i = qtor(ip)%i
+j = qtor(ip)%j
+k = qtor(ip)%k
+l = qtor(ip)%l
+!i  = iqtor(ip)
+!j  = jqtor(ip)
+!k  = kqtor(ip)
+!l  = lqtor(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -14851,10 +14858,13 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = qrmult(ic)*phi-qdeltor(ic)
-pe  = qfktor(ic)*(1.0+cos(arg))
+arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
+pe = qtorlib(ic)%fk*(1.0+cos(arg))
+!arg = qrmult(ic)*phi-qdeltor(ic)
+!pe  = qfktor(ic)*(1.0+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
+dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
+!dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
@@ -16694,7 +16704,6 @@ if (use_excluded_groups) then
         EQ_gc_send(1:ngroups_gc,1:nstates)%qp%el  = EQ_gc(1:ngroups_gc,1:nstates)%qp%el
         EQ_gc_send(1:ngroups_gc,1:nstates)%qp%vdw  = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw
 end if 
-
 
 ! See comments above on the IRecv part
 call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 

@@ -179,6 +179,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 
 	length = nb_list%number_of_NB
 	lengthq = nbq_list%number_of_NB
+
 	if(.not.use_fep) then
 	do j=1,length
 		x1 = xin(3*nb_list%atom1(j)-2)
@@ -232,6 +233,7 @@ subroutine nb_calc_lists(NB_Vlj, NB_Vel, nb_list, nbq_list)
 			end do
                 end if
         end do
+
 	end if
 end subroutine nb_calc_lists
 
@@ -708,6 +710,7 @@ integer function nb_qp_add(desc)
 	qp_aves(:)%el = 0.
 	call mask_initialize(masks(1))
 	call mask_initialize(masks(2))
+
 !Added error handling if the user wants to be smart
 	write(*,*) ''
 	qp_calc%p_first = get_int_arg("Enter first residue of protein:")
@@ -725,6 +728,7 @@ integer function nb_qp_add(desc)
 	qp_calc%p_last = get_int_arg("Enter last residue of protein:")
 	write(*,*) ''
 	write(*,*) 'Last residue of protein:   ',qp_calc%p_last
+
 	if (qp_calc%p_last .gt. nres ) then
 		write(*,*) 'Last residue is larger than number of residues in the topology'
 		write(*,*) 'Last residue set to ',nres
@@ -781,6 +785,7 @@ integer function nb_qp_add(desc)
 		write(*,*) 'Total value is ',totlambda
 		stop 666
 	end if
+
 	end if
 	end if
 	write(*, *) 'Enter mask for q-atoms (e.g. <residue  xx yy>.)'
