@@ -28,7 +28,7 @@ include "mpif.h"
 !-----------------------------------------------------------------------
 !	Constants
 real(8)			::	pi, deg2rad	!set in sub startup
-real(8)			::	zero = 0.0
+real(8),parameter		::	zero = 0.0
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
 real, parameter		::  rho_wat = 0.0335  ! molecules / A**3
@@ -54,7 +54,7 @@ integer(TINY), allocatable		::	iqatom(:)
 ! --- water topology
 ! atoms of water, total water molecules, excluded water molecules
 integer						::	nwat
-real(4)						::	crg_ow, crg_hw, mu_w
+real(8)						::	crg_ow, crg_hw, mu_w
 
 
 !-------------------------------------------------------------------
@@ -94,7 +94,14 @@ real(8)						::	dt, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv
 logical						::	shake_solvent, shake_solute
 logical						::	shake_hydrogens
 logical						::	separate_scaling
-character(len=20)				::	thermostat
+!Paul does not like overflow errors, increased character array length
+!Added ENUM for names to allow integer comparisson later on
+character(len=80)				::	name_thermostat
+ENUM, bind(c) 
+	ENUMERATOR	:: BERENDSEN, LANGEVIN, NOSEHOOVER
+!!!!!Nose Hoover not yet implemented!!!!!
+END ENUM
+integer						::	thermostat = -1
 
 ! --- Non-bonded strategy
 logical						::	use_LRF
@@ -240,7 +247,7 @@ real(8), allocatable		::	d(:)
 real(8), allocatable		::	x(:)
 real(8), allocatable		::	xx(:) !for shake
 real(8), allocatable		::	v(:)
-real, allocatable			::	winv(:)
+real(8), allocatable			::	winv(:)
 real(8)						::	grms !RMS force
 
 
@@ -2075,9 +2082,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast NBcycle')
 
 
 ! water parameters: crg_ow, crg_hw (used by nonbond_ww)
-call MPI_Bcast(crg_ow, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_ow, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_ow')
-call MPI_Bcast(crg_hw, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_hw, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_hw')
 
 ! cutoffs: Rcpp, Rcww, Rcpw, Rcq, RcLRF (used by pair list generating functions)
@@ -2233,8 +2240,9 @@ call MPI_Bcast(v, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast v')
 
 !Setting all vars not sent to slaves to 2147483647. To avoid conflicts.
+!winv is an array of type real8 -> set to maxreal
 if (nodeid .ne. 0) then 
-winv=maxint 
+winv(:)=maxreal
 end if
 
 !Broadcast iqatom
@@ -2351,7 +2359,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast istart_mol')
 ! Bcast iac, crg and cgpatom 
 call MPI_Bcast(iac, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iac')
-call MPI_Bcast(crg, natom, MPI_REAL, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg, natom, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg')
 call MPI_Bcast(cgpatom, natom, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(AI)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast cgpatom')
@@ -2448,10 +2456,10 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qiac')
 end if
 ! real(4) ::  qcrg(nqat,nstates)
 if (nstates.ne.0) then
-call MPI_Bcast(qcrg, size(qcrg), MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, size(qcrg), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 else
-call MPI_Bcast(qcrg, nstates, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 end if
 
@@ -2900,22 +2908,22 @@ if(tau_T < dt) then
         initialize = .false.
 end if
 
-if(.not. prm_get_string_by_key('thermostat', thermostat)) then
+if(.not. prm_get_string_by_key('thermostat', name_thermostat)) then
         write(*,*) 'No thermostat chosen. Berendsen thermostat will be used.'
-        thermostat = 'berendsen'
+        thermostat = BERENDSEN
 
-else if( thermostat == 'langevin' ) then
-	write(*,*) 'Thermostat chosen: ', thermostat
+else if( name_thermostat == 'langevin' ) then
+	write(*,*) 'Thermostat chosen: ', name_thermostat
 	if(.not. prm_get_real8_by_key('langevin_friction', friction)) then
 		friction = 1/tau_T !***according to GROMACS manual, this is their default value. Need to check - A. Barrozo
 		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
 		write(*,*) 'Langevin thermostat friction constant set to default: 1/tau_T'
 	end if
-else if( thermostat /= 'berendsen' .and. thermostat /= 'langevin' ) then
+else if( name_thermostat /= 'berendsen' .and. name_thermostat /= 'langevin' ) then
 	write(*,*) '>>> ERROR: this thermostat does not exist in Q'
 	initialize = .false.
 else
-        write(*,*) 'Thermostat chosen: ', thermostat
+        write(*,*) 'Thermostat chosen: ', name_thermostat
 end if
 
 yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .true.)
@@ -4189,7 +4197,7 @@ if (detail_temps) then
 	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent)
 end if
 
-if (thermostat == 'berendsen') then
+if (thermostat == BERENDSEN) then
 	if (separate_scaling) then
 		if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - 1.0
 		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
@@ -4399,7 +4407,7 @@ start_loop_time1 = rtime()
 #endif
 
 ! if Berendsen thermostat was chosen, applied here
-if( thermostat == 'berendsen' ) then
+if( thermostat == BERENDSEN ) then
 
 		!solute atoms first
         do i=1,nat_solute
@@ -4434,7 +4442,7 @@ if( thermostat == 'berendsen' ) then
         end do
 ! --- end of the velocity reescaling for the Berendsen ---
 ! if Langevin thermostat was chosen, applied here
-else if( thermostat == 'langevin' ) then
+else if( thermostat == LANGEVIN ) then
                 !solute atoms first
         do i=1,natom
                 i3=i*3-3

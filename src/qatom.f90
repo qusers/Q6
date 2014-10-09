@@ -47,7 +47,7 @@ implicit none
 	integer(AI), allocatable							::	iqexpnb(:), jqexpnb(:)
 
 	integer									::	nqlib
-	real(4), allocatable		::	qcrg(:,:)
+	real(8), allocatable		::	qcrg(:,:)
 	real(8), allocatable		::	qmass(:)
 	real(8), allocatable		::	qavdw(:,:), qbvdw(:,:)
 
