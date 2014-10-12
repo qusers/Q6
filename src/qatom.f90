@@ -80,14 +80,34 @@ implicit none
 	type(ANGLIB_TYPE), allocatable::	qanglib(:)
 
 	integer												::	nqtor
-	integer(AI), allocatable			::	iqtor(:),jqtor(:),kqtor(:),lqtor(:)
-	integer(TINY), allocatable		::	qtorcod(:,:)
-	real(8), allocatable					::	qfktor(:),qrmult(:),qdeltor(:)
+
+!make sure we have everything as types and not this stupid single declarations
+!Paul October 2014
+!	integer(AI), allocatable			::	iqtor(:),jqtor(:),kqtor(:),lqtor(:)
+!	integer(TINY), allocatable		::	qtorcod(:,:)
+!	real(8), allocatable					::	qfktor(:),qrmult(:),qdeltor(:)
+
+	type QTORSION_TYPE
+		integer(AI)			:: i,j,k,l
+		integer(TINY)			:: cod(max_states)
+	end type QTORSION_TYPE
+
+	type QTORLIB_TYPE
+		real(8)				:: fk,rmult,deltor,paths
+	end type QTORLIB_TYPE
+
+	type QIMPLIB_TYPE
+		real(8)				:: fk,imp0
+	end type QIMPLIB_TYPE
+
+	type(QTORSION_TYPE),allocatable		:: qtor(:),qimp(:)
+	type(QTORLIB_TYPE),allocatable		:: qtorlib(:)
+	type(QIMPLIB_TYPE),allocatable		:: qimplib(:)
 
 	integer						::	nqimp
-	integer(AI), allocatable	::	iqimp(:),jqimp(:),kqimp(:),lqimp(:)
-	integer(TINY), allocatable	::	qimpcod(:,:)
-	real(8), allocatable		::	qfkimp(:),qimp0(:)
+!	integer(AI), allocatable	::	iqimp(:),jqimp(:),kqimp(:),lqimp(:)
+!	integer(TINY), allocatable	::	qimpcod(:,:)
+!	real(8), allocatable		::	qfkimp(:),qimp0(:)
 
 	integer						::	nang_coupl,ntor_coupl,nimp_coupl
 	integer(AI)					::	iang_coupl(3,max_qat)
@@ -147,6 +167,22 @@ implicit none
 		real(8)						::	sc_aq,sc_bq,sc_aj,sc_bj,alpha_max_tmp
 		logical						::  softcore_use_max_potential
 
+
+!New data structure for keeping the bond information
+!for FEP file sanity checks
+!Paul Ocyober 2014
+	type Q_SANITYCHECK
+		integer		::	i,j
+		integer(TINY)	::	brk_state,set_state
+	end type Q_SANITYCHECK
+	type Q_SAN_CHECK
+		integer(AI)		:: i,j,k,l
+		integer(AI)		:: istate,jstate,abreak,cbreak
+		integer(AI)		:: num,code
+		integer(TINY)		:: brk_state,set_state
+	end type Q_SAN_CHECK
+!Added memory management stuff
+	integer			:: alloc_status_qat
 !-----------------------------------------------------------------------
 !	fep/evb energies
 !-----------------------------------------------------------------------
@@ -178,20 +214,24 @@ end subroutine qatom_startup
 !-------------------------------------------------------------------------
 
 subroutine qatom_shutdown
-	integer						::	alloc_status
-	deallocate(EQ, stat=alloc_status)
-	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status)
-	deallocate(qmass, stat=alloc_status)
-	deallocate(qavdw, qbvdw, stat=alloc_status)
-	deallocate(qbnd, qbondlib, stat=alloc_status)
-	deallocate(qang, stat=alloc_status)
-	deallocate(qanglib, stat=alloc_status)
-	deallocate(iqtor, jqtor, kqtor, lqtor, qtorcod, stat=alloc_status)
-	deallocate(qfktor, qrmult, qdeltor, stat=alloc_status)
-	deallocate(iqimp, jqimp, kqimp, lqimp, qimpcod, stat=alloc_status)
-	deallocate(qfkimp,qimp0, stat=alloc_status)
-	deallocate(exspec, stat=alloc_status)
-	deallocate(offd, offd2, stat=alloc_status)
+	integer						::	alloc_status_qat
+	deallocate(EQ, stat=alloc_status_qat)
+	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status_qat)
+	deallocate(qmass, stat=alloc_status_qat)
+	deallocate(qavdw, qbvdw, stat=alloc_status_qat)
+	deallocate(qbnd, qbondlib, stat=alloc_status_qat)
+	deallocate(qang, stat=alloc_status_qat)
+	deallocate(qanglib, stat=alloc_status_qat)
+	deallocate(qtor, stat=alloc_status_qat)
+	deallocate(qimp, stat=alloc_status_qat)
+	deallocate(qtorlib, stat=alloc_status_qat)
+	deallocate(qimplib, stat=alloc_status_qat)
+!	deallocate(iqtor, jqtor, kqtor, lqtor, qtorcod, stat=alloc_status_qat)
+!	deallocate(qfktor, qrmult, qdeltor, stat=alloc_status_qat)
+!	deallocate(iqimp, jqimp, kqimp, lqimp, qimpcod, stat=alloc_status_qat)
+!	deallocate(qfkimp,qimp0, stat=alloc_status_qat)
+	deallocate(exspec, stat=alloc_status_qat)
+	deallocate(offd, offd2, stat=alloc_status_qat)
 	if (allocated(qq_el_scale)) deallocate(qq_el_scale)
 end subroutine qatom_shutdown
 
@@ -259,7 +299,9 @@ logical function qatom_load_atoms(fep_file)
 			'>>> WARNING: No [atoms] section in fep file. Trying old format.'
 		call prm_close
 		use_new_fep_format = .false.
-		qatom_load_atoms = qatom_old_load_atoms(fep_file)
+!We stop supporting old FEP files to make the code easier to maintain
+!Executive decision, Paul Bauer 07102014
+!		qatom_load_atoms = qatom_old_load_atoms(fep_file)
 		return
 	end if
 
@@ -525,329 +567,10 @@ end function qatom_load_atoms
 
 !-------------------------------------------------------------------------
 
-logical function qatom_old_load_fep()
-  ! *** local variables
-  character					::	libtext*80,qaname*2
-  integer					::	i,j,k,iat
-  integer					::	nqcrg,nqcod
-	integer					::	qflag(max_states)
-	!temp. array to read integer flags before switching to logicals
-	integer					::	exspectemp(max_states)
-
-	qatom_old_load_fep  = .false.
-
-  call centered_heading('Reading fep/evb strategy','-')
-
-  !allocate memory for qatom arrays
-	allocate(qiac(nqat,nstates))
-	allocate(iqexpnb(nqat))
-	allocate(jqexpnb(nqat))
-	!qcrg may be allocated in MD to copy topology charges
-	if(.not. allocated(qcrg)) allocate(qcrg(nqat,nstates))
-
-  ! --- Set new charges
-  read (4,*) nqcrg
-	if(nqcrg > 0) then
-		write (*,60) nqcrg
-
-60		format (/,'No. of changing charges  = ',i5)
-80		format ('q-atom state_1 state_2 ...')
-		do i=1,nqcrg
-			read (4,*) iat,(qcrg(iat,j),j=1,nstates)
-	        write (*,'(i6,8f8.4)') iat,(qcrg(iat,j),j=1,nstates)
-		end do
-	end if
-
-
-  ! --- Set new vdw params / only if qvdw_flag is true
-
-  read (4,*) iat
-  if(iat > 0) qvdw_flag = .true.
-  if(qvdw_flag) then
-	write (*,100)
-100 format (/,'Q-atom vdW parameters are to be redefined:')
-
-
-     write (*,80)
-     do i=1,nqat
-        read (4,*) iat,(qiac(iat,j),j=1,nstates)
-        write (*,'(i6,8i8)') iat,(qiac(iat,j),j=1,nstates)
-     end do
-
-  ! Read Qatom type library
-     read (4,*) nqlib
-     write (*,120) nqlib
-120  format (/,'No. fep/evb lib entries  = ',i5)
-     read (4,'(a80)') libtext
-     write (*,'(a80)') libtext
-
-	 allocate(qmass(nqlib), qavdw(nqlib,nljtyp), qbvdw(nqlib,nljtyp))
-
-     do i=1,nqlib
-        read (4,*) j,qaname,(qavdw(j,k),qbvdw(j,k),k=1,3),qmass(j)
-        write (*,140)j,qaname,(qavdw(j,k),qbvdw(j,k),k=1,3),qmass(j)
-     end do
-140  format (i5,3x,a2,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)
-     !
-
-     read (4,*) nqexpnb
-     write (*,144) nqexpnb
-144  format (/,'No. C*exp(-ar) nb pairs  = ',i5)
-     do i=1,nqexpnb
-        read (4,*) iqexpnb(i),jqexpnb(i)
-        write (*,146) iqexpnb(i),jqexpnb(i)
-     end do
-146  format ('atom_i, atom_j             : ',2i5)
-
-  end if
-
-  ! --- Set new bonds
-
-  read (4,*) nqbond
-  if(nqbond > 0) write (*,160) nqbond
-160 format (/,'No. of changing bonds    = ',i5)
-  allocate(qbnd(nqbond))
-  do i=1,nqbond
-     read (4,*) qbnd(i)%i,qbnd(i)%j
-     read (4,*) (qflag(j),j=1,nstates)
-     read (4,*) (qbnd(i)%cod(j),j=1,nstates)
-     write (*,180) qbnd(i)%i,qbnd(i)%j
-     write (*,200) (qflag(j),j=1,nstates)
-     write (*,220) (qbnd(i)%cod(j),j=1,nstates)
-		!set bond type = 0 where bond presence flag = 0
-		do j=1,nstates
-			if(qflag(j) == 0) qbnd(i)%cod(j) = 0
-		end do
-  end do
-180 format (/,'atom_i -- atom_j              : ',2i5)
-200 format ('exists in state_1 state_2 ... : ',10i5)
-220 format ('codes  in state_1 state_2 ... : ',10i5)
-
-
-  read (4,*) nqcod
-  allocate(qbondlib(nqcod))
-	qbondlib(:)%fk = 0. !clear Harmonic f.c, not available with old FEP file
-  if ( nqcod .gt. 0 ) then
-     write (*,*)
-     write (*,'(a)') 'Morse  E_diss   alpha      b0'
-     do i=1,nqcod
-        read (4,*) qbondlib(i)%Dmz,qbondlib(i)%amz,qbondlib(i)%r0
-        write (*,225) i,qbondlib(i)%Dmz,qbondlib(i)%amz,qbondlib(i)%r0
-     end do
-225  format (i5,3f8.2)
-     write (*,*)
-  end if
-
-  ! --- Set new angles
-
-  read (4,*) nqangle
-  if(nqangle > 0) write (*,260) nqangle
-260 format (/,'No. of changing angles   = ',i5)
-  allocate(qang(nqangle))
-
-  do i=1,nqangle
-     read (4,*) qang(i)%i,qang(i)%j,qang(i)%k
-     read (4,*) qflag(1:nstates)
-     read (4,*) qang(i)%cod(1:nstates)
-     write (*,280) qang(i)%i,qang(i)%j,qang(i)%k
-     write (*,200) qflag(1:nstates)
-     write (*,220) qang(i)%cod(1:nstates)
-		!set code to 0 where presence flag = 0
-		do j=1,nstates
-			if(qflag(j) == 0) qang(i)%cod(j) = 0
-		end do
-  end do
-280 format (/,1x,'atom_i -- atom_j -- atom_k    : ',3i5)
-
-  read (4,*) nqcod
-  allocate(qanglib(nqcod))
-	!set new features to 0.
-	qanglib(:)%ureyfk = 0.
-	qanglib(:)%ureyr0 = 0.
-  if ( nqcod .gt. 0 ) then
-     write (*,*)
-     write (*,'(a)') 'Angle force-k  theta0'
-     do i=1,nqcod
-        read (4,*) qanglib(i)%fk,qanglib(i)%ang0
-        write (*,225) i,qanglib(i)%fk,qanglib(i)%ang0
-        qanglib(i)%ang0 = deg2rad*qanglib(i)%ang0
-     end do
-     write (*,*)
-  end if
-
-  ! --- Set new torsions
-
-  read (4,*) nqtor
-  if(nqtor > 0) write (*,360) nqtor
-360 format (/,'No. of changing torsions = ',i5)
-  allocate(iqtor(nqtor), &
-	jqtor(nqtor), &
-	kqtor(nqtor), &
-	lqtor(nqtor), &
-	qtorcod(nqtor,nstates))
-
-  do i=1,nqtor
-     read (4,*) iqtor(i),jqtor(i),kqtor(i),lqtor(i)
-     read (4,*) (qflag(j),j=1,nstates)
-     read (4,*) (qtorcod(i,j),j=1,nstates)
-     write (*,380) iqtor(i),jqtor(i),kqtor(i),lqtor(i)
-     write (*,200) (qflag(j),j=1,nstates)
-     write (*,220) (qtorcod(i,j),j=1,nstates)
-		do j=1, nstates
-			if(qflag(j) == 0) qtorcod(i,j) =0
-		end do
-  end do
-380 format (/,'at_i -- at_j -- at_k -- at_l  : ',4i5)
-
-  read (4,*) nqcod
-  allocate(qfktor(nqcod), &
-	qrmult(nqcod), &
-	qdeltor(nqcod))
-  if ( nqcod .gt. 0 ) then
-     write (*,*)
-     write (*,'(a)') ' Tors force-k    mult   delta'
-     do i=1,nqcod
-        read (4,*) qfktor(i),qrmult(i),qdeltor(i)
-        write (*,225) i,qfktor(i),qrmult(i),qdeltor(i)
-        qdeltor(i) = deg2rad*qdeltor(i)
-     end do
-     write (*,*)
-  end if
-
-  ! --- Set new impropers
-
-  read (4,*) nqimp
-  if(nqimp > 0) write (*,460) nqimp
-460 format (/,'No. of changing impropers= ',i5)
-
-  allocate(iqimp(nqimp), &
-	jqimp(nqimp), &
-	kqimp(nqimp), &
-	lqimp(nqimp), &
-	qimpcod(nqimp,nstates))
-
-  do i=1,nqimp
-     read (4,*) iqimp(i),jqimp(i),kqimp(i),lqimp(i)
-     read (4,*) (qflag(j),j=1,nstates)
-     read (4,*) (qimpcod(i,j),j=1,nstates)
-     write (*,380) iqimp(i),jqimp(i),kqimp(i),lqimp(i)
-     write (*,200) (qflag(j),j=1,nstates)
-     write (*,220) (qimpcod(i,j),j=1,nstates)
-		!set type = 0 if presence flag = 0
-		do j=1,nstates
-			if(qflag(j) == 0) qimpcod(i,j) = 0
-		end do
-  end do
-
-  read (4,*) nqcod
-  allocate(qfkimp(nqcod), qimp0(nqcod))
-
-  if ( nqcod .gt. 0 ) then
-     write (*,*)
-     write (*,'(a)') ' Impr force-k    imp0'
-     do i=1,nqcod
-        read (4,*) qfkimp(i),qimp0(i)
-        write (*,225) i,qfkimp(i),qimp0(i)
-        qimp0(i) = deg2rad*qimp0(i)
-     end do
-     write (*,*)
-  end if
-
-
-  ! --- Read angle,torsion and improper couplings to Morse bonds
-
-  read (4,*) nang_coupl
-  if(nang_coupl > 0) write (*,544) nang_coupl
-544 format (/,'No. of angle-Morse couplings = ',i5)
-  do i=1,nang_coupl
-     read (4,*) (iang_coupl(j,i),j=1,2)
-     write (*,545) (iang_coupl(j,i),j=1,2)
-  end do
-545 format ('angle_i, bond_j              : ',2i5)
-
-  read (4,*) ntor_coupl
-  if( ntor_coupl > 0) write (*,548) ntor_coupl
-548 format ('No. of tors.-Morse couplings = ',i5)
-  do i=1,ntor_coupl
-     read (4,*) (itor_coupl(j,i),j=1,2)
-     write (*,549) (itor_coupl(j,i),j=1,2)
-  end do
-549 format ('torsion_i, bond_j            : ',2i5)
-
-  read (4,*) nimp_coupl
-  if(nimp_coupl > 0 ) write (*,552) nimp_coupl
-552 format ('No. of impr.-Morse couplings = ',i5)
-  do i=1,nimp_coupl
-     read (4,*) (iimp_coupl(j,i),j=1,2)
-     write (*,553) (iimp_coupl(j,i),j=1,2)
-  end do
-553 format ('improper_i, bond_j           : ',2i5)
-
-  ! --- Read Q-atom shake constraints
-
-  read (4,*) nqshake
-  if(nqshake > 0) write (*,560) nqshake
-560 format ('No. fep/evb shake contraints = ',i5)
-  do i=1,nqshake
-     read (4,*) iqshake(i),jqshake(i),(qshake_dist(i,j),j=1,nstates)
-     write (*,580) iqshake(i),jqshake(i),(qshake_dist(i,j),j=1,nstates)
-  end do
-580 format ('i -- j, dist in state_1, state_2, ... : ',2i5,10f6.2)
-
-  ! --- Read off-diagonal hamiltonial matrix functions
-
-	read (4,*) noffd
-	if(noffd > 0) write (*,600) noffd
-600 format ('No. offdiagonal (Hij) funcs. = ',i5)
-	if(noffd > max_states) then
-		write(*,'(a,i2,a)') &
-			'>>> Error: Too many off-diagonal functions, (max_states is ', &
-				max_states, ' Aborting.'
-		return
-	end if
-	allocate(offd(noffd), offd2(noffd))
-	if ( noffd .gt. 0 ) then
-		write (*,'(a)') 'state_i state_j atom_k atom_l     Aij mu_ij'
-	end if
-	do i=1,noffd
-		read (4,*) offd(i)%i,offd(i)%j,offd2(i)%k,offd2(i)%l,offd2(i)%A, &
-          offd2(i)%mu
-		write (*,620) offd(i)%i,offd(i)%j,offd2(i)%k,offd2(i)%l,offd2(i)%A, &
-          offd2(i)%mu
-	end do
-620 format (i7,1x,3i7,f8.2,f6.2)
-
-! --- Read special exclusions among quantum atoms
-
-      read (unit=4,fmt=*,end=999,err=999) nexspec
-      if(nexspec > 0) write (*,585) nexspec
-	  allocate(exspec(nexspec))
-
- 585  format (/,'No. special exclusions       = ',i5)
-      do i=1,nexspec
-         read (4,*) exspec(i)%i,exspec(i)%j
-         read (4,*) exspectemp(1:nstates)
-         write (*,590) exspec(i)%i,exspec(i)%j
-         write (*,200) exspectemp(1:nstates)
-			do j = 1, nstates
-				if(exspectemp(j) == 0) then
-					exspec(i)%flag(j) = .false.
-				else if(exspectemp(j) == 1) then
-					exspec(i)%flag(j) = .true.
-				else
-					write(*,592)
-					return
-				end if
-			end do
-       end do
-590  format ('i -- j  special exclusion pair  , ... : ',2i5)
-592	format('>>>>> ERROR: Special exclusion state flags are invalid.')
-
-
-999  close(4)
-	qatom_old_load_fep = .true.
-  !.......................................................................
-end function qatom_old_load_fep
+!logical function qatom_old_load_fep()
+!Removed, we stop supporting deprecated FEP file formats
+!Executive decision, Paul Bauer 07102014
+!end function qatom_old_load_fep
 
 !-----------------------------------------------------------------------
 logical function qatom_load_fep(fep_file)
@@ -855,13 +578,35 @@ logical function qatom_load_fep(fep_file)
 	character(*), intent(in)	::	fep_file
   ! *** local variables
   character(len=200)		::	line
-  integer					::	i,j,k,l,iat,st
-  integer					::	nqcrg,nqcod
+  integer					::	i,j,k,l,iat,st,ii
+  integer					::	nqcrg=0,nqbcod=0,nqacod=0,nqtcod=0,nqicod=0
   character(len=40)			::	section
   logical, allocatable, dimension(:)		::	type_read
   integer					::	type_count, filestat
   real(8)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
   integer                   ::  stat
+!New temporary variables for sanity checks
+!Paul October 2014, ICM meeting used for something useful
+  integer				:: test_state,broken_state
+  logical,allocatable			:: testarray(:)
+  type(Q_SANITYCHECK),allocatable	:: break_bonds(:)
+  type(Q_SAN_CHECK),allocatable		:: break_angles(:)
+  type(Q_SAN_CHECK),allocatable		:: break_torsions(:)
+  type(Q_SAN_CHECK),allocatable		:: break_impropers(:)
+  integer				:: nbreak_ang=-1
+  integer				:: nbreak_tor=-1
+  integer				:: nbreak_imp=-1
+  logical				:: have_break = .false.,angle_set = .false.,torsion_set = .false.
+  logical				:: improper_set = .false.
+  integer				:: ibreak,jbreak,kbreak,lbreak,istate,jstate,cbreak,abreak
+  integer				:: nbreak_bnd = 0
+  type(ANGLIB_TYPE),allocatable		:: tmp_qanglib(:)
+  type(QANGLE_TYPE),allocatable			:: tmp_qang(:)
+  type(QTORLIB_TYPE),allocatable		:: tmp_qtorlib(:)
+  type(QTORSION_TYPE),allocatable		:: tmp_qtor(:)
+  type(QIMPLIB_TYPE),allocatable		:: tmp_qimplib(:)
+  type(QTORSION_TYPE),allocatable		:: tmp_qimp(:)
+
 
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
@@ -872,7 +617,9 @@ logical function qatom_load_fep(fep_file)
 
 
 	if(.not. use_new_fep_format) then
-		qatom_load_fep = qatom_old_load_fep()
+!We stop supporting deprecated file formats
+!Executive decision, Paul Bauer 07102014
+!		qatom_load_fep = qatom_old_load_fep()
 		return
 	end if
 
@@ -911,6 +658,7 @@ logical function qatom_load_fep(fep_file)
 	allocate(qiac(nqat,nstates))
 	allocate(iqexpnb(nqat))
 	allocate(jqexpnb(nqat))
+	allocate(testarray(nstates))
 	!qcrg may be allocated in MD to copy topology charges
 	if(.not. allocated(qcrg)) allocate(qcrg(nqat,nstates))
 
@@ -1115,11 +863,11 @@ logical function qatom_load_fep(fep_file)
 
 	! --- Set new bonds
 	section='bond_types'
-	nqcod = prm_max_enum(section, type_count)
-	if(nqcod > 0 ) then
-		allocate(type_read(nqcod))
+	nqbcod = prm_max_enum(section, type_count)
+	if(nqbcod > 0 ) then
+		allocate(type_read(nqbcod))
 	type_read(:) = .false.
-		allocate(qbondlib(nqcod))
+		allocate(qbondlib(nqbcod))
 		write (*,150)
 		write (*,'(a)') 'type #  Morse E_diss    alpha       b0  Harmonic force_k '
 
@@ -1156,7 +904,13 @@ logical function qatom_load_fep(fep_file)
 	if(nqbond > 0)  then
 		write (*,160) nqbond
 		write(*,161) ('state',i,i=1,nstates)
-		allocate(qbnd(nqbond))
+		allocate(qbnd(nqbond),stat=alloc_status_qat)
+		allocate(break_bonds(nqbond),stat=alloc_status_qat)
+		call check_alloc_general(alloc_status_qat,'Q bond arrays')
+		break_bonds(:)%i=-1
+		break_bonds(:)%j=-1
+		break_bonds(:)%set_state=-1
+		break_bonds(:)%brk_state=-1
 		do i=1,nqbond
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) qbnd(i)%i, qbnd(i)%j, qbnd(i)%cod(1:nstates)
@@ -1164,6 +918,7 @@ logical function qatom_load_fep(fep_file)
 			qbnd(i)%j = qbnd(i)%j + offset
 			write (*,162) qbnd(i)%i,qbnd(i)%j,qbnd(i)%cod(1:nstates)
 			!check types
+			testarray(:)=.false.
 			do j=1,nstates
 				if(qbnd(i)%cod(j) >0) then
 					if (allocated(type_read)) then
@@ -1175,7 +930,51 @@ logical function qatom_load_fep(fep_file)
 					    write(*,112) 'Q-bond', qbnd(i)%cod(j)
 					    qatom_load_fep = .false.
 					end if
+!Bond is tested for being present, to check if forming/breaking bonds
+!are set as morse and not harmonic
+					testarray(j)=.true.
+				else
+!Bond is not set
+					testarray(j)=.false.
 				end if
+			end do
+			have_break = .false.
+			do j=1, nstates-1
+!Trigger if bonds break or are always broken
+				if ((testarray(j) .neqv. testarray(j+1)) .or. &
+					(testarray(j).eqv.testarray(j+1).eqv. .false.)) then
+!Now see if we have a forming or breaking bond set as morse
+!make sure we only test for the bond that is actually there
+				if(testarray(j)) then
+				test_state = j
+				broken_state = j+1
+				else if(testarray(j+1)) then
+				test_state = j+1
+				broken_state = j
+!always broken
+				else
+				test_state = -1
+				broken_state = j
+				end if !which state
+!Only trigger event once for saving the bond atoms
+				if (.not.have_break) then
+				nbreak_bnd = nbreak_bnd + 1
+				break_bonds(nbreak_bnd)%i=qbnd(i)%i
+				break_bonds(nbreak_bnd)%j=qbnd(i)%j
+				break_bonds(nbreak_bnd)%brk_state=broken_state
+				break_bonds(nbreak_bnd)%set_state=test_state
+				have_break = .true.
+				end if ! have_break
+				if((test_state .ne. -1 ) .and.(qbondlib(qbnd(i)%cod(test_state))%Dmz .eq. 0 )) then
+!we have a breaking bond set as harmonic
+				write(*,227) qbnd(i),qbnd(i)%cod(test_state)
+				write(*,228) qbnd(i)%i,qbnd(i)%j
+				write(*,225) test_state,qbondlib(test_state)%Dmz,qbondlib(test_state)%amz, qbondlib(test_state)%r0
+				write(*,226) test_state, qbondlib(test_state)%r0, qbondlib(test_state)%fk
+227		format('WARNING: Breaking/Forming bond',2x,i6,2x,'code',2x,i6,2x,'set as harmonic')
+228		format('between atoms',2x,i6,2x,i6)
+				end if ! bond is bad
+				end if ! bond is breaking
 			end do
 		end do
 
@@ -1190,11 +989,11 @@ logical function qatom_load_fep(fep_file)
 
 	! --- Set new angles
 	section = 'angle_types'
-	nqcod = prm_max_enum(section, type_count)
-	if ( nqcod .gt. 0 ) then
-		allocate(type_read(nqcod))
+	nqacod = prm_max_enum(section, type_count)
+	if ( nqacod .gt. 0 ) then
+		allocate(type_read(nqacod))
 	type_read(:) = .false.
-		allocate(qanglib(nqcod))
+		allocate(qanglib(nqacod))
 		!set optional params to 0
 		qanglib(:)%ureyfk = 0.
 		qanglib(:)%ureyr0 = 0.
@@ -1258,20 +1057,162 @@ logical function qatom_load_fep(fep_file)
 	    deallocate(type_read)
 	end if
 
+
+!Add section to check angles for being broken with bonds
+!first get atoms that are breaking bonds
+!then get the angles that those atoms are involved in if not set to zero
+!and check if they are broken in the angles section
+!allocate the maximum number of angles that can theoretically break
+	allocate(break_angles(nbreak_bnd*3),stat=alloc_status_qat)
+	call check_alloc_general(alloc_status_qat,'Q angle break array')
+	nbreak_ang = 0
+	do i=1,nbreak_bnd
+		ibreak = break_bonds(i)%i
+		jbreak = break_bonds(i)%j
+		istate = break_bonds(i)%brk_state
+		jstate = break_bonds(i)%set_state
+		do j=1,nangles
+			if(((ang(j)%i.eq.ibreak .and. ang(j)%j.eq.jbreak) .or. &
+				(ang(j)%j.eq.ibreak .and. ang(j)%k.eq.jbreak) .or. &
+				(ang(j)%k.eq.ibreak .and. ang(j)%j.eq.jbreak) .or. &
+				(ang(j)%j.eq.ibreak .and. ang(j)%i.eq.jbreak)) .and. &
+				ang(j)%cod.ne.0) then
+				nbreak_ang = nbreak_ang + 1
+				break_angles(nbreak_ang)%num = j
+				break_angles(nbreak_ang)%code = ang(j)%cod
+				break_angles(nbreak_ang)%brk_state = istate
+				break_angles(nbreak_ang)%set_state = jstate
+				break_angles(nbreak_ang)%i = ang(j)%i
+				break_angles(nbreak_ang)%j = ang(j)%j
+				break_angles(nbreak_ang)%k = ang(j)%k
+			end if
+		end do
+	end do
+!Now we know all the angles that should be broken/not existing
+!in the relevant states, but not checking for those that should be there
+!loop over the angles that should be gone to make sure they are gone!
+!If not, nuke them from orbit, by first setting new qangletype
+!and then do the nuking part
+	do i=1,nbreak_ang
+		ibreak = break_angles(i)%i
+		jbreak = break_angles(i)%j
+		kbreak = break_angles(i)%k
+		istate = break_angles(i)%brk_state
+		jstate = break_angles(i)%set_state
+		abreak = break_angles(i)%num
+		cbreak = break_angles(i)%code
+		angle_set = .false.
+		do j=1,nqangle
+			if(( (ang(abreak)%i.eq.qang(j)%i) .and. (ang(abreak)%j.eq.qang(j)%j) .and. &
+				(ang(abreak)%k.eq.qang(j)%k)) .or. &
+				( (ang(abreak)%i.eq.qang(j)%k) .and. (ang(abreak)%j.eq.qang(j)%j) .and. &
+				(ang(abreak)%k.eq.qang(j)%i))) then 
+!angle is set in FEP file, trigger angle_set event
+				angle_set = .true.
+				if(qang(j)%cod(istate).ne.0) then
+!We have a broken angle with non zero angle code in the FEP file
+!alert the user, but keep the angle, maybe they will need it
+				write(*,263) 
+				write(*,264) ibreak,jbreak,kbreak
+				write(*,265) istate,qang(j)%cod(istate)
+263		format('!!!WARNING!!! Angle to broken bond is not set to zero!!')
+264		format('between atoms',2x,i6,2x,i6,2x,i6)
+265		format('in state',2x,i6,2x,'qangle code',2x,i6)
+				end if ! angle is not set to zero
+			end if ! angle is qangle
+		end do
+		if (.not. angle_set) then
+!angle is breaking but not set in FEP file
+!critical error, need to add angle to angle list
+!with parameters from topology -> needs some ugly hacks
+			write(*,263)
+			write(*,264) ibreak,jbreak,kbreak
+			write(*,266) istate,abreak,cbreak
+266		format('in state',2x,i6,2x,'angle',2x,i6,2x,'angle code',2x,i6)
+			write(*,267)
+267		format('Trying to get parameters from Topology!')
+!make temporary list of qangle types 
+!make sure there are angles set, could be none
+!user error avoided
+			if (nqacod > 0 ) then
+			allocate(tmp_qanglib(nqacod),stat=alloc_status_qat)
+			call check_alloc_general(alloc_status_qat,'Allocating tmp qangle code lib')
+			tmp_qanglib(1:nqacod)=qanglib(1:nqacod)
+!remove old qanqlib
+			if (allocated(qanglib)) then
+			deallocate(qanglib)
+			end if
+			end if
+!now allocate new qanglib with nqacod+1
+			allocate(qanglib(nqacod+1),stat=alloc_status_qat)
+			call check_alloc_general(alloc_status_qat,'Allocating new qangle code lib')
+			qanglib(:)%ureyfk = 0.
+                        qanglib(:)%ureyr0 = 0.
+!if the old library is there, copy it into the new array
+			if (allocated(tmp_qanglib)) then
+			qanglib(1:nqacod)=tmp_qanglib(1:nqacod)
+			deallocate(tmp_qanglib)
+			end if
+!now set the new qangle type from the topology
+			qanglib(nqacod+1)%fk = anglib(cbreak)%fk
+			qanglib(nqacod+1)%ang0 = anglib(cbreak)%ang0
+			qanglib(nqacod+1)%ureyfk = anglib(cbreak)%ureyfk
+			qanglib(nqacod+1)%ureyr0 = anglib(cbreak)%ureyr0
+			write (*,'(a)', advance='no') 'type #       force-k   theta0'
+			write (*,225) nqacod+1,qanglib(nqacod+1)%fk, qanglib(nqacod+1)%ang0
+!and set new number of qangles to nqacod+1
+			nqacod = nqacod + 1
+!we have the angle type, add it to the number of active qangles
+!with no angle in the broken state
+!first, again need to reallocate the qangles
+			if (nqangle > 0 ) then
+			allocate(tmp_qang(nqangle),stat=alloc_status_qat)
+			call check_alloc_general(alloc_status_qat,'Allocating tmp qangle lib')
+			tmp_qang(1:nqangle)=qang(1:nqangle)
+			deallocate(qang)
+			end if
+			allocate(qang(nqangle+1),stat=alloc_status_qat)
+			call check_alloc_general(alloc_status_qat,'Allocating new qangle lib')
+			if (allocated(tmp_qang)) then
+			qang(1:nqangle)=tmp_qang(1:nqangle)
+			deallocate(tmp_qang)
+			end if
+			qang(nqangle+1)%i = ibreak
+			qang(nqangle+1)%j = jbreak
+			qang(nqangle+1)%k = kbreak
+			qang(nqangle+1)%cod(:) = 0
+!if angle is always broken, keep it like that
+			if (jstate .ne. -1 ) then
+			qang(nqangle+1)%cod(jstate) = nqacod
+			end if
+			nqangle = nqangle + 1
+			write(*,261) ('state',ii,ii=1,nstates)
+                        write (*,262) qang(nqangle)%i,qang(nqangle)%j,qang(nqangle)%k, qang(nqangle)%cod(1:nstates)
+		end if
+	end do
+	if(allocated(break_angles)) then
+	deallocate(break_angles)
+	end if
+
   ! --- Set new torsions
 	section = 'torsion_types'
-	nqcod = prm_max_enum(section, type_count)
-	allocate(qfktor(nqcod), qrmult(nqcod), qdeltor(nqcod))
-	if ( nqcod .gt. 0 ) then
-		allocate(type_read(nqcod))
+	nqtcod = prm_max_enum(section, type_count)
+	allocate(qtorlib(nqtcod),stat=alloc_status_qat)
+	call check_alloc_general(alloc_status_qat,'Allocating qtorsion library array')
+!	allocate(qfktor(nqcod), qrmult(nqcod), qdeltor(nqcod))
+	if ( nqtcod .gt. 0 ) then
+		allocate(type_read(nqtcod))
 		type_read(:) = .false.
 		write (*,350)
 		do i=1,type_count
 			if(.not. prm_get_line(line)) goto 1000
-			read(line,*, err=1000) j, qfktor(j),qrmult(j),qdeltor(j)
+			read(line,*, err=1000) j, qtorlib(j)%fk, qtorlib(j)%rmult,qtorlib(j)%deltor
+!			read(line,*, err=1000) j, qfktor(j),qrmult(j),qdeltor(j)
 			type_read(j) = .true.
-			write (*,225) j,qfktor(j),qrmult(j),qdeltor(j)
-			qdeltor(j) = deg2rad*qdeltor(j)
+			write (*,225) j,qtorlib(j)%fk, qtorlib(j)%rmult,qtorlib(j)%deltor
+!			write (*,225) j,qfktor(j),qrmult(j),qdeltor(j)
+			qtorlib(j)%deltor = deg2rad*qtorlib(j)%deltor
+!			qdeltor(j) = deg2rad*qdeltor(j)
 		end do
 		write (*,*)
 	end if
@@ -1282,34 +1223,55 @@ logical function qatom_load_fep(fep_file)
 		write (*,360) nqtor
 		write(*,361) ('state',i,i=1,nstates)
 360		format (/,'No. of changing torsions = ',i5)
-		allocate(iqtor(nqtor), &
-			jqtor(nqtor), &
-			kqtor(nqtor), &
-			lqtor(nqtor), &
-			qtorcod(nqtor,nstates))
+!		allocate(iqtor(nqtor), &
+!			jqtor(nqtor), &			kqtor(nqtor), &
+!			kqtor(nqtor), &
+!			lqtor(nqtor), &
+!			qtorcod(nqtor,nstates))
+
+		allocate(qtor(nqtor),stat=alloc_status_qat)
+		call check_alloc_general(alloc_status_qat,'Allocating qtorsion array')
 
 		do i=1,nqtor
 			if(.not. prm_get_line(line)) goto 1000
-			read(line,*, err=1000) iqtor(i),jqtor(i),kqtor(i),lqtor(i),qtorcod(i,:)
-			iqtor(i) = iqtor(i) + offset
-			jqtor(i) = jqtor(i) + offset
-			kqtor(i) = kqtor(i) + offset
-			lqtor(i) = lqtor(i) + offset
-			write (*,362) iqtor(i),jqtor(i),kqtor(i),lqtor(i), qtorcod(i,:)
+			read(line,*, err=1000) qtor(i)%i,qtor(i)%j,qtor(i)%k,qtor(i)%l,qtor(i)%cod(1:nstates)
+!			read(line,*, err=1000) iqtor(i),jqtor(i),kqtor(i),lqtor(i),qtorcod(i,:)
+			qtor(i)%i = qtor(i)%i + offset
+			qtor(i)%j = qtor(i)%j + offset
+			qtor(i)%k = qtor(i)%k + offset
+			qtor(i)%l = qtor(i)%l + offset
+!			iqtor(i) = iqtor(i) + offset
+!			jqtor(i) = jqtor(i) + offset
+!			kqtor(i) = kqtor(i) + offset
+!			lqtor(i) = lqtor(i) + offset
+			write (*,362) qtor(i)%i,qtor(i)%j,qtor(i)%k,qtor(i)%l,qtor(i)%cod(1:nstates)
+!			write (*,362) iqtor(i),jqtor(i),kqtor(i),lqtor(i), qtorcod(i,:)
 			!check types
-			do j=1,nstates
-				if(qtorcod(i,j) >0) then
-					if (allocated(type_read)) then
-					if(.not. type_read(qtorcod(i,j))) then
-						write(*,112) 'Q-torsion', qtorcod(i,j)
-						qatom_load_fep = .false.
-					end if
-					else
-					    write(*,112) 'Q-torsion', qtorcod(i,j)
-					    qatom_load_fep = .false.
-					end if
-				end if
-			end do !j
+                        do j=1,nstates
+                                if(qtor(i)%cod(j) > 0) then
+                                        if (allocated(type_read)) then
+                                        if(.not. type_read(qtor(i)%cod(j))) then
+                                                write(*,112) 'Q-torsion', qtor(i)%cod(j)
+                                                qatom_load_fep = .false.
+                                        end if
+                                        else
+                                            write(*,112) 'Q-torsion', qtor(i)%cod(j)
+                                            qatom_load_fep = .false.
+                                        end if
+                                end if
+                        end do !j
+!				if(qtorcod(i,j) >0) then
+!					if (allocated(type_read)) then
+!					if(.not. type_read(qtorcod(i,j))) then
+!						write(*,112) 'Q-torsion', qtorcod(i,j)
+!						qatom_load_fep = .false.
+!					end if
+!					else
+!					    write(*,112) 'Q-torsion', qtorcod(i,j)
+!					    qatom_load_fep = .false.
+!					end if
+!				end if
+!			end do !j
 		end do !i
 361	format('atom_i atom_j atom_k atom_l    torsion type in',4(1x,a5,i2))
 362	format(4(i6,1x),t47,4i8)
@@ -1318,21 +1280,160 @@ logical function qatom_load_fep(fep_file)
 	    deallocate(type_read)
 	end if
 
+!Add section to check torsion for being broken with bonds
+!first get atoms that are breaking bonds
+!then get the torsions that those atoms are involved in if not set to zero
+!and check if they are broken in the torsion section
+!allocate the maximum number of torsions that can theoretically break
+        allocate(break_torsions(nbreak_bnd*13),stat=alloc_status_qat)
+	call check_alloc_general(alloc_status_qat,'Q torsion breaking array')
+	nbreak_tor=0
+        do i=1,nbreak_bnd
+                ibreak = break_bonds(i)%i
+                jbreak = break_bonds(i)%j
+                istate = break_bonds(i)%brk_state
+                jstate = break_bonds(i)%set_state
+                do j=1,ntors
+                        if(((tor(j)%i.eq.ibreak .and. tor(j)%j.eq.jbreak) .or. &
+                                (tor(j)%j.eq.ibreak .and. tor(j)%k.eq.jbreak) .or. &
+				(tor(j)%k.eq.ibreak .and. tor(j)%l.eq.jbreak) .or. &
+				(tor(j)%l.eq.ibreak .and. tor(j)%k.eq.jbreak) .or. &
+                                (tor(j)%k.eq.ibreak .and. tor(j)%j.eq.jbreak) .or. &
+                                (tor(j)%j.eq.ibreak .and. tor(j)%i.eq.jbreak)) .and. &
+                                tor(j)%cod.ne.0) then
+                                nbreak_tor = nbreak_tor + 1
+                                break_torsions(nbreak_tor)%num = j
+                                break_torsions(nbreak_tor)%code = tor(j)%cod
+                                break_torsions(nbreak_tor)%brk_state = istate
+                                break_torsions(nbreak_tor)%set_state = jstate
+                                break_torsions(nbreak_tor)%i = tor(j)%i
+                                break_torsions(nbreak_tor)%j = tor(j)%j
+                                break_torsions(nbreak_tor)%k = tor(j)%k
+				break_torsions(nbreak_tor)%l = tor(j)%l
+                        end if
+                end do
+        end do
+!Now we know all the torsions that should be broken/not existing
+!in the relevant states, but not checking for those that should be there
+!loop over the torsions that should be gone to make sure they are gone!
+!If not, nuke them from orbit, by first setting new qtorsiontype
+!and then do the nuking part
+        do i=1,nbreak_tor
+                ibreak = break_torsions(i)%i
+                jbreak = break_torsions(i)%j
+                kbreak = break_torsions(i)%k
+		lbreak = break_torsions(i)%l
+                istate = break_torsions(i)%brk_state
+                jstate = break_torsions(i)%set_state
+                abreak = break_torsions(i)%num
+                cbreak = break_torsions(i)%code
+                torsion_set = .false.
+                do j=1,nqtor
+                        if((tor(abreak)%i.eq.qtor(j)%i) .and. (tor(abreak)%j.eq.qtor(j)%j) .and. &
+                                (tor(abreak)%k.eq.qtor(j)%k) .and. (tor(abreak)%l.eq.qtor(j)%l) .or. &
+                                ((tor(abreak)%i.eq.qtor(j)%l) .and. (tor(abreak)%j.eq.qtor(j)%k) .and. &
+                                (tor(abreak)%k.eq.qtor(j)%j) .and. (tor(abreak)%l.eq.qtor(j)%i))) then
+!torsion is set in FEP file, trigger torsion_set event
+                                torsion_set = .true.
+                                if(qtor(j)%cod(istate).ne.0) then
+!We have a broken torsion with non zero torsion code in the FEP file
+!alert the user, but keep the torsion, maybe they will need it
+                                write(*,363)
+                                write(*,364) ibreak,jbreak,kbreak,lbreak
+                                write(*,365) istate,qtor(j)%cod(istate)
+363             format('!!!WARNING!!! Torsion to broken bond is not set to zero!!')
+364             format('between atoms',2x,i6,2x,i6,2x,i6,2x,i6)
+365             format('in state',2x,i6,2x,'qtor code',2x,i6)
+                                end if ! torsion is not set to zero
+                        end if ! torsion is qtor
+                end do
+                if (.not. torsion_set) then
+!torsion is breaking but not set in FEP file
+!critical error, need to add torsion to qtorsion list
+!with parameters from topology -> needs some ugly hacks
+                        write(*,363)
+                        write(*,364) ibreak,jbreak,kbreak,lbreak
+                        write(*,366) istate,abreak,cbreak
+366             format('in state',2x,i6,2x,'torsion',2x,i6,2x,'torsion code',2x,i6)
+                        write(*,267)
+!make temporary list of qtor types
+!make sure there are torsions set, could be none
+!user error avoided
+                        if (nqtcod > 0 ) then
+                        allocate(tmp_qtorlib(nqtcod),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating tmp qtor code lib')
+                        tmp_qtorlib(1:nqtcod)=qtorlib(1:nqtcod)
+!remove old qtorlib
+                        deallocate(qtorlib)
+                        end if
+!now allocate new qtorlib with nqtcod+1
+                        allocate(qtorlib(nqtcod+1),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating new qtor code lib')
+!if the old library is there, copy it into the new array
+                        if (allocated(tmp_qtorlib)) then
+                        qtorlib(1:nqtcod)=tmp_qtorlib(1:nqtcod)
+                        deallocate(tmp_qtorlib)
+                        end if
+!now set the new qtor type from the topology
+                        qtorlib(nqtcod+1)%fk = torlib(cbreak)%fk
+			qtorlib(nqtcod+1)%rmult = torlib(cbreak)%rmult
+			qtorlib(nqtcod+1)%deltor = torlib(cbreak)%deltor
+	                write (*,350)
+                        write (*,225) nqtcod+1,qtorlib(nqtcod+1)%fk, qtorlib(nqtcod+1)%rmult,qtorlib(nqtcod+1)%deltor
+!and set new number of qtorlib to nqtcod+1
+                        nqtcod = nqtcod + 1
+!we have the torsion type, add it to the number of active qtorsions
+!with no torsion in the broken state
+!first, again need to reallocate the qtorsions
+                        if (nqtor > 0 ) then
+                        allocate(tmp_qtor(nqtor),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating tmp qtor lib')
+                        tmp_qtor(1:nqtor)=qtor(1:nqtor)
+                        deallocate(qtor)
+                        end if
+                        allocate(qtor(nqtor+1),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating new qtor list')
+                        if (allocated(tmp_qtor)) then
+                        qtor(1:nqtor)=tmp_qtor(1:nqtor)
+                        deallocate(tmp_qtor)
+                        end if
+                        qtor(nqtor+1)%i = ibreak
+                        qtor(nqtor+1)%j = jbreak
+                        qtor(nqtor+1)%k = kbreak
+			qtor(nqtor+1)%l = lbreak
+                        qtor(nqtor+1)%cod(:) = 0
+			if (jstate .ne. -1 ) then
+			end if
+                        qtor(nqtor+1)%cod(jstate) = nqtcod
+	                write(*,361) ('state',ii,ii=1,nstates)
+                        write (*,362) qtor(nqtor+1)%i,qtor(nqtor+1)%j,qtor(nqtor+1)%k,qtor(nqtor+1)%l,qtor(nqtor+1)%cod(1:nstates)
+                        nqtor = nqtor + 1
+                end if
+        end do
+	if(allocated(break_torsions)) then
+	deallocate(break_torsions)
+	end if
+
 	! --- Set new impropers
 	section='improper_types'
-	nqcod=prm_max_enum(section, type_count)
-	if(nqcod > 0 ) then
-		allocate(type_read(nqcod))
+	nqicod=prm_max_enum(section, type_count)
+	if(nqicod > 0 ) then
+		allocate(type_read(nqicod))
 	type_read(:) = .false.
-		allocate(qfkimp(nqcod), qimp0(nqcod))
+		allocate(qimplib(nqicod),stat=alloc_status_qat)
+		call check_alloc_general(alloc_status_qat,'Q improper library array')
+!		allocate(qfkimp(nqcod), qimp0(nqcod))
 		write (*,450)
 450	format(/,'Q-improper types:',/,'type #       force-k     imp0')
-		do i=1,type_count
+		do i=1,nqicod
 			if(.not. prm_get_line(line)) goto 1000
-			read(line,*, err=1000) j, qfkimp(j),qimp0(j)
+			read(line,*, err=1000) j, qimplib(j)%fk,qimplib(j)%imp0
+!			read(line,*, err=1000) j, qfkimp(j),qimp0(j)
 			type_read(j) = .true.
-			write(*,225) j,qfkimp(j),qimp0(j)
-			qimp0(j) = deg2rad*qimp0(j)
+			write(*,225) j,qimplib(j)%fk,qimplib(j)%imp0
+!			write(*,225) j,qfkimp(j),qimp0(j)
+			qimplib(j)%imp0 = deg2rad*qimplib(j)%imp0
+!			qimp0(j) = deg2rad*qimp0(j)
 		end do
 		write (*,*)
 	end if
@@ -1343,38 +1444,202 @@ logical function qatom_load_fep(fep_file)
 		write (*,460) nqimp
 460		format (/,'No. of changing impropers= ',i5)
 		write(*,461) ('state',i,i=1,nstates)
-		allocate(iqimp(nqimp), &
-			jqimp(nqimp), &
-			kqimp(nqimp), &
-			lqimp(nqimp), &
-			qimpcod(nqimp,nstates))
+		allocate(qimp(nqimp),stat=alloc_status_qat)
+		call check_alloc_general(alloc_status_qat,'Q improper array')
+!		allocate(iqimp(nqimp), &
+!			jqimp(nqimp), &
+!			kqimp(nqimp), &
+!			lqimp(nqimp), &
+!			qimpcod(nqimp,nstates))
 
 		do i=1,nqimp
 			if(.not. prm_get_line(line)) goto 1000
-			read(line,*, err=1000) iqimp(i),jqimp(i),kqimp(i),lqimp(i),qimpcod(i,:)
-			iqimp(i) = iqimp(i) + offset
-			jqimp(i) = jqimp(i) + offset
-			kqimp(i) = kqimp(i) + offset
-			lqimp(i) = lqimp(i) + offset
-			write (*,462) iqimp(i),jqimp(i),kqimp(i),lqimp(i), qimpcod(i,1:nstates)
+			read(line,*, err=1000) qimp(i)%i,qimp(i)%j,qimp(i)%k,qimp(i)%l,qimp(i)%cod(1:nstates)
+!			read(line,*, err=1000) iqimp(i),jqimp(i),kqimp(i),lqimp(i),qimpcod(i,:)
+			qimp(i)%i = qimp(i)%i + offset
+			qimp(i)%j = qimp(i)%j + offset
+			qimp(i)%k = qimp(i)%k + offset
+			qimp(i)%l = qimp(i)%l + offset
+!			iqimp(i) = iqimp(i) + offset
+!			jqimp(i) = jqimp(i) + offset
+!			kqimp(i) = kqimp(i) + offset
+!			lqimp(i) = lqimp(i) + offset
+			write (*,462) qimp(i)%i,qimp(i)%j,qimp(i)%k,qimp(i)%l,qimp(i)%cod(1:nstates)
+!			write (*,462) iqimp(i),jqimp(i),kqimp(i),lqimp(i), qimpcod(i,1:nstates)
 			!check types
-			do j=1,nstates
-				if(qimpcod(i,j) >0) then
-					if (allocated(type_read)) then
-					if(.not. type_read(qimpcod(i,j))) then
-						write(*,112) 'Q-impsion', qimpcod(i,j)
-						qatom_load_fep = .false.
-					end if
-					else
-					    write(*,112) 'Q-impsion', qimpcod(i,j)
-					    qatom_load_fep = .false.
-					end if
-				end if
-			end do !j
+                        do j=1,nstates
+                                if(qimp(i)%cod(j) > 0) then
+                                        if (allocated(type_read)) then
+                                        if(.not. type_read(qimp(i)%cod(j))) then
+                                                write(*,112) 'Q-improper', qimp(i)%cod(j)
+                                                qatom_load_fep = .false.
+                                        end if
+                                        else
+                                            write(*,112) 'Q-improper', qimp(i)%cod(j)
+                                            qatom_load_fep = .false.
+                                        end if
+                                end if
+                        end do !j
+
+
+!			do j=1,nstates
+!				if(qimpcod(i,j) >0) then
+!					if (allocated(type_read)) then
+!					if(.not. type_read(qimpcod(i,j))) then
+!						write(*,112) 'Q-impsion', qimpcod(i,j)
+!						qatom_load_fep = .false.
+!					end if
+!					else
+!					    write(*,112) 'Q-impsion', qimpcod(i,j)
+!					    qatom_load_fep = .false.
+!					end if
+!				end if
+!			end do !j
 		end do !i
 	end if
 461	format('atom_i atom_j atom_k atom_l    improper type in',4(1x,a5,i2))
 462	format(4(i6,1x),t48,4i8)
+
+!Add section to check improper torsion for being broken with bonds
+!first get atoms that are breaking bonds
+!then get the torsions that those atoms are involved in if not set to zero
+!and check if they are broken in the improper section
+!allocate the maximum number of impropers that can theoretically break
+        allocate(break_impropers(nbreak_bnd*4),stat=alloc_status_qat)
+	call check_alloc_general(alloc_status_qat,'Q improper breaking array')
+	nbreak_imp = 0
+        do i=1,nbreak_bnd
+                ibreak = break_bonds(i)%i
+                jbreak = break_bonds(i)%j
+                istate = break_bonds(i)%brk_state
+                jstate = break_bonds(i)%set_state
+                do j=1,nimps
+			if( ( (imp(j)%i.eq.ibreak .and. imp(j)%j.eq.jbreak) .or. &
+				(imp(j)%i.eq.ibreak .and. imp(j)%j.eq.ibreak) .or. &
+				(imp(j)%j.eq.ibreak .and. imp(j)%k.eq.jbreak) .or. &
+				(imp(j)%k.eq.ibreak .and. imp(j)%j.eq.jbreak) .or. &
+				(imp(j)%j.eq.ibreak .and. imp(j)%l.eq.jbreak) .or. &
+				(imp(j)%l.eq.ibreak .and. imp(j)%j.eq.jbreak)) .and. &
+				imp(j)%cod.ne.0) then
+                                nbreak_imp = nbreak_imp + 1
+                                break_impropers(nbreak_imp)%num = j
+                                break_impropers(nbreak_imp)%code = imp(j)%cod
+                                break_impropers(nbreak_imp)%brk_state = istate
+                                break_impropers(nbreak_imp)%set_state = jstate
+                                break_impropers(nbreak_imp)%i = imp(j)%i
+                                break_impropers(nbreak_imp)%j = imp(j)%j
+                                break_impropers(nbreak_imp)%k = imp(j)%k
+                                break_impropers(nbreak_imp)%l = imp(j)%l
+                        end if
+                end do
+        end do
+
+
+!Now we know all the improper torsions that should be broken/not existing
+!in the relevant states, but not checking for those that should be there
+!loop over the impropers that should be gone to make sure they are gone!
+!If not, nuke them from orbit, by first setting new qtorsiontype
+!and then do the nuking part
+        do i=1,nbreak_imp
+                ibreak = break_impropers(i)%i
+                jbreak = break_impropers(i)%j
+                kbreak = break_impropers(i)%k
+                lbreak = break_impropers(i)%l
+                istate = break_impropers(i)%brk_state
+                jstate = break_impropers(i)%set_state
+                abreak = break_impropers(i)%num
+                cbreak = break_impropers(i)%code
+                improper_set = .false.
+                do j=1,nqtor
+                        if(( (imp(abreak)%i.eq.qimp(j)%i) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
+                                (imp(abreak)%k.eq.qimp(j)%k) .and. (imp(abreak)%l.eq.qimp(j)%l)) .or. &
+				((imp(abreak)%i.eq.qimp(j)%k) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
+				(imp(abreak)%k.eq.qimp(j)%i) .and. (imp(abreak)%l.eq.qimp(j)%l)) .or. &
+				((imp(abreak)%i.eq.qimp(j)%k) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
+				(imp(abreak)%k.eq.qimp(j)%l) .and. (imp(abreak)%l.eq.qimp(j)%i)) .or. &
+				((imp(abreak)%i.eq.qimp(j)%l) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
+				(imp(abreak)%k.eq.qimp(j)%i) .and. (imp(abreak)%l.eq.qimp(j)%k)) .or. &
+				((imp(abreak)%i.eq.qimp(j)%l) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
+				(imp(abreak)%k.eq.qimp(j)%k) .and. (imp(abreak)%l.eq.qimp(j)%i))) then
+!improper is set in FEP file, trigger improper_set event
+                                improper_set = .true.
+                                if(qimp(j)%cod(istate).ne.0) then
+!We have a broken improper with non zero improper code in the FEP file
+!alert the user, but keep the improper, maybe they will need it
+                                write(*,463)
+                                write(*,364) ibreak,jbreak,kbreak,lbreak
+                                write(*,365) istate,qtor(j)%cod(istate)
+463             format('!!!WARNING!!! Improper to broke bond is not set to zero!!')
+                                end if ! improper is not set to zero
+                        end if ! improper is qimp
+                end do
+                if (.not. improper_set) then
+!improper is breaking but not set in FEP file
+!critical error, need to add improper torsion to qimp list
+!with parameters from topology -> needs some ugly hacks
+                        write(*,363)
+                        write(*,364) ibreak,jbreak,kbreak,lbreak
+                        write(*,466) istate,abreak,cbreak
+466             format('in state',2x,i6,2x,'improper',2x,i6,2x,'improper code',2x,i6)
+                        write(*,267)
+!make temporary list of qimp types
+!make sure there are impropers set, could be none
+!user error avoided
+                        if (nqicod > 0 ) then
+                        allocate(tmp_qimplib(nqicod),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating tmp qimp code lib')
+                        tmp_qimplib(1:nqicod)=qimplib(1:nqicod)
+!remove old qimplib
+                        deallocate(qimplib)
+                        end if
+!now allocate new qimplib with nqicod+1
+                        allocate(qimplib(nqicod+1),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating new qimp code lib')
+!if the old library is there, copy it into the new array
+                        if (allocated(tmp_qimplib)) then
+                        qimplib(1:nqicod)=tmp_qimplib(1:nqicod)
+                        deallocate(tmp_qimplib)
+                        end if
+!now set the new qimp type from the topology
+                        qimplib(nqicod+1)%fk = implib(cbreak)%fk
+                        qimplib(nqicod+1)%imp0 = implib(cbreak)%imp0
+	                write (*,450)
+                        write(*,225) nqicod + 1,qimplib(nqicod + 1)%fk,qimplib(nqicod + 1)%imp0
+!and set new number of qimplib to nqicod+1
+                        nqicod = nqicod + 1
+!we have the improper type, add it to the number of active qimpropers
+!with no improper in the broken state
+!first, again need to reallocate the qimpropers
+                        if (nqimp > 0 ) then
+                        allocate(tmp_qimp(nqimp),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating tmp qimp lib')
+                        tmp_qimp(1:nqimp)=qimp(1:nqimp)
+                        deallocate(qimp)
+                        end if
+                        allocate(qimp(nqimp+1),stat=alloc_status_qat)
+                        call check_alloc_general(alloc_status_qat,'Allocating new qimp list')
+                        if (allocated(tmp_qimp)) then
+                        qimp(1:nqimp)=tmp_qimp(1:nqimp)
+                        deallocate(tmp_qimp)
+                        end if
+                        qimp(nqimp+1)%i = ibreak
+                        qimp(nqimp+1)%j = jbreak
+                        qimp(nqimp+1)%k = kbreak
+                        qimp(nqimp+1)%l = lbreak
+                        qimp(nqimp+1)%cod(:) = 0
+			if (jstate .ne. -1 ) then
+                        qimp(nqimp+1)%cod(jstate) = nqicod
+			end if
+	                write(*,461) ('state',ii,ii=1,nstates)
+                        write (*,462) qimp(nqimp+1)%i,qimp(nqimp+1)%j,qimp(nqimp+1)%k,qimp(nqimp+1)%l,qimp(nqimp+1)%cod(1:nstates)
+                        nqimp = nqimp + 1
+                end if
+        end do
+        if(allocated(break_impropers)) then
+        deallocate(break_impropers)
+        end if
+
+
 	if (allocated(type_read)) then
 	    deallocate(type_read)
 	end if

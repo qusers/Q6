@@ -865,9 +865,10 @@ integer(AI), pointer	::	tempexlong(:,:)
 if(.not. qatom_load_atoms(fep_file)) then
         call die_general('failure to load Q-atoms from FEP file.')
 end if
+
 ! set flags
 do i=1,nqat
-        if(iqseq(i) > 0 .and. iqseq(i) .le. nat_solute)  then
+        if(iqseq(i) > 0 .and. iqseq(i) <= nat_solute)  then
                 iqatom(iqseq(i)) = i
         else if(iqseq(i) == 0) then
                 write(*,10) i
@@ -879,8 +880,6 @@ end do
 10	format('>>> WARNING: Q-atom no. ',i2,' is not associated with a topology atom.')
 20	format('>>>>> ERROR: Q-atom no. ',i2,' has invalid topology number ',i5)
 !allocate memory for qatom charges
-
-
 allocate(qcrg(nqat,nstates), stat=alloc_stat_gen)
 call check_alloc_general(alloc_stat_gen,'Qatom charges')
 
@@ -891,7 +890,6 @@ do i=1,nqat
                 qcrg(i,j)=crg(iqseq(i))
         end do
 end do
-
 
 !initialize softcore lookup array
 allocate (sc_lookup(nqat,natyps+nqat,nstates))
@@ -944,11 +942,16 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         !remove torsions that were redefined
         do i=1,ntors
                 do j=1,nqtor
-						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-                                tor(i)%cod /= 0) then
+			if(( (tor(i)%i.eq.qtor(j)%i .and. tor(i)%j.eq.qtor(j)%j .and. &
+				tor(i)%k.eq.qtor(j)%k .and. tor(i)%l.eq.qtor(j)%l) .or. &
+				(tor(i)%i.eq.qtor(j)%l .and. tor(i)%j.eq.qtor(j)%k .and. &
+				tor(i)%k.eq.qtor(j)%j .and. tor(i)%l.eq.qtor(j)%i )) .and. &
+				tor(i)%cod .ne. 0) then
+!			if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
+!			        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
+!                               (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
+!				tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
+!                                tor(i)%cod /= 0) then
                                 tor(i)%cod = 0
                                 write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
 						end if
@@ -961,19 +964,31 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case(FF_CHARMM) !special code for CHARMM
                 do i=1,nimps
                         do j=1,nqimp
-                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-                                        (imp(i)%i .eq. lqimp(j)) .or. &
-                                        (imp(i)%l .eq. iqimp(j)) .or. &
-                                        (imp(i)%l .eq. lqimp(j))) .and. &
-                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-                                        (imp(i)%j .eq. jqimp(j))  .or. &
-                                        (imp(i)%j .eq. kqimp(j))  .or. &
-                                        (imp(i)%j .eq. lqimp(j))) .and. &
-                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-                                        (imp(i)%k .eq. jqimp(j)) .or. &
-                                        (imp(i)%k .eq. kqimp(j)) .or. &
-                                        (imp(i)%k .eq. lqimp(j))) .and. &
-                                        imp(i)%cod /= 0) then
+				if ( ((	(imp(i)%i.eq.qimp(j)%i) .or. &
+					(imp(i)%i.eq.qimp(j)%l) .or. &
+					(imp(i)%l.eq.qimp(j)%i)) .and. &
+				     (	(imp(i)%j.eq.qimp(j)%l) .or. &
+					(imp(i)%j.eq.qimp(j)%i) .or. &
+					(imp(i)%j.eq.qimp(j)%j) .or. &
+					(imp(i)%j.eq.qimp(j)%k)) .and. &
+				     (	(imp(i)%k.eq.qimp(j)%i) .or. &
+					(imp(i)%k.eq.qimp(j)%j) .or. &
+					(imp(i)%k.eq.qimp(j)%k) .or. &
+					(imp(i)%k.eq.qimp(j)%l))) .and. &
+				     (	imp(i)%cod .ne. 0)) then
+!                                if(((imp(i)%i .eq. iqimp(j)) .or. &
+!                                        (imp(i)%i .eq. lqimp(j)) .or. &
+!                                        (imp(i)%l .eq. iqimp(j)) .or. &
+!                                        (imp(i)%l .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%j .eq. iqimp(j)) .or. &
+!                                        (imp(i)%j .eq. jqimp(j))  .or. &
+!                                        (imp(i)%j .eq. kqimp(j))  .or. &
+!                                        (imp(i)%j .eq. lqimp(j))) .and. &
+!                                        ((imp(i)%k .eq. iqimp(j)) .or. &
+!                                        (imp(i)%k .eq. jqimp(j)) .or. &
+!                                        (imp(i)%k .eq. kqimp(j)) .or. &
+!                                        (imp(i)%k .eq. lqimp(j))) .and. &
+!                                        imp(i)%cod /= 0) then
                                         imp(i)%cod = 0
                                         write (*,231) &
                                         'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
@@ -984,9 +999,19 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case default
         do i=1,nimps
                 do j=1,nqimp
-                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
-                                imp(i)%cod /= 0) then
+                        if(( (imp(i)%i.eq.qimp(j)%i) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%l) .and. (imp(i)%l.eq.qimp(j)%i)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%k)) .or. &
+                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
+                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%i))) then
+!                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
+!                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+!                                imp(i)%cod ne. 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
                         end if
@@ -1037,5 +1062,6 @@ end do
 592	format('>>>>> ERROR: Special exclusion pair ',i2,' (',i5,1x,i5,') is invalid')
 594	format('>>>>> ERROR: Non-Q-atom special excl. pair ',i2,' must be on in all or no states')
 end subroutine get_fep
+
 
 end module CALC_NB

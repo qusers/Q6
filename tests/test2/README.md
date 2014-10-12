@@ -16,6 +16,12 @@ executable in you system and also the version of MPI you will use to run the
 simulation in parallel (qdynp) if such is the case.
 
 
+This test has the original topology from the ancient Q version to give results consistent
+with the first benchmark results. In order to account for the default turning on of the
+separate scaling routine, the test input files have been modified to turn it off to
+be consistent with the original tests. A new series of tests have been added that have 
+both the new topology and use separate scaling to test serial and parallel execution.
+
 Equilibration (Heating)
 --------------------------------------------------------------------------------
 
