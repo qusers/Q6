@@ -75,7 +75,10 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+<<<<<<< HEAD
 	DEBUG_FC=	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+=======
+>>>>>>> f26fe7fb5d418d2c52dbc194adcd94fba5a9a3f4
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -84,8 +87,13 @@ else ifeq ($(COMP),gcc)
 	OMPI_FCFLAGS=	${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
+<<<<<<< HEAD
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}
+=======
+	DEBUG=          -fbacktrace -fbounds-check -g ${FC_OPT}	
+	DEBUGMPI=       -fbacktrace -fbounds-check -g ${FC_OPT}
+>>>>>>> f26fe7fb5d418d2c52dbc194adcd94fba5a9a3f4
 
 else
 	FC=		gfortran

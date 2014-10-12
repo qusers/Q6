@@ -11,7 +11,6 @@ use SIZES
 use TRJ
 use MPIGLOB
 use QATOM
-use EXC
 #if defined (_DF_VERSION_)
 use DFPORT
 use DFLIB
@@ -178,10 +177,6 @@ character(len=200)			::	ene_file
 character(len=200)			::	exrstr_file
 character(len=200)			::	xwat_file
 
-! --- Excluded groups, added 2014 Paul Bauer
-integer					:: ngroups_gc
-logical					:: use_excluded_groups
-type(MASK_TYPE)                         :: allmask
 
 ! --- Restraints
 integer						::	implicit_rstr_from_file
@@ -542,27 +537,17 @@ subroutine allocate_mpi
 
 if(nodeid .eq. 0) then
  allocate(mpi_status(MPI_STATUS_SIZE,numnodes-1), & 
-         request_recv(numnodes-1,4), &
+         request_recv(numnodes-1,3), &
          d_recv(natom*3,numnodes-1), &
          E_recv(numnodes-1), &
          EQ_recv(nstates,numnodes-1), &
          stat=alloc_status)
  call check_alloc('MPI data arrays')
- if (use_excluded_groups) then
-	allocate(EQ_gc_recv(ngroups_gc,nstates,numnodes-1), &
-        stat=alloc_status)
-	call check_alloc('MPI data array excluded groups')
- end if
 else
  allocate(E_send(1), &
           EQ_send(nstates), &
           stat=alloc_status)
  call check_alloc('MPI data arrays')
- if (use_excluded_groups) then
-	allocate(EQ_gc_send(ngroups_gc,nstates), &
-	stat=alloc_status)
-	call check_alloc('MPI data array excluded groups')
- end if
 end if
 end subroutine allocate_mpi
 #endif
@@ -639,9 +624,6 @@ deallocate(rstdis, stat=alloc_status)
 deallocate(rstang, stat=alloc_status)
 deallocate(rstwal, stat=alloc_status)
 
-! excluded groups
-deallocate(ST_gc, stat=alloc_status)
-
 #if defined (USE_MPI)
 !MPI arrays
 deallocate(nbpp_per_cgp ,stat=alloc_status)
@@ -655,15 +637,9 @@ if(nodeid .eq. 0) then
    deallocate(d_recv, stat=alloc_status)
    deallocate(E_recv, stat=alloc_status)
    deallocate(EQ_recv, stat=alloc_status)
-   if (allocated(EQ_gc_recv)) then
-	deallocate(EQ_gc_recv,stat=alloc_status)
-   end if
 else
    deallocate(E_send, stat=alloc_status)
    deallocate(EQ_send, stat=alloc_status)
-   if (allocated(EQ_gc_send)) then
-	deallocate(EQ_gc_send,stat=alloc_status)
-   end if
 end if
 #endif
 
@@ -675,14 +651,11 @@ subroutine reallocate_nonbondlist_pp
 
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-!make it safer and add some padding
-!memory is cheap
 old_max = calculation_assignment%pp%max
-temp_max = int(calculation_assignment%pp%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpp(1:old_max)
 
@@ -710,15 +683,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpp_cgp, 1)
-!making some padding already here
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -740,15 +711,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpw_cgp, 1)
-!again, giving some padding
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpw_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpw_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpw_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpw_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -770,14 +739,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbqp_cgp, 1)
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbqp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbqp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbqp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbqp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -796,12 +764,11 @@ end subroutine reallocate_nbqp_cgp
 subroutine reallocate_nonbondlist_pw
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%pw%max
-temp_max = int(calculation_assignment%pw%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpw(1:old_max)
 
@@ -826,12 +793,11 @@ end subroutine reallocate_nonbondlist_pw
 subroutine reallocate_nonbondlist_qp
 ! variables
 type(NBQP_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%qp%max
-temp_max = int(old_max * 1.05 ) +200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbqp(1:old_max)
 
@@ -856,15 +822,13 @@ end subroutine reallocate_nonbondlist_qp
 subroutine reallocate_nonbondlist_ww
 ! variables
 integer(AI), allocatable		:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-old_max = calculation_assignment%ww%max
-temp_max = int(old_max * 1.05 ) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(calculation_assignment%ww%max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:old_max) = nbww(1:old_max)
-!old_max = calculation_assignment%ww%max
+old_nbxx(1:calculation_assignment%ww%max) = nbww(1:calculation_assignment%ww%max)
+old_max = calculation_assignment%ww%max
 
 ! deallocate and copy back
 deallocate(nbww)
@@ -1452,21 +1416,15 @@ end subroutine close_input_files
 !-----------------------------------------------------------------------
 
 subroutine close_output_files
-integer :: iii
 close (3)
 if ( itrj_cycle .gt. 0 ) close (10)
 if ( iene_cycle .gt. 0 ) close (11)
-if (use_excluded_groups) then
-        do iii=1,ngroups_gc
-        close (ST_gc(iii)%fileunit)
-        end do
-end if
+
 end subroutine close_output_files
 
 !-----------------------------------------------------------------------
 
 subroutine open_files
-	integer :: iii
 ! --> restart file (2)
 if(restart) then
 open (unit=2, file=restart_file, status='old', form='unformatted', action='read', err=2)
@@ -1478,12 +1436,6 @@ open (unit=3, file=xfin_file, status='unknown', form='unformatted', action='writ
 ! --> energy output file (11)
 if ( iene_cycle .gt. 0 ) then
 open (unit=11, file=ene_file, status='unknown', form='unformatted', action='write', err=11)
-	if (use_excluded_groups) then
-		do iii=1,ngroups_gc
-                ST_gc(iii)%fileunit=freefile()
-		open (unit=ST_gc(iii)%fileunit,file=ST_gc(iii)%filename,status='unknown',form='unformatted',action='write',err=11)
-		end do
-	end if
 end if
 
 ! --> external file for implicit position restraints (12)
@@ -1661,16 +1613,11 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         !remove torsions that were redefined
         do i=1,ntors
                 do j=1,nqtor
-			if(( (tor(i)%i.eq.qtor(j)%i .and. tor(i)%j.eq.qtor(j)%j .and. &
-				tor(i)%k.eq.qtor(j)%k .and. tor(i)%l.eq.qtor(j)%l) .or. &
-				(tor(i)%i.eq.qtor(j)%l .and. tor(i)%j.eq.qtor(j)%k .and. &
-				tor(i)%k.eq.qtor(j)%j .and. tor(i)%l.eq.qtor(j)%i )) .and. &
-				tor(i)%cod .ne. 0) then
-!			if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-!			        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-!                               (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-!				tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-!                                tor(i)%cod /= 0) then
+						if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
+						        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
+                                (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
+								tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
+                                tor(i)%cod /= 0) then
                                 tor(i)%cod = 0
                                 write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
 						end if
@@ -1683,31 +1630,19 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case(FF_CHARMM) !special code for CHARMM
                 do i=1,nimps
                         do j=1,nqimp
-				if ( ((	(imp(i)%i.eq.qimp(j)%i) .or. &
-					(imp(i)%i.eq.qimp(j)%l) .or. &
-					(imp(i)%l.eq.qimp(j)%i)) .and. &
-				     (	(imp(i)%j.eq.qimp(j)%l) .or. &
-					(imp(i)%j.eq.qimp(j)%i) .or. &
-					(imp(i)%j.eq.qimp(j)%j) .or. &
-					(imp(i)%j.eq.qimp(j)%k)) .and. &
-				     (	(imp(i)%k.eq.qimp(j)%i) .or. &
-					(imp(i)%k.eq.qimp(j)%j) .or. &
-					(imp(i)%k.eq.qimp(j)%k) .or. &
-					(imp(i)%k.eq.qimp(j)%l))) .and. &
-				     (	imp(i)%cod .ne. 0)) then
-!                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-!                                        (imp(i)%i .eq. lqimp(j)) .or. &
-!                                        (imp(i)%l .eq. iqimp(j)) .or. &
-!                                        (imp(i)%l .eq. lqimp(j))) .and. &
-!                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-!                                        (imp(i)%j .eq. jqimp(j))  .or. &
-!                                        (imp(i)%j .eq. kqimp(j))  .or. &
-!                                        (imp(i)%j .eq. lqimp(j))) .and. &
-!                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-!                                        (imp(i)%k .eq. jqimp(j)) .or. &
-!                                        (imp(i)%k .eq. kqimp(j)) .or. &
-!                                        (imp(i)%k .eq. lqimp(j))) .and. &
-!                                        imp(i)%cod /= 0) then
+                                if(((imp(i)%i .eq. iqimp(j)) .or. &
+                                        (imp(i)%i .eq. lqimp(j)) .or. &
+                                        (imp(i)%l .eq. iqimp(j)) .or. &
+                                        (imp(i)%l .eq. lqimp(j))) .and. &
+                                        ((imp(i)%j .eq. iqimp(j)) .or. &
+                                        (imp(i)%j .eq. jqimp(j))  .or. &
+                                        (imp(i)%j .eq. kqimp(j))  .or. &
+                                        (imp(i)%j .eq. lqimp(j))) .and. &
+                                        ((imp(i)%k .eq. iqimp(j)) .or. &
+                                        (imp(i)%k .eq. jqimp(j)) .or. &
+                                        (imp(i)%k .eq. kqimp(j)) .or. &
+                                        (imp(i)%k .eq. lqimp(j))) .and. &
+                                        imp(i)%cod /= 0) then
                                         imp(i)%cod = 0
                                         write (*,231) &
                                         'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
@@ -1718,19 +1653,9 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
         case default
         do i=1,nimps
                 do j=1,nqimp
-                        if(( (imp(i)%i.eq.qimp(j)%i) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
-                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
-                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
-                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%l)) .or. &
-                                ((imp(i)%i.eq.qimp(j)%k) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
-                                (imp(i)%k.eq.qimp(j)%l) .and. (imp(i)%l.eq.qimp(j)%i)) .or. &
-                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
-                                (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%k)) .or. &
-                                ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
-                                (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%i))) then
-!                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-!                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
-!                                imp(i)%cod ne. 0) then
+                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
+                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
+                                imp(i)%cod /= 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
                         end if
@@ -2060,7 +1985,7 @@ integer, parameter			:: vars = 40    !increment this var when adding data to bro
 integer				   	:: blockcnt(vars), ftype(vars)
 integer(kind=MPI_ADDRESS_KIND)			   	:: fdisp(vars)
 integer					:: mpitype_batch,mpitype_batch2
-integer					:: nat3,j,jj
+integer					:: nat3
 real(kind=wp8), allocatable		:: temp_lambda(:)
 integer, parameter                      ::maxint=2147483647
 real(kind=wp8), parameter                        ::maxreal=1E35
@@ -2204,49 +2129,12 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nat_pro')
 !vars from QATOM
 call MPI_Bcast(nstates, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nstates')
-call MPI_Bcast(use_excluded_groups,1,MPI_LOGICAL, 0,MPI_COMM_WORLD,ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast use_excluded_groups')
-
-!first time force syncing so that everyone knows and has all parameters to this
-!point, should give no hits to performance
-!Paul Bauer 2014
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
-
-
-if (use_excluded_groups) then
-	call MPI_Bcast(ngroups_gc, 1, MPI_INTEGER, 0,MPI_COMM_WORLD,ierr)
-	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ngroups_gc')
-end if
 call MPI_Bcast(nqat, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nqat')
 call MPI_Bcast(qvdw_flag, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qvdw_flag')
 call MPI_Bcast(nqlib, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nqlib')
-
-if (use_excluded_groups) then
-        allocate(tempmask(nat_pro,ngroups_gc),stat=alloc_status)
-        call check_alloc('temp mask arrays')
-        if (nodeid .ne. 0) then
-                allocate(ST_gc(ngroups_gc),stat=alloc_status)
-                call check_alloc('node gc array')
-        end if
-        if (nodeid.eq.0) then
-                do jj=1,ngroups_gc
-                tempmask(:,jj)=ST_gc(jj)%gcmask%mask(:)
-                end do
-        end if
-        call MPI_Bcast(tempmask,nat_pro*ngroups_gc,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-        if (ierr .ne. 0) call die('init_nodes/MPI_Bcast gc atom masks')
-        if (nodeid.ne.0) then
-                do jj=1,ngroups_gc
-                call mask_initialize(ST_gc(jj)%gcmask)
-                ST_gc(jj)%gcmask%mask(:)=tempmask(:,jj)
-                end do
-        end if
-        deallocate(tempmask,stat=alloc_status)
-end if
 
 
 !Setting all vars not sent to slaves to 2147483647. To avoid hidden bugs.
@@ -2257,9 +2145,6 @@ Ndegf=maxint
 Ndegfree=maxint
 xwcent(:)=maxreal 
 end if
-
-!first part completed, syncing again
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 ! --- MD data, second batch ---
 
@@ -2324,8 +2209,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 ! ADD CODE HERE to broadcast shake data
 !end if
 
-!and syncing again
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- lrf data ---
 
 if (use_LRF) then
@@ -2365,8 +2248,6 @@ call MPI_Type_free(mpitype_batch, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Type_free')
 end if !(use_LRF)
 
-!sync to make sure everything is there
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- data from the TOPO module ---
 
 if (nodeid .eq. 0) write (*,'(80a)') 'TOPO data'
@@ -2450,9 +2331,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
 
-!end of part -> sync
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
 ! --- data from the QATOM module ---
 
 if (nodeid .eq. 0) write (*,'(80a)') 'QATOM data'
@@ -2468,11 +2346,8 @@ EQ(nstates), &
 sc_lookup(nqat,natyps+nqat,nstates), &
 stat=alloc_status)
 call check_alloc('Q-atom arrays')
-	if (use_excluded_groups) then
-		allocate(EQ_gc(ngroups_gc,nstates),stat=alloc_status)
-		call check_alloc('Q-energy arrays excluded groups')
-	end if
 end if
+
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
 call MPI_Bcast(sc_lookup, size(sc_lookup), MPI_REAL8, 0, MPI_COMM_WORLD,ierr)
@@ -2528,20 +2403,12 @@ call MPI_Bcast(temp_lambda, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast EQ%lambda')
 if (nodeid .ne. 0) EQ(1:nstates)%lambda = temp_lambda(1:nstates)
 deallocate(temp_lambda)
-!	if (use_excluded_groups) then
-!		do j=1,ngroups_gc
-!		EQ_gc(j,1:nstates)%lambda = EQ(1:nstates)%lambda
-!		end do
-!	end if
 end if
 
 if (nodeid .eq. 0) then 
 call centered_heading('End of initiation', '-')
 print *
 end if
-
-!and we sync again
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 !Finally allocate for  slaves:E_send, EQ_send
 !For master :E_recv,d_recv
@@ -2757,7 +2624,7 @@ end subroutine initial_shaking
 logical function initialize()                  
 ! local variables
 character					:: text*80
-integer						:: i,j,length,ii
+integer						:: i,j,length
 real(8)						:: stepsize
 real(8)						:: lamda_tmp(max_states)
 integer						:: fu, fstat
@@ -2771,9 +2638,7 @@ logical						::	yes
 logical						::	need_restart
 character(len=80)			::	instring
 logical						::	inlog
-integer						::	mask_rows, number
-integer,parameter				:: maxmaskrows=30
-character*80					:: gc_mask_tmp(maxmaskrows),str,str2
+integer						::	mask_rows
 
 ! this subroutine will init:
 !  nsteps, stepsize, dt
@@ -3403,79 +3268,6 @@ if(nstates > 0 ) then
 98			format ('lambda-values      = ',10f8.5)
         end if
 end if
-
-!Option to make additional calculation with atom groups excluded from the
-!energy calculation to provide 'real' group contribution
-!Added Paul Bauer 2014
-use_excluded_groups = .false.
-ngroups_gc = prm_count('exclude_groups')
-write (*,'(/,a)') 'List of excluded atom groups'
-if ( ngroups_gc .gt. 0 ) then
-!allocate new EQ arrays for each group
-777 format (/,'No of excluded group calculations =',i10)
-	write (*,777) ngroups_gc
-	allocate(ST_gc(ngroups_gc), stat=alloc_status)
-	call check_alloc('gc param store')
-	allocate(EQ_gc(ngroups_gc,nstates), stat=alloc_status)
-	call check_alloc('gc excluded list')
-778 format ('groupno	contains')
-	write (*,778)
-	do i=1,ngroups_gc
-		!read numbers from string
-		number = 0
-		do while (prm_get_field(instring))
-			number = number + 1
-			read(instring, *, iostat=fstat) gc_mask_tmp(number)
-	                if(fstat /= 0) then
-        	                write(*,'(a)') '>>> ERROR: Invalid mask.'
-                	        initialize = .false.
-                        	exit
-                	end if
-		end do
-
-		mask_rows = number - 1
-		ST_gc(i)%seltype = trim(gc_mask_tmp(1))
-		if ((trim(ST_gc(i)%seltype) /= 'atom' ).and. (trim(ST_gc(i)%seltype) /= 'residue')) then
-779 format (/,'Could not understand name of the selection , ',a)
-			write (*,779) text
-                	initialize = .false.
-		end if
-		if(iene_cycle > 0) then
-        	if(mask_rows == 0) then
-!You are not as funny as you think ...
-                	write(*,780) i
-780 format (/,'No atoms excluded for group ',i10)
-                	ST_gc(i)%count=0
-        	else
-!			call mask_initialize(ST_gc(i)%gcmask)
-			ST_gc(i)%count=mask_rows
-			allocate(ST_gc(i)%maskarray(mask_rows),stat=alloc_status)
-			call check_alloc('gc maskarray')
-			
-	                do ii=2,mask_rows+1
-                	        yes = gc_store_mask(ST_gc(i),gc_mask_tmp(ii))
-	                end do
-			use_excluded_groups = .true.
-!			ST_gc(i)%fileunit=freefile()
-			write (str,'(i10)') i
-			ST_gc(i)%filename=trim(adjustl(str))//'_'
-                        str2=ene_file
-                        str=trim(ST_gc(i)%filename)//trim(str2)
-			ST_gc(i)%filename=trim(str)
-781 format (/,i10,i10,' atom groups')
-                        write(*,781) i,mask_rows 
-	        end if
-		elseif(mask_rows == 0) then
-		        write(*,'(a)') 'Ignoring section for excluding atoms.'
-		end if
-	end do
-
-end if
-
-		
-		
-		
-
 
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
@@ -4321,7 +4113,7 @@ end subroutine nh_prop
 subroutine md_run
 
 ! local variables
-integer				:: i,j,k,niter,iii
+integer				:: i,j,k,niter
 
 integer				:: i3
 real(8)                         :: Tlast
@@ -4514,33 +4306,39 @@ if( thermostat == 'berendsen' ) then
 		!solute atoms first
         do i=1,nat_solute
                 i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solute
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+		v(i3+1) = ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solute
 
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solute
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+		v(i3+2) = ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solute
 
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solute
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+		v(i3+3) = ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solute
         end do
 
 		!now solvent atoms
         do i=nat_solute+1,natom
                 i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solvent
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solvent
 
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solvent
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solvent
 
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solvent
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solvent
         end do
 ! --- end of the velocity reescaling for the Berendsen ---
 ! if Langevin thermostat was chosen, applied here
@@ -4550,19 +4348,22 @@ else if( thermostat == 'langevin' ) then
                 i3=i*3-3
 		randv= sqrt (gkT/winv(i))
 		call gauss(zero,randv,randf,iseed)
-                v(i3+1)= v(i3+1)*(1-friction*dt)-(d(i3+1)-randf)*winv(i)*dt
+                v(i3+1)= v(i3+1)*(1-friction*dt2)-(d(i3+1)-randf)*winv(i)*dt2
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+                v(i3+1)= v(i3+1)*(1-friction*dt2)-(d(i3+1)-randf)*winv(i)*dt2
 
                 call gauss(zero,randv,randf,iseed)
-                v(i3+2)= v(i3+2)*(1-friction*dt)-(d(i3+2)-randf)*winv(i)*dt
+                v(i3+2)= v(i3+2)*(1-friction*dt2)-(d(i3+2)-randf)*winv(i)*dt2
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+                v(i3+2)= v(i3+2)*(1-friction*dt2)-(d(i3+2)-randf)*winv(i)*dt2
 
 		call gauss(zero,randv,randf,iseed)
-                v(i3+3)= v(i3+3)*(1-friction*dt)-(d(i3+3)-randf)*winv(i)*dt
+                v(i3+3)= v(i3+3)*(1-friction*dt2)-(d(i3+3)-randf)*winv(i)*dt2
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+                v(i3+3)= v(i3+3)*(1-friction*dt2)-(d(i3+3)-randf)*winv(i)*dt2
         end do
 ! --- end of the Langevin thermostat ---
 ! if Nosé-Hoover thermostat was chosen, applied here
@@ -4573,16 +4374,19 @@ call nh_prop
 	do i=1,natom
         	i3=i*3-3
 		xx(i3+1) = x(i3+1)
+        	x(i3+1) = x(i3+1) + v(i3+1)*dt2
         	v(i3+1) = v(i3+1) - d(i3+1)*winv(i)*dt
-        	x(i3+1) = x(i3+1) + v(i3+1)*dt
+        	x(i3+1) = x(i3+1) + v(i3+1)*dt2
 
         	xx(i3+2) = x(i3+2)
+        	x(i3+2) = x(i3+2) + v(i3+2)*dt2
         	v(i3+2) = v(i3+2) - d(i3+2)*winv(i)*dt
-        	x(i3+2) = x(i3+2) + v(i3+2)*dt
+        	x(i3+2) = x(i3+2) + v(i3+2)*dt2
 
         	xx(i3+3) = x(i3+3)
+        	x(i3+3) = x(i3+3) + v(i3+3)*dt2
         	v(i3+3) = v(i3+3) - d(i3+3)*winv(i)*dt
-        	x(i3+3) = x(i3+3) + v(i3+3)*dt
+        	x(i3+3) = x(i3+3) + v(i3+3)*dt2
 	end do
 
 end if
@@ -4632,12 +4436,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
                 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
                 ! nrgy_put_ene(unit, e2, OFFD): print 'e2'=EQ and OFFD to unit 'unit'=11
                         call put_ene(11, EQ, OFFD)
-		! for new excluded groups, write more files for each group
-			if(use_excluded_groups) then
-				do iii=1,ngroups_gc
-				call put_ene(ST_gc(iii)%fileunit,EQ_gc(iii,:),OFFD)
-				end do
-			end if
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
@@ -9874,7 +9672,7 @@ end subroutine nonbon2_pw_box
 
 subroutine nonbon2_qq
 ! local variables
-integer						:: istate,jj
+integer						:: istate
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(8)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(8)						:: Vel,V_a,V_b,dv,el_scale
@@ -9971,21 +9769,9 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   end if
 end do ! ip
 
@@ -9995,7 +9781,7 @@ end subroutine nonbon2_qq
 !-----------------------------------------------------------------------
 subroutine nonbon2_qq_lib_charges
 ! local variables
-integer						:: istate,jj
+integer						:: istate
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(8)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(8)						:: Vel,V_a,V_b,dv,el_scale
@@ -10091,21 +9877,9 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   end if
 end do ! ip
 
@@ -10117,7 +9891,7 @@ end subroutine nonbon2_qq_lib_charges
 subroutine nonbon2_qp
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
-integer						:: istate,jj
+integer						:: istate
 real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
 real(8)						:: Vel,V_a,V_b,dv
 
@@ -10197,13 +9971,6 @@ do istate = 1, nstates
   ! update q-protein or q-water energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do 
-        end if
-
 end do ! istate
 
 end do
@@ -10214,7 +9981,7 @@ end subroutine nonbon2_qp
 subroutine nonbon2_qp_box
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
-  integer						:: istate,jj
+  integer						:: istate
   real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
   real(8)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
@@ -10309,13 +10076,6 @@ subroutine nonbon2_qp_box
 	  ! update q-protein or q-water energies
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-        end if
-
 	end do ! istate
 
   end do
@@ -11289,7 +11049,7 @@ end subroutine nonbond_pw_box
 
 subroutine nonbond_qq
 ! local variables
-integer					:: istate, is,jj
+integer					:: istate, is
 integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(8)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(8)					:: Vel,V_a,V_b,dv,el_scale
@@ -11386,23 +11146,9 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   else
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-        end if
-
-
   end if
 end do
 end do
@@ -11415,7 +11161,7 @@ subroutine nonbond_qq_lib_charges
 !solute-surrounding only
 
 ! local variables
-integer					:: istate,jj
+integer					:: istate
 integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(8)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(8)					:: Vel,V_a,V_b,dv,el_scale
@@ -11507,22 +11253,9 @@ do ip = 1, nbqq_pair(istate)
   if ( jq /= 0 ) then
         EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
         EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
   else  ! j is not a qatom
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-        end if
-
   end if
 end do
 end do
@@ -11538,7 +11271,7 @@ subroutine nonbond_qp
 
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
-integer						:: istate,jj
+integer						:: istate
 real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
 real(8)						:: Vel,V_a,V_b,dv
 
@@ -11593,14 +11326,6 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-        end if
-
-
 end do ! istate
 
 end do
@@ -11615,7 +11340,7 @@ subroutine nonbond_qp_box
 
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
-  integer						:: istate,jj
+  integer						:: istate
   real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
   real(8)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
@@ -11690,13 +11415,6 @@ subroutine nonbond_qp_box
 	  ! update q-protein energies
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-        end if
-
 	end do ! istate
 
   end do
@@ -11710,7 +11428,7 @@ subroutine nonbond_qp_qvdw
 
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ,qLJ
-integer						:: istate,jj
+integer						:: istate
 real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
 real(8)						:: Vel,V_a,V_b,dv,r6_sc
 
@@ -11767,14 +11485,6 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do
-	end if
-
 end do ! istate
 
 end do
@@ -11787,7 +11497,7 @@ subroutine nonbond_qp_qvdw_box
 
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ,qLJ
-  integer						:: istate,jj
+  integer						:: istate
   real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
   real(8)						:: Vel,V_a,V_b,dv,r6_sc
   integer						:: group, gr, ia
@@ -11869,13 +11579,6 @@ subroutine nonbond_qp_qvdw_box
 	  ! update q-protein energies
 		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
 		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-        if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
-                end do 
-        end if
-
 	end do ! istate
 
   end do
@@ -13857,7 +13560,7 @@ subroutine pot_energy
 ! local variables
 
 
-integer					:: istate, i, nat3, numrequest
+integer					:: istate, i, nat3
 integer					:: is, j
 #if defined (PROFILING)
 real(8)					:: start_loop_time1
@@ -13912,14 +13615,6 @@ EQ(istate)%qp%vdw = 0.0
 EQ(istate)%qw%el = 0.0
 EQ(istate)%qw%vdw = 0.0
 EQ(istate)%restraint = 0.0
-if (use_excluded_groups) then
-        do j=1,ngroups_gc
-        EQ_gc(j,istate)%qq%el = 0.0
-        EQ_gc(j,istate)%qq%vdw = 0.0
-        EQ_gc(j,istate)%qp%el = 0.0
-        EQ_gc(j,istate)%qp%vdw = 0.0
-        end do
-end if
 end do
 
 !reset derivatives ---
@@ -14003,17 +13698,10 @@ else  !Slave nodes
 call gather_nonbond
 #endif
 end if
-#if defined(USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
+
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-if (use_excluded_groups) then
-        numrequest = 4
-else
-        numrequest = 3
-end if
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll(numnodes-1,request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -14031,33 +13719,8 @@ do i=1,numnodes-1
   EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
   EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
   EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
-
-if (use_excluded_groups) then
-!	do j=1,ngroups_gc
-	EQ_gc(1:ngroups_gc,1:nstates)%qp%el = EQ_gc(1:ngroups_gc,1:nstates)%qp%el + &
-						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%el
-	EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw + &
-						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%vdw
-!	end do
-end if
 end do
 #endif
-
-if (use_excluded_groups) then
-	do j=1,ngroups_gc
-	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
-	EQ_gc(j,1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
-	EQ_gc(j,1:nstates)%q = EQ(1:nstates)%q
-	EQ_gc(j,1:nstates)%restraint = EQ(1:nstates)%restraint
-	do istate=1,nstates
-	EQ_gc(j,istate)%qx%el = EQ_gc(j,istate)%qq%el + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
-	EQ_gc(j,istate)%qx%vdw = EQ_gc(j,istate)%qq%vdw + EQ_gc(j,istate)%qp%vdw + EQ_gc(j,istate)%qw%vdw
-	EQ_gc(j,istate)%total = EQ_gc(j,istate)%q%bond + EQ_gc(j,istate)%q%angle &
- + EQ_gc(j,istate)%q%torsion + EQ_gc(j,istate)%q%improper + EQ_gc(j,istate)%qx%el &
- + EQ_gc(j,istate)%qx%vdw + EQ_gc(j,istate)%restraint
-	end do
-	end do
-end if
 
 ! q-atom energy summary
 do istate = 1, nstates
@@ -14089,12 +13752,8 @@ E%potential = E%p%bond + E%w%bond + E%p%angle + E%w%angle + E%p%torsion + &
 E%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
 E%ww%vdw + E%q%bond + E%q%angle + E%q%torsion + &
 E%q%improper + E%qx%el + E%qx%vdw + E%restraint%total + E%LRF
-
-
 end if
-#if (USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
+
 end subroutine pot_energy
 
 !-----------------------------------------------------------------------
@@ -14393,7 +14052,7 @@ end subroutine make_shell2
 
 subroutine init_trj
 !locals
-integer						::	trj_atoms, i
+integer						::	trj_atoms
 
 !initialise trajectory atom mask
 if(itrj_cycle > 0) then
@@ -14409,13 +14068,6 @@ if(itrj_cycle > 0) then
 end if
 
 100	format('Coordinates for',i6,' atoms will be written to the trajectory.')
-
-!preparing the first half-step to initialize the leap-frog integration
-
-        do i=1,3*natom
-                x(i) = x(i) + v(i)*dt2
-	end do
-
 end subroutine init_trj
 
 !-----------------------------------------------------------------------
@@ -14535,20 +14187,6 @@ crg_hw = crg_hw * sqrt(coulomb_constant)
 if(nqat > 0) then
         qcrg(:,:) = qcrg(:,:) * sqrt(coulomb_constant)
 end if
-if (use_excluded_groups) then
-        do i=1,ngroups_gc
-                call mask_initialize(ST_gc(i)%gcmask)
-                call gc_make_array(ST_gc(i))
-                do j=1,ST_gc(i)%count
-                stat = mask_add(ST_gc(i)%gcmask,ST_gc(i)%sendtomask(j))
-                end do
-                do j=1,nstates
-                EQ_gc(i,j)%lambda=EQ(j)%lambda
-                end do
-
-        end do
-end if
-
 end subroutine prep_sim
 
 !-----------------------------------------------------------------------
@@ -14793,8 +14431,7 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqimp
 
-ic = qimp(ip)%cod(istate)
-!ic = qimpcod(ip,istate)
+ic = qimpcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14812,14 +14449,11 @@ do im = 1, nimp_coupl
 end do
 
 
-i = qimp(ip)%i
-j = qimp(ip)%j
-k = qimp(ip)%k
-l = qimp(ip)%l
-!i  = iqimp(ip)
-!j  = jqimp(ip)
-!k  = kqimp(ip)
-!l  = lqimp(ip)
+
+i  = iqimp(ip)
+j  = jqimp(ip)
+k  = kqimp(ip)
+l  = lqimp(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -14855,11 +14489,9 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = phi - qimplib(ic)%imp0
-!arg = phi - qimp0(ic)
+arg = phi - qimp0(ic)
 arg = arg - 2.*pi*nint(arg/(2.*pi))
-dv = qimplib(ic)%fk*arg
-!dv  = qfkimp(ic)*arg
+dv  = qfkimp(ic)*arg
 pe  = 0.5*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
@@ -14945,8 +14577,7 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqtor
 
-ic = qtor(ip)%cod(istate)
-!ic = qtorcod(ip,istate)
+ic = qtorcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -14963,14 +14594,10 @@ do im = 1, ntor_coupl
    end if
 end do
 
-i = qtor(ip)%i
-j = qtor(ip)%j
-k = qtor(ip)%k
-l = qtor(ip)%l
-!i  = iqtor(ip)
-!j  = jqtor(ip)
-!k  = kqtor(ip)
-!l  = lqtor(ip)
+i  = iqtor(ip)
+j  = jqtor(ip)
+k  = kqtor(ip)
+l  = lqtor(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -15009,13 +14636,10 @@ if ( sgn .lt. 0 ) phi = -phi
 
 ! ---       energy
 
-arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
-pe = qtorlib(ic)%fk*(1.0+cos(arg))
-!arg = qrmult(ic)*phi-qdeltor(ic)
-!pe  = qfktor(ic)*(1.0+cos(arg))
+arg = qrmult(ic)*phi-qdeltor(ic)
+pe  = qfktor(ic)*(1.0+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
-!dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
+dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
@@ -16633,7 +16257,7 @@ end subroutine MC_volume
 subroutine new_potential( old )
 
 type(ENERGIES), intent(in)		:: old	
-integer							:: istate,i, numrequest
+integer							:: istate,i
 
 !zero all energies
 E%potential = 0.0
@@ -16740,12 +16364,7 @@ end if
 
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-if (use_excluded_groups) then
-        numrequest = 4
-else
-        numrequest = 3
-end if
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -16796,24 +16415,22 @@ end subroutine new_potential
 !***********************
 ! Use the global vars
 !  request_recv, E_send,EQ_send,E_recv,EQ_Recv,d_recv
-! and now also the EQ_gc variables from the group contributions
 ! Allocate  - status
 
 
 subroutine gather_nonbond()
 
 integer,parameter                       :: vars=3
-integer,dimension(4,numnodes-1)         :: tag
+integer,dimension(3,numnodes-1)         :: tag
 integer,dimension(vars)	                :: blockcnt,ftype 
 integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
 integer                                 :: mpitype_package,mpitype_send
-integer                                 :: i,j,istate
+integer                                 :: i,istate
 
 do i=1,numnodes-1
 tag(1,i)=numnodes*100+i
 tag(2,i)=numnodes*200+i
 tag(3,i)=numnodes*300+i
-tag(4,i)=numnodes*400+i
 end do
 
 if (nodeid .eq. 0) then        !master
@@ -16832,10 +16449,6 @@ do i = 1,numnodes-1
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
   call MPI_IRecv(EQ_recv(1,i), nstates*2*2, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
        request_recv(i,3),ierr)
-  if (use_excluded_groups) then
-	call MPI_IRecv(EQ_gc_recv(1,1,i), nstates*2*2*ngroups_gc, MPI_REAL8, i, tag(4,i), MPI_COMM_WORLD, &
-        request_recv(i,4),ierr)
-  end if
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
 
@@ -16851,11 +16464,6 @@ EQ_send(1:nstates)%qp%el  = EQ(1:nstates)%qp%el
 EQ_send(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw
 EQ_send(1:nstates)%qw%el  = EQ(1:nstates)%qw%el
 EQ_send(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
-if (use_excluded_groups) then
-        EQ_gc_send(1:ngroups_gc,1:nstates)%qp%el  = EQ_gc(1:ngroups_gc,1:nstates)%qp%el
-        EQ_gc_send(1:ngroups_gc,1:nstates)%qp%vdw  = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw
-end if 
-
 
 ! See comments above on the IRecv part
 call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 
@@ -16863,9 +16471,6 @@ if (ierr .ne. 0) call die('gather_nonbond/Send d')
 call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
 call MPI_Send(EQ_send, nstates*2*2, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
-if (use_excluded_groups) then
-	call MPI_Send(EQ_gc_send(1,1),nstates*2*2*ngroups_gc, MPI_REAL8, 0, tag(4,nodeid), MPI_COMM_WORLD,ierr)
-end if
 if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
 
 end if

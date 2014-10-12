@@ -1,0 +1,27 @@
+[MD]
+steps                  20000
+stepsize                   2.0
+temperature              300.0
+bath_coupling            100
+shake_hydrogens           on
+lrf                       on
+separate_scaling		off
+
+[sphere]
+shell_radius              16
+shell_force               20
+
+[cut_offs]
+
+[intervals]
+non_bond                  25
+output                    50
+
+[files]
+topology                  prep/lig_w.top
+fep                       prep/lig_w.fep
+restart                   dc3.re
+final                     dc4.re
+
+[sequence_restraints]
+1 46 0.5 0 1

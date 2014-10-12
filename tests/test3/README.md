@@ -16,6 +16,10 @@ executable in you system and also the version of MPI you will use to run the
 simulation in parallel (qdynp) if such is the case.
 
 
+This test is set up to both use the new topology and separate scaling, with serial execution
+standards generated according to run_test_serial_benchmark
+This test uses the Berendsen thermostat
+
 Equilibration (Heating)
 --------------------------------------------------------------------------------
 
