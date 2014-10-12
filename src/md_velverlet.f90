@@ -4306,33 +4306,39 @@ if( thermostat == 'berendsen' ) then
 		!solute atoms first
         do i=1,nat_solute
                 i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solute
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+		v(i3+1) = ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solute
 
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solute
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+		v(i3+2) = ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solute
 
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solute
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solute
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+		v(i3+3) = ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solute
         end do
 
 		!now solvent atoms
         do i=nat_solute+1,natom
                 i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solvent
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt2 ) * Tscale_solvent
 
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solvent
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt2 ) * Tscale_solvent
 
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solvent
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solvent
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt2 ) * Tscale_solvent
         end do
 ! --- end of the velocity reescaling for the Berendsen ---
 ! if Langevin thermostat was chosen, applied here
@@ -4342,19 +4348,22 @@ else if( thermostat == 'langevin' ) then
                 i3=i*3-3
 		randv= sqrt (gkT/winv(i))
 		call gauss(zero,randv,randf,iseed)
-                v(i3+1)= v(i3+1)*(1-friction*dt)-(d(i3+1)-randf)*winv(i)*dt
+                v(i3+1)= v(i3+1)*(1-friction*dt2)-(d(i3+1)-randf)*winv(i)*dt2
                 xx(i3+1) = x(i3+1)
                 x(i3+1) = x(i3+1) + v(i3+1)*dt
+                v(i3+1)= v(i3+1)*(1-friction*dt2)-(d(i3+1)-randf)*winv(i)*dt2
 
                 call gauss(zero,randv,randf,iseed)
-                v(i3+2)= v(i3+2)*(1-friction*dt)-(d(i3+2)-randf)*winv(i)*dt
+                v(i3+2)= v(i3+2)*(1-friction*dt2)-(d(i3+2)-randf)*winv(i)*dt2
                 xx(i3+2) = x(i3+2)
                 x(i3+2) = x(i3+2) + v(i3+2)*dt
+                v(i3+2)= v(i3+2)*(1-friction*dt2)-(d(i3+2)-randf)*winv(i)*dt2
 
 		call gauss(zero,randv,randf,iseed)
-                v(i3+3)= v(i3+3)*(1-friction*dt)-(d(i3+3)-randf)*winv(i)*dt
+                v(i3+3)= v(i3+3)*(1-friction*dt2)-(d(i3+3)-randf)*winv(i)*dt2
                 xx(i3+3) = x(i3+3)
                 x(i3+3) = x(i3+3) + v(i3+3)*dt
+                v(i3+3)= v(i3+3)*(1-friction*dt2)-(d(i3+3)-randf)*winv(i)*dt2
         end do
 ! --- end of the Langevin thermostat ---
 ! if Nosé-Hoover thermostat was chosen, applied here
@@ -4365,16 +4374,19 @@ call nh_prop
 	do i=1,natom
         	i3=i*3-3
 		xx(i3+1) = x(i3+1)
+        	x(i3+1) = x(i3+1) + v(i3+1)*dt2
         	v(i3+1) = v(i3+1) - d(i3+1)*winv(i)*dt
-        	x(i3+1) = x(i3+1) + v(i3+1)*dt
+        	x(i3+1) = x(i3+1) + v(i3+1)*dt2
 
         	xx(i3+2) = x(i3+2)
+        	x(i3+2) = x(i3+2) + v(i3+2)*dt2
         	v(i3+2) = v(i3+2) - d(i3+2)*winv(i)*dt
-        	x(i3+2) = x(i3+2) + v(i3+2)*dt
+        	x(i3+2) = x(i3+2) + v(i3+2)*dt2
 
         	xx(i3+3) = x(i3+3)
+        	x(i3+3) = x(i3+3) + v(i3+3)*dt2
         	v(i3+3) = v(i3+3) - d(i3+3)*winv(i)*dt
-        	x(i3+3) = x(i3+3) + v(i3+3)*dt
+        	x(i3+3) = x(i3+3) + v(i3+3)*dt2
 	end do
 
 end if
@@ -14040,7 +14052,7 @@ end subroutine make_shell2
 
 subroutine init_trj
 !locals
-integer						::	trj_atoms, i
+integer						::	trj_atoms
 
 !initialise trajectory atom mask
 if(itrj_cycle > 0) then
@@ -14056,13 +14068,6 @@ if(itrj_cycle > 0) then
 end if
 
 100	format('Coordinates for',i6,' atoms will be written to the trajectory.')
-
-!preparing the first half-step to initialize the leap-frog integration
-
-        do i=1,3*natom
-                x(i) = x(i) + v(i)*dt2
-	end do
-
 end subroutine init_trj
 
 !-----------------------------------------------------------------------
