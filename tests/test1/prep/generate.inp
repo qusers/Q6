@@ -16,8 +16,8 @@ preferences
 #addbond atomnum atomnum y
 
 #Create water sphere
-boundary sphere 1:C7 20
-solvate 1:C7 20 1 HOH
+boundary box 1:C7 50 50 50
+solvate 1 HOH
 
 mt lig_w
 wt lig_w.top

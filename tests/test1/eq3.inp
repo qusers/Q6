@@ -3,14 +3,16 @@ steps                   1000
 stepsize                   2.0
 temperature              150.0
 bath_coupling             10
+separate_scaling		on
+
 shake_hydrogens           on
 lrf                       on
 
-[sphere]
-shell_radius              16
-shell_force               20
+[PBC]
 
 [cut-offs]
+q_atom			24
+lrf			24
 
 [intervals]
 non_bond                  25

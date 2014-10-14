@@ -1,18 +1,17 @@
 [MD]
-steps                   1000
+steps                  2000000
 stepsize                   2.0
-temperature               50.0
-bath_coupling             10
-separate_scaling		on
-
+temperature              300.0
+bath_coupling            100
 shake_hydrogens           on
 lrf                       on
+separate_scaling		off
 
-[PBC]
+[sphere]
+shell_radius              16
+shell_force               20
 
-[cut-offs]
-q_atom			24
-lrf			24
+[cut_offs]
 
 [intervals]
 non_bond                  25
@@ -21,9 +20,8 @@ output                    50
 [files]
 topology                  lig_w.top
 fep                       lig_w.fep
-final                     eq2.re
-restart                   eq1.re
+restart                   dc5.re
+final                     dc6.re
 
 [sequence_restraints]
 1 46 0.5 0 1
-

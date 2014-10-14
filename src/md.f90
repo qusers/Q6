@@ -95,6 +95,9 @@ real(8)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, 
 logical						::	shake_solvent, shake_solute
 logical						::	shake_hydrogens
 logical						::	separate_scaling
+!new logical to select for gaussian or uniform random numbers in LANGEVIN
+!themorstat
+logical                                         ::      langevin_gauss_rand = .false.
 !Paul does not like overflow errors, increased character array length
 !Added ENUM for names to allow integer comparisson later on
 character(len=80)				::	name_thermostat
@@ -2967,6 +2970,15 @@ else if( name_thermostat == 'langevin' ) then
 		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
 		write(*,*) 'Langevin thermostat friction constant set to default: 1/tau_T'
 	end if
+        if(.not. prm_get_logical_by_key('langevin_random', langevin_gauss_rand )) then
+        !we use uniform random noise by default for random numbers in the
+        !langevin thermostat, Paul October 2014
+                write(*,*) 'Using uniform random numbers for Langevin thermostat'
+        else if (langevin_gauss_rand) then
+                write(*,*) 'Using Gaussian random numbers for Langevin thermostat'
+        else if (.not.langevin_gauss_rand) then
+                 write(*,*) 'Using uniform random numbers for Langevin thermostat'
+        end if
 else if( name_thermostat == 'nose-hoover' ) then
         write(*,*) 'Thermostat chosen: Nose-Hoover'
 		thermostat = NOSEHOOVER
@@ -4347,7 +4359,7 @@ real(8)                         :: Tlast
 real(8)                         ::Ekinmax
 real(8)				::Tscale_solute,Tscale_solvent
 !new for temperature control
-real(8)				::Tscale,dv_mod,dv_friction,dv_mod2
+real(8)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
 integer				:: n_max = -1
 real(8),allocatable	::randva(:),randfa(:,:),dv(:)
 !Random variable temperature control array
@@ -4446,7 +4458,14 @@ else if ( thermostat == NOSEHOOVER )then
 	n_max = natom
 else if ( thermostat == LANGEVIN ) then
 	dv_friction = (1-friction*dv_mod)
+	if (.not.langevin_gauss_rand) then
+!we use the fast random number generation from unifrom random numbers
+!this is the default! -- Paul and Alex October 2014
+	gkT = 24*friction*Boltz*Temp0/dv_mod ! this 24 comes from the fact that we are using uniform random numbers
+	else
+!we use gaussian random numbers
     gkT = 2*friction*Boltz*Temp0/dv_mod
+	end if
 	randva(:)= sqrt (gkT/winv(:))
 	n_max = natom
 else
@@ -4575,11 +4594,22 @@ else
 		Tscale = 1
 end if
 if (thermostat == LANGEVIN ) then
+	if (.not.langevin_gauss_rand) then
+!using uniform random numbers, default
+        do i=1,natom
+                do j=1,3
+		randnum = randm(iseed)
+		randfa(i,j) =  randva(i) * ( randnum  - 0.5 )
+                end do 
+        end do
+	else
+!using gaussian random numbers, not default
         do i=1,natom
                 do j=1,3
 	        call gauss(zero,randva(i),randfa(i,j),iseed)
                 end do 
         end do
+	end if	
 end if
 if (thermostat == NOSEHOOVER ) then
 	call nh_prop
