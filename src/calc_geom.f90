@@ -14,7 +14,8 @@ module CALC_GEOM
 	real(8)						::	pi
 	integer, private			::	Nmeas = 0
 	type GEOM_TYPE
-		integer					::	i, j, k, l, cod
+		integer					::	i, j, k, l, cod, qcod(max_states)
+		logical					::	is_fep
 		integer					::	kind
 	end type GEOM_TYPE
 	type(GEOM_TYPE), private	::	geom(MAX_MEASUREMENTS)
@@ -56,6 +57,8 @@ integer function dist_add(desc)
 	end if
 
 	geom(Nmeas)%cod = 0 !clear force field code
+	geom(Nmeas)%qcod(:) = 0
+	geom(Nmeas)%is_fep = .false.
 	!search topology for a bond between these atoms
 	do b = 1, nbonds
 		if((bnd(b)%i == geom(Nmeas)%i .and. bnd(b)%j == geom(Nmeas)%j) .or. &
@@ -64,10 +67,30 @@ integer function dist_add(desc)
 			exit
 		end if
 	end do
+	!search FEP strategy for bond between the atoms
+	if (use_fep) then
+	!only if topology, else boom
+	if ((geom(Nmeas)%i.le.nat_solute).and.(geom(Nmeas)%j.le.nat_solute)) then
+		do b = 1, nqbond
+			if((qbnd(b)%i==geom(Nmeas)%i .and. qbnd(b)%j==geom(Nmeas)%j) .or. &
+				(qbnd(b)%j==geom(Nmeas)%i .and. qbnd(b)%i==geom(Nmeas)%j)) then
+			do states = 1, nstates
+			geom(Nmeas)%qcod(states) = qbnd(b)%cod(states)
+			end do
+			geom(Nmeas)%cod = 0
+			geom(Nmeas)%is_fep = .true.
+			exit
+			end if 
+		end do
+	end if
+	end if
 	dist_add = Nmeas
 	if(geom(Nmeas)%cod > 0) then
 		write(desc, 19) geom(Nmeas)%i, geom(Nmeas)%j
 19		format('distance, bond energy between atoms',i5,' and',i5)
+	elseif(geom(Nmeas)%is_fep) then
+		write(desc, 219) geom(Nmeas)%i, geom(Nmeas)%j
+219             format('distance, qbond energy between atoms',i5,' and',i5)
 	else
 		write(desc, 20) geom(Nmeas)%i, geom(Nmeas)%j
 20		format('distance between atoms',i5,' and',i5)
@@ -111,6 +134,8 @@ integer function angle_add(desc)
 	geom(Nmeas)%j = j
 	geom(Nmeas)%k = k
 	geom(Nmeas)%cod = 0 !clear force field code
+	geom(Nmeas)%qcod(:) = 0
+	geom(Nmeas)%is_fep = .false.
 	!search topology for this angle
 	do b = 1, nangles
 		if(ang(b)%j == j .and. &
@@ -120,10 +145,30 @@ integer function angle_add(desc)
 			exit
 		end if
 	end do
+        !search FEP strategy for angle between the atoms
+        if (use_fep) then
+        !only if topology, else boom
+        if ((geom(Nmeas)%i.le.nat_solute).and.(geom(Nmeas)%k.le.nat_solute)) then
+                do b = 1, nqangle
+                        if((qang(b)%i==geom(Nmeas)%i .and. qang(b)%k==geom(Nmeas)%k) .or. &
+                                (qang(b)%i==geom(Nmeas)%k .and. qang(b)%k==geom(Nmeas)%i)) then
+                        do states = 1, nstates
+                        geom(Nmeas)%qcod(states) = qang(b)%cod(states)
+                        end do
+                        geom(Nmeas)%cod = 0
+                        geom(Nmeas)%is_fep = .true.
+                        exit
+                        end if
+                end do
+        end if
+        end if
 	angle_add = Nmeas
 	if(geom(Nmeas)%cod > 0) then
 		write(desc, 19) i, j, k
 19		format('angle, angle energy between atoms',i5,',',i5,',',i5)
+        elseif(geom(Nmeas)%is_fep) then
+                write(desc, 319) i, j, k
+319             format('angle, qangle energy between atoms',i5,',',i5,',',i5)
 	else
 		write(desc, 20) i, j, k
 20		format('angle between atoms',i5,',',i5,',',i5)
@@ -170,6 +215,8 @@ integer function torsion_add(desc)
 	geom(Nmeas)%k = k
 	geom(Nmeas)%l = l
 	geom(Nmeas)%cod = 0 !clear force field code
+	geom(Nmeas)%qcod(:)=0
+	geom(Nmeas)%is_fep = .false.
 	!search topology for this angle
 	do b = 1, ntors
 		if((tor(b)%i == i .and. tor(b)%j == j .and. &
@@ -180,10 +227,34 @@ integer function torsion_add(desc)
 			exit
 		end if
 	end do
+        !search FEP strategy for torsion between the atoms
+        if (use_fep) then
+        !only if topology, else boom
+        if ((geom(Nmeas)%i.le.nat_solute).and.(geom(Nmeas)%j.le.nat_solute) .and. &
+		(geom(Nmeas)%k.le.nat_solute).and.(geom(Nmeas)%l.le.nat_solute)) then
+                do b = 1, nqtor
+                if((qtor(b)%i == i .and. qtor(b)%j == j .and. &
+                        qtor(b)%k == k .and. qtor(b)%l == l) .or. &
+                   (qtor(b)%i == l .and. qtor(b)%j == k .and. &
+                        qtor(b)%k == j .and. qtor(b)%l == i)) then
+                        do states = 1, nstates
+                        geom(Nmeas)%qcod(states) = qtor(b)%cod(states)
+                        end do
+                        geom(Nmeas)%cod = 0
+                        geom(Nmeas)%is_fep = .true.
+                        exit
+                        end if
+                end do
+        end if
+        end if
+	write(*,*)i, j, k, l
 	torsion_add = Nmeas
 	if(geom(Nmeas)%cod > 0) then
 		write(desc, 19) i, j, k, l
 19		format('torsion, torsion energy between atoms',i5,',',i5,',',i5,',',i5)
+        elseif(geom(Nmeas)%is_fep) then
+                write(*, 419) i, j, k, l
+419             format('torsion, qtorsion energy between atoms',i5,',',i5,',',i5,',',i5)
 	else
 		write(desc, 20) i, j, k, l
 20		format('torsion between atoms',i5,',',i5,',',i5,',',i5)
@@ -198,8 +269,8 @@ subroutine dist_calc(i)
 
 	!locals
 	real(8)						::	rji(3)
-	real(8)						::	r2, r, V
-
+	real(8)						::	r2, r, V , fexp
+	V = 0
 	if(i < 1 .or. i > Nmeas) return
 	
 	rji(:) = xin(3*geom(i)%i-2:3*geom(i)%i) - xin(3*geom(i)%j-2:3*geom(i)%j)
@@ -209,6 +280,16 @@ subroutine dist_calc(i)
 100	format(f10.2)
 	if(geom(i)%cod > 0) then !calc energy
 		V = 0.5 * bondlib(geom(i)%cod)%fk * (r - bondlib(geom(i)%cod)%bnd0)**2
+		write(*,110, advance='no') V
+	elseif (geom(i)%is_fep) then !calc q energy
+		do states = 1 , nstates
+			if(geom(i)%qcod(states)>0) then
+			fexp = exp(-qbondlib(geom(i)%qcod(states))%amz*(r-qbondlib(geom(i)%qcod(states))%r0))
+			V = V + (lamda(states) * &
+				qbondlib(geom(i)%qcod(states))%Dmz*(fexp*fexp-2.*fexp) + &
+				0.5*qbondlib(geom(i)%qcod(states))%fk*(r-qbondlib(geom(i)%qcod(states))%r0)**2)
+			end if
+		end do
 		write(*,110, advance='no') V
 	end if
 110	format(f8.2)
@@ -223,7 +304,7 @@ subroutine angle_calc(i)
 	!locals
 	real(8)						::	rji(3), rjk(3), scp
 	real(8)						::	a, V
-
+	V = 0
 	if(i < 1 .or. i > Nmeas) return
 	
 	rji(:) = xin(3*geom(i)%i-2:3*geom(i)%i) - xin(3*geom(i)%j-2:3*geom(i)%j)
@@ -240,6 +321,14 @@ subroutine angle_calc(i)
 		V = 0.5 * anglib(geom(i)%cod)%fk &
 			*(a-anglib(geom(i)%cod)%ang0*pi/180.)**2
 		write(*,110, advance='no') V
+	elseif (geom(i)%is_fep) then !calc q energy
+		do states = 1 , nstates
+                        if(geom(i)%qcod(states)>0) then
+                        V = V + (lamda(states) * &
+                                0.5*qanglib(geom(i)%qcod(states))%fk*(a-qanglib(geom(i)%qcod(states))%ang0))
+                        end if
+                end do
+		write(*,100, advance='no') V
 	end if
 110	format(f8.2)
 	
@@ -254,7 +343,7 @@ subroutine torsion_calc(i)
 	real(8)						::	rji(3), rjk(3), rkl(3), rnj(3), rnk(3), scp
 	real(8)						::	phi, sgn, arg, V
 	integer						::	ic
-
+	V = 0
 	if(i < 1 .or. i > Nmeas) return
 	
 	rji(:) = xin(3*geom(i)%i-2:3*geom(i)%i) - xin(3*geom(i)%j-2:3*geom(i)%j)
@@ -284,6 +373,15 @@ subroutine torsion_calc(i)
 		arg = torlib(ic)%rmult * phi - torlib(ic)%deltor * pi / 180.
 		V = torlib(ic)%fk *(1.0 + cos(arg) ) / real(torlib(ic)%paths )
 		write(*,110, advance='no') V
+        elseif (geom(i)%is_fep) then !calc q energy
+                do states = 1 , nstates
+                        if(geom(i)%qcod(states)>0) then
+			arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
+                        V = V + (lamda(states) * &
+                                qtorlib(ic)%fk*(1.0+cos(arg)))
+                        end if
+                end do
+                write(*,100, advance='no') V
 	end if
 110	format(f8.2)
 	

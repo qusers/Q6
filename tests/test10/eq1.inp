@@ -1,10 +1,13 @@
 [MD]
 steps                    100
 stepsize                   0.1
-initial_temperature        0.1
-random_seed                1
 temperature                0.1
 bath_coupling              1
+thermostat	 langevin
+integrator		velocity-verlet
+separate_scaling        on
+random_seed                1
+initial_temperature        0.1
 shake_hydrogens           off
 lrf                       on
 
@@ -17,14 +20,11 @@ shell_force               20
 [intervals]
 non_bond                  25
 output                    50
-energy			10
+
 [files]
-topology                  prep/lig_w.top
-fep                       prep/lig_w.fep
+topology                  lig_w.top
+fep                       lig_w.fep
 final                     eq1.re
-energy				eq1.en
-[exclude_groups]
-residue 1
 
 [sequence_restraints]
 1 46 0.5 0 1

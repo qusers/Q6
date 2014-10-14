@@ -10,15 +10,15 @@ lrf                       on
 shell_radius              16
 shell_force               20
 
-[cut_offs]
+[cut-offs]
 
 [intervals]
 non_bond                  25
 output                    50
 
 [files]
-topology                  prep/lig_w.top
-fep                       prep/lig_w.fep
+topology                  lig_w.top
+fep                       lig_w.fep
 final                     eq5.re
 restart                   eq4.re
 

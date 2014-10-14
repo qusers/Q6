@@ -177,7 +177,7 @@ integer(4), parameter                   :: stdout_unit = 6
 
 end subroutine die_general
 
-!stole this subroutine from stackoverflo
+!stole this subroutine from stackoverflow
 !page https://stackoverflow.com/questions/13495388/converting-arbitrary-floating-point-string-to-real-in-fortran-95
 !written by abbot
 !all credit goes to this guy

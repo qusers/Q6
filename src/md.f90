@@ -28,7 +28,7 @@ include "mpif.h"
 !-----------------------------------------------------------------------
 !	Constants
 real(8)			::	pi, deg2rad	!set in sub startup
-real(8)			::	zero = 0.0
+real(8),parameter		::	zero = 0.0
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
 real, parameter		::  rho_wat = 0.0335  ! molecules / A**3
@@ -54,7 +54,7 @@ integer(TINY), allocatable		::	iqatom(:)
 ! --- water topology
 ! atoms of water, total water molecules, excluded water molecules
 integer						::	nwat
-real(4)						::	crg_ow, crg_hw, mu_w
+real(8)						::	crg_ow, crg_hw, mu_w
 
 
 !-------------------------------------------------------------------
@@ -95,7 +95,21 @@ real(8)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, 
 logical						::	shake_solvent, shake_solute
 logical						::	shake_hydrogens
 logical						::	separate_scaling
-character(len=20)				::	thermostat
+!Paul does not like overflow errors, increased character array length
+!Added ENUM for names to allow integer comparisson later on
+character(len=80)				::	name_thermostat
+ENUM, bind(c) 
+	ENUMERATOR	:: BERENDSEN, LANGEVIN, NOSEHOOVER
+END ENUM
+integer						::	thermostat = -1
+!Added support for different integration schemes
+!For now leap-frog and velocity-verlet
+!Alexandre Barrozo and Paul Bauer, October 2014
+character(len=80)			:: name_integrator
+integer						:: integrator = -1
+ENUM, bind(c)
+	ENUMERATOR	:: LEAPFROG,VELVERLET
+END ENUM
 real(8), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:) 
 
 ! --- Non-bonded strategy
@@ -242,7 +256,7 @@ real(8), allocatable		::	d(:)
 real(8), allocatable		::	x(:)
 real(8), allocatable		::	xx(:) !for shake
 real(8), allocatable		::	v(:)
-real, allocatable			::	winv(:)
+real(8), allocatable			::	winv(:)
 real(8)						::	grms !RMS force
 
 
@@ -612,7 +626,7 @@ deallocate (winv, stat=alloc_status)
 deallocate (iqatom, stat=alloc_status)
 
 ! Nosé-Hoover array
-if ( thermostat == 'nose-hoover') then
+if ( thermostat == NOSEHOOVER) then
 deallocate (xnh, stat=alloc_status)
 deallocate (vnh, stat=alloc_status)
 deallocate (qnh, stat=alloc_status)
@@ -641,7 +655,6 @@ deallocate(rstwal, stat=alloc_status)
 
 ! excluded groups
 deallocate(ST_gc, stat=alloc_status)
-
 #if defined (USE_MPI)
 !MPI arrays
 deallocate(nbpp_per_cgp ,stat=alloc_status)
@@ -1456,6 +1469,7 @@ integer :: iii
 close (3)
 if ( itrj_cycle .gt. 0 ) close (10)
 if ( iene_cycle .gt. 0 ) close (11)
+
 if (use_excluded_groups) then
         do iii=1,ngroups_gc
         close (ST_gc(iii)%fileunit)
@@ -2121,9 +2135,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast NBcycle')
 
 
 ! water parameters: crg_ow, crg_hw (used by nonbond_ww)
-call MPI_Bcast(crg_ow, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_ow, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_ow')
-call MPI_Bcast(crg_hw, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_hw, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_hw')
 
 ! cutoffs: Rcpp, Rcww, Rcpw, Rcq, RcLRF (used by pair list generating functions)
@@ -2268,7 +2282,7 @@ if (nodeid .eq. 0) write (*,'(80a)') 'MD data, second batch'
 ! allocate arrays
 if (nodeid .ne. 0) then
  call allocate_natom_arrays
- if (thermostat == 'nose-hoover') then
+ if (thermostat == NOSEHOOVER) then
   call allocate_nhchain_arrays
  end if
 end if
@@ -2282,8 +2296,9 @@ call MPI_Bcast(v, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast v')
 
 !Setting all vars not sent to slaves to 2147483647. To avoid conflicts.
+!winv is an array of type real8 -> set to maxreal
 if (nodeid .ne. 0) then 
-winv=maxint 
+winv(:)=maxreal
 end if
 
 !Broadcast iqatom
@@ -2400,7 +2415,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast istart_mol')
 ! Bcast iac, crg and cgpatom 
 call MPI_Bcast(iac, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iac')
-call MPI_Bcast(crg, natom, MPI_REAL, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg, natom, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg')
 call MPI_Bcast(cgpatom, natom, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(AI)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast cgpatom')
@@ -2449,7 +2464,6 @@ call MPI_Bcast(list14long, 2*n14long, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(A
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
-
 !end of part -> sync
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
@@ -2497,10 +2511,10 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qiac')
 end if
 ! real(4) ::  qcrg(nqat,nstates)
 if (nstates.ne.0) then
-call MPI_Bcast(qcrg, size(qcrg), MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, size(qcrg), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 else
-call MPI_Bcast(qcrg, nstates, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 end if
 
@@ -2528,11 +2542,6 @@ call MPI_Bcast(temp_lambda, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast EQ%lambda')
 if (nodeid .ne. 0) EQ(1:nstates)%lambda = temp_lambda(1:nstates)
 deallocate(temp_lambda)
-!	if (use_excluded_groups) then
-!		do j=1,ngroups_gc
-!		EQ_gc(j,1:nstates)%lambda = EQ(1:nstates)%lambda
-!		end do
-!	end if
 end if
 
 if (nodeid .eq. 0) then 
@@ -2542,7 +2551,6 @@ end if
 
 !and we sync again
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-
 !Finally allocate for  slaves:E_send, EQ_send
 !For master :E_recv,d_recv
 call allocate_mpi  
@@ -2925,7 +2933,7 @@ write (*,10) nsteps, stepsize
 
 ! convert to internal time units once and for all.
 dt=0.020462*stepsize
-
+dt2=0.5*dt
 ! --- Temperature, Thermostat etc.
 if(.not. prm_get_real8_by_key('temperature', Temp0)) then
         write(*,*) '>>> ERROR: temperature not specified (section MD)'
@@ -2949,39 +2957,58 @@ if(tau_T < dt) then
         initialize = .false.
 end if
 
-if(.not. prm_get_string_by_key('thermostat', thermostat)) then
+if(.not. prm_get_string_by_key('thermostat', name_thermostat)) then
         write(*,*) 'No thermostat chosen. Berendsen thermostat will be used.'
-        thermostat = 'berendsen'
+        thermostat = BERENDSEN
 
-else if( thermostat == 'langevin' ) then
-	write(*,*) 'Thermostat chosen: Langevin.'
+else if( name_thermostat == 'langevin' ) then
+	write(*,*) 'Thermostat chosen: ', name_thermostat
+	thermostat = LANGEVIN
 	if(.not. prm_get_real8_by_key('langevin_friction', friction)) then
 		friction = 1/tau_T !***according to GROMACS manual, this is their default value. Need to check - A. Barrozo
 		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
 		write(*,*) 'Langevin thermostat friction constant set to default: 1/tau_T'
 	end if
-
-else if( thermostat == 'nose-hoover' ) then
+else if( name_thermostat == 'nose-hoover' ) then
         write(*,*) 'Thermostat chosen: Nose-Hoover'
+		thermostat = NOSEHOOVER
         kbT = Boltz*Temp0
 
-else if( thermostat /= 'berendsen' .and. thermostat /= 'langevin' .and. thermostat /= 'nose_hoover' ) then
-	write(*,*) '>>> ERROR: this thermostat does not exist in Q.'
+else if( name_thermostat /= 'berendsen' .and. name_thermostat /= 'langevin' .and. name_thermostat /= 'nose_hoover' ) then
+	write(*,*) '>>> ERROR: this thermostat does not exist in Q.',name_thermostat
 	initialize = .false.
 else
-        write(*,*) 'Thermostat chosen: ', thermostat
+		thermostat = BERENDSEN
+		name_thermostat = 'berendsen'
+        write(*,*) 'Thermostat chosen: ', name_thermostat
 end if
 
-if(.not. prm_get_integer_by_key('nhchains', numchain) .and. thermostat == 'nose-hoover') then
+if(.not. prm_get_integer_by_key('nhchains', numchain) .and. thermostat == NOSEHOOVER ) then
 	numchain = 10
         write(*,*) 'Nose-Hoover thermostat chain number set to default: 10'
 end if
 
-if(.not. prm_get_real8_by_key('nose-hoover_mass', nhq) .and. thermostat == 'nose-hoover') then
+if(.not. prm_get_real8_by_key('nose-hoover_mass', nhq) .and. thermostat == NOSEHOOVER ) then
 	nhq = kbT/(tau_T*tau_T)
         write(*,*) 'Nose-Hoover thermostat mass set to default: kbT/tau_T^2' !Based on Martyna, Klein and Tuckerman J.Chem. Phys. 92
 end if
 
+
+if(.not. prm_get_string_by_key('integrator', name_integrator)) then
+        write(*,*) 'Leap frog integrator used by default.'
+        integrator = LEAPFROG
+
+else if( name_integrator == 'velocity-verlet' ) then
+	write(*,*) 'Integrator: ', name_integrator
+	integrator = VELVERLET
+else if( name_integrator /= 'leap-frog' .and. name_integrator /= 'velocity-verlet' ) then
+	write(*,*) '>>> ERROR: no such integrator exists in Q.',name_integrator
+	initialize = .false.
+else
+		name_integrator = 'leap-frog'
+		integrator = LEAPFROG
+        write(*,*) 'Integrator: ', name_integrator
+end if
 yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .true.)
 if(separate_scaling) then
 	   write(*,'(a)') 'Solute and solvent atoms coupled separately to heat bath.'
@@ -3403,7 +3430,6 @@ if(nstates > 0 ) then
 98			format ('lambda-values      = ',10f8.5)
         end if
 end if
-
 !Option to make additional calculation with atom groups excluded from the
 !energy calculation to provide 'real' group contribution
 !Added Paul Bauer 2014
@@ -3471,11 +3497,6 @@ if ( ngroups_gc .gt. 0 ) then
 	end do
 
 end if
-
-		
-		
-		
-
 
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
@@ -4254,7 +4275,7 @@ if (detail_temps) then
 	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent)
 end if
 
-if (thermostat == 'berendsen') then
+if (thermostat == BERENDSEN) then
 	if (separate_scaling) then
 		if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - 1.0
 		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
@@ -4275,7 +4296,7 @@ end subroutine temperature
 ! Subroutine for the Nosé-Hoover chain propagation
 subroutine nh_prop
 
-real(8)				:: dt2, dt4, dt8, expf, s
+real(8)				:: dt4, dt8, expf, s
 integer				:: i, i3
 
 !initializing all the constants to be used
@@ -4327,7 +4348,11 @@ integer				:: i3
 real(8)                         :: Tlast
 real(8)                         ::Ekinmax
 real(8)				::Tscale_solute,Tscale_solvent
-
+!new for temperature control
+real(8)				::Tscale,dv_mod,dv_friction,dv_mod2
+integer				:: n_max = -1
+real(8),allocatable	::randva(:),randfa(:,:),dv(:)
+!Random variable temperature control array
 real(8)				:: time0, time1, time_per_step, startloop
 integer(4)				:: time_completion
 
@@ -4397,6 +4422,40 @@ if (nodeid .eq. 0) then
 		startloop = rtime()
 end if
 
+!set thermostat variables to the values needed in the time steps
+!moved here to have definition before we do every step
+if (nodeid.eq.0) then
+!	allocate temp control arrays
+	allocate(randva(natom))
+	call check_alloc('Random variable temperature control array')
+	allocate(randfa(natom,3))
+	call check_alloc('Random variable temperature control array 2')
+        allocate(dv(nat3))
+        call check_alloc('Delta v array for temperature control')
+! if velocity verlet is used, take half steps
+if ( integrator == VELVERLET ) then
+        dv_mod = dt2
+else
+        dv_mod = dt
+end if
+if ( thermostat == BERENDSEN ) then
+	dv_friction = 1
+	n_max = nat_solute
+	randfa(:,:) = 0
+else if ( thermostat == NOSEHOOVER )then
+	dv_friction = 1
+	randfa(:,:) = 0
+	n_max = natom
+else if ( thermostat == LANGEVIN ) then
+	dv_friction = (1-friction*dv_mod)
+        gkT = 2*friction*Boltz*Temp0/dv_mod
+	randva(:)= sqrt (gkT/winv(:))
+	n_max = natom
+else
+	write(*,*) 'No such thermostat'
+	stop
+end if
+end if !nodeid .eq. 0
 
 !***********************************************************************
 !	begin MAIN DYNAMICS LOOP (Verlet leap-frog algorithm)
@@ -4419,7 +4478,9 @@ do istep = 0, nsteps-1
 				if( use_PBC .and. (put_solute_back_in_box .or. put_solvent_back_in_box) ) then 
 				  call put_back_in_box() 
 				end if
-
+!Time estimate removed, can be activated again by passing -DTIME to the compiler
+!Paul Bauer October 2014
+#ifdef TIME
                 if ((nodeid .eq. 0) .and. (istep > 0)) then
                         ! print timing info
                         call centered_heading('Timing', '-')
@@ -4431,7 +4492,7 @@ do istep = 0, nsteps-1
 222    format('Milliseconds per step (wall-clock): ',f5.2,&
                                 ' Estimated completion in',i6,' minutes')
                 end if
-
+#endif
                 ! update lists of nonbonded interaction pairs
                 if (nodeid .eq. 0) then
                    call centered_heading('Nonbonded pair list generation', '-')
@@ -4509,84 +4570,78 @@ start_loop_time1 = rtime()
 #endif
 
 ! if Berendsen thermostat was chosen, applied here
-if( thermostat == 'berendsen' ) then
-
-		!solute atoms first
-        do i=1,nat_solute
-                i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solute
-                xx(i3+1) = x(i3+1)
-                x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solute
-                xx(i3+2) = x(i3+2)
-                x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solute
-                xx(i3+3) = x(i3+3)
-                x(i3+3) = x(i3+3) + v(i3+3)*dt
-        end do
-
-		!now solvent atoms
-        do i=nat_solute+1,natom
-                i3=i*3-3
-                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*dt ) * Tscale_solvent
-                xx(i3+1) = x(i3+1)
-                x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*dt ) * Tscale_solvent
-                xx(i3+2) = x(i3+2)
-                x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*dt ) * Tscale_solvent
-                xx(i3+3) = x(i3+3)
-                x(i3+3) = x(i3+3) + v(i3+3)*dt
-        end do
-! --- end of the velocity reescaling for the Berendsen ---
-! if Langevin thermostat was chosen, applied here
-else if( thermostat == 'langevin' ) then
-                !solute atoms first
-        do i=1,natom
-                i3=i*3-3
-		randv= sqrt (gkT/winv(i))
-		call gauss(zero,randv,randf,iseed)
-                v(i3+1)= v(i3+1)*(1-friction*dt)-(d(i3+1)-randf)*winv(i)*dt
-                xx(i3+1) = x(i3+1)
-                x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-                call gauss(zero,randv,randf,iseed)
-                v(i3+2)= v(i3+2)*(1-friction*dt)-(d(i3+2)-randf)*winv(i)*dt
-                xx(i3+2) = x(i3+2)
-                x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-		call gauss(zero,randv,randf,iseed)
-                v(i3+3)= v(i3+3)*(1-friction*dt)-(d(i3+3)-randf)*winv(i)*dt
-                xx(i3+3) = x(i3+3)
-                x(i3+3) = x(i3+3) + v(i3+3)*dt
-        end do
-! --- end of the Langevin thermostat ---
-! if Nosé-Hoover thermostat was chosen, applied here
-else if( thermostat == 'nose-hoover' ) then
-
-call nh_prop
-
-	do i=1,natom
-        	i3=i*3-3
-		xx(i3+1) = x(i3+1)
-        	v(i3+1) = v(i3+1) - d(i3+1)*winv(i)*dt
-        	x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-        	xx(i3+2) = x(i3+2)
-        	v(i3+2) = v(i3+2) - d(i3+2)*winv(i)*dt
-        	x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-        	xx(i3+3) = x(i3+3)
-        	v(i3+3) = v(i3+3) - d(i3+3)*winv(i)*dt
-        	x(i3+3) = x(i3+3) + v(i3+3)*dt
-	end do
-
+!because Tscale changes all the time
+if( thermostat == BERENDSEN ) then
+		Tscale = Tscale_solute
+else
+		Tscale = 1
 end if
-! --- end of the Nosé-Hoover dynamics ---
+if (thermostat == LANGEVIN ) then
+        do i=1,natom
+                do j=1,3
+	        call gauss(zero,randva(i),randfa(i,j),iseed)
+                end do 
+        end do
+end if
+if (thermostat == NOSEHOOVER ) then
+	call nh_prop
+end if
+!Now general equation for all thermostats
+!to reduce code duplication
+!Paul Bauer October 2014
+	dv_mod2 = dv_mod * Tscale
+        do i=1,n_max
+                i3=i*3-3
+		dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*dv_mod2
+		dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*dv_mod2
+		dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*dv_mod2
+
+                v(i3+1)  = (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
+                xx(i3+1) = x(i3+1)
+                x(i3+1)  = x(i3+1) + v(i3+1)*dt
+
+                v(i3+2)  = (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
+                xx(i3+2) = x(i3+2)
+                x(i3+2)  = x(i3+2) + v(i3+2)*dt
+
+                v(i3+3)  = (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
+                xx(i3+3) = x(i3+3)
+                x(i3+3)  = x(i3+3) + v(i3+3)*dt
+
+		if (integrator == VELVERLET) then
+			v(i3+1)= (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
+			v(i3+2)= (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
+			v(i3+3)= (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
+		end if
+        end do
+if( thermostat == BERENDSEN ) then
+	Tscale = Tscale_solvent
+	dv_mod2 = dv_mod * Tscale
+        do i=n_max+1,natom
+                i3=i*3-3
+		dv(i3+1) = d(i3+1)*winv(i)*dv_mod2
+		dv(i3+2) = d(i3+2)*winv(i)*dv_mod2
+		dv(i3+3) = d(i3+3)*winv(i)*dv_mod2
+
+                v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
+                xx(i3+1) = x(i3+1)
+                x(i3+1) = x(i3+1) + v(i3+1)*dt
+
+                v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
+                xx(i3+2) = x(i3+2)
+                x(i3+2) = x(i3+2) + v(i3+2)*dt
+
+                v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
+                xx(i3+3) = x(i3+3)
+                x(i3+3) = x(i3+3) + v(i3+3)*dt
+
+		if (integrator == VELVERLET) then
+			v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
+			v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
+			v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
+		end if
+        end do
+end if
 ! --- end of thermostat section ---
 
 #if defined (PROFILING)
@@ -4597,7 +4652,7 @@ profile(11)%time = profile(11)%time + rtime() - start_loop_time1
         if(shake_constraints > 0) then
                 niter=shake(xx, x)
                 v(:) = (x(:) - xx(:)) / dt
-		if ( thermostat == 'nose-hoover' ) then
+		if ( thermostat == NOSEHOOVER ) then
 			call nh_prop !scaling velocities after applying SHAKE
 		end if
         end if
@@ -4698,6 +4753,11 @@ end if
 
 
 if (nodeid .eq. 0) then
+!Deallocate temperature control arrays
+        deallocate(randfa)
+        deallocate(randva)
+        deallocate(dv)
+
 	time1 = rtime()
 	write (*,202) time1 - startloop
 	202 format('Total time of main loop:                     ', f15.1,'(s)')
@@ -10203,7 +10263,6 @@ do istate = 1, nstates
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do 
         end if
-
 end do ! istate
 
 end do
@@ -10315,7 +10374,6 @@ subroutine nonbon2_qp_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
 	end do ! istate
 
   end do
@@ -11401,8 +11459,6 @@ do ip = 1, nbqq_pair(istate)
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
-
   end if
 end do
 end do
@@ -11522,7 +11578,6 @@ do ip = 1, nbqq_pair(istate)
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
   end if
 end do
 end do
@@ -11599,8 +11654,6 @@ do istate = 1, nstates
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
-
 end do ! istate
 
 end do
@@ -11696,7 +11749,6 @@ subroutine nonbond_qp_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
         end if
-
 	end do ! istate
 
   end do
@@ -11767,14 +11819,12 @@ do istate = 1, nstates
   ! update q-protein energies
         EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
         EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-
 	if (use_excluded_groups) then
                 do jj = 1, ngroups_gc
                 call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do
 	end if
-
 end do ! istate
 
 end do
@@ -11875,7 +11925,6 @@ subroutine nonbond_qp_qvdw_box
                 ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
                 end do 
         end if
-
 	end do ! istate
 
   end do
@@ -14003,9 +14052,6 @@ else  !Slave nodes
 call gather_nonbond
 #endif
 end if
-#if defined(USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
 if (use_excluded_groups) then
@@ -14031,7 +14077,6 @@ do i=1,numnodes-1
   EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
   EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
   EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
-
 if (use_excluded_groups) then
 !	do j=1,ngroups_gc
 	EQ_gc(1:ngroups_gc,1:nstates)%qp%el = EQ_gc(1:ngroups_gc,1:nstates)%qp%el + &
@@ -14042,7 +14087,6 @@ if (use_excluded_groups) then
 end if
 end do
 #endif
-
 if (use_excluded_groups) then
 	do j=1,ngroups_gc
 	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
@@ -14089,12 +14133,8 @@ E%potential = E%p%bond + E%w%bond + E%p%angle + E%w%angle + E%p%torsion + &
 E%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
 E%ww%vdw + E%q%bond + E%q%angle + E%q%torsion + &
 E%q%improper + E%qx%el + E%qx%vdw + E%restraint%total + E%LRF
-
-
 end if
-#if (USE_MPI)
-call MPI_BARRIER(MPI_COMM_WORLD,ierr)
-#endif
+
 end subroutine pot_energy
 
 !-----------------------------------------------------------------------
@@ -14272,7 +14312,7 @@ end if ! .not. use_PBC
 ! --- read restart file
 
 call allocate_natom_arrays
- if (thermostat == 'nose-hoover') then
+ if (thermostat == NOSEHOOVER) then
   call allocate_nhchain_arrays
  end if
 if(restart) then
@@ -14393,7 +14433,7 @@ end subroutine make_shell2
 
 subroutine init_trj
 !locals
-integer						::	trj_atoms, i
+integer						::	trj_atoms
 
 !initialise trajectory atom mask
 if(itrj_cycle > 0) then
@@ -14409,13 +14449,6 @@ if(itrj_cycle > 0) then
 end if
 
 100	format('Coordinates for',i6,' atoms will be written to the trajectory.')
-
-!preparing the first half-step to initialize the leap-frog integration
-
-        do i=1,3*natom
-                x(i) = x(i) + v(i)*dt2
-	end do
-
 end subroutine init_trj
 
 !-----------------------------------------------------------------------
@@ -14494,7 +14527,7 @@ end if
 
 if( use_PBC ) then 
         !compute masses of all molecules
-        allocate( mol_mass(1:nmol) )
+        allocate(mol_mass(nmol))
         mol_mass(:) = 0.0
 
         do i = 1,nmol-1 !all molecules but the last
@@ -14510,13 +14543,15 @@ if( use_PBC ) then
         mol_mass(:) = 1./mol_mass(:)
 
         !prepare array of masses
-        allocate( mass(1:natom) )
-        mass(:) = 1.0/winv(:)
+        allocate(mass(natom))
+!make this a duplicate of the iaclib array to avoid truncation errors
+!        mass(:) = 1.0/winv(:)
+        mass(:)=iaclib(iac(:))%mass
 
 end if
 
 !initialization for the Nosé-Hoover chain thermostat
-if ( thermostat == 'nose-hoover' ) then
+if ( thermostat == NOSEHOOVER ) then
 	do i=1,numchain
 	   qnh(i)=nhq
 	   vnh(i)=0
@@ -14548,7 +14583,6 @@ if (use_excluded_groups) then
 
         end do
 end if
-
 end subroutine prep_sim
 
 !-----------------------------------------------------------------------
@@ -14810,6 +14844,7 @@ do im = 1, nimp_coupl
 	  if ( iimp_coupl(3,im) .eq. 1) gamma = 1 - gamma
    end if 
 end do
+
 
 
 i = qimp(ip)%i
@@ -16855,7 +16890,6 @@ if (use_excluded_groups) then
         EQ_gc_send(1:ngroups_gc,1:nstates)%qp%el  = EQ_gc(1:ngroups_gc,1:nstates)%qp%el
         EQ_gc_send(1:ngroups_gc,1:nstates)%qp%vdw  = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw
 end if 
-
 
 ! See comments above on the IRecv part
 call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 

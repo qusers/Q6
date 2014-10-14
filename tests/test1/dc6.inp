@@ -1,0 +1,30 @@
+[MD]
+steps                  200000
+stepsize                   0.5
+temperature              300.0
+bath_coupling            400000
+shake_hydrogens           off
+shake_solvent             off
+lrf                       off
+
+[sphere]
+shell_radius              16
+shell_force               20
+
+[cut-offs]
+solute_solute           99
+solute_solvent          99
+solvent_solvent         99
+
+[intervals]
+non_bond                  25
+output                    50
+
+[files]
+topology                  lig_w.top
+fep                       lig_w.fep
+restart                   dc5.re
+final                     dc6.re
+
+[sequence_restraints]
+1 46 0.5 0 1

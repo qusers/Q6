@@ -10,9 +10,9 @@ module CALC_CHEMSCORE
 	use CALC_BASE
 	use MASKMANIP
 	use TRJ
-	use PRMFILE
+!	use PRMFILE
 	use INDEXER
-	use QATOM
+!	use QATOM
 	implicit none
 
 	real							:: score
@@ -21,7 +21,7 @@ module CALC_CHEMSCORE
 	integer						:: i
 	character(len=4)	:: trj_type
 
-	character*80		:: top_file, fep_file
+	character*80		:: top_file!, fep_file
 
 	type SCORE_PRECALC_TYPE
 		character(len=80)	:: chFilename		! name of re file if one is given
@@ -148,7 +148,7 @@ module CALC_CHEMSCORE
 	
 	!No record is kept of polar(non H-bonding) atoms
 	
-	integer, allocatable		::	iqatom(:)	!one element per atom, 0 if not Q-atom, 
+!	integer, allocatable		::	iqatom(:)	!one element per atom, 0 if not Q-atom, 
 												!else number in iqseq (ligand)
 	real,allocatable			::	vdwr(:)		!van der Waals radius of each atom 	
 

@@ -1,24 +1,28 @@
 [MD]
 steps                  20000
-stepsize                   2.0
+stepsize                   0.5
 temperature              300.0
-bath_coupling            100
-shake_hydrogens           on
-lrf                       on
+bath_coupling            400000
+shake_hydrogens           off
+shake_solvent             off
+lrf                       off
 
 [sphere]
 shell_radius              16
 shell_force               20
 
-[cut_offs]
+[cut-offs]
+solute_solute           99
+solute_solvent          99
+solvent_solvent         99
 
 [intervals]
 non_bond                  25
 output                    50
 
 [files]
-topology                  prep/lig_w.top
-fep                       prep/lig_w.fep
+topology                  lig_w.top
+fep                       lig_w.fep
 restart                   dc4.re
 final                     dc5.re
 

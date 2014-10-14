@@ -3,7 +3,7 @@ Ligand in a water sphere test.
 
 This test follows an initial equilibration/heating protocol performed 
 in 5 steps and then a dynamics run split into 5 identical steps. A total of
-200ps are simulated after equilibration.
+4.2 ns are simulated after equilibration.
 
 The system is a simple ligand in a water sphere and the
 force-field used is the OPLSAA force field from Jorgensen's lab.
@@ -18,7 +18,7 @@ simulation in parallel (qdynp) if such is the case.
 
 This test is set up to both use the new topology and separate scaling, with serial execution
 standards generated according to run_test_serial_benchmark
-This test uses the Langevin thermostat and default friction
+This test uses the Langevin thermostat, default friction and leap frog integration
 
 Equilibration (Heating)
 --------------------------------------------------------------------------------
@@ -74,6 +74,12 @@ Short Production Run
  - hydrogen shake on
  - Local Reaction Field as Taylor expansion = on
 
+### Step6
+ - 2000000 steps / 2.0 fs ea. = 4 ns
+ - temp = 300
+ - bath coupling 100
+ - hydrogen shake on
+ - Local Reaction Field as Taylor expansion = on
 
 Benchmarks
 --------------------------------------------------------------------------------

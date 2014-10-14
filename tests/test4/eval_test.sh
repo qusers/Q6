@@ -21,7 +21,7 @@ do
  fi
 done
 
-for step in {1..5}
+for step in {1..6}
 do
  echo -n "Checking presence of production step $step                      "
 
@@ -47,7 +47,7 @@ do
  fi
 done
 
-for step in {1..5}
+for step in {1..6}
 do
  echo -n "Checking normal termination in production step $step            "
 
@@ -81,9 +81,9 @@ fi
 # (Need not always be true, but in this case it is.)                          #
 ###############################################################################
 
-sed -n '/Energy summary at step      0/,/==/ p' dc{2..5}.log \
+sed -n '/Energy summary at step      0/,/==/ p' dc{2..6}.log \
  | grep "SUM"    > step0.tmp
-sed -n '/FINAL  Energy summary/,/==/ p' dc{1..4}.log \
+sed -n '/FINAL  Energy summary/,/==/ p' dc{1..5}.log \
  | grep "SUM"   > final.tmp
 
 step=1
@@ -140,7 +140,7 @@ echo -n "Extracting ligand-surrounding energies                      "
 echo   '#          This Qdyn             Benchmark   '  > this_qsurr.en
 printf "# %10s %10s %10s %10s\n" "el" "vdw" "el" "vdw" >> this_qsurr.en
 awk '/^Q-surr./ {printf "%10.2f %10.2f \n",$4,$5}' \
-     eq{1..5}.log dc{1..5}.log | cat -n                >> this_qsurr.en
+     eq{1..5}.log dc{1..6}.log | cat -n                >> this_qsurr.en
 
 echo -e "$OK"
 
@@ -155,7 +155,7 @@ set style line 3 lt 1 lc 5 lw 1 pt 6
 set xlabel 'Simulation step'
 set ylabel 'VdW energy [kcal/mol]'
 set log x
-set xrange [1:3000]
+set xrange [1:40000]
 plot 'qsurr_benchmark.en' using 1:4                         \
                             notitle  with lines ls 1,       \
      'qsurr_benchmark.en' using 1:5                         \

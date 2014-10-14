@@ -92,7 +92,7 @@ character(len=256)			::	prm_file
 	real(8), allocatable				::	xtop(:)			! topology/coordinates
 	integer(TINY), allocatable	::	iac(:)			! integer atom codes
 	logical, allocatable				::	heavy(:)		! boolean flag, true if atom >= He
-	real, allocatable						::	crg(:)			! charges
+	real(8), allocatable						::	crg(:)			! charges
 	integer(AI), allocatable		::	cgpatom(:)		! charge groups
 	integer, parameter					::	SOLVENT_SPC=0, SOLVENT_3ATOM=1, SOLVENT_GENERAL=2
 	integer											::	solvent_type
@@ -361,7 +361,7 @@ subroutine topo_reallocate(oldatoms, atoms, waters)
 !locals
 	integer						::	oldbonds, bonds
 	integer						::	oldangles, angles
-	real, allocatable			::	r4temp(:)
+	real(8), allocatable			::	r4temp(:)
 	integer(1), allocatable		::	i1temp(:)
 	type(BOND_TYPE), allocatable::	bndtemp(:)
 	type(ANG_TYPE), allocatable	::	angtemp(:)

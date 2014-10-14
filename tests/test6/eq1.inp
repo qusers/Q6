@@ -1,0 +1,30 @@
+[MD]
+steps                    500
+stepsize                   0.1
+temperature                0.1
+bath_coupling              1
+thermostat	langevin
+separate_scaling        on
+random_seed		1
+initial_temperature        0.1
+shake_hydrogens           off
+lrf                       on
+
+[PBC]
+
+[cut-offs]
+q_atom			24
+lrf			24
+
+[intervals]
+non_bond                  25
+output                    50
+
+[files]
+topology                  lig_w.top
+fep                       lig_w.fep
+final                     eq1.re
+
+[sequence_restraints]
+1 46 0.5 0 1
+

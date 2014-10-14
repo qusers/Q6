@@ -15,6 +15,7 @@ modified in the first lines in order to specify the location of the qdyn
 executable in you system and also the version of MPI you will use to run the
 simulation in parallel (qdynp) if such is the case.
 
+This tests the energy conservation after equilibration, by setting the temperature coupling >= steps
 
 Equilibration (Heating)
 --------------------------------------------------------------------------------
@@ -64,11 +65,12 @@ Short Production Run
 --------------------------------------------------------------------------------
 
 ### Step1 through Step5 (identical steps total 200ps)
- - 20000 steps / 2.0 fs ea. = 40ps
+ - 20000 steps / 0.5 fs ea. = 10ps
  - temp = 300
- - bath coupling 100
- - hydrogen shake on
- - Local Reaction Field as Taylor expansion = on
+ - bath coupling 400000 (>t_total)
+ - hydrogen shake off
+ - Local Reaction Field as Taylor expansion = off
+ - all cut offs = 99
 
 
 Benchmarks
