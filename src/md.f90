@@ -2262,7 +2262,6 @@ if (use_excluded_groups) then
         deallocate(tempmask,stat=alloc_status)
 end if
 
-
 !Setting all vars not sent to slaves to 2147483647. To avoid hidden bugs.
 if (nodeid .ne. 0) then 
 shake_constraints=maxint 
@@ -2271,7 +2270,6 @@ Ndegf=maxint
 Ndegfree=maxint
 xwcent(:)=maxreal 
 end if
-
 !first part completed, syncing again
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
@@ -4448,7 +4446,7 @@ else if ( thermostat == NOSEHOOVER )then
 	n_max = natom
 else if ( thermostat == LANGEVIN ) then
 	dv_friction = (1-friction*dv_mod)
-        gkT = 2*friction*Boltz*Temp0/dv_mod
+    gkT = 2*friction*Boltz*Temp0/dv_mod
 	randva(:)= sqrt (gkT/winv(:))
 	n_max = natom
 else

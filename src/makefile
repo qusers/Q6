@@ -26,8 +26,8 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g -check bounds  ${FC_DEBUG}
-	DEBUGMPI=       -debug -traceback -g -check bounds ${FC_DEBUG}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 
 ################################################################################
 # OSX Mavericks using gfortran
@@ -88,7 +88,7 @@ else ifeq ($(COMP),gcc)
 
 else
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll --static -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -135,7 +135,7 @@ qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
-qdyn5 qdum5: qdyn.o 
+qdyn5 qdum5: qdyn.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -163,7 +163,7 @@ qdyn5p : md_mpi.o qdyn_mpi.o
 avetr.o: avetr.f90 prep.o
 	${FC} ${FFLAGS} -c $<
 
-calc_base.o:calc_base.f90 topo.o
+calc_base.o:calc_base.f90 topo.o prmfile.o qatom.o
 	${FC} ${FFLAGS} -c $<
 
 calc_chemscore.o: calc_chemscore.f90 maskmanip.o trj.o prmfile.o index.o qatom.o
@@ -230,10 +230,10 @@ md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o
 misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
 
-mpiglob.o: mpiglob.f90 sizes.o nrgy.o 
+mpiglob.o: mpiglob.f90 sizes.o nrgy.o
 	${FC} ${FFLAGS} -c $<
 
-nrgy.o: nrgy.f90 sizes.o 
+nrgy.o: nrgy.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
 
 parse.o: parse.f90 misc.o
