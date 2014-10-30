@@ -13,3 +13,7 @@ obj/
 *.DS_Store
 slurm*
 tests/test*/run-*
+build-number.txt
+*swo
+*swp
+*ipa
