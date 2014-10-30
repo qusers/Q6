@@ -130,6 +130,15 @@ subroutine startup
 	write(*,'(a,a,a)') 'QDyn evaluation version ', trim(QDYN_VERSION), ' initialising'
 	write(*,'(a)') 'This version is for evaluation purposes only.'
 	write(*,'(a)') 'Optimisations are disabled - runs at <20% of maximum speed.'
+#endif
+#if defined (BUILD_USERNAME) && defined (BUILD_HOSTNAME) && defined (BUILD_DATE) && defined (BUILD_SOURCE) && defined (BUILD_NUMBER) && defined(BUILD_COMPILER)
+	write(*,'(a,a)') 'Build number ', BUILD_NUMBER
+	write(*,'(a,a)') 'Build date   ', BUILD_DATE
+	write(*,'(a)')   'Built:       '
+	write(*,'(a,a)') '      by     ', BUILD_USERNAME
+	write(*,'(a,a)') '      on     ', BUILD_HOSTNAME
+	write(*,'(a,a)') '      git id ', BUILD_SOURCE
+	write(*,'(a,a)') '      with   ', BUILD_COMPILER
 #else
 	write(*,'(a,a,a,a)') 'QDyn version ', trim(QDYN_VERSION), trim(QDYN_SUFFIX),' initialising'
 #endif

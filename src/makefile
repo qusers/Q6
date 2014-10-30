@@ -5,9 +5,16 @@
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: May 9, 2014                                                  #
+#  latest update: Oct 17, 2014                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
+
+
+################################################################################
+#  Q Build Auto Increment                                                      #
+################################################################################
+
+BUILD_NUMBER_FILE=build-number.txt
 
 ################################################################################
 # Intel Fortran ifort ( tested in linux and osx)
@@ -27,6 +34,7 @@ ifeq ($(COMP),ifort)
 
 	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
 	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+
 
 ################################################################################
 # OSX Mavericks using gfortran
@@ -102,18 +110,23 @@ default: what
 ################################################################################
 # Targets
 ################################################################################
-all:	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+all:        
+	@make $(BUILD_NUMBER_FILE) \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2 
 
 debug:
 	@make FFLAGS="${DEBUG}" \
+	$(BUILD_NUMBER_FILE) \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpi:
 	@make FFLAGS="${MPI}" \
+	$(BUILD_NUMBER_FILE) \
 	qdyn5p move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
+	$(BUILD_NUMBER_FILE) \
 	qdyn5p move1 move3
 
 clean:
@@ -254,13 +267,13 @@ qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_bas
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
 qdyn.o: qdyn.f90 md.o mpiglob.o
-	${FC} ${FFLAGS} ${FPP_FLG} -c qdyn.f90
+	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qdyn.f90
 
 qdyn_dum.o: qdyn.f90 md.o mpiglob.o
-	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c qdyn.f90 -o qdyn_dum.o
+	${FC} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DDUM -c qdyn.f90 -o qdyn_dum.o
 
 qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o
-	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
         -c qdyn.f90 -o qdyn_mpi.o
 
 qfep.o: qfep.f90 nrgy.o parse.o
@@ -277,12 +290,18 @@ trj.o:  trj.f90 mask.o misc.o
 
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
+	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
+	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
 	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/
+
+
+
+include buildnumber.mak
 
 ################################################################################
 
