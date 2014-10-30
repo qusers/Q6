@@ -12,3 +12,7 @@ obj/
 *DS_Store*
 *.DS_Store
 slurm*
+build-number.txt
+*swo
+*swp
+*ipa
