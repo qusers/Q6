@@ -31,7 +31,7 @@ character					::	libtext*80,qaname*2
 integer					::	i,j,k,iat
 !temp. array for reallocating long-range exclusion list
 integer(AI), pointer	::	tempexlong(:,:)
-
+	allocate(iqatom(nat_pro))
 ! --- # states, # q-atoms
 if(.not. qatom_load_atoms(fep_file)) then
         call die_general('failure to load Q-atoms from FEP file.')

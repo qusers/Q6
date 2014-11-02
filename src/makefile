@@ -83,7 +83,7 @@ else ifeq ($(COMP),gcc)
 	OMPI_FCFLAGS=	${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
-	DEBUG=          -fbacktrace -g ${DEBUG_FC}	
+	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}
 
 else
