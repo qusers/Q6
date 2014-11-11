@@ -21,7 +21,11 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=		ifort
-	FC_OPT=         -O3 -ip -ipo -unroll -i-static
+	ifeq ($(OPT),O0)
+		FC_OPT=         -O0 -ip -ipo -unroll -i-static
+	else
+		FC_OPT=         -O3 -ip -ipo -unroll -i-static
+	endif
 	FC_DEBUG=	-unroll 
 	FFLAGS=         -fstack-protector ${FC_OPT}
 	FPP_FLG=	-fpp
@@ -42,8 +46,13 @@ ifeq ($(COMP),ifort)
 ################################################################################
 else ifeq ($(COMP),osx)
 	FC= gfortran
-	FC_OPT=         -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
-	                -std=legacy -Wall -Wtabs
+	ifeq ($(OPT),O0)	
+		FC_OPT=         -O0 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
+	                	-std=legacy -Wall -Wtabs
+	else
+		FC_OPT=         -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
+	        	        -std=legacy -Wall -Wtabs
+	endif
 	FFLAGS=         -fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=        -cpp
 
@@ -60,7 +69,11 @@ else ifeq ($(COMP),osx)
 ################################################################################
 else ifeq ($(COMP),pgi)
 	FC=		pgf90
-	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
+	ifeq ($(OPT),O0)
+		FC_OPT=		-fastsse -Mipa=fast,inline -O0 -Munroll -mcmodel=medium
+	else
+		FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
+	endif
 	FFLAGS=		${FC_OPT}
 	FPP_FLG=	-Mpreprocess
 
@@ -82,7 +95,11 @@ else ifeq ($(COMP),ibm)
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	ifeq ($(OPT),O0)
+		FC_OPT=		-O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	else
+		FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	endif
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -96,7 +113,11 @@ else ifeq ($(COMP),gcc)
 
 else
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	ifeq ($(OPT),O0)
+		FC_OPT=		-O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	else
+		FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	endif
 	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=	-cpp
 
@@ -314,7 +335,7 @@ include buildnumber.mak
 # Build instructions
 ################################################################################
 what:
-	@echo "Use: make [target] [COMP=compiler]"
+	@echo "Use: make [target] [COMP=compiler] [OPT=O0]"
 	@echo
 	@echo "[target] is one of:"
 	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
@@ -327,5 +348,9 @@ what:
 	@echo "osx              Gnu Compiler Collection (GCC) in mac"
 	@echo "gcc              GCC in linux"
 	@echo "pgi              Portland Group compiler"
+	@echo
+	@echo "For optimalization pick:"
+	@echo "O0		Greater compatibility but more slower working"
+	@echo "O3		Default option"
 ################################################################################
 
