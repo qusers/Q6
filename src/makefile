@@ -5,7 +5,7 @@
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: Oct 17, 2014                                                 #
+#  latest update: Nov 12, 2014                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
@@ -21,13 +21,10 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=		ifort
-	ifeq ($(OPT),O0)
-		FC_OPT=         -O0 -ip -ipo -unroll -i-static
-	else
-		FC_OPT=         -O3 -ip -ipo -unroll -i-static
-	endif
+	#FC_OPT=         -O3 -ip -ipo -unroll -i-static
+	FC_OPT=         -xHost #speed for a accuray (+10-20% on triolith)
+	FFLAGS=         -fstack-protector -i-static #-istatic flag is only linking compiler static
 	FC_DEBUG=	-unroll 
-	FFLAGS=         -fstack-protector ${FC_OPT}
 	FPP_FLG=	-fpp
 
 	MPIFC=		mpif90
@@ -37,8 +34,8 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 
 
 ################################################################################
@@ -46,14 +43,10 @@ ifeq ($(COMP),ifort)
 ################################################################################
 else ifeq ($(COMP),osx)
 	FC= gfortran
-	ifeq ($(OPT),O0)	
-		FC_OPT=         -O0 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
-	                	-std=legacy -Wall -Wtabs
-	else
-		FC_OPT=         -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
-	        	        -std=legacy -Wall -Wtabs
-	endif
-	FFLAGS=         -fstack-protector ${FC_OPT} -DG95=1
+	FC_OPT=         -O3
+	FFLAGS=         -fstack-protector -DG95=1 \
+                        -ffree-line-length-none -fcray-pointer -fall-intrinsics\
+                        -std=legacy -Wall -Wtabs
 	FPP_FLG=        -cpp
 
 	MPIFC=          mpif90
@@ -61,20 +54,16 @@ else ifeq ($(COMP),osx)
 	OMPI_FCFLAGS=   ${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
-	DEBUG=          -debug  -g ${FC_OPT}
-	DEBUGMPI=       -debug  -g ${FC_OPT}
+	DEBUG=          -debug  -g ${FFLAGS}
+	DEBUGMPI=       -debug  -g ${FFLAGS}
 
 ################################################################################
 # PGI Compiler -- compiles at csb
 ################################################################################
 else ifeq ($(COMP),pgi)
 	FC=		pgf90
-	ifeq ($(OPT),O0)
-		FC_OPT=		-fastsse -Mipa=fast,inline -O0 -Munroll -mcmodel=medium
-	else
-		FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
-	endif
-	FFLAGS=		${FC_OPT}
+	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
+	FFLAGS=    
 	FPP_FLG=	-Mpreprocess
 
 	MPIFC=		mpif90
@@ -95,33 +84,28 @@ else ifeq ($(COMP),ibm)
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	ifeq ($(OPT),O0)
-		FC_OPT=		-O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	else
-		FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	endif
-	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
+	FC_OPT=		-O3 -unroll
 	FPP_FLG=	-cpp
 
 	MPIFC=		mpif90
 	OMPI_FC=	${FC}
-	OMPI_FCFLAGS=	${FFLAGS}
+	OMPI_FCFLAGS=	-fstack-protector -DG95=1 \
+                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	MPI=		${OMPI_FCFLAGS}
 
+	FFLAGS=		--static ${OMPI_FCFLAGS}
+
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}
+	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 
 else
 	FC=		gfortran
-	ifeq ($(OPT),O0)
-		FC_OPT=		-O0 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	else
-		FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	endif
-	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
+	FC_OPT=		-O3 -unroll 
 	FPP_FLG=	-cpp
 
-	MPI=		${FFLAGS}
+	MPI=		-fstack-protector -DG95=1 \
+                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	FFLAGS=		--static ${MPI}
 endif
 
 ################################################################################
@@ -132,23 +116,27 @@ default: what
 ################################################################################
 # Targets
 ################################################################################
-all:        
-	@make $(BUILD_NUMBER_FILE) \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2 
+all:    tools serial mpi
+	
+
+tools:
+	@make FFLAGS="${FFLAGS} -O0" \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+
+serial:	
+	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
+	qdyn5 move1 moveqdyn
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	$(BUILD_NUMBER_FILE) \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	$(BUILD_NUMBER_FILE) \
 	qdyn5p move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	$(BUILD_NUMBER_FILE) \
 	qdyn5p move1 move3
 
 clean:
@@ -313,13 +301,15 @@ topo.o:  topo.f90 misc.o mpiglob.o sizes.o
 trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
+moveqdyn:
+	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_opt
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
 	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 ../bin/
 
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/
@@ -335,11 +325,12 @@ include buildnumber.mak
 # Build instructions
 ################################################################################
 what:
-	@echo "Use: make [target] [COMP=compiler] [OPT=O0]"
+	@echo "Use: make [target] [COMP=compiler]"
 	@echo
 	@echo "[target] is one of:"
-	@echo "all              Everything except the MPI parallel version of Q (qdyn5p)"
-	@echo "debug            All with debug information (stacktraces)."
+	@echo "all              Everything, including non optimized and optimized qdyn5/qdyn5p"
+	@echo "tools            Non speed optimized versions of qdyn5, qdum5, qfep5, qcalc5 and qprep5"
+	@echo "debug            Tools with debug information (stacktraces)."
 	@echo "mpi              qdyn5p using a currently loaded MPI library"
 	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
 	@echo
@@ -348,9 +339,5 @@ what:
 	@echo "osx              Gnu Compiler Collection (GCC) in mac"
 	@echo "gcc              GCC in linux"
 	@echo "pgi              Portland Group compiler"
-	@echo
-	@echo "For optimalization pick:"
-	@echo "O0		Greater compatibility but more slower working"
-	@echo "O3		Default option"
 ################################################################################
 
