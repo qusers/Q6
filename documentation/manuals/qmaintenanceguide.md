@@ -141,7 +141,7 @@ Needs benchmarking against ifortran and pgi.
 git clone https://github.com/qusers/qsource.git
 cd qsource/src
 module load  gcc/4.8/4.8.1
-make all COMP=osx
+make all COMP=gcc
 module load openmpi/1.5.4
 make mpi COMP=gcc
 ```                   
