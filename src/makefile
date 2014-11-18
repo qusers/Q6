@@ -98,6 +98,8 @@ else ifeq ($(COMP),gcc)
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 
+	PROF=		-pg ${DEBUG}
+
 else
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll 
@@ -129,6 +131,10 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
+	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+
+prof:
+	@make FFLAGS="${PROF}" \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 mpi:
@@ -309,7 +315,7 @@ move1:
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
 
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/
