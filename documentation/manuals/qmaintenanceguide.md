@@ -133,9 +133,25 @@ make mpi COMP=ifort
 ```
 
 ###Linux - CentOS 6.5 (glenn) AMD Opteron 6220
-There is some issue with finding the path to linker libraries, so, I've used
+Since the problem with finding the correct path to linker libraries keeps
+being an issue an alternative solution is to compile using the intel
+fortran compiler and mpi libraries. Even though the processors are not
+Intel in this cluster, the intel compiler and libraries have been shown
+in many benchmarks to be even the optimal choice for non-Intel CPU's.
+Benchmarking results comparing compilations with intel/impi against gcc/ompi
+here would be appreciated.
+
+```bash
+git clone https://github.com/qusers/qsource.git
+cd qsource/src
+module load intel-mkl/11.2
+make all COMP=ifort
+module load intel-mpi/4.1.1.036
+make mpi COMP=ifort
+```
+
+As stated before there is some issue with finding the path to linker libraries, so, I've used
 the compilation flags used in the mac in this case.
-Needs benchmarking against ifortran and pgi.
 
 ```bash
 git clone https://github.com/qusers/qsource.git
