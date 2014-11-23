@@ -26,6 +26,7 @@ Your **standard deviation is large** [ >5 kcal ]:
   You likely observe a flipping HOH, GLU, HIS etc..
   Fix:
   Use a distance or angle restraint to keep the bad guy under control.
+  Or use a sequnce restraint and enable apply it also on the hydrogen of the water...
 2) You did not equilibrate your system long enough and/or your 
   frames are too short.
   Fix:
