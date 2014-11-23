@@ -6,9 +6,11 @@ Created on Nov 2014, 21. by Beat Amrein
 Work carefully trough this checklist to make ruse that not you, but your system is the problem.
 
 Energy wrong by >50KCAL
+Are you mapping to the right water run?
 Your profile is ever increasing and has **no TS** [dG* > 50kcal]:
 (you are not running the same reaction in water and protein).
 Debugging:
+0) Are you mapping to the right water run?
 1) Check Movie (compare with your chemical intuition).
 2) Check Fep Files. 
 3) Compare FEP/Movie from Water- with Protein-run
@@ -47,3 +49,14 @@ Q1) You can not obtain the literature energies in protein, but your waterrun is 
   A: Check hydrogen bonds and group contributions.
   A: Look at temperature, distances etc.
   A: This is a very common problem and requires you to play around. 
+  
+Shake Failure:
+The previous run has hot atoms. If you are equilibrating the system:
+try to run the previous step longer (eg double the time).
+
+NaN:
+Your system exploded. 
+Look at the movie (and/or the logfile) to see what happendend: 
+If you cant see a thing (immediate explosion), 
+decrease the stepsize (eg. to 0.01) and the trajectory interval (eg to 1). 
+If this does not help, you have an error in your fep file.
