@@ -57,7 +57,9 @@ try to run the previous step longer (eg double the time).
 
 NaN:
 Your system exploded. 
-Look at the movie (and/or the logfile) to see what happendend: 
-If you cant see a thing (immediate explosion), 
-decrease the stepsize (eg. to 0.01) and the trajectory interval (eg to 1). 
-If this does not help, you have an error in your fep file.
+- Look at the movie (and/or the logfile) to see what happendend: 
+  If you cant see a thing (immediate explosion), 
+  decrease the stepsize (eg. to 0.01) and the trajectory interval (eg to 1). 
+- Also the pdbfile you used to generate the topology with vmd and try to locate 
+   strange bonds that formed, when you eg docked some substrate.
+- If this does not help and you use a fep file, you have an error in your fep file.
