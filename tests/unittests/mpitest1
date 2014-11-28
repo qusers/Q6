@@ -1,0 +1,5 @@
+mpi test
+
+running the same input with mpi on 1,2,3,4,5,6,7,8,9,10 etc. processors should give the same results.
+(with some limitted variation because of rounding)
+*input should be relatively short, so that rounding by MPI does not have impact*
