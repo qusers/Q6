@@ -1,0 +1,5 @@
+serial tests are important, because they can immediately show if something was broken.
+when eg. the temperature differs.
+
+essentially short testruns, eg in gasphase should always give the **exact** same results 
+with a serially compiled code (at the very least when all optimizations are turned off).
