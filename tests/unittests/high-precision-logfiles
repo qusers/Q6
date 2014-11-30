@@ -3,4 +3,4 @@ temperature, engries etc. should be increased to single, doulbe or quad precisio
 the code was  compiled (new feature that is curretly implemented by irek).
 to not break compatibilyty with logfile reading  utilities, this should be made an optional flag.
 
-(at runtime, so that only when we run a test or when the user wants huge logfiles, the precision is increased.
+(it should be a switch/keyword at runtime, so that only when we run a test or when the user wants huge logfiles, the precision is increased.
