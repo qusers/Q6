@@ -27,18 +27,19 @@ include "mpif.h"
 !	shared variables
 !-----------------------------------------------------------------------
 !	Constants
-real(8)			::	pi, deg2rad	!set in sub startup
-real(8),parameter		::	zero = 0.0
+real(kind=prec)			::	pi, deg2rad	!set in sub startup
+real(kind=prec),parameter		::	zero = 0.0_prec
+real(kind=prec),parameter		::	one = 1.0_prec
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
-real, parameter		::  rho_wat = 0.0335  ! molecules / A**3
-real, parameter		::  Boltz = 0.001986
+real, parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3
+real, parameter		::  Boltz = 0.001986_prec
 
 !Read status
 integer                     :: stat
 
 !print temperature if it changed more than 2% in one time step
-real, parameter				::	TEMP_PRINT_THRESHOLD=0.02
+real, parameter				::	TEMP_PRINT_THRESHOLD=0.02_prec
 
 
 !	Memory management
@@ -54,7 +55,7 @@ integer(TINY), allocatable		::	iqatom(:)
 ! --- water topology
 ! atoms of water, total water molecules, excluded water molecules
 integer						::	nwat
-real(8)						::	crg_ow, crg_hw, mu_w
+real(kind=prec)						::	crg_ow, crg_hw, mu_w
 
 
 !-------------------------------------------------------------------
@@ -69,16 +70,16 @@ logical						:: put_solute_back_in_box, put_solvent_back_in_box
 logical						:: constant_pressure = .false.
 integer						:: volume_try, volume_acc
 logical                                         :: atom_based_scaling = .false.
-real(8)						:: pressure, max_vol_displ
+real(kind=prec)						:: pressure, max_vol_displ
 integer						:: pressure_seed
-real(8), allocatable		:: mol_mass(:)
-real(8), allocatable		:: mass(:)
+real(kind=prec), allocatable		:: mol_mass(:)
+real(kind=prec), allocatable		:: mass(:)
 
 
 
 !variabels used when user change boxsize in inputfile
 logical						:: control_box
-real(8)						:: new_boxl(3) 
+real(kind=prec)						:: new_boxl(3) 
 
 !-----------------------------------------------------------------------
 !	Dynamics control information     
@@ -91,7 +92,7 @@ real(8)						:: new_boxl(3)
 integer						::	nsteps, istep
 integer						::	iseed, numchain
 logical						::	restart
-real(8)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, nhq
+real(kind=prec)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, nhq
 logical						::	shake_solvent, shake_solute
 logical						::	shake_hydrogens
 logical						::	separate_scaling
@@ -113,12 +114,12 @@ integer						:: integrator = -1
 ENUM, bind(c)
 	ENUMERATOR	:: LEAPFROG,VELVERLET
 END ENUM
-real(8), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:) 
+real(kind=prec), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:) 
 
 ! --- Non-bonded strategy
 logical						::	use_LRF
 integer						::	NBcycle
-real(8)						::	Rcpp, Rcww, Rcpw, Rcq, RcLRF
+real(kind=prec)						::	Rcpp, Rcww, Rcpw, Rcq, RcLRF
 integer, parameter			                ::	max_atyp = 255
 integer						::	ljcod(max_atyp,max_atyp)
 
@@ -132,17 +133,17 @@ integer						::	ivolume_cycle
 
 ! --- Protein boundary
 logical						::	exclude_bonded
-real(8)						::	fk_pshell
-real(8)      :: fk_fix    = 200.0
+real(kind=prec)						::	fk_pshell
+real(kind=prec)      :: fk_fix    = 200.0_prec
 
 ! --- Water sphere
-real(8)						::	Dwmz, awmz, rwat_in
-real(8)						::	fkwpol
+real(kind=prec)						::	Dwmz, awmz, rwat_in
+real(kind=prec)						::	fkwpol
 logical						::	wpol_restr, wpol_Born
 logical      :: freeze
-real(8)						::	fk_wsphere, crgtot, crgQtot
+real(kind=prec)						::	fk_wsphere, crgtot, crgQtot
 integer(AI), allocatable	::	list_sh(:,:), nsort(:,:)
-real(8),  allocatable		::	theta(:), theta0(:), tdum(:)
+real(kind=prec),  allocatable		::	theta(:), theta0(:), tdum(:)
 integer						::	nwpolr_shell, n_max_insh
 
 
@@ -158,24 +159,24 @@ type(SHELL_TYPE), allocatable::	wshell(:)
 
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
-real,  parameter			::	wpolr_layer			= 3.0001
-real, parameter				::	drout				= 0.5
-real(8), parameter			::	tau_T_default		= 100.
-real(8), parameter			::	rcpp_default		= 10.
-real(8), parameter			::	rcww_default		= 10.
-real(8), parameter			::	rcpw_default		= 10.
-real(8), parameter			::	rcq_default			= 99.
-real(8), parameter			::	rcLRF_default		= 99.
+real,  parameter			::	wpolr_layer			= 3.0001_prec
+real, parameter				::	drout				= 0.5_prec
+real(kind=prec), parameter			::	tau_T_default		= 100.0_prec
+real(kind=prec), parameter			::	rcpp_default		= 10.0_prec
+real(kind=prec), parameter			::	rcww_default		= 10.0_prec
+real(kind=prec), parameter			::	rcpw_default		= 10.0_prec
+real(kind=prec), parameter			::	rcq_default			= 99.0_prec
+real(kind=prec), parameter			::	rcLRF_default		= 99.0_prec
 !recxl_i is set to rexcl_o * shell_default
-real(8), parameter   :: fk_fix_default = 200.
-real(8), parameter			::	shell_default		= 0.85
-real(8), parameter			::	fk_pshell_default	= 10.
+real(kind=prec), parameter   :: fk_fix_default = 200.0_prec
+real(kind=prec), parameter			::	shell_default		= 0.85_prec
+real(kind=prec), parameter			::	fk_pshell_default	= 10.0_prec
 integer, parameter			::	itrj_cycle_default	= 100
 integer, parameter			::	iene_cycle_default	= 10
 integer, parameter			::	iout_cycle_default	= 10
 integer, parameter			::	nb_cycle_default	= 10
-real(8), parameter			::	fkwpol_default		= 20.
-real(8), parameter			::	fk_wsphere_default	= 60.
+real(kind=prec), parameter			::	fkwpol_default		= 20.0_prec
+real(kind=prec), parameter			::	fk_wsphere_default	= 60.0_prec
 logical, parameter			::	wpol_restr_default	= .true.
 
 integer, parameter			::	ivolume_cycle_default = 10
@@ -207,7 +208,7 @@ integer      :: nrstr_seq, nrstr_pos, nrstr_dist, nrstr_angl, nrstr_wall
 
 type RSTRSEQ_TYPE
         integer(AI)				::	i,j
-        real(8)					::	fk
+        real(kind=prec)					::	fk
         integer(TINY)			::	ih
         integer					::	to_centre !flag for restraining to geom. or mass centre
 end type RSTRSEQ_TYPE
@@ -216,31 +217,31 @@ end type RSTRSEQ_TYPE
 type RSTRPOS_TYPE
         integer(AI)				::	i
         integer(TINY)			::	ipsi
-        real(8)					::	fk(3)
-        real(8)					::	x(3)
+        real(kind=prec)					::	fk(3)
+        real(kind=prec)					::	x(3)
 end type RSTRPOS_TYPE
 
 
 type RSTRDIS_TYPE
         integer(AI)				::	i,j
         integer(TINY)			::	ipsi
-        real(8)					::	fk
-        real(8)					::	d1, d2
+        real(kind=prec)					::	fk
+        real(kind=prec)					::	d1, d2
         character(len=20)       ::  itext,jtext
 end type RSTRDIS_TYPE
 
 type RSTRANG_TYPE 
         integer(AI)    :: i,j,k
         integer(TINY)  :: ipsi
-        real(8)        :: fk
-        real(8)        :: ang
+        real(kind=prec)        :: fk
+        real(kind=prec)        :: ang
 !       character(len=20)       ::  itext,jtext,ktext
 end type RSTRANG_TYPE                                                                                                
 
 type RSTRWAL_TYPE
 
         integer(AI)				::	i,j
-        real(8)					::	d, fk, aMorse, dMorse
+        real(kind=prec)					::	d, fk, aMorse, dMorse
         integer(TINY)			::	ih
 end type RSTRWAL_TYPE
 
@@ -255,20 +256,20 @@ type(RSTRWAL_TYPE), allocatable::	rstwal(:)
 !-----------------------------------------------------------------------
 !	Coordinates, velocities, forces
 !-----------------------------------------------------------------------
-real(8), allocatable		::	d(:)
-real(8), allocatable		::	x(:)
-real(8), allocatable		::	xx(:) !for shake
-real(8), allocatable		::	v(:)
-real(8), allocatable			::	winv(:)
-real(8)						::	grms !RMS force
+real(kind=prec), allocatable		::	d(:)
+real(kind=prec), allocatable		::	x(:)
+real(kind=prec), allocatable		::	xx(:) !for shake
+real(kind=prec), allocatable		::	v(:)
+real(kind=prec), allocatable			::	winv(:)
+real(kind=prec)						::	grms !RMS force
 
 
 !-----------------------------------------------------------------------
 !	Energies , EQ is defined in qatom.f90
 !-----------------------------------------------------------------------
 type(ENERGIES)				::	E
-real(8)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
-real(8)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
+real(kind=prec)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
+real(kind=prec)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
 
 
 !-----------------------------------------------------------------------
@@ -282,7 +283,7 @@ end type NB_TYPE
 
 type CGP_PAIR_TYPE
         integer(AI)				:: i, j !switching atoms (or equal in case of no switching atoms) of the chargegroups
-        real(8)					:: x, y, z !periodical shifts
+        real(kind=prec)					:: x, y, z !periodical shifts
 end type CGP_PAIR_TYPE
 
 type NBQP_TYPE
@@ -296,7 +297,7 @@ type NBQ_TYPE
         integer(AI)				::	j       !atom number
         integer(AI)				::	iq, jq  !q-atom numbers
         integer(TINY)			::	LJcod
-        real(8)                 ::  el_scale !scale factor for electostatic interactions in qq-pairs
+        real(kind=prec)                 ::  el_scale !scale factor for electostatic interactions in qq-pairs
 end type NBQ_TYPE
 
 integer						::	nbpp_pair !current no solute-solute pairs
@@ -336,11 +337,11 @@ integer(AI), allocatable	::	iwhich_cgp(:)
 
 
 type LRF_TYPE
-        real(8)					::	cgp_cent(3)
-        real(8)					::	phi0
-        real(8)					::	phi1(3)
-        real(8)					::	phi2(9)
-        real(8)					::	phi3(27)
+        real(kind=prec)					::	cgp_cent(3)
+        real(kind=prec)					::	phi0
+        real(kind=prec)					::	phi1(3)
+        real(kind=prec)					::	phi2(9)
+        real(kind=prec)					::	phi3(27)
 end type LRF_TYPE
 
 type(LRF_TYPE), allocatable	::	lrf(:)
@@ -352,13 +353,13 @@ type(node_assignment_type)	:: calculation_assignment
 
 !shake types & variables
 !convergence criterion (fraction of distance)
-real(8), parameter			::	SHAKE_TOL = 0.0001
+real(kind=prec), parameter			::	SHAKE_TOL = 0.0001_prec
 integer, parameter			::	SHAKE_MAX_ITER = 1000
 
 
 type SHAKE_BOND_TYPE
         integer(AI)				::	i,j
-        real(8)					::	dist2
+        real(kind=prec)					::	dist2
         logical					::	ready
 end type SHAKE_BOND_TYPE
 
@@ -382,15 +383,15 @@ integer, parameter		:: num_profiling_times = 11
 
 type profiling_var_type
 	character(len=100)	:: name
-	real(8)			:: time = 0.0
+	real(kind=prec)			:: time = zero
 end type profiling_var_type
 
 type(profiling_var_type)	:: profile(num_profiling_times)
 
 #if defined (USE_MPI)
  !vectors for keeping track of node times
-real(8),allocatable				:: all_node_times(:)
-real(8),allocatable				:: node_times(:)
+real(kind=prec),allocatable				:: all_node_times(:)
+real(kind=prec),allocatable				:: node_times(:)
 #endif
 
 #endif
@@ -420,8 +421,8 @@ call trj_startup
 
 
 ! initialise constants
-pi = 4.0*atan(1.0)
-deg2rad = pi/180.0
+pi = 4.0_prec*atan(one)
+deg2rad = pi/180.0_prec
 
 end subroutine md_startup
 
@@ -902,15 +903,15 @@ end subroutine reallocate_nonbondlist_ww
 
 ! --- Dynamics subroutines, alphabetically
 
-real(8) function angle(istart, iend)
+real(kind=prec) function angle(istart, iend)
 ! *** arguments
 integer						::	istart, iend
 
 ! *** local variables
 integer						::	i,j,k,ia,ic,i3,j3,k3
-real(8)						::	bjiinv, bjkinv, bji2inv, bjk2inv
-real(8)						::	scp,angv,da,dv,f1
-real(8)						::  rji(3),rjk(3),di(3),dk(3) 
+real(kind=prec)						::	bjiinv, bjkinv, bji2inv, bjk2inv
+real(kind=prec)						::	scp,angv,da,dv,f1
+real(kind=prec)						::  rji(3),rjk(3),di(3),dk(3) 
 
 ! global variables used:
 ! ang, x, anglib, d
@@ -919,7 +920,7 @@ real(8)						::  rji(3),rjk(3),di(3),dk(3)
 ! updates d
 
 ! reset Eangle
-angle = 0.
+angle = zero			!zero = 0.0_prec
 
 do ia=istart,iend
         ! for each angle in range:
@@ -940,33 +941,33 @@ rjk(2) = x(k3+2) - x(j3+2)
 rjk(3) = x(k3+3) - x(j3+3)
 
         ! calculate bjiinv and bjkinv and their squares
-bji2inv = 1./(rji(1)**2 + rji(2)**2 + rji(3)**2 )
-bjk2inv = 1./(rjk(1)**2 + rjk(2)**2 + rjk(3)**2 )
+bji2inv = one/(rji(1)**2 + rji(2)**2 + rji(3)**2 )
+bjk2inv = one/(rjk(1)**2 + rjk(2)**2 + rjk(3)**2 )
         bjiinv = sqrt(bji2inv)
         bjkinv = sqrt(bjk2inv)
 
         ! calculate scp and angv
 scp = ( rji(1)*rjk(1) + rji(2)*rjk(2) + rji(3)*rjk(3) )
 scp = scp * bjiinv*bjkinv
-if ( scp .gt.  1.0 ) then
-          scp =  1.0
-        else if ( scp .lt. -1.0 ) then
-          scp = -1.0
+if ( scp .gt.  one ) then
+          scp =  one
+        else if ( scp .lt. -one ) then
+          scp = -one
         end if
 angv = acos(scp)
 
         ! calculate da and dv
 da = angv - anglib(ic)%ang0
-angle = angle + 0.5*anglib(ic)%fk*da**2
+angle = angle + 0.5_prec*anglib(ic)%fk*da**2
 dv = anglib(ic)%fk*da
 
         ! calculate f1
 f1 = sin ( angv ) 
-if ( abs(f1) .lt. 1.e-12 ) then
+if ( abs(f1) .lt. 1.e-12_prec ) then	! E is for single precision adding _prec customise precision D for double but _prec addon could not work propielty.
           ! avoid division by zero
-          f1 = -1.e12
+          f1 = -1.e12_prec
         else
-  f1 =  -1.0 / f1
+  f1 =  -one / f1
         end if
 
         ! calculate di and dk
@@ -992,23 +993,23 @@ end do
 end function angle
 
 !-----------------------------------------------------------------------
-real(8) function urey_bradley(istart, iend)
+real(kind=prec) function urey_bradley(istart, iend)
 ! *** arguments
 integer						::	istart, iend
 
 ! *** local variables
 integer						::	i,j,k,ia,ic,i3,j3,k3
-real(8)						::	bjiinv, bjkinv, bji2inv, bjk2inv
-real(8)						::	scp,angv,da,dv,f1
-real(8)						::  rji(3),rjk(3),di(3),dk(3) 
-real(8)						::	rik(3), dik, ru, du 
-real(8)						::	Eurey
+real(kind=prec)						::	bjiinv, bjkinv, bji2inv, bjk2inv
+real(kind=prec)						::	scp,angv,da,dv,f1
+real(kind=prec)						::  rji(3),rjk(3),di(3),dk(3) 
+real(kind=prec)						::	rik(3), dik, ru, du 
+real(kind=prec)						::	Eurey
 
 ! global variables used:
 ! ang, x, anglib, d
 
 ! reset energy
-urey_bradley = 0.
+urey_bradley = zero
 
 do ia=istart,iend
         ! for each angle in range:
@@ -1022,7 +1023,7 @@ i3=i*3-3
 j3=j*3-3
 k3=k*3-3
         ! 1-3 distance for Urey-Bradley potential:
-    if(anglib(ic)%ureyfk > 0.) then
+    if(anglib(ic)%ureyfk > zero) then
                 rik(1) = x(k3+1) - x(i3+1)
                 rik(2) = x(k3+2) - x(i3+2)
                 rik(3) = x(k3+3) - x(i3+3)
@@ -1043,20 +1044,20 @@ end function urey_bradley
 
 !-----------------------------------------------------------------------
 
-real(8) function bond(istart, iend)
+real(kind=prec) function bond(istart, iend)
 ! *** arguments
 integer						::	istart, iend
 
 ! *** local variables
 integer						::	i,j,ib,ic,i3,j3
-real(8)						::	b,db,dv
-real(8)						::	rij(3)
+real(kind=prec)						::	b,db,dv
+real(kind=prec)						::	rij(3)
 
 ! global variables used:
 ! bnd, x, bondlib, d
 
 ! reset Ebond
-bond = 0
+bond = zero
 
 do ib=istart,iend
         ! for each bond in range:
@@ -1074,7 +1075,7 @@ do ib=istart,iend
         ! calculate b and db, update Ebond
         b = sqrt ( rij(1)**2 + rij(2)**2 + rij(3)**2 )
         db = b - bondlib(ic)%bnd0
-        bond = bond + 0.5*bondlib(ic)%fk*db**2
+        bond = bond + 0.5_prec*bondlib(ic)%fk*db**2
 
         ! calculate dv and update d
         dv = bondlib(ic)%fk*db/b
@@ -1093,17 +1094,17 @@ subroutine cgp_centers
 integer						::	ig,i,i3
 
 do ig = 1, ncgp
-        lrf(ig)%cgp_cent(:) = 0.
-        lrf(ig)%phi0 = 0.
-lrf(ig)%phi1(:) = 0.
-lrf(ig)%phi2(:) = 0.
-lrf(ig)%phi3(:) = 0.
+        lrf(ig)%cgp_cent(:) = zero
+        lrf(ig)%phi0 = zero
+lrf(ig)%phi1(:) = zero
+lrf(ig)%phi2(:) = zero
+lrf(ig)%phi3(:) = zero
 
         do i  = cgp(ig)%first, cgp(ig)%last
                 lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
         end do
 
-lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1)
+lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
 
 end do
 
@@ -1220,7 +1221,7 @@ icgp=0
 sum=0
  !First assign master a small part
 node_assignment(0)%pp%start=icgp+1
-percent=REAL(totnbpp)/n_nonbonded
+percent=REAL(totnbpp, kind=prec)/n_nonbonded
 less_than_sum = master_assign*percent  ! No. of pp-type to assign master
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
@@ -1246,7 +1247,7 @@ node_assignment(numnodes-1)%pp%end=ncgp_solute
 icgp=0
 sum=0
 node_assignment(0)%pw%start=icgp+1
-percent=REAL(totnbpw)/n_nonbonded
+percent=REAL(totnbpw, kind=prec)/n_nonbonded
 less_than_sum = master_assign*percent
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
@@ -1271,7 +1272,7 @@ node_assignment(numnodes-1)%pw%end=ncgp_solute
 icgp=0
 sum=0
 node_assignment(0)%qp%start=icgp+1
-percent=REAL(totnbqp)/n_nonbonded
+percent=REAL(totnbqp, kind=prec)/n_nonbonded
 less_than_sum = master_assign*percent
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
@@ -1296,7 +1297,7 @@ node_assignment(numnodes-1)%qp%end=ncgp_solute
 icgp=0
 sum=0
 node_assignment(0)%ww%start=icgp+1
-percent=REAL(totnbww)/n_nonbonded
+percent=REAL(totnbww, kind=prec)/n_nonbonded
 less_than_sum = master_assign*percent
 do while((icgp .lt. nwat) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
@@ -1321,7 +1322,7 @@ node_assignment(numnodes-1)%ww%end=nwat
 icgp=0
 sum=0
 node_assignment(0)%qw%start=icgp+1
-percent=REAL(totnbqw)/n_nonbonded
+percent=REAL(totnbqw, kind=prec)/n_nonbonded
 less_than_sum = master_assign*percent
 do while((icgp .lt. nwat) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
@@ -1525,8 +1526,8 @@ end subroutine open_files
 subroutine fix_shell
 ! local variables
 integer						::	i,i3
-real(8)						::	fk,r2,erst
-real(8)						::	dr(3)
+real(kind=prec)						::	fk,r2,erst
+real(kind=prec)						::	dr(3)
 
 ! global variables used:
 !  E, nat_pro, excl, shell, heavy, fk_fix, fk_pshell, x, xtop, d
@@ -1556,7 +1557,7 @@ dr(1)   = x(i3+1) - xtop(i3+1)
 dr(2)   = x(i3+2) - xtop(i3+2)
 dr(3)   = x(i3+3) - xtop(i3+3)
 r2      = dr(1)**2 + dr(2)**2 + dr(3)**2
-erst    = 0.5*fk*r2
+erst    = 0.5_prec*fk*r2
 
   ! update restraint energies
 if ( excl(i) ) E%restraint%fix   = E%restraint%fix + erst
@@ -1574,19 +1575,19 @@ end subroutine fix_shell
 
 subroutine gauss (am,sd,v,ig)
 ! arguments
-real(8)					::	am,sd,v
+real(kind=prec)					::	am,sd,v
 integer					::	ig
 
 ! local variables
 integer					::	i
-real(8)					::	a,y
+real(kind=prec)					::	a,y
 
-a=0.0
+a=zero
 do i=1,12
 y=randm(ig)
 a=a+y
 end do
-v=(a-6.0)*sd+am
+v=(a-6.0_prec)*sd+am
 end subroutine gauss
 
 !-----------------------------------------------------------------------
@@ -1629,7 +1630,7 @@ end do
 
 !initialize softcore lookup array
 allocate (sc_lookup(nqat,natyps+nqat,nstates))
-sc_lookup(:,:,:)=0.0
+sc_lookup(:,:,:)=zero
 
 !load rest of fep file
 if(.not. qatom_load_fep(fep_file)) then
@@ -1823,24 +1824,24 @@ end subroutine get_fname
 
 !-----------------------------------------------------------------------
 
-real(8) function improper(istart, iend)
+real(kind=prec) function improper(istart, iend)
 !arguments
 integer						::	istart, iend
 
 ! evaluate harmonic impropers
 ! local variables
 integer						::	ip
-real(8)						::	scp,phi,dv,arg,f1
-real(8)						::	bjinv, bkinv, bj2inv, bk2inv
-real(8)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)						::	scp,phi,dv,arg,f1
+real(kind=prec)						::	bjinv, bkinv, bj2inv, bk2inv
+real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
 
 ! global variables used:
 !  imp, implib, x, pi, d
 
-improper = 0.
+improper = zero
 
 do ip = iend, istart,-1
         t => imp(ip)
@@ -1863,16 +1864,16 @@ rnk(1) = -rjk(2)*rkl(3) + rjk(3)*rkl(2)
 rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
 rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
 
-bj2inv  = 1./( rnj(1)**2 + rnj(2)**2 + rnj(3)**2)
-bk2inv  = 1./( rnk(1)**2 + rnk(2)**2 + rnk(3)**2)
+bj2inv  = one/( rnj(1)**2 + rnj(2)**2 + rnj(3)**2)
+bk2inv  = one/( rnk(1)**2 + rnk(2)**2 + rnk(3)**2)
         bjinv = sqrt(bj2inv)
         bkinv = sqrt(bk2inv)
 
 scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))*(bjinv*bkinv)
-if ( scp .gt.  1.0 ) then
-                scp =  1.0
-else if ( scp .lt. -1.0 ) then 
-                scp = -1.0
+if ( scp .gt.  one ) then
+                scp =  one
+else if ( scp .lt. -one ) then 
+                scp = -one
         end if
 phi = acos ( scp )
 if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
@@ -1885,15 +1886,15 @@ if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
 ! ---       energy
 
 arg = phi - lib%imp0
-arg = arg - 2.*pi*nint(arg/(2.*pi))
+arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 dv  = lib%fk*arg
-improper = improper + 0.5*dv*arg
+improper = improper + 0.5_prec*dv*arg
 
 ! ---       forces
 
 f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rnk(1)*bjinv*bkinv - scp*rnj(1)*bj2inv )
 di(2) = f1 * ( rnk(2)*bjinv*bkinv - scp*rnj(2)*bj2inv )
 di(3) = f1 * ( rnk(3)*bjinv*bkinv - scp*rnj(3)*bj2inv )
@@ -1938,23 +1939,23 @@ end function improper
 
 !-----------------------------------------------------------------------
 
-real(8) function improper2(istart, iend)
+real(kind=prec) function improper2(istart, iend)
 !evaluate periodic impropers
 !arguments
 integer						::	istart, iend
 ! local variables
 integer						::	ip
-real(8)						::	scp,phi,dv,arg,f1
-real(8)						::	bjinv, bkinv, bj2inv, bk2inv
-real(8)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)						::	scp,phi,dv,arg,f1
+real(kind=prec)						::	bjinv, bkinv, bj2inv, bk2inv
+real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
 
 ! global variables used:
 ! imp, implib, x, pi, d
 
-improper2 = 0.
+improper2 = zero
 
 do ip = iend, istart,-1
         t => imp(ip)
@@ -1976,16 +1977,16 @@ rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
 rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
 
 
-bj2inv  = 1./( rnj(1)**2 + rnj(2)**2 + rnj(3)**2)
-bk2inv  = 1./( rnk(1)**2 + rnk(2)**2 + rnk(3)**2)
+bj2inv  = one/( rnj(1)**2 + rnj(2)**2 + rnj(3)**2)
+bk2inv  = one/( rnk(1)**2 + rnk(2)**2 + rnk(3)**2)
         bjinv = sqrt(bj2inv)
         bkinv = sqrt(bk2inv)
 
 scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))*(bjinv*bkinv)
-if ( scp .gt.  1.0 ) then
-                scp =  1.0
-else if ( scp .lt. -1.0 ) then 
-                scp = -1.0
+if ( scp .gt.  one ) then
+                scp =  one
+else if ( scp .lt. -one ) then 
+                scp = -one
         end if
 phi = acos ( scp )
 if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
@@ -2004,8 +2005,8 @@ dv  = -2*lib%fk * sin(arg)
 ! ---       forces
 
 f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rnk(1)*bjinv*bkinv - scp*rnj(1)*bj2inv )
 di(2) = f1 * ( rnk(2)*bjinv*bkinv - scp*rnj(2)*bj2inv )
 di(3) = f1 * ( rnk(3)*bjinv*bkinv - scp*rnj(3)*bj2inv )
@@ -2080,7 +2081,7 @@ integer					:: mpitype_batch,mpitype_batch2
 integer					:: nat3,j,jj
 real(kind=wp8), allocatable		:: temp_lambda(:)
 integer, parameter                      ::maxint=2147483647
-real(kind=wp8), parameter                        ::maxreal=1E35
+real(kind=wp8), parameter                        ::maxreal=1E35_prec
 integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 
 !external MPI_Address
@@ -2361,15 +2362,15 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast lrf parameters')
 
 ! lrf
 ftype(:) = MPI_REAL8
-blockcnt(1) = 3					! real(8) cgp_cent(3)
+blockcnt(1) = 3					! real(kind=prec) cgp_cent(3)
 fdisp(1) = 0
-blockcnt(2) = 1					! real(8) phi0
+blockcnt(2) = 1					! real(kind=prec) phi0
 fdisp(2) = 3*8
-blockcnt(3) = 3					! real(8) phi1(3)
+blockcnt(3) = 3					! real(kind=prec) phi1(3)
 fdisp(3) = 3*8 + 8
-blockcnt(4) = 9					! real(8) phi2(9)
+blockcnt(4) = 9					! real(kind=prec) phi2(9)
 fdisp(4) = 3*8 + 8 + 3*8
-blockcnt(5) = 27				! real(8) phi3(27)
+blockcnt(5) = 27				! real(kind=prec) phi3(27)
 fdisp(5) = 3*8 + 8 + 3*8 + 9*8
 call MPI_Type_create_struct(5, blockcnt, fdisp, ftype, mpitype_batch, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Type_create_struct')
@@ -2439,11 +2440,11 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Type_free')
 
 ! iaclib
 ftype(:) = MPI_REAL8
-blockcnt(1) = 1					! real(8) mass
+blockcnt(1) = 1					! real(kind=prec) mass
 fdisp(1) = 0
-blockcnt(2) = nljtyp				! real(8) avdw(nljtyp)
+blockcnt(2) = nljtyp				! real(kind=prec) avdw(nljtyp)
 fdisp(2) = 8
-blockcnt(3) = nljtyp				! real(8) bvdw(nljtyp)
+blockcnt(3) = nljtyp				! real(kind=prec) bvdw(nljtyp)
 fdisp(3) = 8 + 8*nljtyp
 call MPI_Type_create_struct(3, blockcnt, fdisp, ftype, mpitype_batch, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Type_create_struct')
@@ -2521,7 +2522,7 @@ end if
 
 if(qvdw_flag) then
 !MN20030409-> Havn't tried with qvdw_flag == .true.
-! qavdw and qbvdw share the same format: real(8) qxvdw(nqlib,nljtyp)
+! qavdw and qbvdw share the same format: real(kind=prec) qxvdw(nqlib,nljtyp)
 if (nstates.ne.0) then
 call MPI_Bcast(qavdw, size(qavdw), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qavdw')
@@ -2568,7 +2569,7 @@ subroutine init_shake
 !
 !locals
 integer						::	mol, b, ia, ja, constr, angle
-real(8)						:: exclshk
+real(kind=prec)						:: exclshk
 integer						::	src, trg
 integer						::	solute_shake_constraints
 
@@ -2578,7 +2579,7 @@ call check_alloc('shake molecule array')
 
 shake_mol(:)%nconstraints = 0
 mol = 0
-exclshk = 0.
+exclshk = zero
 
 !count bonds to be constrained in each molecule
 !also count shake constraints involving excluded atoms
@@ -2597,8 +2598,8 @@ do b=1,nbonds
            shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
 
            if( .not. use_PBC ) then
-                if(excl(ia)) exclshk = exclshk + 0.5
-                if(excl(ja)) exclshk = exclshk + 0.5
+                if(excl(ia)) exclshk = exclshk + 0.5_prec
+                if(excl(ja)) exclshk = exclshk + 0.5_prec
            end if
 
         end if
@@ -2767,10 +2768,10 @@ logical function initialize()
 ! local variables
 character					:: text*80
 integer						:: i,j,length,ii
-real(8)						:: stepsize
-real(8)						:: lamda_tmp(max_states)
+real(kind=prec)						:: stepsize
+real(kind=prec)						:: lamda_tmp(max_states)
 integer						:: fu, fstat
-real(8)						::	rjunk
+real(kind=prec)						::	rjunk
 integer						::	ijunk
 
 ! local parameters
@@ -2859,12 +2860,12 @@ else
 				write(*, '(a, i4 )' ) 'Pressure seed: ', pressure_seed
 
                 if( .not. prm_get_real8_by_key('pressure', pressure) ) then
-                        pressure = 1.0
+                        pressure = one
                 end if
                 write(*,9) pressure
 9	format ('Pressure = ',f10.3,'  bar')
                 !convert pressure to strange internal unit
-                pressure = pressure * 1.43836e-5
+                pressure = pressure * 1.43836e-5_prec
                 yes = prm_get_logical_by_key('atom_based_scaling', atom_based_scaling, .false.)
                 if (atom_based_scaling) then
                         write (*,'(a)') 'Coordinate scaling on volume changes:  Atom based'
@@ -2933,8 +2934,8 @@ write (*,10) nsteps, stepsize
 10	format ('Number of MD steps =',i10,'  Stepsize (fs)    =',f10.3)
 
 ! convert to internal time units once and for all.
-dt=0.020462*stepsize
-dt2=0.5*dt
+dt=0.020462_prec*stepsize
+dt2=0.5_prec*dt
 ! --- Temperature, Thermostat etc.
 if(.not. prm_get_real8_by_key('temperature', Temp0)) then
         write(*,*) '>>> ERROR: temperature not specified (section MD)'
@@ -2947,7 +2948,7 @@ if(.not. prm_get_real8_by_key('bath_coupling', tau_T)) then
 end if
 
 write (*,15) Temp0,tau_T
-tau_T=0.020462*tau_T
+tau_T=0.020462_prec*tau_T
 if(Temp0 <= 0) then
         write(*,'(a)') &
                 '>>> Error: No dynamics at zero temperature!'
@@ -3136,7 +3137,7 @@ if( .not. box ) then
                 end if
                 if(prm_get_real8_by_key('shell_radius', rexcl_i)) then  !inner radius of restrained shell
                     write(*,50) rexcl_i
-                    if(rexcl_i < 0.) then
+                    if(rexcl_i < zero) then
                       call die('inner radius of restrained shell must be >= 0')
                     end if
                 else
@@ -3422,7 +3423,7 @@ if(nstates == 0 .and. fep_file /= '') then
         if(fep_file /= '') then
                 write(*,'(a)') 'Defaulting to single FEP state.'
                 nstates = 1
-                lamda_tmp(1) = 1.
+                lamda_tmp(1) = one
         end if
 end if
 if(nstates > 0 ) then
@@ -3669,12 +3670,12 @@ integer						::	iuse_indip, shake_flag
 character					:: text*80, watmodel*80
 integer						:: i,j,length
 integer						:: irestart
-real(8)						:: stepsize
-real(8)						:: lamda_tmp(max_states)
+real(kind=prec)						:: stepsize
+real(kind=prec)						:: lamda_tmp(max_states)
 integer						:: fstat
 integer						::	NBMethod
 integer						::	iwpol_restr
-real(8)						::	rjunk
+real(kind=prec)						::	rjunk
 
 !this is called by initialize to read old-style input file which is 
 !alreadu open as unit fu
@@ -3711,7 +3712,7 @@ write(*,1)
 old_initialize = .true. 
 
 !use default values for new features not in old kind of input.
-RcLRF = 999.
+RcLRF = 999.0_prec
 exclude_bonded = .false.
 force_rms = .false.
 shake_hydrogens = .false.
@@ -3729,8 +3730,8 @@ write (*,10) nsteps, stepsize
 10	format ('Number of MD steps =',i10,'  Stepsize (fs)    =',f10.3)
 
 ! convert to internal time units once and for all.
-dt=0.020462*stepsize
-dt2=0.5*dt
+dt=0.020462_prec*stepsize
+dt2=0.5_prec*dt
 
 ! --- Temp0, tau_T, iseed, Tmaxw
 read(fu,'(a80)') text !read line into buffer
@@ -3747,7 +3748,7 @@ end if
 if (iseed > 0) write (*,16) Tmaxw, iseed
 16	format ('Initial velocities will be generated from Maxwell distribution:',&
                 /,'Maxwell temperature=',f10.2,' Random number seed=',i10)
-tau_T=0.020462*tau_T
+tau_T=0.020462_prec*tau_T
 if(tau_T < dt) then
         write(*,'(a)') '>>> Error: tau_t must be >= stepsize.'
         old_initialize = .false.
@@ -4046,8 +4047,8 @@ end function old_initialize
 subroutine lrf_taylor
 ! *** local variables
 integer						::	i,i3,ic
-real(8)						::	Vij, q
-real(8)						::	dr(3),df(3)
+real(kind=prec)						::	Vij, q
+real(kind=prec)						::	dr(3),df(3)
 
 ! global variables used:
 !  E%LRF, natom, excl, iqatom, iwhich_cgp, lrf, x, crg, d
@@ -4068,39 +4069,39 @@ dr(3) = lrf(ic)%cgp_cent(3) - x(i3+3)
 ! --- Electric potential
 Vij=lrf(ic)%phi0 &
      +lrf(ic)%phi1(1)*dr(1)+lrf(ic)%phi1(2)*dr(2)+lrf(ic)%phi1(3)*dr(3) &
-     +0.5*(lrf(ic)%phi2(1)*dr(1)+lrf(ic)%phi2(2)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi2(1)*dr(1)+lrf(ic)%phi2(2)*dr(2) &
      +lrf(ic)%phi2(3)*dr(3))*dr(1) &
-     +0.5*(lrf(ic)%phi2(4)*dr(1)+lrf(ic)%phi2(5)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi2(4)*dr(1)+lrf(ic)%phi2(5)*dr(2) &
      +lrf(ic)%phi2(6)*dr(3))*dr(2) &
-     +0.5*(lrf(ic)%phi2(7)*dr(1)+lrf(ic)%phi2(8)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi2(7)*dr(1)+lrf(ic)%phi2(8)*dr(2) &
      +lrf(ic)%phi2(9)*dr(3))*dr(3)
 
-E%LRF = E%LRF + .5 * crg(i) * Vij
+E%LRF = E%LRF + 0.5_prec * crg(i) * Vij
 
 ! --- Electric field
 df(1)=lrf(ic)%phi1(1) &
      +lrf(ic)%phi2(1)*dr(1)+lrf(ic)%phi2(2)*dr(2)+lrf(ic)%phi2(3)*dr(3) &
-     +0.5*(lrf(ic)%phi3(1 )*dr(1)+lrf(ic)%phi3(2 )*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(1 )*dr(1)+lrf(ic)%phi3(2 )*dr(2) &
      +lrf(ic)%phi3(3 )*dr(3))*dr(1) &
-     +0.5*(lrf(ic)%phi3(4 )*dr(1)+lrf(ic)%phi3(5 )*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(4 )*dr(1)+lrf(ic)%phi3(5 )*dr(2) &
      +lrf(ic)%phi3(6 )*dr(3))*dr(2) &
-     +0.5*(lrf(ic)%phi3(7 )*dr(1)+lrf(ic)%phi3(8 )*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(7 )*dr(1)+lrf(ic)%phi3(8 )*dr(2) &
      +lrf(ic)%phi3(9 )*dr(3))*dr(3)
 df(2)=lrf(ic)%phi1(2) &
      +lrf(ic)%phi2(4)*dr(1)+lrf(ic)%phi2(5)*dr(2)+lrf(ic)%phi2(6)*dr(3) &
-     +0.5*(lrf(ic)%phi3(10)*dr(1)+lrf(ic)%phi3(11)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(10)*dr(1)+lrf(ic)%phi3(11)*dr(2) &
      +lrf(ic)%phi3(12)*dr(3))*dr(1) &
-     +0.5*(lrf(ic)%phi3(13)*dr(1)+lrf(ic)%phi3(14)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(13)*dr(1)+lrf(ic)%phi3(14)*dr(2) &
      +lrf(ic)%phi3(15)*dr(3))*dr(2) &
-     +0.5*(lrf(ic)%phi3(16)*dr(1)+lrf(ic)%phi3(17)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(16)*dr(1)+lrf(ic)%phi3(17)*dr(2) &
      +lrf(ic)%phi3(18)*dr(3))*dr(3)
 df(3)=lrf(ic)%phi1(3) &
      +lrf(ic)%phi2(7)*dr(1)+lrf(ic)%phi2(8)*dr(2)+lrf(ic)%phi2(9)*dr(3) &
-     +0.5*(lrf(ic)%phi3(19)*dr(1)+lrf(ic)%phi3(20)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(19)*dr(1)+lrf(ic)%phi3(20)*dr(2) &
      +lrf(ic)%phi3(21)*dr(3))*dr(1) &
-     +0.5*(lrf(ic)%phi3(22)*dr(1)+lrf(ic)%phi3(23)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(22)*dr(1)+lrf(ic)%phi3(23)*dr(2) &
      +lrf(ic)%phi3(24)*dr(3))*dr(2) &
-     +0.5*(lrf(ic)%phi3(25)*dr(1)+lrf(ic)%phi3(26)*dr(2) &
+     +0.5_prec*(lrf(ic)%phi3(25)*dr(1)+lrf(ic)%phi3(26)*dr(2) &
      +lrf(ic)%phi3(27)*dr(3))*dr(3) 
 
   ! update d
@@ -4116,7 +4117,7 @@ end subroutine lrf_taylor
 
 subroutine make_pair_lists
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -4189,7 +4190,7 @@ end subroutine make_pair_lists
 subroutine maxwell
 ! *** local variables
 integer						:: i,j,k
-real(8)						:: sd,vg,kT
+real(kind=prec)						:: sd,vg,kT
 
 !	Generate Maxwellian velocities 
 kT = Boltz*Tmaxw
@@ -4212,21 +4213,21 @@ end subroutine maxwell
 subroutine temperature(Tscale_solute,Tscale_solvent,Ekinmax)
 ! calculate the temperature
 !arguments
-real(8)						:: Tscale_solute,Tscale_solvent,Ekinmax
+real(kind=prec)						:: Tscale_solute,Tscale_solvent,Ekinmax
 
 !locals
 integer						::	i, i3
-real(8)						::	Ekin
+real(kind=prec)						::	Ekin
 
-Temp = 0.
-Temp_solute = 0.
-Tfree_solute = 0.
-Texcl_solute = 0.
+Temp = zero
+Temp_solute = zero
+Tfree_solute = zero
+Texcl_solute = zero
 
 !get kinetic energies for solute atoms
 do i=1,nat_solute
         i3=i*3-3
-        Ekin = 0.5*iaclib(iac(i))%mass*(v(i3+1)**2+v(i3+2)**2+v(i3+3)**2)
+        Ekin = 0.5_prec*iaclib(iac(i))%mass*(v(i3+1)**2+v(i3+2)**2+v(i3+3)**2)
         Temp_solute = Temp_solute + Ekin
 
         !******PWadded if
@@ -4238,20 +4239,20 @@ do i=1,nat_solute
         !if ( .not. excl(i)) Tfree = Tfree + Ekin
         if ( Ekin .gt. Ekinmax ) then
                 ! hot atom warning
-                write (*,180) i,2.*Ekin/Boltz/3.
+                write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
         end if
 end do
 
-Tfree_solvent = 0.
-Temp_solvent = 0.
-Texcl_solvent = 0.
-Ekin = 0
+Tfree_solvent = zero
+Temp_solvent = zero
+Texcl_solvent = zero
+Ekin = zero
 
 
 !get kinetic energies for solvent atoms
 do i=nat_solute+1,natom
         i3=i*3-3
-        Ekin = 0.5*iaclib(iac(i))%mass*(v(i3+1)**2+v(i3+2)**2+v(i3+3)**2)
+        Ekin = 0.5_prec*iaclib(iac(i))%mass*(v(i3+1)**2+v(i3+2)**2+v(i3+3)**2)
         Temp_solvent = Temp_solvent + Ekin
 
         !******PWadded if
@@ -4263,7 +4264,7 @@ do i=nat_solute+1,natom
         !if ( .not. excl(i)) Tfree = Tfree + Ekin
         if ( Ekin .gt. Ekinmax ) then
                 ! hot atom warning
-                write (*,180) i,2.*Ekin/Boltz/3.
+                write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
         end if
 end do
 
@@ -4272,27 +4273,27 @@ Temp = Temp_solute + Temp_solvent
 
 E%kinetic = Temp
 
-Temp  = 2.0*Temp/Boltz/real(Ndegf)
-Tfree = 2.0*Tfree/Boltz/real(Ndegfree)
+Temp  = 2.0_prec*Temp/Boltz/real(Ndegf, kind=prec)
+Tfree = 2.0_prec*Tfree/Boltz/real(Ndegfree, kind=prec)
 
 if (detail_temps) then
-	Temp_solute  = 2.0*Temp_solute /Boltz/real(Ndegf_solute)
-	Tfree_solute = 2.0*Tfree_solute/Boltz/real(Ndegfree_solute)
-	if ( Ndegf_solute .ne. Ndegfree_solute) Texcl_solute = 2.0*Texcl_solute/Boltz/real(Ndegf_solute - Ndegfree_solute)
+	Temp_solute  = 2.0_prec*Temp_solute /Boltz/real(Ndegf_solute, kind=prec)
+	Tfree_solute = 2.0_prec*Tfree_solute/Boltz/real(Ndegfree_solute, kind=prec)
+	if ( Ndegf_solute .ne. Ndegfree_solute) Texcl_solute = 2.0_prec*Texcl_solute/Boltz/real(Ndegf_solute - Ndegfree_solute, kind=prec)
 
-	Temp_solvent  = 2.0*Temp_solvent /Boltz/real(Ndegf_solvent)
-	Tfree_solvent = 2.0*Tfree_solvent/Boltz/real(Ndegfree_solvent)
-	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent)
+	Temp_solvent  = 2.0_prec*Temp_solvent /Boltz/real(Ndegf_solvent, kind =prec)
+	Tfree_solvent = 2.0_prec*Tfree_solvent/Boltz/real(Ndegfree_solvent, kind=prec)
+	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0_prec*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent, kind=prec)
 end if
 
 if (thermostat == BERENDSEN) then
 	if (separate_scaling) then
-		if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - 1.0
+		if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - one
 		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
-		if ( Tfree_solute .ne. 0 ) Tscale_solute = Temp0/Tfree_solute - 1.0
+		if ( Tfree_solute .ne. 0 ) Tscale_solute = Temp0/Tfree_solute - one
 		Tscale_solute = sqrt ( 1 + dt/tau_T * Tscale_solute )
 	else
-		if ( Tfree .ne. 0 ) Tscale_solvent = Temp0/Tfree - 1.0
+		if ( Tfree .ne. 0 ) Tscale_solvent = Temp0/Tfree - one
 		Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
 		Tscale_solute = Tscale_solvent
 	end if
@@ -4306,12 +4307,12 @@ end subroutine temperature
 ! Subroutine for the Nosé-Hoover chain propagation
 subroutine nh_prop
 
-real(8)				:: dt4, dt8, expf, s
+real(kind=prec)				:: dt4, dt8, expf, s
 integer				:: i, i3
 
 !initializing all the constants to be used
-dt4=0.5*dt2
-dt8=0.5*dt4
+dt4=0.5_prec*dt2
+dt8=0.5_prec*dt4
 
 Gnh(1) = Ndegf*Boltz*(Temp-Temp0)/qnh(1)
 
@@ -4355,19 +4356,19 @@ subroutine md_run
 integer				:: i,j,k,niter,iii
 
 integer				:: i3
-real(8)                         :: Tlast
-real(8)                         ::Ekinmax
-real(8)				::Tscale_solute,Tscale_solvent
+real(kind=prec)                         :: Tlast
+real(kind=prec)                         ::Ekinmax
+real(kind=prec)				::Tscale_solute,Tscale_solvent
 !new for temperature control
-real(8)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
+real(kind=prec)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
 integer				:: n_max = -1
-real(8),allocatable	::randva(:),randfa(:,:),dv(:)
+real(kind=prec),allocatable	::randva(:),randfa(:,:),dv(:)
 !Random variable temperature control array
-real(8)				:: time0, time1, time_per_step, startloop
+real(kind=prec)				:: time0, time1, time_per_step, startloop
 integer(4)				:: time_completion
 
 #if defined(PROFILING)
-real(8)                                         :: start_loop_time1, start_loop_time2
+real(kind=prec)                                         :: start_loop_time1, start_loop_time2
 
 profile(1)%name = 'NB_update'
 profile(2)%name = '   nbwwlist_time'
@@ -4393,8 +4394,8 @@ end if
 allocate(node_times(num_profiling_times), stat=alloc_status) !each node's profiling times, used at end of md_run by mpi_gather
 call check_alloc('MPI profiling')
 
-all_node_times(:) = 0.0
-node_times(:) = 0.0
+all_node_times(:) = zero
+node_times(:) = zero
 
 #endif
 #endif
@@ -4406,7 +4407,7 @@ nat3=natom*3
 ! calculate maximum temperature
 !**MN-> Only master calc. temp for now.
 if (nodeid .eq. 0) then
-Ekinmax = 1000.0*Ndegf*Boltz*Temp0/2.0/real(natom)
+Ekinmax = 1000.0_prec*Ndegf*Boltz*Temp0/2.0_prec/real(natom, kind=prec)
 
 call temperature(Tscale_solute,Tscale_solvent,Ekinmax)
 !store old Temp
@@ -4599,7 +4600,7 @@ if (thermostat == LANGEVIN ) then
         do i=1,natom
                 do j=1,3
 		randnum = randm(iseed)
-		randfa(i,j) =  randva(i) * ( randnum  - 0.5 )
+		randfa(i,j) =  randva(i) * ( randnum  - 0.5_prec )
                 end do 
         end do
 	else
@@ -4844,10 +4845,10 @@ integer						:: nppcgp(:)
 
 ! local variables
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: dx, dy, dz
 ! This routine counts non-bonded solute-solute atom pairs 
 ! excluding any Q-atoms.
 
@@ -4918,11 +4919,11 @@ jaloop:	do ja = cgp(jg)%first, cgp(jg)%last
 
           ! skip if all interactions zero
           LJ_code = ljcod(iac(i),iac(j))
-          if((crg(i) * crg(j) == 0.) &
+          if((crg(i) * crg(j) == zero) &
                 .and. &
-                (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == 0.) &
+                (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == zero) &
                 .and. &
-                (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == 0.)) &
+                (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == zero)) &
                 cycle jaloop
 
           ! check bonded exclusions and 1-4 nbors
@@ -4958,7 +4959,7 @@ end subroutine nbpp_count
 subroutine nbpplis2
 ! local variables
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,inside
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 
 ! for spherical boundary 
@@ -4966,7 +4967,7 @@ real(8)						:: rcut2,r2
 !	excluding any Q-atoms.
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -5091,11 +5092,11 @@ end subroutine nbpplis2
 subroutine nbpplis2_box
   ! local variables
   integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,inside
-  real(8)						:: rcut2,r2
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: rcut2,r2
+  real(kind=prec)						:: dx, dy, dz
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
  
@@ -5224,18 +5225,18 @@ end subroutine nbpplis2_box
 subroutine nbpplis2_box_lrf
   ! local variables
   integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,inside
-  real(8)						:: rcut2,r2
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: rcut2,r2
+  real(kind=prec)						:: dx, dy, dz
  
-  real(8)						::RcLRF2,field0, field1, field2
-  real(8)						::dr(3)
-  real(8)						::boxshiftx, boxshifty, boxshiftz	
+  real(kind=prec)						::RcLRF2,field0, field1, field2
+  real(kind=prec)						::dr(3)
+  real(kind=prec)						::boxshiftx, boxshifty, boxshiftz	
   integer						::inside_LRF, is3
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
   !	excluding any Q-atoms.
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -5380,7 +5381,7 @@ jaloop:       do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
           lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
           lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
           lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -5391,33 +5392,33 @@ jaloop:       do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
           lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         end do
 
 		!jg : ig calculations
@@ -5447,7 +5448,7 @@ jaloop:       do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
           lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
           lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
           lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -5458,33 +5459,33 @@ jaloop:       do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
           lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
 
       end if ! outside cutoff
@@ -5501,14 +5502,14 @@ subroutine nbpplis2_lrf
 ! local variables
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,is 
 logical						::	inside
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
-real(8)						::	RcLRF2
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
+real(kind=prec)						::	RcLRF2
 
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -5635,7 +5636,7 @@ ialoop2:		do ia = cgp(ig)%first, cgp(ig)%last
                                 lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
                                 lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
                                 lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-                                field1=3.*field0/r2
+                                field1=3.0_prec*field0/r2
                                 lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
                                 lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
                                 lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -5646,33 +5647,33 @@ ialoop2:		do ia = cgp(ig)%first, cgp(ig)%last
                                 lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
                                 lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
                                 field2=-field1/r2
-                                lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-                                lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-                                lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-                                lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-                                lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-                                lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-                                lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-                                lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-                                lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-                                lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-                                lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-                                lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-                                lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-                                lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-                                lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-                                lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-                                lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-                                lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-                                lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-                                lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-                                lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-                                lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-                                lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-                                lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-                                lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-                                lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-                                lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+                                lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+                                lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+                                lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+                                lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+                                lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+                                lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+                                lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+                                lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+                                lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+                                lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+                                lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+                                lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+                                lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+                                lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+                                lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+                                lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+                                lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+                                lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+                                lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+                                lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+                                lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+                                lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+                                lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+                                lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+                                lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+                                lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+                                lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
                         end do ialoop2
 
 jaloop2:		do ja = cgp(jg)%first, cgp(jg)%last
@@ -5693,7 +5694,7 @@ jaloop2:		do ja = cgp(jg)%first, cgp(jg)%last
                                 lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
                                 lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
                                 lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-                                field1=3.*field0/r2
+                                field1=3.0_prec*field0/r2
                                 lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
                                 lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
 
@@ -5706,33 +5707,33 @@ jaloop2:		do ja = cgp(jg)%first, cgp(jg)%last
                                 lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
                                 lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
                                 field2=-field1/r2
-                                lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-                                lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-                                lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-                                lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-                                lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-                                lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-                                lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-                                lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-                                lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-                                lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-                                lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-                                lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-                                lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-                                lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-                                lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-                                lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-                                lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-                                lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-                                lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-                                lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-                                lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-                                lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-                                lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-                                lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-                                lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-                                lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-                                lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+                                lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+                                lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+                                lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+                                lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+                                lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+                                lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+                                lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+                                lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+                                lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+                                lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+                                lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+                                lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+                                lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+                                lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+                                lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+                                lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+                                lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+                                lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+                                lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+                                lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+                                lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+                                lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+                                lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+                                lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+                                lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+                                lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+                                lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 
                         end do jaloop2
                 end if
@@ -5749,7 +5750,7 @@ end subroutine nbpplis2_lrf
 subroutine nbpplist
 ! local variables
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 
 ! For use with spherical boundary   
@@ -5763,7 +5764,7 @@ integer						:: LJ_code
 ! reset #pairs
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -5819,11 +5820,11 @@ jaloop: do ja = cgp(jg)%first, cgp(jg)%last
           LJ_code = ljcod(iac(i),iac(j))
 
           ! skip if all interactions zero
-          if((crg(i) * crg(j) == 0.) &
+          if((crg(i) * crg(j) == zero) &
                 .and. &
-                (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == 0.) &
+                (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == zero) &
                 .and. &
-                (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == 0.)) &
+                (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == zero)) &
                 cycle jaloop
 
           ! skip bonded exclusions and 1-4 nbors
@@ -5881,9 +5882,9 @@ end subroutine nbpplist
 subroutine nbpplist_box
   ! local variables
   integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,ig_sw, jg_sw
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
   
   ! For use with periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -5896,7 +5897,7 @@ subroutine nbpplist_box
   ! reset #pairs
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -5960,11 +5961,11 @@ jaloop: do ja = cgp(jg)%first, cgp(jg)%last
 		  LJ_code = ljcod(iac(i),iac(j))
 
 		  ! skip if all interactions zero
-		  if((crg(i) * crg(j) == 0.) &
+		  if((crg(i) * crg(j) == zero) &
 			.and. &
-			(iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == 0.) &
+			(iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == zero) &
 			.and. &
-			(iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == 0.)) &
+			(iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == zero)) &
 			cycle jaloop
 
 		  ! skip bonded exclusions and 1-4 nbors
@@ -6022,13 +6023,13 @@ end subroutine nbpplist_box
 subroutine nbpplist_lrf
 ! local variables
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,is,is3
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
 integer						:: LJ_code
-real(8)						::	RcLRF2
+real(kind=prec)						::	RcLRF2
 
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -6091,11 +6092,11 @@ jaloop:	  do ja = cgp(jg)%first, cgp(jg)%last
                 LJ_code = ljcod(iac(i),iac(j))
 
                 ! skip if all interactions zero
-                if ((crg(i) * crg(j) == 0.) &
+                if ((crg(i) * crg(j) == zero) &
                   .and. &
-                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == 0.) &
+                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == zero) &
                   .and. &
-                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == 0.)) &
+                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == zero)) &
                   cycle jaloop
 
                 ! check bonded exclusions and 1-4 nbors
@@ -6164,7 +6165,7 @@ jaloop:	  do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
           lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
           lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
           lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -6175,33 +6176,33 @@ jaloop:	  do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
           lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         end do
 
         do ja = cgp(jg)%first, cgp(jg)%last
@@ -6222,7 +6223,7 @@ jaloop:	  do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
           lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
           lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
           lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -6233,33 +6234,33 @@ jaloop:	  do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
           lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
 
   end if ! outside cutoff
@@ -6276,16 +6277,16 @@ end subroutine nbpplist_lrf
 subroutine nbpplist_box_lrf
   ! local variables
   integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,ig_sw, jg_sw, is3
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
   
-  real(8)						::RcLRF2,field0, field1, field2
-  real(8)						::dr(3)
-  real(8)						::boxshiftx, boxshifty, boxshiftz	
+  real(kind=prec)						::RcLRF2,field0, field1, field2
+  real(kind=prec)						::dr(3)
+  real(kind=prec)						::boxshiftx, boxshifty, boxshiftz	
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -6359,11 +6360,11 @@ jaloop:   do ja = cgp(jg)%first, cgp(jg)%last
 		    LJ_code = ljcod(iac(i),iac(j))
 
 		    ! skip if all interactions zero
-		    if((crg(i) * crg(j) == 0.) &
+		    if((crg(i) * crg(j) == zero) &
 			  .and. &
-			  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == 0.) &
+			  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(j))%avdw(LJ_code) == zero) &
 			  .and. &
-			  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == 0.)) &
+			  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(j))%bvdw(LJ_code) == zero)) &
 			  cycle jaloop
 
 		    ! skip bonded exclusions and 1-4 nbors
@@ -6440,7 +6441,7 @@ jaloop:   do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
           lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
           lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
           lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -6451,33 +6452,33 @@ jaloop:   do ja = cgp(jg)%first, cgp(jg)%last
           lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
           lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(27)=lrf(jg)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         end do
 
 		!jg : ig calculations
@@ -6507,7 +6508,7 @@ jaloop:   do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
           lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
           lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
           lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -6518,33 +6519,33 @@ jaloop:   do ja = cgp(jg)%first, cgp(jg)%last
           lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
           lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
 
       end if ! outside cutoff
@@ -6565,12 +6566,12 @@ integer						:: npwcgp(:)
 
 ! local variables
 integer						:: i,ig,jg,ia,ja,i3,j3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 
 !******PWadded variables 2001-10-01
 
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: dx, dy, dz
 
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
@@ -6629,11 +6630,11 @@ jaloop:	do ja = nat_solute + 3*jg-2, nat_solute + 3*jg
           LJ_code = ljcod(iac(i),iac(ja))
 
           ! skip pairs with zero interaction
-          if((crg(i) * crg(ja) == 0.) &
+          if((crg(i) * crg(ja) == zero) &
                   .and. &
-                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == 0.) &
+                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == zero) &
                   .and. &
-                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == 0.)) &
+                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == zero)) &
                   cycle jaloop
 
           ! count the pair
@@ -6652,9 +6653,9 @@ end subroutine nbpw_count
 subroutine nbpwlis2
 ! local variables
 integer						:: i,ig,jg,ia,ja,i3,j3, inside
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -6732,14 +6733,14 @@ end subroutine nbpwlis2
 subroutine nbpwlis2_box
   ! local variables
   integer						:: i,ig,jg,ia,ja,i3,j3,ig_atom, inside
-  real(8)						:: rcut2,r2
-  real(8)						:: dx, dy,dz
+  real(kind=prec)						:: rcut2,r2
+  real(kind=prec)						:: dx, dy,dz
   
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -6817,19 +6818,19 @@ end subroutine nbpwlis2_box
 subroutine nbpwlis2_box_lrf
   ! local variables
   integer						:: i,ig,jg,ia,ja,i3,j3,ig_atom, inside
-  real(8)						:: rcut2,r2
-  real(8)						:: dx, dy,dz
+  real(kind=prec)						:: rcut2,r2
+  real(kind=prec)						:: dx, dy,dz
   !LRF
-  real(8)						:: RcLRF2, field0, field1, field2
-  real(8)						:: dr(3)
+  real(kind=prec)						:: RcLRF2, field0, field1, field2
+  real(kind=prec)						:: dr(3)
   integer						:: jg_cgp, j, inside_LRF, is3
-  real(8)						:: boxshiftx, boxshifty, boxshiftz
+  real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz
   
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -6933,7 +6934,7 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
 		  lrf(jg_cgp)%phi1(1)=lrf(jg_cgp)%phi1(1)-field0*dr(1)
 		  lrf(jg_cgp)%phi1(2)=lrf(jg_cgp)%phi1(2)-field0*dr(2)
           lrf(jg_cgp)%phi1(3)=lrf(jg_cgp)%phi1(3)-field0*dr(3)
-		  field1=3.*field0/r2
+		  field1=3.0_prec*field0/r2
 		  lrf(jg_cgp)%phi2(1)=lrf(jg_cgp)%phi2(1)+field1*dr(1)*dr(1)-field0
 		  lrf(jg_cgp)%phi2(2)=lrf(jg_cgp)%phi2(2)+field1*dr(1)*dr(2)
 		  lrf(jg_cgp)%phi2(3)=lrf(jg_cgp)%phi2(3)+field1*dr(1)*dr(3)
@@ -6944,33 +6945,33 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
 		  lrf(jg_cgp)%phi2(8)=lrf(jg_cgp)%phi2(8)+field1*dr(3)*dr(2)
 		  lrf(jg_cgp)%phi2(9)=lrf(jg_cgp)%phi2(9)+field1*dr(3)*dr(3)-field0
 		  field2=-field1/r2
-		  lrf(jg_cgp)%phi3(1 )=lrf(jg_cgp)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-		  lrf(jg_cgp)%phi3(2 )=lrf(jg_cgp)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(3 )=lrf(jg_cgp)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(4 )=lrf(jg_cgp)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(5 )=lrf(jg_cgp)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(6 )=lrf(jg_cgp)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-		  lrf(jg_cgp)%phi3(7 )=lrf(jg_cgp)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(8 )=lrf(jg_cgp)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-		  lrf(jg_cgp)%phi3(9 )=lrf(jg_cgp)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(10)=lrf(jg_cgp)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(11)=lrf(jg_cgp)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(12)=lrf(jg_cgp)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-		  lrf(jg_cgp)%phi3(13)=lrf(jg_cgp)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(14)=lrf(jg_cgp)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-		  lrf(jg_cgp)%phi3(15)=lrf(jg_cgp)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(16)=lrf(jg_cgp)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-		  lrf(jg_cgp)%phi3(17)=lrf(jg_cgp)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(18)=lrf(jg_cgp)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(19)=lrf(jg_cgp)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(20)=lrf(jg_cgp)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-		  lrf(jg_cgp)%phi3(21)=lrf(jg_cgp)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(22)=lrf(jg_cgp)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-		  lrf(jg_cgp)%phi3(23)=lrf(jg_cgp)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(24)=lrf(jg_cgp)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(25)=lrf(jg_cgp)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(26)=lrf(jg_cgp)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(27)=lrf(jg_cgp)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+		  lrf(jg_cgp)%phi3(1 )=lrf(jg_cgp)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+		  lrf(jg_cgp)%phi3(2 )=lrf(jg_cgp)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(3 )=lrf(jg_cgp)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(4 )=lrf(jg_cgp)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(5 )=lrf(jg_cgp)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(6 )=lrf(jg_cgp)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+		  lrf(jg_cgp)%phi3(7 )=lrf(jg_cgp)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(8 )=lrf(jg_cgp)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+		  lrf(jg_cgp)%phi3(9 )=lrf(jg_cgp)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(10)=lrf(jg_cgp)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(11)=lrf(jg_cgp)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(12)=lrf(jg_cgp)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+		  lrf(jg_cgp)%phi3(13)=lrf(jg_cgp)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(14)=lrf(jg_cgp)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+		  lrf(jg_cgp)%phi3(15)=lrf(jg_cgp)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(16)=lrf(jg_cgp)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+		  lrf(jg_cgp)%phi3(17)=lrf(jg_cgp)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(18)=lrf(jg_cgp)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(19)=lrf(jg_cgp)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(20)=lrf(jg_cgp)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+		  lrf(jg_cgp)%phi3(21)=lrf(jg_cgp)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(22)=lrf(jg_cgp)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+		  lrf(jg_cgp)%phi3(23)=lrf(jg_cgp)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(24)=lrf(jg_cgp)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(25)=lrf(jg_cgp)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(26)=lrf(jg_cgp)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(27)=lrf(jg_cgp)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 		 enddo ialoop2
 
 		!solvent : solut	
@@ -6999,7 +7000,7 @@ jaloop2: do ja = 1, 3
 		  lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
 		  lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
 		  lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-		  field1=3.*field0/r2
+		  field1=3.0_prec*field0/r2
 		  lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
 		  lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
 		  lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -7010,33 +7011,33 @@ jaloop2: do ja = 1, 3
 		  lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
 		  lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
 		  field2=-field1/r2
-		  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-		  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-		  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-		  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-		  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-		  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-		  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-		  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-		  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-		  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-		  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-		  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-		  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-		  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-		  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-		  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-		  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-		  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-		  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-		  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-		  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-		  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-		  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-		  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-		  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-		  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-		  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+		  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+		  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+		  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+		  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+		  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+		  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+		  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+		  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+		  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+		  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+		  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+		  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+		  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+		  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+		  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+		  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+		  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+		  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+		  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+		  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+		  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+		  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+		  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+		  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+		  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+		  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+		  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
          enddo jaloop2
       end if
 
@@ -7051,13 +7052,13 @@ end subroutine nbpwlis2_box_lrf
 subroutine nbpwlis2_lrf
 ! local variables
 integer						:: i,j,ig,iw,jg,ia,ja,i3,j3,inside,is,is3
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
-real(8)						::	RcLRF2
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
+real(kind=prec)						::	RcLRF2
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -7144,7 +7145,7 @@ ialoop2:      do ia = cgp(ig)%first, cgp(ig)%last
       lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
       lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
       lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-      field1=3.*field0/r2
+      field1=3.0_prec*field0/r2
       lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
       lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
       lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -7155,33 +7156,33 @@ ialoop2:      do ia = cgp(ig)%first, cgp(ig)%last
       lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
       lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
       field2=-field1/r2
-      lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-      lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-      lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-      lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-      lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-      lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-      lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-      lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-      lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-      lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-      lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-      lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-      lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-      lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-      lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-      lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-      lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-      lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-      lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-      lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-      lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-      lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-      lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-      lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-      lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-      lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-      lrf(jg)%phi3(27)=lrf(jg)%phi3(27) 	+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+      lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+      lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+      lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+      lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+      lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+      lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+      lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+      lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+      lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+      lrf(jg)%phi3(10)=lrf(jg)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+      lrf(jg)%phi3(11)=lrf(jg)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+      lrf(jg)%phi3(12)=lrf(jg)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+      lrf(jg)%phi3(13)=lrf(jg)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+      lrf(jg)%phi3(14)=lrf(jg)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+      lrf(jg)%phi3(15)=lrf(jg)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+      lrf(jg)%phi3(16)=lrf(jg)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+      lrf(jg)%phi3(17)=lrf(jg)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+      lrf(jg)%phi3(18)=lrf(jg)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+      lrf(jg)%phi3(19)=lrf(jg)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+      lrf(jg)%phi3(20)=lrf(jg)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+      lrf(jg)%phi3(21)=lrf(jg)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+      lrf(jg)%phi3(22)=lrf(jg)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+      lrf(jg)%phi3(23)=lrf(jg)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+      lrf(jg)%phi3(24)=lrf(jg)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+      lrf(jg)%phi3(25)=lrf(jg)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+      lrf(jg)%phi3(26)=lrf(jg)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+      lrf(jg)%phi3(27)=lrf(jg)%phi3(27) 	+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 
    end do ialoop2
 
@@ -7201,7 +7202,7 @@ jaloop2:   do ja = 1, 3
       lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
       lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
       lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-      field1=3.*field0/r2
+      field1=3.0_prec*field0/r2
       lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
       lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
       lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -7212,33 +7213,33 @@ jaloop2:   do ja = 1, 3
       lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
       lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
       field2=-field1/r2
-      lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-      lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-      lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-      lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-      lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-      lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.*dr(1)*dr(2)*dr(3))
-      lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-      lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.*dr(1)*dr(3)*dr(2))
-      lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-      lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-      lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-      lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.*dr(2)*dr(1)*dr(3))
-      lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-      lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-      lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-      lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.*dr(2)*dr(3)*dr(1))
-      lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-      lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-      lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-      lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.*dr(3)*dr(1)*dr(2))
-      lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-      lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.*dr(3)*dr(2)*dr(1))
-      lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-      lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-      lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-      lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-      lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+      lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+      lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+      lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+      lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+      lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+      lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 ) +field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+      lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+      lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+      lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 ) +field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+      lrf(ig)%phi3(10)=lrf(ig)%phi3(10) +field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+      lrf(ig)%phi3(11)=lrf(ig)%phi3(11) +field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+      lrf(ig)%phi3(12)=lrf(ig)%phi3(12) +field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+      lrf(ig)%phi3(13)=lrf(ig)%phi3(13) +field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+      lrf(ig)%phi3(14)=lrf(ig)%phi3(14) +field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+      lrf(ig)%phi3(15)=lrf(ig)%phi3(15) +field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+      lrf(ig)%phi3(16)=lrf(ig)%phi3(16) +field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+      lrf(ig)%phi3(17)=lrf(ig)%phi3(17) +field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+      lrf(ig)%phi3(18)=lrf(ig)%phi3(18) +field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+      lrf(ig)%phi3(19)=lrf(ig)%phi3(19) +field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+      lrf(ig)%phi3(20)=lrf(ig)%phi3(20) +field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+      lrf(ig)%phi3(21)=lrf(ig)%phi3(21) +field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+      lrf(ig)%phi3(22)=lrf(ig)%phi3(22) +field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+      lrf(ig)%phi3(23)=lrf(ig)%phi3(23) +field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+      lrf(ig)%phi3(24)=lrf(ig)%phi3(24) +field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+      lrf(ig)%phi3(25)=lrf(ig)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+      lrf(ig)%phi3(26)=lrf(ig)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+      lrf(ig)%phi3(27)=lrf(ig)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 
    end do jaloop2
 
@@ -7258,7 +7259,7 @@ end subroutine nbpwlis2_lrf
 subroutine nbpwlist
 ! local variables
 integer						:: i,ig,jg,ia,ja,i3,j3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 
 
@@ -7267,7 +7268,7 @@ integer						:: LJ_code
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -7316,11 +7317,11 @@ jaloop:	do ja = nat_solute + 3*jg-2, nat_solute + 3*jg
           LJ_code = ljcod(iac(i),iac(ja))
 
           ! skip pairs with zero interaction
-          if((crg(i) * crg(ja) == 0.) &
+          if((crg(i) * crg(ja) == zero) &
                   .and. &
-                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == 0.) &
+                  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == zero) &
                   .and. &
-                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == 0.)) &
+                  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == zero)) &
                   cycle jaloop
 
           ! add the pair
@@ -7344,15 +7345,15 @@ end subroutine nbpwlist
 subroutine nbpwlist_box
   ! local variables
   integer						:: i,ig,jg,ia,ja,i3,j3,ig_sw,jg_sw
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
 
   ! For use with periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -7410,11 +7411,11 @@ jaloop:	do ja = nat_solute + 3*jg-2, nat_solute + 3*jg
 		  LJ_code = ljcod(iac(i),iac(ja))
 
 		  ! skip pairs with zero interaction
-		  if((crg(i) * crg(ja) == 0.) &
+		  if((crg(i) * crg(ja) == zero) &
   			  .and. &
-			  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == 0.) &
+			  (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == zero) &
 			  .and. &
-			  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == 0.)) &
+			  (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == zero)) &
 			  cycle jaloop
 
 		  ! add the pair
@@ -7438,13 +7439,13 @@ end subroutine nbpwlist_box
 subroutine nbpwlist_lrf
 ! local variables
 integer						:: i,j,ig,iw,jg,ia,ja,i3,j3,is,is3
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
 integer						:: LJ_code
-real(8)						::	RcLRF2
+real(kind=prec)						::	RcLRF2
 
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -7492,11 +7493,11 @@ jaloop:	  do ja = nat_solute + 3*iw-2, nat_solute + 3*iw
                 LJ_code = ljcod(iac(i),iac(ja))
 
                 ! skip pairs with zero interaction
-                if((crg(i) * crg(ja) == 0.) &
+                if((crg(i) * crg(ja) == zero) &
                         .and. &
-                        (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == 0.) &
+                        (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == zero) &
                         .and. &
-                        (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == 0.)) &
+                        (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == zero)) &
                         cycle jaloop
 
                 ! add the pair
@@ -7533,7 +7534,7 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
   lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
   lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
   lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-  field1=3.*field0/r2
+  field1=3.0_prec*field0/r2
   lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
   lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
   lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -7544,33 +7545,33 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
   lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
   lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
   field2=-field1/r2
-  lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-  lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-  lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-  lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-  lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-  lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-  lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-  lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-  lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-  lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-  lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-  lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-  lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-  lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-  lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-  lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-  lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-  lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-  lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-  lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-  lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-  lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-  lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-  lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-  lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-  lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-  lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+  lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+  lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+  lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+  lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+  lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+  lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+  lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+  lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+  lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+  lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+  lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+  lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+  lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+  lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+  lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+  lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+  lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+  lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+  lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+  lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+  lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+  lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+  lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+  lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+  lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+  lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+  lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 enddo ialoop2
 
 jaloop2: do ja = 1, 3
@@ -7590,7 +7591,7 @@ jaloop2: do ja = 1, 3
   lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
   lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
   lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-  field1=3.*field0/r2
+  field1=3.0_prec*field0/r2
   lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
   lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
   lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -7601,33 +7602,33 @@ jaloop2: do ja = 1, 3
   lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
   lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
   field2=-field1/r2
-  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 enddo jaloop2
 
 end if
@@ -7644,17 +7645,17 @@ end subroutine nbpwlist_lrf
 subroutine nbpwlist_box_lrf
   ! local variables
   integer						:: i,ig,jg,ia,ja,i3,j3,ig_sw,jg_sw
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
   ! LRF
-  real(8)						:: RcLRF2, field0, field1, field2
-  real(8)						:: dr(3)
+  real(kind=prec)						:: RcLRF2, field0, field1, field2
+  real(kind=prec)						:: dr(3)
   integer						:: jg_cgp, j, is3
-  real(8)						:: boxshiftx, boxshifty, boxshiftz
+  real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -7717,11 +7718,11 @@ jaloop:	  do ja = nat_solute + 3*jg-2, nat_solute + 3*jg
 		    LJ_code = ljcod(iac(i),iac(ja))
 
 		    ! skip pairs with zero interaction
-		    if((crg(i) * crg(ja) == 0.) &
+		    if((crg(i) * crg(ja) == zero) &
   			    .and. &
-			    (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == 0.) &
+			    (iaclib(iac(i))%avdw(LJ_code)*iaclib(iac(ja))%avdw(LJ_code) == zero) &
 			    .and. &
-			    (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == 0.)) &
+			    (iaclib(iac(i))%bvdw(LJ_code)*iaclib(iac(ja))%bvdw(LJ_code) == zero)) &
 			    cycle jaloop
 
 		    ! add the pair
@@ -7769,7 +7770,7 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
 		  lrf(jg_cgp)%phi1(1)=lrf(jg_cgp)%phi1(1)-field0*dr(1)
 		  lrf(jg_cgp)%phi1(2)=lrf(jg_cgp)%phi1(2)-field0*dr(2)
           lrf(jg_cgp)%phi1(3)=lrf(jg_cgp)%phi1(3)-field0*dr(3)
-		  field1=3.*field0/r2
+		  field1=3.0_prec*field0/r2
 		  lrf(jg_cgp)%phi2(1)=lrf(jg_cgp)%phi2(1)+field1*dr(1)*dr(1)-field0
 		  lrf(jg_cgp)%phi2(2)=lrf(jg_cgp)%phi2(2)+field1*dr(1)*dr(2)
 		  lrf(jg_cgp)%phi2(3)=lrf(jg_cgp)%phi2(3)+field1*dr(1)*dr(3)
@@ -7780,33 +7781,33 @@ ialoop2: do ia = cgp(ig)%first, cgp(ig)%last
 		  lrf(jg_cgp)%phi2(8)=lrf(jg_cgp)%phi2(8)+field1*dr(3)*dr(2)
 		  lrf(jg_cgp)%phi2(9)=lrf(jg_cgp)%phi2(9)+field1*dr(3)*dr(3)-field0
 		  field2=-field1/r2
-		  lrf(jg_cgp)%phi3(1 )=lrf(jg_cgp)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-		  lrf(jg_cgp)%phi3(2 )=lrf(jg_cgp)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(3 )=lrf(jg_cgp)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(4 )=lrf(jg_cgp)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(5 )=lrf(jg_cgp)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(6 )=lrf(jg_cgp)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-		  lrf(jg_cgp)%phi3(7 )=lrf(jg_cgp)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(8 )=lrf(jg_cgp)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-		  lrf(jg_cgp)%phi3(9 )=lrf(jg_cgp)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(10)=lrf(jg_cgp)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(11)=lrf(jg_cgp)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(12)=lrf(jg_cgp)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-		  lrf(jg_cgp)%phi3(13)=lrf(jg_cgp)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(14)=lrf(jg_cgp)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-		  lrf(jg_cgp)%phi3(15)=lrf(jg_cgp)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(16)=lrf(jg_cgp)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-		  lrf(jg_cgp)%phi3(17)=lrf(jg_cgp)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(18)=lrf(jg_cgp)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(19)=lrf(jg_cgp)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(20)=lrf(jg_cgp)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-		  lrf(jg_cgp)%phi3(21)=lrf(jg_cgp)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(22)=lrf(jg_cgp)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-		  lrf(jg_cgp)%phi3(23)=lrf(jg_cgp)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-		  lrf(jg_cgp)%phi3(24)=lrf(jg_cgp)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(25)=lrf(jg_cgp)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-		  lrf(jg_cgp)%phi3(26)=lrf(jg_cgp)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-		  lrf(jg_cgp)%phi3(27)=lrf(jg_cgp)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+		  lrf(jg_cgp)%phi3(1 )=lrf(jg_cgp)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+		  lrf(jg_cgp)%phi3(2 )=lrf(jg_cgp)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(3 )=lrf(jg_cgp)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(4 )=lrf(jg_cgp)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(5 )=lrf(jg_cgp)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(6 )=lrf(jg_cgp)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+		  lrf(jg_cgp)%phi3(7 )=lrf(jg_cgp)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(8 )=lrf(jg_cgp)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+		  lrf(jg_cgp)%phi3(9 )=lrf(jg_cgp)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(10)=lrf(jg_cgp)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(11)=lrf(jg_cgp)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(12)=lrf(jg_cgp)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+		  lrf(jg_cgp)%phi3(13)=lrf(jg_cgp)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(14)=lrf(jg_cgp)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+		  lrf(jg_cgp)%phi3(15)=lrf(jg_cgp)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(16)=lrf(jg_cgp)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+		  lrf(jg_cgp)%phi3(17)=lrf(jg_cgp)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(18)=lrf(jg_cgp)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(19)=lrf(jg_cgp)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(20)=lrf(jg_cgp)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+		  lrf(jg_cgp)%phi3(21)=lrf(jg_cgp)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(22)=lrf(jg_cgp)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+		  lrf(jg_cgp)%phi3(23)=lrf(jg_cgp)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+		  lrf(jg_cgp)%phi3(24)=lrf(jg_cgp)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(25)=lrf(jg_cgp)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+		  lrf(jg_cgp)%phi3(26)=lrf(jg_cgp)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+		  lrf(jg_cgp)%phi3(27)=lrf(jg_cgp)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
 		 enddo ialoop2
 
 		!solvent : solut	
@@ -7835,7 +7836,7 @@ jaloop2: do ja = 1, 3
 		  lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
 		  lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
 		  lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-		  field1=3.*field0/r2
+		  field1=3.0_prec*field0/r2
 		  lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
 		  lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
 		  lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -7846,33 +7847,33 @@ jaloop2: do ja = 1, 3
 		  lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
 		  lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
 		  field2=-field1/r2
-		  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-		  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-		  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-		  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-		  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-		  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-		  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-		  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-		  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-		  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-		  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-		  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-		  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-		  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-		  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-		  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-		  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-		  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-		  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-		  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-		  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-		  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-		  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-		  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-		  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-		  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-		  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+		  lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+		  lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+		  lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+		  lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+		  lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+		  lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+		  lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+		  lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+		  lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+		  lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+		  lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+		  lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+		  lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+		  lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+		  lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+		  lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+		  lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+		  lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+		  lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+		  lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+		  lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+		  lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+		  lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+		  lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+		  lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+		  lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+		  lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
          enddo jaloop2
       end if
     end do jgloop
@@ -8026,7 +8027,7 @@ end function nbqq_count
 
 subroutine nbqqlist
 integer						::	iq, j, jq, is, i, k,l
-real(8)                     :: el_scale
+real(kind=prec)                     :: el_scale
 logical                     :: set
 
 nbqq_pair(:) = 0
@@ -8059,7 +8060,7 @@ do iq = 1, nqat - 1
                          end do
                    end if !if (qconn = 4)
 				   if (nel_scale .eq. 0) then
-                     nbqq(nbqq_pair(is),is)%el_scale = 1.0
+                     nbqq(nbqq_pair(is),is)%el_scale = one
 				   else
   				     set=.false.
 				     do i=1,nel_scale
@@ -8071,7 +8072,7 @@ do iq = 1, nqat - 1
 						   set=.true.
 						   exit
                        end if
-                       if (.not. set) nbqq(nbqq_pair(is),is)%el_scale = 1.0
+                       if (.not. set) nbqq(nbqq_pair(is),is)%el_scale = one
 				     end do
 				   end if
            end if !if (qconn > 3)
@@ -8091,7 +8092,7 @@ do j = 1, nat_solute
                                         nbqq(nbqq_pair(is),is)%iq = iq
                                         nbqq(nbqq_pair(is),is)%j = j
                                         nbqq(nbqq_pair(is),is)%jq = 0
-										nbqq(nbqq_pair(is),is)%el_scale=1.0
+										nbqq(nbqq_pair(is),is)%el_scale=one
                                         if(qconn(is, j, iq) == 4) then
                                                 nbqq(nbqq_pair(is),is)%LJcod = 3
                                         elseif(qvdw_flag) then
@@ -8116,11 +8117,11 @@ integer						:: nqpcgp(:)
 
 ! local variables
 integer						:: ig,ia,i,j,iq,i3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 !******PWadded variables 2001-10-01
 
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: dx, dy, dz
 
 !	This routine counts non-bonded atom pairs involving
 !	*one* Q-atom and *one* non-Q-atom, where the latter is *not connected*
@@ -8192,11 +8193,11 @@ integer						:: nqwmol(:)
 
 ! local variables
 integer						:: ig,ia,i,j,iq,i3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 !******PWadded variables
 
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: dx, dy, dz
 
 !	This routine counts water molecules that interact with q-atoms
 nqw = 0
@@ -8242,7 +8243,7 @@ end subroutine nbqw_count
 subroutine nbqplis2
 ! local variables
 integer						:: ig,ia,i,j,iq,i3,nl,inside
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						:: xspec
 logical, save					:: list_done
 
@@ -8262,7 +8263,7 @@ logical, save					:: list_done
 !don't remake pair list if q-atoms interact with all solute atoms (rcq>rexcl_o)
 !and list already made
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8352,9 +8353,9 @@ end subroutine nbqplis2
 subroutine nbqplis2_box
 !  ! local variables
   integer						:: ig,ia,i,j,iq,i3,nl,inside,ig_atom
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						:: xspec
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
  
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded atom pairs involving
@@ -8369,7 +8370,7 @@ subroutine nbqplis2_box
   !  nbqs_pair, Rcq, cgp, excl, cgpatom, x, xpcent, nqat, iqseq, 
   !  qconn, calculation_assignment%qs%max, nbqs, ljcod, nwat, nat_solute
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8453,12 +8454,12 @@ end subroutine nbqplis2_box
 subroutine nbqplist
 ! local variables
 integer						:: ig,ia,i,j,iq,i3,nl
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 integer						::	xspec
 logical, save				::	list_done = .false.
 
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8547,13 +8548,13 @@ end subroutine nbqplist
 subroutine nbqplist_box
   ! local variables
   integer						:: ig,ia,i,j,iq,i3,nl,ig_sw
-  real(8)						:: rcut2,r2
+  real(kind=prec)						:: rcut2,r2
   integer						::	xspec
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: dx, dy, dz
   integer						:: ga, gb
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8645,7 +8646,7 @@ subroutine nbqwlist
 
 ! local variables
 integer						:: ig,ia,i,i3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 
 !	This routine makes a list of water molecules within rcq from xpcent,
@@ -8653,7 +8654,7 @@ real(8)						:: rcut2,r2
 ! q-atoms with all atoms of the listed water
 ! waters may not have bonded interactions with q-atoms !
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8702,15 +8703,15 @@ subroutine nbqwlist_box
 
   ! local variables
   integer						:: ig,ia,i,i3
-  real(8)						:: rcut2,r2
-  real(8)						:: dx, dy, dz
+  real(kind=prec)						:: rcut2,r2
+  real(kind=prec)						:: dx, dy, dz
 
   !	This routine makes a list of water molecules within rcq from xswitch,
   ! i.e. the q-atom - water non-bond lists which implicitly includes all
   ! q-atoms with all atoms of the listed water
   ! waters may not have bonded interactions with q-atoms !
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8752,11 +8753,11 @@ integer						:: nwwmol(:)
 
 ! local variables
 integer						:: iw,jw,ia,ja,i3,j3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 !******PWadded variables		
 
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: dx, dy, dz
 
 ! This routine counts non-bonded solvent-solvent atom pairs.
 
@@ -8811,14 +8812,14 @@ end subroutine nbww_count
 subroutine nbwwlist
 ! local variables
 integer						:: iw,jw,ia,ja,i3,j3
-real(8)						:: rcut2,r2
+real(kind=prec)						:: rcut2,r2
 
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 
 ! uses the global variables:
 !  nbww_pair, Rcww, nat_solute, excl, nwat, x, nbww, calculation_assignment%ww%max,nbww_true_pair
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8877,15 +8878,15 @@ subroutine nbwwlist_box
 
 ! local variables
 integer						:: iw,jw,ia,ja,i3,j3
-real(8)						:: rcut2,r2
-real(8)						:: dx, dy, dz
+real(kind=prec)						:: rcut2,r2
+real(kind=prec)						:: dx, dy, dz
 
 ! for periodic boundary conditions
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 ! uses the global variables:
 !  nbww_pair, Rcww, nat_solute, excl, nwat, x, nbww, calculation_assignment%ww%max,nbww_true_pair
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -8948,12 +8949,12 @@ end subroutine nbwwlist_box
 subroutine nbwwlist_lrf
 ! local variables
 integer						:: i,j,ig,jg,iw,jw,ia,ja,i3,j3,is,is3
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
-real(8)						::	RcLRF2
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
+real(kind=prec)						::	RcLRF2
 
 #if defined (PROFILING)
-real(8)						:: start_loop_time
+real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -9017,7 +9018,7 @@ r2 = ( x(is3+1) -x(j3+1) )**2 &
           lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
           lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
           lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
           lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -9028,33 +9029,33 @@ r2 = ( x(is3+1) -x(j3+1) )**2 &
           lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
           lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
 
         do ja = 1, 3
@@ -9074,7 +9075,7 @@ r2 = ( x(is3+1) -x(j3+1) )**2 &
           lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
           lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
           lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
           lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -9085,33 +9086,33 @@ r2 = ( x(is3+1) -x(j3+1) )**2 &
           lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
           lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
   end if
 
@@ -9136,14 +9137,14 @@ end subroutine nbwwlist_lrf
 subroutine nbwwlist_box_lrf
 ! local variables
 integer						:: i,j,ig,jg,iw,jw,ia,ja,i3,j3,is,is3
-real(8)						:: rcut2,r2,field0,field1,field2
-real(8)						:: dr(3)
-real(8)						::	RcLRF2
-real(8)						::  dx, dy, dz
-real(8)                     :: boxshiftx, boxshifty, boxshiftz  
+real(kind=prec)						:: rcut2,r2,field0,field1,field2
+real(kind=prec)						:: dr(3)
+real(kind=prec)						::	RcLRF2
+real(kind=prec)						::  dx, dy, dz
+real(kind=prec)                     :: boxshiftx, boxshifty, boxshiftz  
 
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -9218,7 +9219,7 @@ r2 = dx*dx + dy*dy + dz*dz
           lrf(jg)%phi1(1)=lrf(jg)%phi1(1)-field0*dr(1)
           lrf(jg)%phi1(2)=lrf(jg)%phi1(2)-field0*dr(2)
           lrf(jg)%phi1(3)=lrf(jg)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(jg)%phi2(1)=lrf(jg)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(jg)%phi2(2)=lrf(jg)%phi2(2)+field1*dr(1)*dr(2)
           lrf(jg)%phi2(3)=lrf(jg)%phi2(3)+field1*dr(1)*dr(3)
@@ -9229,35 +9230,33 @@ r2 = dx*dx + dy*dy + dz*dz
           lrf(jg)%phi2(8)=lrf(jg)%phi2(8)+field1*dr(3)*dr(2)
           lrf(jg)%phi2(9)=lrf(jg)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-
-
-  lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(jg)%phi3(1 )=lrf(jg)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(jg)%phi3(2 )=lrf(jg)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(3 )=lrf(jg)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(4 )=lrf(jg)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(5 )=lrf(jg)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(6 )=lrf(jg)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(jg)%phi3(7 )=lrf(jg)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(8 )=lrf(jg)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(jg)%phi3(9 )=lrf(jg)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(10)=lrf(jg)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(jg)%phi3(11)=lrf(jg)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(jg)%phi3(12)=lrf(jg)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(jg)%phi3(13)=lrf(jg)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(14)=lrf(jg)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(jg)%phi3(15)=lrf(jg)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(jg)%phi3(16)=lrf(jg)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(jg)%phi3(17)=lrf(jg)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(18)=lrf(jg)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(19)=lrf(jg)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(jg)%phi3(20)=lrf(jg)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(jg)%phi3(21)=lrf(jg)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(jg)%phi3(22)=lrf(jg)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(jg)%phi3(23)=lrf(jg)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(jg)%phi3(24)=lrf(jg)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(jg)%phi3(25)=lrf(jg)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(jg)%phi3(26)=lrf(jg)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(jg)%phi3(27)=lrf(jg)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
 		
 		!jw interaction
@@ -9287,7 +9286,7 @@ r2 = dx*dx + dy*dy + dz*dz
           lrf(ig)%phi1(1)=lrf(ig)%phi1(1)-field0*dr(1)
           lrf(ig)%phi1(2)=lrf(ig)%phi1(2)-field0*dr(2)
           lrf(ig)%phi1(3)=lrf(ig)%phi1(3)-field0*dr(3)
-          field1=3.*field0/r2
+          field1=3.0_prec*field0/r2
           lrf(ig)%phi2(1)=lrf(ig)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(ig)%phi2(2)=lrf(ig)%phi2(2)+field1*dr(1)*dr(2)
           lrf(ig)%phi2(3)=lrf(ig)%phi2(3)+field1*dr(1)*dr(3)
@@ -9298,33 +9297,33 @@ r2 = dx*dx + dy*dy + dz*dz
           lrf(ig)%phi2(8)=lrf(ig)%phi2(8)+field1*dr(3)*dr(2)
           lrf(ig)%phi2(9)=lrf(ig)%phi2(9)+field1*dr(3)*dr(3)-field0
           field2=-field1/r2
-          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.*dr(1)*dr(1)*dr(1)-r2*3.*dr(1))
-          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.*dr(1)*dr(1)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.*dr(1)*dr(1)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.*dr(1)*dr(2)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.*dr(1)*dr(2)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.*dr(1)*dr(2)*dr(3))
-          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.*dr(1)*dr(3)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.*dr(1)*dr(3)*dr(2))
-          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.*dr(1)*dr(3)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.*dr(2)*dr(1)*dr(1)-r2*dr(2))
-          lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.*dr(2)*dr(1)*dr(2)-r2*dr(1))
-          lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.*dr(2)*dr(1)*dr(3))
-          lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.*dr(2)*dr(2)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.*dr(2)*dr(2)*dr(2)-r2*3.*dr(2))
-          lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.*dr(2)*dr(2)*dr(3)-r2*dr(3))
-          lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.*dr(2)*dr(3)*dr(1))
-          lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.*dr(2)*dr(3)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.*dr(2)*dr(3)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.*dr(3)*dr(1)*dr(1)-r2*dr(3))
-          lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.*dr(3)*dr(1)*dr(2))
-          lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.*dr(3)*dr(1)*dr(3)-r2*dr(1))
-          lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.*dr(3)*dr(2)*dr(1))
-          lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.*dr(3)*dr(2)*dr(2)-r2*dr(3))
-          lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.*dr(3)*dr(2)*dr(3)-r2*dr(2))
-          lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.*dr(3)*dr(3)*dr(1)-r2*dr(1))
-          lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.*dr(3)*dr(3)*dr(2)-r2*dr(2))
-          lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.*dr(3)*dr(3)*dr(3)-r2*3.*dr(3))
+          lrf(ig)%phi3(1 )=lrf(ig)%phi3(1 )+field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
+          lrf(ig)%phi3(2 )=lrf(ig)%phi3(2 )+field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(3 )=lrf(ig)%phi3(3 )+field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(4 )=lrf(ig)%phi3(4 )+field2*(5.0_prec*dr(1)*dr(2)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(5 )=lrf(ig)%phi3(5 )+field2*(5.0_prec*dr(1)*dr(2)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(6 )=lrf(ig)%phi3(6 )+field2*(5.0_prec*dr(1)*dr(2)*dr(3))
+          lrf(ig)%phi3(7 )=lrf(ig)%phi3(7 )+field2*(5.0_prec*dr(1)*dr(3)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(8 )=lrf(ig)%phi3(8 )+field2*(5.0_prec*dr(1)*dr(3)*dr(2))
+          lrf(ig)%phi3(9 )=lrf(ig)%phi3(9 )+field2*(5.0_prec*dr(1)*dr(3)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(10)=lrf(ig)%phi3(10)+field2*(5.0_prec*dr(2)*dr(1)*dr(1)-r2*dr(2))
+          lrf(ig)%phi3(11)=lrf(ig)%phi3(11)+field2*(5.0_prec*dr(2)*dr(1)*dr(2)-r2*dr(1))
+          lrf(ig)%phi3(12)=lrf(ig)%phi3(12)+field2*(5.0_prec*dr(2)*dr(1)*dr(3))
+          lrf(ig)%phi3(13)=lrf(ig)%phi3(13)+field2*(5.0_prec*dr(2)*dr(2)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(14)=lrf(ig)%phi3(14)+field2*(5.0_prec*dr(2)*dr(2)*dr(2)-r2*3.0_prec*dr(2))
+          lrf(ig)%phi3(15)=lrf(ig)%phi3(15)+field2*(5.0_prec*dr(2)*dr(2)*dr(3)-r2*dr(3))
+          lrf(ig)%phi3(16)=lrf(ig)%phi3(16)+field2*(5.0_prec*dr(2)*dr(3)*dr(1))
+          lrf(ig)%phi3(17)=lrf(ig)%phi3(17)+field2*(5.0_prec*dr(2)*dr(3)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(18)=lrf(ig)%phi3(18)+field2*(5.0_prec*dr(2)*dr(3)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(19)=lrf(ig)%phi3(19)+field2*(5.0_prec*dr(3)*dr(1)*dr(1)-r2*dr(3))
+          lrf(ig)%phi3(20)=lrf(ig)%phi3(20)+field2*(5.0_prec*dr(3)*dr(1)*dr(2))
+          lrf(ig)%phi3(21)=lrf(ig)%phi3(21)+field2*(5.0_prec*dr(3)*dr(1)*dr(3)-r2*dr(1))
+          lrf(ig)%phi3(22)=lrf(ig)%phi3(22)+field2*(5.0_prec*dr(3)*dr(2)*dr(1))
+          lrf(ig)%phi3(23)=lrf(ig)%phi3(23)+field2*(5.0_prec*dr(3)*dr(2)*dr(2)-r2*dr(3))
+          lrf(ig)%phi3(24)=lrf(ig)%phi3(24)+field2*(5.0_prec*dr(3)*dr(2)*dr(3)-r2*dr(2))
+          lrf(ig)%phi3(25)=lrf(ig)%phi3(25)+field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
+          lrf(ig)%phi3(26)=lrf(ig)%phi3(26)+field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
+          lrf(ig)%phi3(27)=lrf(ig)%phi3(27)+field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
         enddo
   end if
 
@@ -9424,11 +9423,11 @@ end subroutine nbmonitorlist
 subroutine nonbond_monitor
 !monitor nonbonded energies between selected groups of atoms
 
-real(8)  :: dx1,dx2,dx3,r,r2,r6
+real(kind=prec)  :: dx1,dx2,dx3,r,r2,r6
 integer	 :: i,j,istate,LJ_code,par
 integer	 :: grpi,grpj,atomi,atomj,qatomi,qatomj,qq_pair, iaci,iacj
-real(8)  :: aLJi,bLJi,aLJj,bLJj,qi,qj, Vel,Vvdw,Vwel,Vwvdw,Vwsum
-real(8)  :: r6_hc    !  softcore variables
+real(kind=prec)  :: aLJi,bLJi,aLJj,bLJj,qi,qj, Vel,Vvdw,Vwel,Vwvdw,Vwsum
+real(kind=prec)  :: r6_hc    !  softcore variables
 integer  :: sc_1,sc_2     !  softcore variables, sc_1 is the first index in sc_lookup (the qatom)
 logical  :: do_sc    !  softcore variables,   do_sc is a boolean to determine if softcore should be done
 					! do_sc is true when atom i or j is a qatom  (and qvdw is true)
@@ -9472,7 +9471,7 @@ do par=1,monitor_group_pairs
                         r    = SQRT(1/r2) 
                         r6   = r2*r2*r2
 						r6_hc= r6   !needed for softcore
-  						r6   = 1._8/r6
+  						r6   = one/r6
             
 			            do istate=1,nstates			
 								do_sc = .false.  !default is no softcore
@@ -9521,7 +9520,7 @@ do par=1,monitor_group_pairs
 										
 										if (do_sc) then  ! calculate softcore r6
 											r6 = r6_hc + sc_lookup (sc_1,sc_2,istate)
-											r6 = 1._8/r6
+											r6 = one/r6
 										end if	 
                                 endif										
                                 Vel  = qi*qj*r	
@@ -9529,7 +9528,7 @@ do par=1,monitor_group_pairs
                                         Vvdw = aLJi*aLJj*r6*r6-bLJi*bLJj*r6
                                 else !arithmetic
                                         Vvdw = bLJi * bLJj * (aLJi+aLJj)**6 * r6 * &
-                                                ((aLJi+aLJj)**6 * r6 - 2.0)
+                                                ((aLJi+aLJj)**6 * r6 - 2.0_prec)
                                 endif
                                 !add up for this pair of atom groups
                                 monitor_group_pair(par)%Vel(istate)= monitor_group_pair(par)%Vel(istate)+Vel
@@ -9550,10 +9549,10 @@ end subroutine nonbond_monitor
 subroutine nonbon2_pp
 ! local variables
 integer						:: ip
-real(8)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
-real(8)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
-real(8)						:: Vela,V_aa,V_ba,dva
-real(8)						:: Velb,V_ab,V_bb,dvb
+real(kind=prec)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
+real(kind=prec)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
+real(kind=prec)						:: Vela,V_aa,V_ba,dva
+real(kind=prec)						:: Velb,V_ab,V_bb,dvb
 type(NB_TYPE), pointer		:: pa
 type(NB_TYPE), pointer		:: pb
 
@@ -9585,8 +9584,8 @@ dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
 dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
 
-r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-r2b   = 1./(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
+r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 ra = sqrt(r2a)
 rb = sqrt(r2b) 
 
@@ -9604,10 +9603,10 @@ if ( pb%LJcod .eq. 3 ) then
 end if
 V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
 V_ab  = bLJb*aLJb*aLJb*r6b*r6b 
-V_ba  = 2.0*bLJa*aLJa*r6a
-V_bb  = 2.0*bLJb*aLJb*r6b
-dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
-dvb   = r2b*( -Velb -12.*V_ab +6.*V_bb )
+V_ba  = 2.0_prec*bLJa*aLJa*r6a
+V_bb  = 2.0_prec*bLJb*aLJb*r6b
+dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
+dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 ! update d
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
@@ -9641,7 +9640,7 @@ dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
 dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
 
-r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
 ra = sqrt(r2a)
 
 r6a   = r2a*r2a*r2a
@@ -9650,8 +9649,8 @@ Vela  = crg(pa%i)*crg(pa%j)*ra
 if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
 
 V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-V_ba  = 2.0*bLJa*aLJa*r6a
-dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
+V_ba  = 2.0_prec*bLJa*aLJa*r6a
+dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
 
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
 d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
@@ -9670,10 +9669,10 @@ end subroutine nonbon2_pp
 subroutine nonbon2_pp_box
   ! local variables
   integer						:: ip, ga, gb, group
-  real(8)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
-  real(8)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
-  real(8)						:: Vela,V_aa,V_ba,dva
-  real(8)						:: Velb,V_ab,V_bb,dvb
+  real(kind=prec)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
+  real(kind=prec)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
+  real(kind=prec)						:: Vela,V_aa,V_ba,dva
+  real(kind=prec)						:: Velb,V_ab,V_bb,dvb
   type(NB_TYPE), pointer		:: pa
   type(NB_TYPE), pointer		:: pb
 
@@ -9731,8 +9730,8 @@ subroutine nonbon2_pp_box
 	
 
 
-    r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-    r2b   = 1./(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
+    r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+    r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 	ra = sqrt(r2a)
 	rb = sqrt(r2b) 
 
@@ -9750,10 +9749,10 @@ subroutine nonbon2_pp_box
 	end if
     V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
     V_ab  = bLJb*aLJb*aLJb*r6b*r6b 
-    V_ba  = 2.0*bLJa*aLJa*r6a
-    V_bb  = 2.0*bLJb*aLJb*r6b
-    dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
-    dvb   = r2b*( -Velb -12.*V_ab +6.*V_bb )
+    V_ba  = 2.0_prec*bLJa*aLJa*r6a
+    V_bb  = 2.0_prec*bLJb*aLJb*r6b
+    dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
+    dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 	! update d
     d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
@@ -9793,15 +9792,15 @@ subroutine nonbon2_pp_box
 	dx3a = dx3a - nbpp_cgp(ga)%z  
 
 
-    r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+    r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
 	ra = sqrt(r2a)
     r6a   = r2a*r2a*r2a
 
    Vela  = crg(pa%i)*crg(pa%j)*ra
     if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
     V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-    V_ba  = 2.0*bLJa*aLJa*r6a
-    dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
+    V_ba  = 2.0_prec*bLJa*aLJa*r6a
+    dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
 
     d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
     d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
@@ -9820,8 +9819,8 @@ end subroutine nonbon2_pp_box
 subroutine nonbon2_pw
 ! local variables
 integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
-real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
-real(8)						:: Vel,V_a,V_b,dv
+real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
+real(kind=prec)						:: Vel,V_a,V_b,dv
 
 ! global variables used:
 !  iac, crg, iaclib, x, d, E
@@ -9848,7 +9847,7 @@ dx2  = x(j3+2) - x(i3+2)
 dx3  = x(j3+3) - x(i3+3)
 
 r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-r2   = 1./r2
+r2   = one/r2
 r    = sqrt ( r2 ) 
 r6   = r2*r2*r2
 r12  = r6*r6
@@ -9856,8 +9855,8 @@ r12  = r6*r6
 ! calculate Vel and dv
 Vel  = crg(i)*crg(j)*r
 V_a  = bLJ*aLJ*aLJ*r12 
-V_b  = 2.0*bLJ*aLJ*r6
-dv   = r2*( -Vel -12.*V_a +6.*V_b )
+V_b  = 2.0_prec*bLJ*aLJ*r6
+dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 
 ! update forces
 d(i3+1) = d(i3+1) - dv*dx1
@@ -9879,8 +9878,8 @@ end subroutine nonbon2_pw
 subroutine nonbon2_pw_box
   ! local variables
   integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
-  real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
-  real(8)						:: Vel,V_a,V_b,dv
+  real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
+  real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, ga, gb
 
   ! global variables used:
@@ -9932,7 +9931,7 @@ subroutine nonbon2_pw_box
 	
 
 	r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-	r2   = 1./r2
+	r2   = one/r2
 	r    = sqrt ( r2 ) 
 	r6   = r2*r2*r2
 	r12  = r6*r6
@@ -9940,8 +9939,8 @@ subroutine nonbon2_pw_box
 	! calculate Vel and dv
 	Vel  = crg(i)*crg(j)*r
 	V_a  = bLJ*aLJ*aLJ*r12 
-	V_b  = 2.0*bLJ*aLJ*r6
-	dv   = r2*( -Vel -12.*V_a +6.*V_b )
+	V_b  = 2.0_prec*bLJ*aLJ*r6
+	dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 
 	! update forces
 	d(i3+1) = d(i3+1) - dv*dx1
@@ -9964,8 +9963,8 @@ subroutine nonbon2_qq
 ! local variables
 integer						:: istate,jj
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
-real(8)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
-real(8)						:: Vel,V_a,V_b,dv,el_scale
+real(kind=prec)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
+real(kind=prec)						:: Vel,V_a,V_b,dv,el_scale
 
 do istate = 1, nstates
 ! for every state:
@@ -10027,8 +10026,8 @@ do ip = 1, nbqq_pair(istate)
   r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
   r6_hc = r2*r2*r2  !for softcore
   r6   = r6_hc + sc_lookup(iq,jq+natyps,istate)  !softcore
-  r6   = 1._8/r6
-  r2   = 1./r2
+  r6   = one/r6
+  r2   = one/r2
   r    = sqrt ( r2 ) 
   r12  = r6*r6
 
@@ -10037,14 +10036,14 @@ do ip = 1, nbqq_pair(istate)
   if ( iLJ .eq. 3 ) Vel = Vel*el14_scale
   if (qvdw_flag .and. jq /= 0 .and. iLJ .eq. 2 ) then
         V_a = aLJ*exp(-bLJ/r)
-        V_b = 0.0
+        V_b = zero
         dv  = r2*( -Vel -bLJ*V_a/r )*EQ(istate)%lambda
   else
         aLJ  = aLJ*aLJ
         aLJ  = aLJ*aLJ*aLJ
         V_a  = bLJ*aLJ*aLJ*r12 
-        V_b  = 2.0*bLJ*aLJ*r6
-        dv  = r2*( -Vel -(12.*V_a -6.*V_b)*r6*r6_hc )*EQ(istate)%lambda
+        V_b  = 2.0_prec*bLJ*aLJ*r6
+        dv  = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*r6*r6_hc )*EQ(istate)%lambda
   endif
 
   ! update forces
@@ -10085,8 +10084,8 @@ subroutine nonbon2_qq_lib_charges
 ! local variables
 integer						:: istate,jj
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
-real(8)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
-real(8)						:: Vel,V_a,V_b,dv,el_scale
+real(kind=prec)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
+real(kind=prec)						:: Vel,V_a,V_b,dv,el_scale
 
 do istate = 1, nstates
 ! for every state:
@@ -10142,9 +10141,9 @@ do ip = 1, nbqq_pair(istate)
   r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
   r6_hc = r2*r2*r2   !needed for softcore
   r6   = r6_hc + sc_lookup(iq,jq+natyps,istate)  !softcore
-  r6   = 1._8/r6
+  r6   = one/r6
   r12  = r6*r6
-  r2   = 1./r2
+  r2   = one/r2
   r    = sqrt ( r2 ) 
 
   ! calculate Vel, V_a, V_b and dv
@@ -10153,18 +10152,18 @@ do ip = 1, nbqq_pair(istate)
   if (qvdw_flag .and. jq /= 0 .and. iLJ .eq. 2 ) then
         V_a = aLJ*exp(-bLJ/r)
         V_b = qbvdw(iaci,1)*qbvdw(iacj,1)*r6
-        dv  = r2*( -Vel -bLJ*V_a/r +6.*V_b )*EQ(istate)%lambda
+        dv  = r2*( -Vel -bLJ*V_a/r +6.0_prec*V_b )*EQ(istate)%lambda
         !
         ! ---       change here to exclude 1/r6 attraction
         !
-        !	       V_b = 0.0
+        !	       V_b = zero
         !	       dv  = r2*( -Vel -bLJ*V_a/r )*EQ(istate)%lambda
   else
         aLJ  = aLJ*aLJ
         aLJ  = aLJ*aLJ*aLJ
         V_a  = bLJ*aLJ*aLJ*r12 
-        V_b  = 2.0*bLJ*aLJ*r6
-        dv  = r2*( -Vel -(12.*V_a -6.*V_b)*r6*r6_hc )*EQ(istate)%lambda
+        V_b  = 2.0_prec*bLJ*aLJ*r6
+        dv  = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*r6*r6_hc )*EQ(istate)%lambda
   endif
 
   ! update forces
@@ -10206,8 +10205,8 @@ subroutine nonbon2_qp
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
 integer						:: istate,jj
-real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
-real(8)						:: Vel,V_a,V_b,dv
+real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
+real(kind=prec)						:: Vel,V_a,V_b,dv
 
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
@@ -10235,7 +10234,7 @@ r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
 r6   = r2*r2*r2
 r6_hc = r6     !for softcore
 
-r2   = 1._8/r2
+r2   = one/r2
 r    = sqrt(r2)
 
 
@@ -10248,7 +10247,7 @@ do istate = 1, nstates
         iaci = iac(i)
         aLJ  = iaclib(iaci)%avdw(iLJ)
         bLJ  = iaclib(iaci)%bvdw(iLJ)
-		r6 = 1._8/r6_hc
+		r6 = one/r6_hc
   else
         iaci = qiac(iq,istate)
 		if ( iLJ .eq. 2 ) then
@@ -10260,7 +10259,7 @@ do istate = 1, nstates
 		end if
 
 		r6 = r6_hc + sc_lookup(iq,iacj,istate) !this is softcore
-		r6 = 1._8/r6
+		r6 = one/r6
   end if
   aLJ = aLJ+iaclib(iacj)%avdw(iLJ)
   bLJ = bLJ*iaclib(iacj)%bvdw(iLJ)
@@ -10271,8 +10270,8 @@ do istate = 1, nstates
   Vel  = qcrg(iq,istate)*crg(j)*r
   if ( iLJ .eq. 3 ) Vel = Vel*el14_scale
   V_a  = bLJ*aLJ*aLJ*r6*r6
-  V_b  = 2.0*bLJ*aLJ*r6
-  dv   = r2*( -Vel -(12.*V_a -6.*V_b)*r6*r6_hc )*EQ(istate)%lambda   !softcore r6*r6_hc is (r^6/(r^6+alpha))
+  V_b  = 2.0_prec*bLJ*aLJ*r6
+  dv   = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*r6*r6_hc )*EQ(istate)%lambda   !softcore r6*r6_hc is (r^6/(r^6+alpha))
 
   ! update forces
   d(i3+1) = d(i3+1) - dv*dx1
@@ -10302,8 +10301,8 @@ subroutine nonbon2_qp_box
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
   integer						:: istate,jj
-  real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
-  real(8)						:: Vel,V_a,V_b,dv
+  real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
+  real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
 
   ! global variables used:
@@ -10349,7 +10348,7 @@ subroutine nonbon2_qp_box
 	r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
 	r6_hc = r2*r2*r2  !for softcore
 
-	r2   = 1._8/r2
+	r2   = one/r2
 	r    = sqrt(r2)
 
 	do istate = 1, nstates
@@ -10360,7 +10359,7 @@ subroutine nonbon2_qp_box
 		iaci = iac(i)
 		aLJ  = iaclib(iaci)%avdw(iLJ)
 		bLJ  = iaclib(iaci)%bvdw(iLJ)
-		r6 = 1._8/r6_hc
+		r6 = one/r6_hc
 	  else
 		iaci = qiac(iq,istate)
         if ( iLJ .eq. 2 ) then
@@ -10371,7 +10370,7 @@ subroutine nonbon2_qp_box
 		  bLJ  = qbvdw(iaci,iLJ)
         end if
 		r6 = r6_hc + sc_lookup(iq,iacj,istate)
-		r6 = 1._8/r6
+		r6 = one/r6
 	  end if
 	  aLJ = aLJ+iaclib(iacj)%avdw(iLJ)
 	  bLJ = bLJ*iaclib(iacj)%bvdw(iLJ)
@@ -10382,8 +10381,8 @@ subroutine nonbon2_qp_box
 	  Vel  = qcrg(iq,istate)*crg(j)*r
 	  if ( iLJ .eq. 3 ) Vel = Vel*el14_scale
 	  V_a  = bLJ*aLJ*aLJ*r6*r6
-	  V_b  = 2.0*bLJ*aLJ*r6
-	  dv   = r2*( -Vel -(12.*V_a -6.*V_b)*r6*r6_hc )*EQ(istate)%lambda
+	  V_b  = 2.0_prec*bLJ*aLJ*r6
+	  dv   = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*r6*r6_hc )*EQ(istate)%lambda
 
 	  ! update forces
 	  d(i3+1) = d(i3+1) - dv*dx1
@@ -10414,12 +10413,12 @@ subroutine nonbon2_qw
 ! local variables
 integer						:: jw,iq,i,j,iLJO, iLJH, iaci
 integer						:: istate
-real(8)						::	aLJO, bLJO, aLJH, bLJH
-real(8)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
-real(8)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
-real(8)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
-real(8)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2 
-real(8), save				::	aO(2), bO(2), aH(2), bH(2)
+real(kind=prec)						::	aLJO, bLJO, aLJH, bLJH
+real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
+real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
+real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+real(kind=prec)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2 
+real(kind=prec), save				::	aO(2), bO(2), aH(2), bH(2)
 integer, save				::	iac_ow, iac_hw
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
@@ -10448,9 +10447,9 @@ do jw = 1, nbqw_pair
                 dxH2 = x(3*j+4) - x(3*i-2)
                 dyH2 = x(3*j+5) - x(3*i-1)
                 dzH2 = x(3*j+6) - x(3*i  )
-                r2O  = 1._8/(dxO*dxO + dyO*dyO + dzO*dzO)
-                r2H1 = 1._8/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1)
-                r2H2 = 1._8/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2)
+                r2O  = one/(dxO*dxO + dyO*dyO + dzO*dzO)
+                r2H1 = one/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1)
+                r2H2 = one/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2)
                 rO = sqrt(r2O)
                 r6O = r2O*r2O*r2O
 				r6O_hc = r6O	!softcore
@@ -10480,26 +10479,26 @@ do jw = 1, nbqw_pair
                         aLJH  = aLJH  * aLJH 
                         aLJH  = aLJH  * aLJH  * aLJH 
                         V_aO = bLJO*aLJO*aLJO*r6O*r6O 
-                        V_bO = 2.0*bLJO*aLJO*r6O
+                        V_bO = 2.0_prec*bLJO*aLJO*r6O
                         V_aH1= bLJH*aLJH*aLJH*r6H1*r6H1
-                        V_bH1= 2.0*bLJH*aLJH*r6H1
+                        V_bH1= 2.0_prec*bLJH*aLJH*r6H1
                         V_aH2= bLJH*aLJH*aLJH*r6H2*r6H2
-                        V_bH2= 2.0*bLJH*aLJH*r6H2
+                        V_bH2= 2.0_prec*bLJH*aLJH*r6H2
                 end if
                 do istate = 1, nstates ! for every state:
 
                         ! set new LJ params if Q-atom types are used
                         if (qvdw_flag) then
 
-								r6O = 1._8/r6O_hc
+								r6O = one/r6O_hc
 								r6O = r6O + sc_lookup(iq,iac_ow,istate)   !softcore
-								r6O = 1._8/r6O
-								r6H1 = 1._8/r6H1_hc
+								r6O = one/r6O
+								r6H1 = one/r6H1_hc
 								r6H1 = r6H1 + sc_lookup(iq,iac_hw,istate)   !softcore
-								r6H1 = 1._8/r6H1
-								r6H2 = 1._8/r6H2_hc
+								r6H1 = one/r6H1
+								r6H2 = one/r6H2_hc
 								r6H2 = r6H2 + sc_lookup(iq,iac_hw,istate)   !softcore
-								r6H2 = 1._8/r6H2
+								r6H2 = one/r6H2
                                 aLJO  = qavdw(qiac(iq,istate),1)+aO(iLJO)
                                 bLJO  = qbvdw(qiac(iq,istate),1)*bO(iLJO)
                                 aLJH  = qavdw(qiac(iq,istate),1)+aH(iLJH)
@@ -10509,11 +10508,11 @@ do jw = 1, nbqw_pair
                                 aLJH  = aLJH  * aLJH 
                                 aLJH  = aLJH  * aLJH  * aLJH 
                                 V_aO = bLJO*aLJO*aLJO*r6O*r6O 
-                                V_bO = 2.0*bLJO*aLJO*r6O
+                                V_bO = 2.0_prec*bLJO*aLJO*r6O
                                 V_aH1= bLJH*aLJH*aLJH*r6H1*r6H1
-                                V_bH1= 2.0*bLJH*aLJH*r6H1
+                                V_bH1= 2.0_prec*bLJH*aLJH*r6H1
                                 V_aH2= bLJH*aLJH*aLJH*r6H2*r6H2
-                                V_bH2= 2.0*bLJH*aLJH*r6H2
+                                V_bH2= 2.0_prec*bLJH*aLJH*r6H2
                         end if
 
 
@@ -10521,9 +10520,9 @@ do jw = 1, nbqw_pair
                         VelO = crg_ow*qcrg(iq,istate)*rO
                         VelH1 = crg_hw*qcrg(iq,istate)*rH1
                         VelH2 = crg_hw*qcrg(iq,istate)*rH2
-                        dvO  = dvO  + r2O *( -VelO  -(12.*V_aO  -6.*V_bO )*r6O/r6O_hc)*EQ(istate)%lambda
-                        dvH1 = dvH1 + r2H1*( -VelH1 -(12.*V_aH1 -6.*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda
-                        dvH2 = dvH2 + r2H2*( -VelH2 -(12.*V_aH2 -6.*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda
+                        dvO  = dvO  + r2O *( -VelO  -(12.0_prec*V_aO  -6.0_prec*V_bO )*r6O/r6O_hc)*EQ(istate)%lambda
+                        dvH1 = dvH1 + r2H1*( -VelH1 -(12.0_prec*V_aH1 -6.0_prec*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda
+                        dvH2 = dvH2 + r2H2*( -VelH2 -(12.0_prec*V_aH2 -6.0_prec*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda
                         ! update q-water energies
                         EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
                         EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2 
@@ -10555,13 +10554,13 @@ subroutine nonbon2_qw_box
 	! local variables
 	integer						:: jw,iq,i,j,iLJO, iLJH, iaci
 	integer						:: istate
-	real(8)						::	aLJO, bLJO, aLJH, bLJH
-	real(8)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
-	real(8)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
-	real(8)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
-	real(8)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2
-	real(8)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz 
-	real(8), save				::	aO(2), bO(2), aH(2), bH(2)
+	real(kind=prec)						::	aLJO, bLJO, aLJH, bLJH
+	real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
+	real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
+	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+	real(kind=prec)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2
+	real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz 
+	real(kind=prec), save				::	aO(2), bO(2), aH(2), bH(2)
 	integer, save				::	iac_ow, iac_hw
 	! global variables used:
 	!  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
@@ -10608,9 +10607,9 @@ subroutine nonbon2_qw_box
 			dxH2 = dxH2 - boxshiftx 
 			dyH2 = dyH2 - boxshifty  
 			dzH2 = dzH2 - boxshiftz  
-			r2O  = 1._8/(dxO*dxO + dyO*dyO + dzO*dzO)
-			r2H1 = 1._8/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1)
-			r2H2 = 1._8/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2)
+			r2O  = one/(dxO*dxO + dyO*dyO + dzO*dzO)
+			r2H1 = one/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1)
+			r2H2 = one/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2)
 			rO = sqrt(r2O)
 			r6O = r2O*r2O*r2O
 			r6O_hc = r6O    !needed for softcore
@@ -10639,25 +10638,25 @@ subroutine nonbon2_qw_box
 				aLJH  = aLJH  * aLJH 
 				aLJH  = aLJH  * aLJH  * aLJH 
 				V_aO = bLJO*aLJO*aLJO*r6O*r6O 
-				V_bO = 2.0*bLJO*aLJO*r6O
+				V_bO = 2.0_prec*bLJO*aLJO*r6O
 				V_aH1= bLJH*aLJH*aLJH*r6H1*r6H1
-				V_bH1= 2.0*bLJH*aLJH*r6H1
+				V_bH1= 2.0_prec*bLJH*aLJH*r6H1
 				V_aH2= bLJH*aLJH*aLJH*r6H2*r6H2
-				V_bH2= 2.0*bLJH*aLJH*r6H2
+				V_bH2= 2.0_prec*bLJH*aLJH*r6H2
 			end if
 			do istate = 1, nstates ! for every state:
 			
 				! set new LJ params if Q-atom types are used
 				if (qvdw_flag) then
-					r6O = 1._8/r6O_hc
+					r6O = one/r6O_hc
 					r6O = r6O + sc_lookup(iq,iac_ow,istate)   !softcore
-					r6O = 1._8/r6O
-					r6H1 = 1._8/r6H1_hc
+					r6O = one/r6O
+					r6H1 = one/r6H1_hc
 					r6H1 = r6H1 + sc_lookup(iq,iac_hw,istate)   !softcore
-					r6H1 = 1._8/r6H1
-					r6H2 = 1._8/r6H2_hc
+					r6H1 = one/r6H1
+					r6H2 = one/r6H2_hc
 					r6H2 = r6H2 + sc_lookup(iq,iac_hw,istate)   !softcore
-					r6H2 = 1._8/r6H2
+					r6H2 = one/r6H2
 					aLJO  = qavdw(qiac(iq,istate),1)+aO(iLJO)
 					bLJO  = qbvdw(qiac(iq,istate),1)*bO(iLJO)
 					aLJH  = qavdw(qiac(iq,istate),1)+aH(iLJH)
@@ -10667,11 +10666,11 @@ subroutine nonbon2_qw_box
 					aLJH  = aLJH  * aLJH 
 					aLJH  = aLJH  * aLJH  * aLJH 
 					V_aO = bLJO*aLJO*aLJO*r6O*r6O 
-					V_bO = 2.0*bLJO*aLJO*r6O
+					V_bO = 2.0_prec*bLJO*aLJO*r6O
 					V_aH1= bLJH*aLJH*aLJH*r6H1*r6H1
-					V_bH1= 2.0*bLJH*aLJH*r6H1
+					V_bH1= 2.0_prec*bLJH*aLJH*r6H1
 					V_aH2= bLJH*aLJH*aLJH*r6H2*r6H2
-					V_bH2= 2.0*bLJH*aLJH*r6H2
+					V_bH2= 2.0_prec*bLJH*aLJH*r6H2
 				end if
 
 
@@ -10680,9 +10679,9 @@ subroutine nonbon2_qw_box
 				VelH1 = crg_hw*qcrg(iq,istate)*rH1
 				VelH2 = crg_hw*qcrg(iq,istate)*rH2
 
-				dvO  = dvO  + r2O *( -VelO  -(12.*V_aO  -6.*V_bO )*r6O/r6O_hc)*EQ(istate)%lambda    !r6O/r6O_hc softcore
-				dvH1 = dvH1 + r2H1*( -VelH1 -(12.*V_aH1 -6.*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda  !r6H1/r6H1_hc softcore
-				dvH2 = dvH2 + r2H2*( -VelH2 -(12.*V_aH2 -6.*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda  !r6H2/r6H2_hc softcore
+				dvO  = dvO  + r2O *( -VelO  -(12.0_prec*V_aO  -6.0_prec*V_bO )*r6O/r6O_hc)*EQ(istate)%lambda    !r6O/r6O_hc softcore
+				dvH1 = dvH1 + r2H1*( -VelH1 -(12.0_prec*V_aH1 -6.0_prec*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda  !r6H1/r6H1_hc softcore
+				dvH2 = dvH2 + r2H2*( -VelH2 -(12.0_prec*V_aH2 -6.0_prec*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda  !r6H2/r6H2_hc softcore
 				! update q-water energies
 				EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
 				EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2 
@@ -10714,10 +10713,10 @@ subroutine nonbon2_ww
 ! local variables
 integer						:: iw,ip,i,j,i3,j3,ia
 integer						:: iaci,iacj,iLJ,ja
-real(8)						:: aLJ,bLJ
+real(kind=prec)						:: aLJ,bLJ
 integer						:: ipstart
-real(8)						:: dx1,dx2,dx3,r2,r,r6,r12
-real(8)						:: Vel,V_a,V_b,dv
+real(kind=prec)						:: dx1,dx2,dx3,r2,r,r6,r12
+real(kind=prec)						:: Vel,V_a,V_b,dv
 
 ! global variables used:
 !  nat_solute, iac, crg, ljcod, iaclib, x, d, E
@@ -10752,14 +10751,14 @@ do ia = 1, 3
         dx2  = x(j3+2) - x(i3+2)
         dx3  = x(j3+3) - x(i3+3)
         r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-        r2   = 1./r2
+        r2   = one/r2
         r    = sqrt ( r2 ) 
         r6   = r2*r2*r2
         r12  = r6*r6
         Vel  = crg(i)*crg(j)*r
         V_a  = bLJ*aLJ*aLJ*r12 
-        V_b  = 2.0*bLJ*aLJ*r6
-        dv   = r2*( -Vel -12.*V_a +6.*V_b )
+        V_b  = 2.0_prec*bLJ*aLJ*r6
+        dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
         d(i3+1) = d(i3+1) - dv*dx1
         d(i3+2) = d(i3+2) - dv*dx2
         d(i3+3) = d(i3+3) - dv*dx3
@@ -10783,14 +10782,14 @@ do ia = 1, 3
         dx2  = x(j3+2) - x(i3+2)
         dx3  = x(j3+3) - x(i3+3)
         r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-        r2   = 1./r2
+        r2   = one/r2
         r    = sqrt ( r2 ) 
         r6   = r2*r2*r2
         r12  = r6*r6
         Vel  = crg(i)*crg(j)*r
         V_a  = bLJ*aLJ*aLJ*r12 
-        V_b  = 2.0*bLJ*aLJ*r6
-        dv   = r2*( -Vel -12.*V_a +6.*V_b )
+        V_b  = 2.0_prec*bLJ*aLJ*r6
+        dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
         d(i3+1) = d(i3+1) - dv*dx1
         d(i3+2) = d(i3+2) - dv*dx2
         d(i3+3) = d(i3+3) - dv*dx3
@@ -10814,14 +10813,14 @@ do ia = 1, 3
         dx2  = x(j3+2) - x(i3+2)
         dx3  = x(j3+3) - x(i3+3)
         r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-        r2   = 1./r2
+        r2   = one/r2
         r    = sqrt ( r2 ) 
         r6   = r2*r2*r2
         r12  = r6*r6
         Vel  = crg(i)*crg(j)*r
         V_a  = bLJ*aLJ*aLJ*r12 
-        V_b  = 2.0*bLJ*aLJ*r6
-        dv   = r2*( -Vel -12.*V_a +6.*V_b )
+        V_b  = 2.0_prec*bLJ*aLJ*r6
+        dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
         d(i3+1) = d(i3+1) - dv*dx1
         d(i3+2) = d(i3+2) - dv*dx2
         d(i3+3) = d(i3+3) - dv*dx3
@@ -10845,11 +10844,11 @@ subroutine nonbon2_ww_box
   ! local variables
   integer						:: iw,ip,i,j,i3,j3,ia
   integer						:: iaci,iacj,iLJ,ja
-  real(8)						:: aLJ,bLJ
+  real(kind=prec)						:: aLJ,bLJ
   integer						:: ipstart
-  real(8)						:: dx1,dx2,dx3,r2,r,r6,r12
-  real(8)						:: Vel,V_a,V_b,dv
-  real(8)						:: ds1, ds2, ds3
+  real(kind=prec)						:: dx1,dx2,dx3,r2,r,r6,r12
+  real(kind=prec)						:: Vel,V_a,V_b,dv
+  real(kind=prec)						:: ds1, ds2, ds3
 
   ! global variables used:
   !  nat_solute, iac, crg, ljcod, iaclib, x, d, E
@@ -10899,14 +10898,14 @@ subroutine nonbon2_ww_box
 		dx3 = dx3 - ds3
 
 		r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-		r2   = 1./r2
+		r2   = one/r2
 		r    = sqrt ( r2 ) 
 		r6   = r2*r2*r2
 		r12  = r6*r6
 		Vel  = crg(i)*crg(j)*r
 		V_a  = bLJ*aLJ*aLJ*r12 
-		V_b  = 2.0*bLJ*aLJ*r6
-		dv   = r2*( -Vel -12.*V_a +6.*V_b )
+		V_b  = 2.0_prec*bLJ*aLJ*r6
+		dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 		d(i3+1) = d(i3+1) - dv*dx1
 		d(i3+2) = d(i3+2) - dv*dx2
 		d(i3+3) = d(i3+3) - dv*dx3
@@ -10934,14 +10933,14 @@ subroutine nonbon2_ww_box
 		dx3 = dx3 - ds3
 		
 		r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-		r2   = 1./r2
+		r2   = one/r2
 		r    = sqrt ( r2 ) 
 		r6   = r2*r2*r2
 		r12  = r6*r6
 		Vel  = crg(i)*crg(j)*r
 		V_a  = bLJ*aLJ*aLJ*r12 
-		V_b  = 2.0*bLJ*aLJ*r6
-		dv   = r2*( -Vel -12.*V_a +6.*V_b )
+		V_b  = 2.0_prec*bLJ*aLJ*r6
+		dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 		d(i3+1) = d(i3+1) - dv*dx1
 		d(i3+2) = d(i3+2) - dv*dx2
 		d(i3+3) = d(i3+3) - dv*dx3
@@ -10969,14 +10968,14 @@ subroutine nonbon2_ww_box
 		dx3 = dx3 - ds3
 	
 		r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-		r2   = 1./r2
+		r2   = one/r2
 		r    = sqrt ( r2 ) 
 		r6   = r2*r2*r2
 		r12  = r6*r6
 		Vel  = crg(i)*crg(j)*r
 		V_a  = bLJ*aLJ*aLJ*r12 
-		V_b  = 2.0*bLJ*aLJ*r6
-		dv   = r2*( -Vel -12.*V_a +6.*V_b )
+		V_b  = 2.0_prec*bLJ*aLJ*r6
+		dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 		d(i3+1) = d(i3+1) - dv*dx1
 		d(i3+2) = d(i3+2) - dv*dx2
 		d(i3+3) = d(i3+3) - dv*dx3
@@ -11001,10 +11000,10 @@ subroutine nonbond_pp
 ! local variables
 integer						:: ip
 type(NB_TYPE), pointer		:: pa, pb
-real(8)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
-real(8)						:: Vela,V_aa,V_ba,dva
-real(8)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
-real(8)						:: Velb,V_ab,V_bb,dvb
+real(kind=prec)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
+real(kind=prec)						:: Vela,V_aa,V_ba,dva
+real(kind=prec)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
+real(kind=prec)						:: Velb,V_ab,V_bb,dvb
 
 ! global variables used:
 
@@ -11026,8 +11025,8 @@ dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
 dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
 dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
-r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-r2b   = 1./(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
+r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 ra    = sqrt ( r2a ) 
 rb    = sqrt ( r2b ) 
 r6a   = r2a*r2a*r2a
@@ -11051,8 +11050,8 @@ V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod) &
 V_bb = r6b*iaclib(iac(pb%i))%bvdw(pb%LJcod) &
         *iaclib(iac(pb%j))%bvdw(pb%LJcod)
 
-dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
-dvb   = r2b*( -Velb -12.*V_ab +6.*V_bb )
+dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
+dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 ! update d
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
@@ -11080,7 +11079,7 @@ pa => nbpp(ip)
 dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
 dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
 ra   = sqrt(r2a)
 r6a   = r2a*r2a*r2a
 
@@ -11088,7 +11087,7 @@ Vela  = crg(pa%i)*crg(pa%j)*ra
 if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
 V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod)*iaclib(iac(pa%j))%avdw(pa%LJcod)
 V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
+dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
 
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
 d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
@@ -11109,10 +11108,10 @@ subroutine nonbond_pp_box
   ! local variables
   integer						:: ip, group, ga, gb
   type(NB_TYPE), pointer		:: pa, pb
-  real(8)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
-  real(8)						:: Vela,V_aa,V_ba,dva
-  real(8)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
-  real(8)						:: Velb,V_ab,V_bb,dvb
+  real(kind=prec)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
+  real(kind=prec)						:: Vela,V_aa,V_ba,dva
+  real(kind=prec)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
+  real(kind=prec)						:: Velb,V_ab,V_bb,dvb
 
   ! global variables used:
   !  x, crg, el14_scale, iaclib, d, E, 
@@ -11156,8 +11155,8 @@ subroutine nonbond_pp_box
 	dx3a = dx3a - nbpp_cgp(ga)%z  
 	dx3b = dx3b - nbpp_cgp(gb)%z   
 	
-    r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-    r2b   = 1./(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
+    r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+    r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
     ra    = sqrt ( r2a ) 
     rb    = sqrt ( r2b ) 
     r6a   = r2a*r2a*r2a
@@ -11180,8 +11179,8 @@ subroutine nonbond_pp_box
 		*iaclib(iac(pa%j))%bvdw(pa%LJcod)
 	V_bb = r6b*iaclib(iac(pb%i))%bvdw(pb%LJcod) &
 		*iaclib(iac(pb%j))%bvdw(pb%LJcod)
-    dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
-    dvb   = r2b*( -Velb -12.*V_ab +6.*V_bb )
+    dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
+    dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 	! update d
     d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
@@ -11214,7 +11213,7 @@ subroutine nonbond_pp_box
 	dx2a = dx2a - nbpp_cgp(ga)%y  
 	dx3a = dx3a - nbpp_cgp(ga)%z  
 	
-	r2a   = 1./(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
+	r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
 	ra   = sqrt(r2a)
 
 
@@ -11224,7 +11223,7 @@ subroutine nonbond_pp_box
 	if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
 	V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod)*iaclib(iac(pa%j))%avdw(pa%LJcod)
 	V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-	dva   = r2a*( -Vela -12.*V_aa +6.*V_ba )
+	dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
 
 	d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
 	d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
@@ -11244,8 +11243,8 @@ end subroutine nonbond_pp_box
 subroutine nonbond_pw
 ! local variables
 integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
-real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
-real(8)						:: Vel,V_a,V_b,dv
+real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
+real(kind=prec)						:: Vel,V_a,V_b,dv
 
 ! global variables used:
 !  iac, crg, iaclib, x, d, E
@@ -11269,7 +11268,7 @@ dx1  = x(j3+1) - x(i3+1)
 dx2  = x(j3+2) - x(i3+2)
 dx3  = x(j3+3) - x(i3+3)
 r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-r2   = 1./r2
+r2   = one/r2
 r    = sqrt ( r2 )
 r6   = r2*r2*r2
 r12  = r6*r6
@@ -11278,7 +11277,7 @@ r12  = r6*r6
 Vel  = crg(i)*crg(j)*r
 V_a  = aLJ*r12 
 V_b  = bLJ*r6
-dv   = r2*( -Vel -12.*V_a +6.*V_b )
+dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 
 ! update forces
 d(i3+1) = d(i3+1) - dv*dx1
@@ -11299,8 +11298,8 @@ end subroutine nonbond_pw
 subroutine nonbond_pw_box
   ! local variables
   integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
-  real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
-  real(8)						:: Vel,V_a,V_b,dv
+  real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
+  real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, ga, gb
 
   ! global variables used:
@@ -11346,7 +11345,7 @@ subroutine nonbond_pw_box
 	dx3 = dx3 - nbpw_cgp(group)%z 
 	
 	r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-	r2   = 1./r2
+	r2   = one/r2
 	r    = sqrt ( r2 )
 	r6   = r2*r2*r2
 	r12  = r6*r6
@@ -11355,7 +11354,7 @@ subroutine nonbond_pw_box
 	Vel  = crg(i)*crg(j)*r
 	V_a  = aLJ*r12 
 	V_b  = bLJ*r6
-	dv   = r2*( -Vel -12.*V_a +6.*V_b )
+	dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 
 	! update forces
 	d(i3+1) = d(i3+1) - dv*dx1
@@ -11377,8 +11376,8 @@ subroutine nonbond_qq
 ! local variables
 integer					:: istate, is,jj
 integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
-real(8)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
-real(8)					:: Vel,V_a,V_b,dv,el_scale
+real(kind=prec)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
+real(kind=prec)					:: Vel,V_a,V_b,dv,el_scale
 
 do istate = 1, nstates
 ! for every state:
@@ -11441,10 +11440,10 @@ do ip = 1, nbqq_pair(istate)
 
   r6_hc   = r2*r2*r2   !hardcore
   r6   = r2*r2*r2+sc_lookup(iq,natyps+jq,istate)   !Use softcore instead. sc is 0 for hardcore MPA
-  r6   = 1./r6
+  r6   = one/r6
   r12  = r6*r6
 
-  r2   = 1./r2
+  r2   = one/r2
   r    = sqrt ( r2 ) 
 
   ! calculate Vel, V_a, V_b and dv
@@ -11452,12 +11451,12 @@ do ip = 1, nbqq_pair(istate)
   if ( iLJ .eq. 3 ) Vel = Vel*el14_scale
   if (qvdw_flag .and. jq /= 0 .and. iLJ .eq. 2 ) then
         V_a = aLJ*exp(-bLJ/r)
-        V_b = 0.0
+        V_b = zero
         dv  = r2*( -Vel -bLJ*V_a/r )*EQ(istate)%lambda
   else
         V_a = aLJ*r12 
         V_b = bLJ*r6
-        dv  = r2*( -Vel - (12.*V_a - 6.*V_b)*r6_hc*r6 )*EQ(istate)%lambda
+        dv  = r2*( -Vel - (12.0_prec*V_a - 6.0_prec*V_b)*r6_hc*r6 )*EQ(istate)%lambda
   endif
 
   ! update forces
@@ -11501,8 +11500,8 @@ subroutine nonbond_qq_lib_charges
 ! local variables
 integer					:: istate,jj
 integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
-real(8)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
-real(8)					:: Vel,V_a,V_b,dv,el_scale
+real(kind=prec)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
+real(kind=prec)					:: Vel,V_a,V_b,dv,el_scale
 
 do istate = 1, nstates
 ! for every state:
@@ -11560,10 +11559,10 @@ do ip = 1, nbqq_pair(istate)
 
   r6_hc = r2*r2*r2   !hardcore
   r6   = r2*r2*r2+sc_lookup(iq,natyps+jq,istate)   !sc_lookup is softcore fix MPA
-  r6   = 1./r6
+  r6   = one/r6
   r12  = r6*r6
 
-  r2   = 1./r2
+  r2   = one/r2
   r    = sqrt ( r2 ) 
 
   ! calculate Vel, V_a, V_b and dv
@@ -11571,12 +11570,12 @@ do ip = 1, nbqq_pair(istate)
   if ( iLJ .eq. 3 ) Vel = Vel*el14_scale
   if (qvdw_flag .and. jq /= 0 .and. iLJ .eq. 2 ) then
         V_a = aLJ*exp(-bLJ/r)
-        V_b = 0.0
+        V_b = zero
         dv  = r2*( -Vel -bLJ*V_a/r )*EQ(istate)%lambda
   else
         V_a = aLJ*r12 
         V_b = bLJ*r6
-        dv  = r2*( -Vel -(12.*V_a -6.*V_b)*r6_hc*r6 )*EQ(istate)%lambda
+        dv  = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*r6_hc*r6 )*EQ(istate)%lambda
   endif
 
   ! update forces
@@ -11622,8 +11621,8 @@ subroutine nonbond_qp
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
 integer						:: istate,jj
-real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
-real(8)						:: Vel,V_a,V_b,dv
+real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
+real(kind=prec)						:: Vel,V_a,V_b,dv
 
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, 
@@ -11645,7 +11644,7 @@ dx2  = x(j3+2) - x(i3+2)
 dx3  = x(j3+3) - x(i3+3)
 r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
 !softcore not needed here since nonbond_qp_qvdw is called instead
-r2   = 1./r2
+r2   = one/r2
 r6   = r2*r2*r2
 r    = sqrt(r2)
 do istate = 1, nstates
@@ -11663,7 +11662,7 @@ do istate = 1, nstates
 
   V_a  = aLJ*r6*r6 
   V_b  = bLJ*r6        
-  dv   = r2*( -Vel -12.*V_a +6.*V_b )*EQ(istate)%lambda
+  dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )*EQ(istate)%lambda
 
   ! update forces
   d(i3+1) = d(i3+1) - dv*dx1
@@ -11697,8 +11696,8 @@ subroutine nonbond_qp_box
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
   integer						:: istate,jj
-  real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
-  real(8)						:: Vel,V_a,V_b,dv
+  real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
+  real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
   ! global variables used:
   !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, 
@@ -11740,7 +11739,7 @@ subroutine nonbond_qp_box
 	dx3 = dx3 - nbqp_cgp(group)%z  
 	
 	r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
-	r2   = 1./r2
+	r2   = one/r2
 	r6   = r2*r2*r2   !softcore not needed here. taken care of in nonbond_qp_qvdw_box
 	r    = sqrt(r2)
 
@@ -11758,7 +11757,7 @@ subroutine nonbond_qp_box
 
 	  V_a  = aLJ*r6*r6 
 	  V_b  = bLJ*r6
-	  dv   = r2*( -Vel -12.*V_a +6.*V_b )*EQ(istate)%lambda
+	  dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )*EQ(istate)%lambda
 
 	  ! update forces
 	  d(i3+1) = d(i3+1) - dv*dx1
@@ -11791,8 +11790,8 @@ subroutine nonbond_qp_qvdw
 ! local variables
 integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ,qLJ
 integer						:: istate,jj
-real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
-real(8)						:: Vel,V_a,V_b,dv,r6_sc
+real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
+real(kind=prec)						:: Vel,V_a,V_b,dv,r6_sc
 
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
@@ -11816,7 +11815,7 @@ dx3  = x(j3+3) - x(i3+3)
 r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
 
 r6   = r2*r2*r2
-r2   = 1./r2
+r2   = one/r2
 r    = sqrt(r2)
 
 do istate = 1, nstates
@@ -11834,7 +11833,7 @@ do istate = 1, nstates
   r6_sc = r6 + sc_lookup(iq,iacj,istate) !sc_lookup is softcore fix MPA
   V_a  = aLJ/(r6_sc*r6_sc)
   V_b  = bLJ/(r6_sc)
-  dv   = r2*( -Vel -(12.*V_a -6.*V_b)*(r6/r6_sc) )*EQ(istate)%lambda  !r6 is r^6 not 1/r^6, r6_sc is r^6+sc not 1/(r^6+sc)
+  dv   = r2*( -Vel -(12.0_prec*V_a -6.0_prec*V_b)*(r6/r6_sc) )*EQ(istate)%lambda  !r6 is r^6 not 1/r^6, r6_sc is r^6+sc not 1/(r^6+sc)
 
   ! update forces
   d(i3+1) = d(i3+1) - dv*dx1
@@ -11866,8 +11865,8 @@ subroutine nonbond_qp_qvdw_box
   ! local variables
   integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ,qLJ
   integer						:: istate,jj
-  real(8)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
-  real(8)						:: Vel,V_a,V_b,dv,r6_sc
+  real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
+  real(kind=prec)						:: Vel,V_a,V_b,dv,r6_sc
   integer						:: group, gr, ia
 
 
@@ -11915,7 +11914,7 @@ subroutine nonbond_qp_qvdw_box
 	r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
 
 	r6   = r2*r2*r2
-	r2   = 1./r2
+	r2   = one/r2
 	r    = sqrt(r2)
 
 	do istate = 1, nstates
@@ -11934,7 +11933,7 @@ subroutine nonbond_qp_qvdw_box
 	  r6_sc = r6 + sc_lookup(iq,iacj,istate)        !sc_lookup is softcore fix MPA
 	  V_a  = aLJ/(r6_sc*r6_sc)
 	  V_b  = bLJ/r6_sc         !sc_lookup is softcore fix MPA
-	  dv   = r2*( -Vel - ( (12.*V_a - 6.*V_b)*(r6/r6_sc) ) )*EQ(istate)%lambda  !r6 is r^6 not 1/r^6, r6_sc is r^6+sc not 1/(r^6+sc)
+	  dv   = r2*( -Vel - ( (12.0_prec*V_a - 6.0_prec*V_b)*(r6/r6_sc) ) )*EQ(istate)%lambda  !r6 is r^6 not 1/r^6, r6_sc is r^6+sc not 1/(r^6+sc)
 
 	  ! update forces
 	  d(i3+1) = d(i3+1) - dv*dx1
@@ -11967,12 +11966,12 @@ subroutine nonbond_qw_spc
 ! local variables
 integer						:: jw,iq,i,j,iLJ
 integer						:: istate
-real(8)						::	aLJ, bLJ
-real(8)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
-real(8)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
-real(8)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
-real(8)						::  V_a, V_b, r6O_sc, r6O_hc
-real(8), save				::	aO(2), bO(2)
+real(kind=prec)						::	aLJ, bLJ
+real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
+real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
+real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+real(kind=prec)						::  V_a, V_b, r6O_sc, r6O_hc
+real(kind=prec), save				::	aO(2), bO(2)
 integer, save				::	iac_ow = 0, iac_hw = 0
 
 ! global variables used:
@@ -12001,10 +12000,10 @@ do jw = 1, nbqw_pair
                 dyH2 = x(3*j+5) - x(3*i-1)
                 dzH2 = x(3*j+6) - x(3*i  )
                 r2O  = dxO*dxO + dyO*dyO + dzO*dzO
-                rH1  = sqrt(1._8/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1))
-                rH2  = sqrt(1._8/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2))
+                rH1  = sqrt(one/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1))
+                rH2  = sqrt(one/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2))
                 r6O_hc  = r2O*r2O*r2O   !will set r6O to 1/r6O later, needed for softcore
-                r2O  = 1._8/r2O
+                r2O  = one/r2O
                 rO   = sqrt(r2O)
                 r2H1 = rH1*rH1
                 r6H1 = r2H1*r2H1*r2H1
@@ -12020,7 +12019,7 @@ do jw = 1, nbqw_pair
                 iLJ = LJcod(iac_ow, iac(i))
                 if(.not. qvdw_flag) then
                         !use same LJ params for all states
-						r6O  = 1./r6O_hc     !softcore hack, see comment 15 lines up
+						r6O  = one/r6O_hc     !softcore hack, see comment 15 lines up
                         aLJ  = iaclib(iac(i))%avdw(iLJ)
                         bLJ  = iaclib(iac(i))%bvdw(iLJ)
                         V_a  = aLJ*aO(iLJ)*r6O*r6O 
@@ -12041,7 +12040,7 @@ do jw = 1, nbqw_pair
                         VelO = crg_ow*qcrg(iq,istate)*rO
                         VelH1 = crg_hw*qcrg(iq,istate)*rH1
                         VelH2 = crg_hw*qcrg(iq,istate)*rH2
-                        dvO  = dvO  + r2O*( -VelO -( (12.*V_a - 6.*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
+                        dvO  = dvO  + r2O*( -VelO -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
                         dvH1 = dvH1 - r2H1*VelH1*EQ(istate)%lambda
                         dvH2 = dvH2 - r2H2*VelH2*EQ(istate)%lambda
                         ! update q-water energies
@@ -12080,13 +12079,13 @@ subroutine nonbond_qw_spc_box
 	! local variables
 	integer						:: jw,iq,i,j,iLJ
 	integer						:: istate
-	real(8)						::	aLJ, bLJ
-	real(8)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
-	real(8)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
-	real(8)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
-	real(8)						:: V_a, V_b, r6O_sc, r6O_hc
-	real(8)						:: dx, dy, dz, boxshiftx, boxshifty, boxshiftz
-	real(8), save				::	aO(2), bO(2)
+	real(kind=prec)						::	aLJ, bLJ
+	real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
+	real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
+	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+	real(kind=prec)						:: V_a, V_b, r6O_sc, r6O_hc
+	real(kind=prec)						:: dx, dy, dz, boxshiftx, boxshifty, boxshiftz
+	real(kind=prec), save				::	aO(2), bO(2)
 	integer, save				::	iac_ow = 0, iac_hw = 0
 
 	! global variables used:
@@ -12134,10 +12133,10 @@ subroutine nonbond_qw_spc_box
 			dzH2 = dzH2 - boxshiftz  
 
 			r2O = dxO*dxO + dyO*dyO + dzO*dzO
-			rH1 = sqrt(1._8/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1))
-			rH2 = sqrt(1._8/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2))
+			rH1 = sqrt(one/(dxH1*dxH1 + dyH1*dyH1 + dzH1*dzH1))
+			rH2 = sqrt(one/(dxH2*dxH2 + dyH2*dyH2 + dzH2*dzH2))
 			r6O_hc = r2O*r2O*r2O   !will set r6O = 1/r6O later, need for softcore MPA
-			r2O = 1._8/r2O
+			r2O = one/r2O
 			rO  = sqrt(r2O)
 			r2H1 = rH1*rH1
 			r6H1 = r2H1*r2H1*r2H1
@@ -12155,7 +12154,7 @@ subroutine nonbond_qw_spc_box
 				!use same LJ params for all states
 				aLJ  = iaclib(iac(i))%avdw(iLJ)
 				bLJ  = iaclib(iac(i))%bvdw(iLJ)
-				r6O  = 1._8/r6O_hc   !softcore hack  MPA
+				r6O  = one/r6O_hc   !softcore hack  MPA
 				V_a  = aLJ*aO(iLJ)*r6O*r6O 
 				V_b  = bLJ*bO(iLJ)*r6O
 			end if
@@ -12175,7 +12174,7 @@ subroutine nonbond_qw_spc_box
 				VelO = crg_ow*qcrg(iq,istate)*rO
 				VelH1 = crg_hw*qcrg(iq,istate)*rH1
 				VelH2 = crg_hw*qcrg(iq,istate)*rH2
-				dvO  = dvO  + r2O*( -VelO -( (12.*V_a - 6.*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
+				dvO  = dvO  + r2O*( -VelO -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
 				dvH1 = dvH1 - r2H1*VelH1*EQ(istate)%lambda
 				dvH2 = dvH2 - r2H2*VelH2*EQ(istate)%lambda
 				! update q-water energies
@@ -12210,17 +12209,17 @@ subroutine nonbond_qw_3atom
 ! local variables
 integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci
 integer						:: istate
-real(8)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
-real(8)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
-real(8)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
-real(8)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
-real(8), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
+real(kind=prec)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
+real(kind=prec)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
+real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
+real(kind=prec)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
+real(kind=prec), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
 integer, save				::	iac1, iac2, iac3
 real, save					::	crg1, crg2, crg3
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
-if(a1(1) == 0.) then !set first time
+if(a1(1) == zero) then !set first time
         iac1 = iac(nat_solute+1)
         iac2 = iac(nat_solute+2)
         iac3 = iac(nat_solute+3)
@@ -12254,13 +12253,13 @@ do jw = 1, nbqw_pair
                 r2_2 = dx2*dx2 + dy2*dy2 + dz2*dz2
                 r2_3 = dx3*dx3 + dy3*dy3 + dz3*dz3
                 r6_1_hc = r2_1*r2_1*r2_1   !will set r6 to 1/r6 later, needed for softcore
-                r2_1 = 1._8/r2_1
+                r2_1 = one/r2_1
 				r_1  = sqrt(r2_1)
                 r6_2_hc = r2_2*r2_2*r2_2   !will set r6 to 1/r6 later, needed for softcore
-                r2_2 = 1._8/r2_2
+                r2_2 = one/r2_2
 				r_2  = sqrt(r2_2)
                 r6_3_hc = r2_3*r2_3*r2_3   !will set r6 to 1/r6 later, needed for softcore
-                r2_3 = 1._8/r2_3
+                r2_3 = one/r2_3
 				r_3  = sqrt(r2_3)
 
                 !reset potential
@@ -12273,9 +12272,9 @@ do jw = 1, nbqw_pair
                 iLJ3 = LJcod(iac3, iaci)
                 if(.not. qvdw_flag) then
                         !use same LJ params for all states
-						r6_1 = 1._8/r6_1_hc	!softcore hack
-						r6_2 = 1._8/r6_2_hc	!softcore hack
-						r6_3 = 1._8/r6_3_hc	!softcore hack
+						r6_1 = one/r6_1_hc	!softcore hack
+						r6_2 = one/r6_2_hc	!softcore hack
+						r6_3 = one/r6_3_hc	!softcore hack
 
                         V_a1  = iaclib(iaci)%avdw(iLJ1)*a1(iLJ1)*r6_1*r6_1 
                         V_b1  = iaclib(iaci)%bvdw(iLJ1)*b1(iLJ1)*r6_1
@@ -12303,9 +12302,9 @@ do jw = 1, nbqw_pair
                         Vel1 = crg1*qcrg(iq,istate)*r_1
                         Vel2 = crg2*qcrg(iq,istate)*r_2
                         Vel3 = crg3*qcrg(iq,istate)*r_3
-                        dv1 = dv1 + r2_1*(-Vel1- ((12.*V_a1-6.*V_b1)*(r6_1_hc/r6_1_sc)) )*EQ(istate)%lambda
-                        dv2 = dv2 + r2_2*(-Vel2- ((12.*V_a2-6.*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
-                        dv3 = dv3 + r2_3*(-Vel3- ((12.*V_a3-6.*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
+                        dv1 = dv1 + r2_1*(-Vel1- ((12.0_prec*V_a1-6.0_prec*V_b1)*(r6_1_hc/r6_1_sc)) )*EQ(istate)%lambda
+                        dv2 = dv2 + r2_2*(-Vel2- ((12.0_prec*V_a2-6.0_prec*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
+                        dv3 = dv3 + r2_3*(-Vel3- ((12.0_prec*V_a3-6.0_prec*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
                         ! update q-water energies
                         EQ(istate)%qw%el  = EQ(istate)%qw%el + Vel1 + Vel2 + Vel3
                         EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a1 - V_b1 &
@@ -12338,18 +12337,18 @@ subroutine nonbond_qw_3atom_box
 	! local variables
 	integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci
 	integer						:: istate
-	real(8)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
-	real(8)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
-	real(8)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
-	real(8)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
-	real(8)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz
-	real(8), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
+	real(kind=prec)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
+	real(kind=prec)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
+	real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
+	real(kind=prec)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
+	real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz
+	real(kind=prec), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
 	integer, save				::	iac1, iac2, iac3
 	real, save					::	crg1, crg2, crg3
 	! global variables used:
 	!  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
   
-	if(a1(1) == 0.) then !set first time
+	if(a1(1) == zero) then !set first time
 		iac1 = iac(nat_solute+1)
 		iac2 = iac(nat_solute+2)
 		iac3 = iac(nat_solute+3)
@@ -12402,13 +12401,13 @@ subroutine nonbond_qw_3atom_box
             r2_2 = dx2*dx2 + dy2*dy2 + dz2*dz2
             r2_3 = dx3*dx3 + dy3*dy3 + dz3*dz3
             r6_1_hc = r2_1*r2_1*r2_1   !will set r6 to 1/r6 later, needed for softcore
-            r2_1 = 1._8/r2_1
+            r2_1 = one/r2_1
 			r_1  = sqrt(r2_1)
 			r6_2_hc = r2_2*r2_2*r2_2   !will set r6 to 1/r6 later, needed for softcore
-			r2_2 = 1._8/r2_2
+			r2_2 = one/r2_2
 			r_2  = sqrt(r2_2)
 			r6_3_hc = r2_3*r2_3*r2_3   !will set r6 to 1/r6 later, needed for softcore
-			r2_3 = 1._8/r2_3
+			r2_3 = one/r2_3
 			r_3  = sqrt(r2_3)
 
 			!reset potential
@@ -12421,9 +12420,9 @@ subroutine nonbond_qw_3atom_box
 			iLJ3 = LJcod(iac3, iaci)
 			if(.not. qvdw_flag) then
 				!use same LJ params for all states
-				r6_1 = 1._8/r6_1_hc	!softcore hack
-				r6_2 = 1._8/r6_2_hc	!softcore hack
-				r6_3 = 1._8/r6_3_hc	!softcore hack
+				r6_1 = one/r6_1_hc	!softcore hack
+				r6_2 = one/r6_2_hc	!softcore hack
+				r6_3 = one/r6_3_hc	!softcore hack
 
 				V_a1  = iaclib(iaci)%avdw(iLJ1)*a1(iLJ1)*r6_1*r6_1 
 				V_b1  = iaclib(iaci)%bvdw(iLJ1)*b1(iLJ1)*r6_1
@@ -12452,9 +12451,9 @@ subroutine nonbond_qw_3atom_box
 				Vel1 = crg1*qcrg(iq,istate)*r_1
 				Vel2 = crg2*qcrg(iq,istate)*r_2
 				Vel3 = crg3*qcrg(iq,istate)*r_3
-				dv1 = dv1 + r2_1*(-Vel1- ((12.*V_a1-6.*V_b1)*(r6_1_hc/r6_1_sc)) )*EQ(istate)%lambda
-				dv2 = dv2 + r2_2*(-Vel2- ((12.*V_a2-6.*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
-				dv3 = dv3 + r2_3*(-Vel3- ((12.*V_a3-6.*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
+				dv1 = dv1 + r2_1*(-Vel1- ((12.0_prec*V_a1-6.0_prec*V_b1)*(r6_1_hc/r6_1_sc)) )*EQ(istate)%lambda
+				dv2 = dv2 + r2_2*(-Vel2- ((12.0_prec*V_a2-6.0_prec*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
+				dv3 = dv3 + r2_3*(-Vel3- ((12.0_prec*V_a3-6.0_prec*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
 				! update q-water energies
 				EQ(istate)%qw%el  = EQ(istate)%qw%el + Vel1 + Vel2 + Vel3
 				EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a1 - V_b1 &
@@ -12485,12 +12484,12 @@ subroutine nonbond_ww_spc
 ! local variables
 integer						:: iw,ip,i,j,i3,j3, ia
 integer						:: ipstart
-real(8)						:: rOX, rH1X, rH2X, r2
-real(8)						:: dxOX,  dyOX,  dzOX
-real(8)						:: dxH1X, dyH1X, dzH1X
-real(8)						:: dxH2X, dyH2X, dzH2X
-real(8)						:: Vel,V_a,V_b,dv
-real(8), save					:: A_OO, B_OO
+real(kind=prec)						:: rOX, rH1X, rH2X, r2
+real(kind=prec)						:: dxOX,  dyOX,  dzOX
+real(kind=prec)						:: dxH1X, dyH1X, dzH1X
+real(kind=prec)						:: dxH2X, dyH2X, dzH2X
+real(kind=prec)						:: Vel,V_a,V_b,dv
+real(kind=prec), save					:: A_OO, B_OO
 integer						::	iac_ow, iac_hw
 
 ! global variables used:
@@ -12534,9 +12533,9 @@ do while (nbww(ip) .ne. 0)
   dyH2X = x((j3+1))-x((i3+1))
   dzH2X = x((j3+2))-x((i3+2))
   rH2X = dxH2X*dxH2X+dyH2X*dyH2X+dzH2X*dzH2X
-  rOX=	sqrt(1._8/rOX  )
-  rH1X=	sqrt(1._8/rH1X )
-  rH2X=	sqrt(1._8/rH2X )
+  rOX=	sqrt(one/rOX  )
+  rH1X=	sqrt(one/rH1X )
+  rH2X=	sqrt(one/rH2X )
   ! O-O 
   ! LJ only for O-O
   r2 = rOX * rOX
@@ -12545,7 +12544,7 @@ do while (nbww(ip) .ne. 0)
   V_b  = B_OO*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 - 6 !move pointer back to O in interacting mol.
   d((i3  )) = d((i3  )) -(dv*dxOX)
   d((j3  )) = d((j3  )) +(dv*dxOX)
@@ -12598,9 +12597,9 @@ do while (nbww(ip) .ne. 0)
   dyH2X = x((j3+1))-x((i3+1))
   dzH2X = x((j3+2))-x((i3+2))
   rH2X = dxH2X*dxH2X+dyH2X*dyH2X+dzH2X*dzH2X
-  rOX=	sqrt(1._8/rOX  )
-  rH1X=	sqrt(1._8/rH1X )
-  rH2X=	sqrt(1._8/rH2X )
+  rOX=	sqrt(one/rOX  )
+  rH1X=	sqrt(one/rH1X )
+  rH2X=	sqrt(one/rH2X )
   ! H1-O 
   r2 = rOX * rOX
   Vel = crg_hw*crg_ow*rOX
@@ -12658,9 +12657,9 @@ do while (nbww(ip) .ne. 0)
   dyH2X = x((j3+1))-x((i3+1))
   dzH2X = x((j3+2))-x((i3+2))
   rH2X = dxH2X*dxH2X+dyH2X*dyH2X+dzH2X*dzH2X
-  rOX=	sqrt(1._8/rOX  )
-  rH1X=	sqrt(1._8/rH1X )
-  rH2X=	sqrt(1._8/rH2X )
+  rOX=	sqrt(one/rOX  )
+  rH1X=	sqrt(one/rH1X )
+  rH2X=	sqrt(one/rH2X )
   ! H2-O 
   r2 = rOX * rOX
   Vel = crg_hw*crg_ow*rOX
@@ -12713,14 +12712,14 @@ subroutine nonbond_ww_spc_box
   ! local variables
   integer						:: iw,ip,i,j,i3,j3, ia
   integer						:: ipstart
-  real(8)						:: rOX, rH1X, rH2X, r2
-  real(8)						:: dxOX,  dyOX,  dzOX
-  real(8)						:: dxH1X, dyH1X, dzH1X
-  real(8)						:: dxH2X, dyH2X, dzH2X
-  real(8)						:: Vel,V_a,V_b,dv
-  real(8), save					:: A_OO, B_OO
+  real(kind=prec)						:: rOX, rH1X, rH2X, r2
+  real(kind=prec)						:: dxOX,  dyOX,  dzOX
+  real(kind=prec)						:: dxH1X, dyH1X, dzH1X
+  real(kind=prec)						:: dxH2X, dyH2X, dzH2X
+  real(kind=prec)						:: Vel,V_a,V_b,dv
+  real(kind=prec), save					:: A_OO, B_OO
   integer						::	iac_ow, iac_hw
-  real(8)						:: boxshiftx, boxshifty, boxshiftz
+  real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz
 
   ! global variables used:
   !  iaclib, nat_solute, x, crg_ow, E, d, crg_hw
@@ -12777,9 +12776,9 @@ subroutine nonbond_ww_spc_box
 	  rH1X = dxH1X*dxH1X + dyH1X*dyH1X + dzH1X*dzH1X
 	  rH2X = dxH2X*dxH2X + dyH2X*dyH2X + dzH2X*dzH2X
 
-	  rOX=	sqrt(1._8/rOX  )
-	  rH1X=	sqrt(1._8/rH1X )
-	  rH2X=	sqrt(1._8/rH2X )
+	  rOX=	sqrt(one/rOX  )
+	  rH1X=	sqrt(one/rH1X )
+	  rH2X=	sqrt(one/rH2X )
 	  ! O-O 
 	  ! LJ only for O-O
 	  r2 = rOX * rOX
@@ -12788,7 +12787,7 @@ subroutine nonbond_ww_spc_box
 	  V_b  = B_OO*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 - 6 !move pointer back to O in interacting mol.
 	  d((i3  )) = d((i3  )) -(dv*dxOX)
 	  d((j3  )) = d((j3  )) +(dv*dxOX)
@@ -12851,9 +12850,9 @@ subroutine nonbond_ww_spc_box
 	  rOX = dxOX*dxOX + dyOX*dyOX + dzOX*dzOX
 	  rH1X = dxH1X*dxH1X + dyH1X*dyH1X + dzH1X*dzH1X
 	  rH2X = dxH2X*dxH2X + dyH2X*dyH2X + dzH2X*dzH2X
-	  rOX=	sqrt(1._8/rOX  )
-	  rH1X=	sqrt(1._8/rH1X )
-	  rH2X=	sqrt(1._8/rH2X )
+	  rOX=	sqrt(one/rOX  )
+	  rH1X=	sqrt(one/rH1X )
+	  rH2X=	sqrt(one/rH2X )
 	  ! H1-O 
 	  r2 = rOX * rOX
 	  Vel = crg_hw*crg_ow*rOX
@@ -12921,9 +12920,9 @@ subroutine nonbond_ww_spc_box
 	  rOX = dxOX*dxOX + dyOX*dyOX + dzOX*dzOX
 	  rH1X = dxH1X*dxH1X + dyH1X*dyH1X + dzH1X*dzH1X
 	  rH2X = dxH2X*dxH2X + dyH2X*dyH2X + dzH2X*dzH2X
-	  rOX=	sqrt(1._8/rOX  )
-	  rH1X=	sqrt(1._8/rH1X )
-	  rH2X=	sqrt(1._8/rH2X )
+	  rOX=	sqrt(one/rOX  )
+	  rH1X=	sqrt(one/rH1X )
+	  rH2X=	sqrt(one/rH2X )
 	  ! H2-O 
 	  r2 = rOX * rOX
 	  Vel = crg_hw*crg_ow*rOX
@@ -12976,20 +12975,20 @@ subroutine nonbond_3atomsolvent
 ! local variables
 integer						:: iw,ip,i,j,i3,j3, ia
 integer						:: ipstart
-real(8)						::	r1X, r2X, r3X, r2
-real(8)						::	dx1X,  dy1X,  dz1X
-real(8)						::	dx2X, dy2X, dz2X
-real(8)						::	dx3X, dy3X, dz3X
-real(8)						::	Vel,V_a,V_b,dv
-real(8), save					::	A_11, B_11, A_12, B_12, A_13, B_13
-real(8), save					::	A_22, B_22, A_23, B_23, A_33, B_33
+real(kind=prec)						::	r1X, r2X, r3X, r2
+real(kind=prec)						::	dx1X,  dy1X,  dz1X
+real(kind=prec)						::	dx2X, dy2X, dz2X
+real(kind=prec)						::	dx3X, dy3X, dz3X
+real(kind=prec)						::	Vel,V_a,V_b,dv
+real(kind=prec), save					::	A_11, B_11, A_12, B_12, A_13, B_13
+real(kind=prec), save					::	A_22, B_22, A_23, B_23, A_33, B_33
 real, save					::	crg1, crg2, crg3
 integer						::	iac1, iac2, iac3
 
 ! global variables used:
 !  iaclib, nat_solute, x, E, d
 
-if(A_11 == 0.) then !initialize static variables
+if(A_11 == zero) then !initialize static variables
 iac1 = iac(nat_solute+1)
 iac2 = iac(nat_solute+2)
 iac3 = iac(nat_solute+3)
@@ -13052,9 +13051,9 @@ do while (nbww(ip) /= 0)
   dy3X = x((j3+1))-x((i3+1))
   dz3X = x((j3+2))-x((i3+2))
   r3X = dx3X*dx3X+dy3X*dy3X+dz3X*dz3X
-  r1X=	sqrt(1._8/r1X  )
-  r2X=	sqrt(1._8/r2X )
-  r3X=	sqrt(1._8/r3X )
+  r1X=	sqrt(one/r1X  )
+  r2X=	sqrt(one/r2X )
+  r3X=	sqrt(one/r3X )
   ! 1-1 
   r2 = r1X * r1X
   Vel = crg1*crg1*r1X
@@ -13062,7 +13061,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_11*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 - 6 !move pointer back to 1 in interacting mol.
   d((i3  )) = d((i3  )) -(dv*dx1X)
   d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13077,7 +13076,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_12*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 2 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx2X)
   d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13092,7 +13091,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_13*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 3 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx3X)
   d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13121,9 +13120,9 @@ do while (nbww(ip) /= 0)
   dy3X = x((j3+1))-x((i3+1))
   dz3X = x((j3+2))-x((i3+2))
   r3X = dx3X*dx3X+dy3X*dy3X+dz3X*dz3X
-  r1X=	sqrt(1._8/r1X  )
-  r2X=	sqrt(1._8/r2X )
-  r3X=	sqrt(1._8/r3X )
+  r1X=	sqrt(one/r1X  )
+  r2X=	sqrt(one/r2X )
+  r3X=	sqrt(one/r3X )
   ! 2-1 
   r2 = r1X * r1X
   Vel = crg2*crg1*r1X
@@ -13131,7 +13130,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_12*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 - 6 !move pointer back to o in j-mol.
   d((i3  )) = d((i3  )) -(dv*dx1X)
   d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13146,7 +13145,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_22*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 2 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx2X)
   d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13161,7 +13160,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_23*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 3 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx3X)
   d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13190,9 +13189,9 @@ do while (nbww(ip) /= 0)
   dy3X = x((j3+1))-x((i3+1))
   dz3X = x((j3+2))-x((i3+2))
   r3X = dx3X*dx3X+dy3X*dy3X+dz3X*dz3X
-  r1X=	sqrt(1._8/r1X  )
-  r2X=	sqrt(1._8/r2X )
-  r3X=	sqrt(1._8/r3X )
+  r1X=	sqrt(one/r1X  )
+  r2X=	sqrt(one/r2X )
+  r3X=	sqrt(one/r3X )
   ! 3-1 
   r2 = r1X * r1X
   Vel = crg3*crg1*r1X
@@ -13200,7 +13199,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_13*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 - 6 !move pointer back to o in j-mol.
   d((i3  )) = d((i3  )) -(dv*dx1X)
   d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13215,7 +13214,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_23*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 2 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx2X)
   d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13230,7 +13229,7 @@ do while (nbww(ip) /= 0)
   V_b  = B_33*(r2*r2*r2)
   E%ww%vdw = E%ww%vdw + V_a-V_B
   E%ww%el = E%ww%el + Vel
-  dv = r2*( -Vel -12.*V_a +6.*V_b )
+  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
   j3 = j3 +3 !point to 3 in j-molecule
   d((i3  )) = d((i3  )) -(dv*dx3X)
   d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13254,21 +13253,21 @@ subroutine nonbond_3atomsolvent_box
   ! local variables
   integer						:: iw,ip,i,j,i3,j3, ia
   integer						:: ipstart
-  real(8)						::	r1X, r2X, r3X, r2
-  real(8)						::	dx1X,  dy1X,  dz1X
-  real(8)						::	dx2X, dy2X, dz2X
-  real(8)						::	dx3X, dy3X, dz3X
-  real(8)						::	Vel,V_a,V_b,dv
-  real(8), save					::	A_11, B_11, A_12, B_12, A_13, B_13
-  real(8), save					::	A_22, B_22, A_23, B_23, A_33, B_33
+  real(kind=prec)						::	r1X, r2X, r3X, r2
+  real(kind=prec)						::	dx1X,  dy1X,  dz1X
+  real(kind=prec)						::	dx2X, dy2X, dz2X
+  real(kind=prec)						::	dx3X, dy3X, dz3X
+  real(kind=prec)						::	Vel,V_a,V_b,dv
+  real(kind=prec), save					::	A_11, B_11, A_12, B_12, A_13, B_13
+  real(kind=prec), save					::	A_22, B_22, A_23, B_23, A_33, B_33
   real, save					::	crg1, crg2, crg3
   integer						::	iac1, iac2, iac3
-  real(8)						::  boxshiftx, boxshifty, boxshiftz
+  real(kind=prec)						::  boxshiftx, boxshifty, boxshiftz
 
   ! global variables used:
   !  iaclib, nat_solute, x, E, d
 
-  if(A_11 == 0.) then !initialize static variables
+  if(A_11 == zero) then !initialize static variables
 	iac1 = iac(nat_solute+1)
 	iac2 = iac(nat_solute+2)
 	iac3 = iac(nat_solute+3)
@@ -13347,9 +13346,9 @@ subroutine nonbond_3atomsolvent_box
 	  r2X = dx2X*dx2X + dy2X*dy2X + dz2X*dz2X
 	  r3X = dx3X*dx3X + dy3X*dy3X + dz3X*dz3X
 
-	  r1X=	sqrt(1._8/r1X  )
-	  r2X=	sqrt(1._8/r2X )
-	  r3X=	sqrt(1._8/r3X )
+	  r1X=	sqrt(one/r1X  )
+	  r2X=	sqrt(one/r2X )
+	  r3X=	sqrt(one/r3X )
 	  ! 1-1 
 	  r2 = r1X * r1X
 	  Vel = crg1*crg1*r1X
@@ -13357,7 +13356,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_11*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 - 6 !move pointer back to 1 in interacting mol.
 	  d((i3  )) = d((i3  )) -(dv*dx1X)
 	  d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13372,7 +13371,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_12*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 2 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx2X)
 	  d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13387,7 +13386,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_13*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 3 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx3X)
 	  d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13426,9 +13425,9 @@ subroutine nonbond_3atomsolvent_box
 	  r1X = dx1X*dx1X + dy1X*dy1X + dz1X*dz1X
 	  r2X = dx2X*dx2X + dy2X*dy2X + dz2X*dz2X
 	  r3X = dx3X*dx3X + dy3X*dy3X + dz3X*dz3X
-	  r1X=	sqrt(1._8/r1X  )
-	  r2X=	sqrt(1._8/r2X )
-	  r3X=	sqrt(1._8/r3X )
+	  r1X=	sqrt(one/r1X  )
+	  r2X=	sqrt(one/r2X )
+	  r3X=	sqrt(one/r3X )
 	  ! 2-1 
 	  r2 = r1X * r1X
 	  Vel = crg2*crg1*r1X
@@ -13436,7 +13435,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_12*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 - 6 !move pointer back to o in j-mol.
 	  d((i3  )) = d((i3  )) -(dv*dx1X)
 	  d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13451,7 +13450,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_22*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 2 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx2X)
 	  d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13466,7 +13465,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_23*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 3 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx3X)
 	  d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13505,9 +13504,9 @@ subroutine nonbond_3atomsolvent_box
 	  r1X = dx1X*dx1X + dy1X*dy1X + dz1X*dz1X
 	  r2X = dx2X*dx2X + dy2X*dy2X + dz2X*dz2X
 	  r3X = dx3X*dx3X + dy3X*dy3X + dz3X*dz3X
-	  r1X=	sqrt(1._8/r1X  )
-	  r2X=	sqrt(1._8/r2X )
-	  r3X=	sqrt(1._8/r3X )
+	  r1X=	sqrt(one/r1X  )
+	  r2X=	sqrt(one/r2X )
+	  r3X=	sqrt(one/r3X )
 	  ! 3-1 
 	  r2 = r1X * r1X
 	  Vel = crg3*crg1*r1X
@@ -13515,7 +13514,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_13*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 - 6 !move pointer back to o in j-mol.
 	  d((i3  )) = d((i3  )) -(dv*dx1X)
 	  d((j3  )) = d((j3  )) +(dv*dx1X)
@@ -13530,7 +13529,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_23*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 2 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx2X)
 	  d((j3  )) = d((j3  )) +(dv*dx2X)
@@ -13545,7 +13544,7 @@ subroutine nonbond_3atomsolvent_box
 	  V_b  = B_33*(r2*r2*r2)
 	  E%ww%vdw = E%ww%vdw + V_a-V_B
 	  E%ww%el = E%ww%el + Vel
-	  dv = r2*( -Vel -12.*V_a +6.*V_b )
+	  dv = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
 	  j3 = j3 +3 !point to 3 in j-molecule
 	  d((i3  )) = d((i3  )) -(dv*dx3X)
 	  d((j3  )) = d((j3  )) +(dv*dx3X)
@@ -13568,7 +13567,7 @@ end subroutine nonbond_3atomsolvent_box
 subroutine offdiag
 ! local variables
 integer						:: io,i,j,k,l,k3,l3
-real(8)						:: r
+real(kind=prec)						:: r
 
 ! global variables used:
 !  offd, noffd, iqseq, x, Hij, offd2
@@ -13597,9 +13596,9 @@ end subroutine offdiag
 subroutine p_restrain
 ! *** Local variables
 integer :: ir,i,j,k,i3,j3,k3,istate, n_ctr
-real(8) :: fk,r2,erst,Edum,x2,y2,z2,wgt,b,db,dv, totmass, theta,rij,r2ij,rjk,r2jk, scp,f1
-real(8) :: dr(3), dr2(3), ctr(3), di(3), dk(3)
-real(8)						::	fexp
+real(kind=prec) :: fk,r2,erst,Edum,x2,y2,z2,wgt,b,db,dv, totmass, theta,rij,r2ij,rjk,r2jk, scp,f1
+real(kind=prec) :: dr(3), dr2(3), ctr(3), di(3), dk(3)
+real(kind=prec)						::	fexp
 
 ! global variables used:
 !  E, nstates, EQ, nrstr_seq, rstseq, heavy, x, xtop, d, nrstr_pos, rstpos, nrstr_dist, 
@@ -13613,7 +13612,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
   ! restrain to geometrical centre
 
   ! reset dr & atom counter
-  dr(:) = 0.
+  dr(:) = zero
   n_ctr = 0
 
   ! calculate deviation from center
@@ -13630,13 +13629,13 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
         ! form average
         dr(:) = dr(:) / n_ctr 
         r2      = dr(1)**2 + dr(2)**2 + dr(3)**2
-        erst    = 0.5*fk*r2
+        erst    = 0.5_prec*fk*r2
         E%restraint%protein  = E%restraint%protein + erst
 
         ! apply same force to all atoms
         do i = rstseq(ir)%i, rstseq(ir)%j
         if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
-                d(i*3-2:i*3) = d(i*3-2:i*3) + fk*dr(:)*iaclib(iac(i))%mass/12.010
+                d(i*3-2:i*3) = d(i*3-2:i*3) + fk*dr(:)*iaclib(iac(i))%mass/12.010_prec
           end if
         end do
   end if
@@ -13644,8 +13643,8 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
 else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
   ! restrain to mass centre
   ! reset dr & variable to put masses
-  dr(:) = 0.
-  totmass = 0.
+  dr(:) = zero
+  totmass = zero
   
 ! calculate deviation from mass center
   do i = rstseq(ir)%i, rstseq(ir)%j
@@ -13661,7 +13660,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
         ! form average
         dr(:) = dr(:)/totmass                                  ! divide by total mass
         r2      = dr(1)**2 + dr(2)**2 + dr(3)**2
-        erst    = 0.5*fk*r2
+        erst    = 0.5_prec*fk*r2
         E%restraint%protein  = E%restraint%protein + erst
 
         ! apply same force to all atoms
@@ -13689,7 +13688,7 @@ else
        end if
           r2      = dr(1)**2 + dr(2)**2 + dr(3)**2
 
-          erst    = 0.5*fk*r2
+          erst    = 0.5_prec*fk*r2
           E%restraint%protein  = E%restraint%protein + erst
 
           d(i3+1) = d(i3+1) + fk*dr(1)
@@ -13713,16 +13712,16 @@ dr(3)  = x(i3+3) - rstpos(ir)%x(3)
 if ( istate .ne. 0 ) then
 wgt = EQ(istate)%lambda
 else
-wgt = 1.0
+wgt = one
 end if
 
 x2 = dr(1)**2
 y2 = dr(2)**2
 z2 = dr(3)**2
 
-Edum = 0.5*rstpos(ir)%fk(1)*x2 + &
-   0.5*rstpos(ir)%fk(2)*y2 + &
-   0.5*rstpos(ir)%fk(3)*z2
+Edum = 0.5_prec*rstpos(ir)%fk(1)*x2 + &
+   0.5_prec*rstpos(ir)%fk(2)*y2 + &
+   0.5_prec*rstpos(ir)%fk(3)*z2
 
 d(i3+1) = d(i3+1) + rstpos(ir)%fk(1)*dr(1)*wgt
 d(i3+2) = d(i3+2) + rstpos(ir)%fk(2)*dr(2)*wgt
@@ -13760,7 +13759,7 @@ end if
 if ( istate .ne. 0 ) then
 wgt = EQ(istate)%lambda
 else
-wgt = 1.0
+wgt = one
 end if
 
 b      = sqrt ( dr(1)**2 + dr(2)**2 + dr(3)**2 )
@@ -13773,7 +13772,7 @@ else
         cycle !skip zero force calculation
 endif
 
-Edum   = 0.5*rstdis(ir)%fk*db**2
+Edum   = 0.5_prec*rstdis(ir)%fk*db**2
 dv     = wgt*rstdis(ir)%fk*db/b
 
 d(j3+1) = d(j3+1) + dr(1)*dv
@@ -13829,7 +13828,7 @@ end if
 if ( istate .ne. 0 ) then
 wgt = EQ(istate)%lambda
 else
-wgt = 1.0
+wgt = one
 end if
 
 ! square distances from the triangle formed by the atoms i, j and k
@@ -13844,23 +13843,23 @@ scp = ( dr(1)*dr2(1) + dr(2)*dr2(2) + dr(3)*dr2(3) )
 scp = scp / ( rij*rjk )
 
 ! criteria inserted on the real angle force calculations to ensure no weird scp.
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 
 theta = acos(scp)
 db    = theta - (rstang(ir)%ang)*deg2rad
 
 ! dv is the force to be added in module
-Edum   = 0.5*rstang(ir)%fk*db**2
+Edum   = 0.5_prec*rstang(ir)%fk*db**2
 dv     = wgt*rstang(ir)%fk*db
 
 ! calculate sin(theta) to use in forces
 f1 = sin ( theta )
-if ( abs(f1) .lt. 1.e-12 ) then
+if ( abs(f1) .lt. 1.e-12_prec ) then
         ! avoid division by zero
-        f1 = -1.e12
+        f1 = -1.e12_prec
 else
-        f1 =  -1.0 / f1
+        f1 =  -one / f1
 end if
 
         ! calculate di and dk
@@ -13907,13 +13906,13 @@ do ir = 1, nrstr_wall
                         b     = sqrt ( dr(1)**2 + dr(2)**2 + dr(3)**2 )
                         db = b - rstwal(ir)%d
 
-                        if(db > 0.) then
-                                erst =  0.5 * fk * db**2 - rstwal(ir)%Dmorse
+                        if(db > zero) then
+                                erst =  0.5_prec * fk * db**2 - rstwal(ir)%Dmorse
                                 dv = fk*db/b
                         else
                                 fexp = exp(rstwal(ir)%aMorse*db)
-                                erst = rstwal(ir)%dMorse*(fexp*fexp-2.*fexp)
-                                dv=-2.*rstwal(ir)%dMorse*rstwal(ir)%aMorse*(fexp-fexp*fexp)/b
+                                erst = rstwal(ir)%dMorse*(fexp*fexp-2.0_prec*fexp)
+                                dv=-2.0_prec*rstwal(ir)%dMorse*rstwal(ir)%aMorse*(fexp-fexp*fexp)/b
                         end if
                         E%restraint%protein = E%restraint%protein + erst
 
@@ -13937,70 +13936,70 @@ subroutine pot_energy
 integer					:: istate, i, nat3, numrequest
 integer					:: is, j
 #if defined (PROFILING)
-real(8)					:: start_loop_time1
-real(8)					:: start_loop_time2
-real(8)					:: start_loop_time3
+real(kind=prec)					:: start_loop_time1
+real(kind=prec)					:: start_loop_time2
+real(kind=prec)					:: start_loop_time3
 #endif
 
 ! --- reset all energies
 
-E%potential = 0.0
-!E%kinetic = 0.0	! no need to reset because it will be assigned its final value at once
-E%LRF = 0.0
-E%p%bond  = 0.0
-E%p%angle = 0.0
-E%p%torsion = 0.0
-E%p%improper = 0.0
-E%w%bond  = 0.0
-E%w%angle = 0.0
-E%w%torsion = 0.0
-E%w%improper = 0.0
-E%q%bond  = 0.0
-E%q%angle = 0.0
-E%q%torsion   = 0.0
-E%q%improper   = 0.0
-E%pp%el  = 0.0
-E%pp%vdw = 0.0
-E%pw%el  = 0.0
-E%pw%vdw = 0.0
-E%ww%el  = 0.0
-E%ww%vdw = 0.0
-E%qx%el    = 0.0
-E%qx%vdw   = 0.0
-!E%restraint%total = 0.0	! will be assigned its final value later
-E%restraint%fix = 0.0
-E%restraint%shell = 0.0
-E%restraint%protein = 0.0
-E%restraint%solvent_radial = 0.0
-E%restraint%water_pol = 0.0
+E%potential = zero
+!E%kinetic = zero	! no need to reset because it will be assigned its final value at once
+E%LRF = zero
+E%p%bond  = zero
+E%p%angle = zero
+E%p%torsion = zero
+E%p%improper = zero
+E%w%bond  = zero
+E%w%angle = zero
+E%w%torsion = zero
+E%w%improper = zero
+E%q%bond  = zero
+E%q%angle = zero
+E%q%torsion   = zero
+E%q%improper   = zero
+E%pp%el  = zero
+E%pp%vdw = zero
+E%pw%el  = zero
+E%pw%vdw = zero
+E%ww%el  = zero
+E%ww%vdw = zero
+E%qx%el    = zero
+E%qx%vdw   = zero
+!E%restraint%total = zero	! will be assigned its final value later
+E%restraint%fix = zero
+E%restraint%shell = zero
+E%restraint%protein = zero
+E%restraint%solvent_radial = zero
+E%restraint%water_pol = zero
 do istate = 1, nstates
 !EQ(istate)%lambda set by initialize
 !EQ(istate)%total assigned its final value later
-EQ(istate)%q%bond = 0.0
-EQ(istate)%q%angle = 0.0
-EQ(istate)%q%torsion = 0.0
-EQ(istate)%q%improper = 0.0
-!EQ(istate)%qx%el = 0.0	! assigned its final value later
-!EQ(istate)%qx%vdw = 0.0	! assigned its final value later
-EQ(istate)%qq%el = 0.0
-EQ(istate)%qq%vdw = 0.0
-EQ(istate)%qp%el = 0.0
-EQ(istate)%qp%vdw = 0.0
-EQ(istate)%qw%el = 0.0
-EQ(istate)%qw%vdw = 0.0
-EQ(istate)%restraint = 0.0
+EQ(istate)%q%bond = zero
+EQ(istate)%q%angle = zero
+EQ(istate)%q%torsion = zero
+EQ(istate)%q%improper = zero
+!EQ(istate)%qx%el = zero	! assigned its final value later
+!EQ(istate)%qx%vdw = zero	! assigned its final value later
+EQ(istate)%qq%el = zero
+EQ(istate)%qq%vdw = zero
+EQ(istate)%qp%el = zero
+EQ(istate)%qp%vdw = zero
+EQ(istate)%qw%el = zero
+EQ(istate)%qw%vdw = zero
+EQ(istate)%restraint = zero
 if (use_excluded_groups) then
         do j=1,ngroups_gc
-        EQ_gc(j,istate)%qq%el = 0.0
-        EQ_gc(j,istate)%qq%vdw = 0.0
-        EQ_gc(j,istate)%qp%el = 0.0
-        EQ_gc(j,istate)%qp%vdw = 0.0
+        EQ_gc(j,istate)%qq%el = zero
+        EQ_gc(j,istate)%qq%vdw = zero
+        EQ_gc(j,istate)%qp%el = zero
+        EQ_gc(j,istate)%qp%vdw = zero
         end do
 end if
 end do
 
 !reset derivatives ---
-d(:) = 0.
+d(:) = zero
 
 ! --- calculate the potential energy and derivatives ---
 ! *** nonbonds distribueras
@@ -14390,7 +14389,7 @@ end subroutine prep_coord
 subroutine make_shell
 ! *** Local variables
 	integer						::	i,ig,i3
-	real(8)						::	rin2,r2
+	real(kind=prec)						::	rin2,r2
 
 	nshellats = 0
 	rin2  = rexcl_i**2
@@ -14423,8 +14422,8 @@ end subroutine make_shell
 subroutine make_shell2
 ! *** Local variables
 	integer						::	i,ig,i3,k
-	real(8)						::	rout2,rin2,r2
-	real(8), allocatable		::	cgp_cent(:,:)
+	real(kind=prec)						::	rout2,rin2,r2
+	real(kind=prec), allocatable		::	cgp_cent(:,:)
 	nshellats = 0
 	rin2  = rexcl_i**2
 
@@ -14432,7 +14431,7 @@ subroutine make_shell2
 
 	allocate(cgp_cent(3,ncgp+nwat))
 
-	cgp_cent(:,:) = 0.
+	cgp_cent(:,:) = zero
 
 	do ig=1,ncgp_solute
     if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then
@@ -14494,7 +14493,7 @@ if(nwat > 0) then
         select case (solvent_type)
         case (SOLVENT_SPC, SOLVENT_3ATOM)
                 crg_ow = crg(nat_solute+1)
-                crg_hw = -crg_ow/2.0
+                crg_hw = -crg_ow/2.0_prec
         case(SOLVENT_GENERAL)
                 !add appropriate code here
                 call die('Topology contains mixed or non-3-atomic solvent. This feature is not implemented yet.')
@@ -14507,7 +14506,7 @@ if(nwat > 0) then
         else !compute charges of the system for box case 
         !(done in subroutine wat_sphere for sphere case)
                 !calc. total charge of non-Q-atoms
-                crgtot = 0.0
+                crgtot = zero
                 do i = 1, nat_solute
                         if ( iqatom(i)==0 ) crgtot = crgtot + crg(i)
                 end do
@@ -14516,7 +14515,7 @@ if(nwat > 0) then
 
 
         !calc effective charge of whole system at this lambda
-                crgQtot = 0.0
+                crgQtot = zero
                 do i = 1, nqat
                         do istate = 1, nstates
                         crgtot = crgtot + qcrg(i,istate)*EQ(istate)%lambda
@@ -14542,7 +14541,7 @@ if(use_LRF .or. use_PBC) then
 end if
 
 !	Prepare an array of inverse masses
-winv(:) = 1./iaclib(iac(:))%mass
+winv(:) = one/iaclib(iac(:))%mass
 
 
 if(use_PBC .and. control_box) then
@@ -14556,7 +14555,7 @@ end if
 if( use_PBC ) then 
         !compute masses of all molecules
         allocate(mol_mass(nmol))
-        mol_mass(:) = 0.0
+        mol_mass(:) = zero
 
         do i = 1,nmol-1 !all molecules but the last
                 do j = istart_mol(i), istart_mol(i+1)-1 !all atoms of molecule
@@ -14568,12 +14567,12 @@ if( use_PBC ) then
                 mol_mass(nmol) = mol_mass(nmol) + iaclib(iac(j))%mass
         end do
 
-        mol_mass(:) = 1./mol_mass(:)
+        mol_mass(:) = one/mol_mass(:)
 
         !prepare array of masses
         allocate(mass(natom))
 !make this a duplicate of the iaclib array to avoid truncation errors
-!        mass(:) = 1.0/winv(:)
+!        mass(:) = one/winv(:)
         mass(:)=iaclib(iac(:))%mass
 
 end if
@@ -14621,8 +14620,8 @@ integer						:: istate
 
 ! local variables
 integer						:: ia,i,j,k,ic,i3,j3,k3,im,icoupl,ib
-real(8)						:: bji,bjk,scp,ang,da,ae,dv,gamma
-real(8)						:: rji(3),rjk(3),f1,di(3),dk(3)
+real(kind=prec)						:: bji,bjk,scp,ang,da,ae,dv,gamma
+real(kind=prec)						:: rji(3),rjk(3),f1,di(3),dk(3)
 
 
 do ia = 1, nqangle
@@ -14632,7 +14631,7 @@ ic = qang(ia)%cod(istate)
  !skip if angle not present (code 0)
 if ( ic > 0 ) then
 
-gamma = 1.0
+gamma = one
 icoupl = 0
 
 do im = 1, nang_coupl
@@ -14641,7 +14640,7 @@ do im = 1, nang_coupl
       ib     = iang_coupl(2,im)
       gamma = EMorseD(ib)
 	  !couple improper to bond breaking not making
-	  if ( iang_coupl(3,im) .eq. 1) gamma = 1.0_8 - gamma
+	  if ( iang_coupl(3,im) .eq. 1) gamma = one - gamma
 	  exit
    end if
 end do
@@ -14663,17 +14662,17 @@ bji = sqrt ( rji(1)**2 + rji(2)**2 + rji(3)**2 )
 bjk = sqrt ( rjk(1)**2 + rjk(2)**2 + rjk(3)**2 )
 scp = ( rji(1)*rjk(1) + rji(2)*rjk(2) + rji(3)*rjk(3) )
 scp = scp / (bji*bjk)
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 ang = acos(scp)
 da = ang - qanglib(ic)%ang0
-ae = 0.5*qanglib(ic)%fk*da**2
+ae = 0.5_prec*qanglib(ic)%fk*da**2
 EQ(istate)%q%angle = EQ(istate)%q%angle + ae*gamma
 
 dv = gamma*qanglib(ic)%fk*da*EQ(istate)%lambda
 f1 = sin ( ang )
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rjk(1)/(bji*bjk) - scp*rji(1)/bji**2 )
 di(2) = f1 * ( rjk(2)/(bji*bjk) - scp*rji(2)/bji**2 )
 di(3) = f1 * ( rjk(3)/(bji*bjk) - scp*rji(3)/bji**2 )
@@ -14719,15 +14718,15 @@ integer						:: istate
 
 ! local variables
 integer						::	ia,i,j,k,ic,i3,j3,k3,im,icoupl,ib
-real(8)						::	gamma
-real(8)						::	rik(3), dik, du, ru, Eurey
+real(kind=prec)						::	gamma
+real(kind=prec)						::	rik(3), dik, du, ru, Eurey
 
 do ia = 1, nqangle
         ic = qang(ia)%cod(istate)
         !skip if angle not present (code 0)
-        if ( ic == 0  .or. qanglib(ic)%ureyfk == 0.) cycle
+        if ( ic == 0  .or. qanglib(ic)%ureyfk == zero) cycle
 
-gamma = 1.0
+gamma = one
 icoupl = 0
 
 do im = 1, nang_coupl
@@ -14791,8 +14790,8 @@ integer						::	istate
 
 ! local variables
 integer						::	ib,i,j,ic,i3,j3
-real(8)						::	b,db,be,dv,fexp
-real(8)						::	rij(3)
+real(kind=prec)						::	b,db,be,dv,fexp
+real(kind=prec)						::	rij(3)
 
 do ib = 1, nqbond
 
@@ -14813,10 +14812,10 @@ b = sqrt ( rij(1)**2 + rij(2)**2 + rij(3)**2 )
 db = b - qbondlib(ic)%r0
 
         fexp = exp ( -qbondlib(ic)%amz*db ) 
-        be = qbondlib(ic)%Dmz*(fexp*fexp-2.*fexp) + 0.5*qbondlib(ic)%fk*db**2
-        EMorseD(ib) = -(fexp*fexp-2.*fexp)
+        be = qbondlib(ic)%Dmz*(fexp*fexp-2.0_prec*fexp) + 0.5_prec*qbondlib(ic)%fk*db**2
+        EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
 EQ(istate)%q%bond = EQ(istate)%q%bond + be
-dv = (2.*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) + qbondlib(ic)%fk*db)*EQ(istate)%lambda/b
+dv = (2.0_prec*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) + qbondlib(ic)%fk*db)*EQ(istate)%lambda/b
 
 d(i3+1) = d(i3+1) - dv*rij(1)
 d(i3+2) = d(i3+2) - dv*rij(2)
@@ -14827,13 +14826,13 @@ d(j3+3) = d(j3+3) + dv*rij(3)
 
 !Force scaling factor to be 1 when distance is smaller than r0
  if ( db > 0 ) then
- 	EMorseD(ib) = -(fexp*fexp-2.*fexp)
- 	dMorse_i(:,ib) = +2.*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
- 	dMorse_j(:,ib) = -2.*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
+ 	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
+ 	dMorse_i(:,ib) = +2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
+ 	dMorse_j(:,ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
  else
- 	EMorseD(ib) = 1
- 	dMorse_i(:,ib) = 0
- 	dMorse_j(:,ib) = 0
+ 	EMorseD(ib) = one
+ 	dMorse_i(:,ib) = zero
+ 	dMorse_j(:,ib) = zero
  end if
 
 end if
@@ -14849,9 +14848,9 @@ integer						::	istate
 ! local variables
 integer						::	i,j,k,l,ip,ic,i3,j3,k3,l3
 integer						::	icoupl,im,ib
-real(8)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
-real(8)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
+real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqimp
 
@@ -14860,7 +14859,7 @@ ic = qimp(ip)%cod(istate)
 
 if ( ic > 0 ) then
 
-gamma = 1.0
+gamma = one
 icoupl = 0
 
 do im = 1, nimp_coupl
@@ -14908,8 +14907,8 @@ rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
 bj = sqrt ( rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
 bk = sqrt ( rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
 scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))/(bj*bk)
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 phi = acos ( scp )
 sgn =  rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
      +rjk(2)*(rnj(3)*rnk(1)-rnj(1)*rnk(3)) &
@@ -14920,18 +14919,18 @@ if ( sgn .lt. 0 ) phi = -phi
 
 arg = phi - qimplib(ic)%imp0
 !arg = phi - qimp0(ic)
-arg = arg - 2.*pi*nint(arg/(2.*pi))
+arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 dv = qimplib(ic)%fk*arg
 !dv  = qfkimp(ic)*arg
-pe  = 0.5*dv*arg
+pe  = 0.5_prec*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
 f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rnk(1)/(bj*bk) - scp*rnj(1)/bj**2 )
 di(2) = f1 * ( rnk(2)/(bj*bk) - scp*rnj(2)/bj**2 )
 di(3) = f1 * ( rnk(3)/(bj*bk) - scp*rnj(3)/bj**2 )
@@ -15002,9 +15001,9 @@ integer						::	istate
 ! local variables
 integer						::	i,j,k,l,ip,ic,i3,j3,k3,l3
 integer						::	icoupl,im,ib
-real(8)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
-real(8)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
+real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 
 do ip = 1,nqtor
 
@@ -15013,7 +15012,7 @@ ic = qtor(ip)%cod(istate)
 
 if ( ic > 0 ) then
 
-gamma = 1.0
+gamma = one
 icoupl = 0
 
 do im = 1, ntor_coupl
@@ -15057,8 +15056,8 @@ rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
 bj = sqrt ( rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
 bk = sqrt ( rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
 scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))/(bj*bk)
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 phi = acos ( scp )
 sgn =  rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
      +rjk(2)*(rnj(3)*rnk(1)-rnj(1)*rnk(3)) &
@@ -15073,9 +15072,9 @@ if ( sgn .lt. 0 ) phi = -phi
 ! ---       energy
 
 arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
-pe = qtorlib(ic)%fk*(1.0+cos(arg))
+pe = qtorlib(ic)%fk*(one+cos(arg))
 !arg = qrmult(ic)*phi-qdeltor(ic)
-!pe  = qfktor(ic)*(1.0+cos(arg))
+!pe  = qfktor(ic)*(one+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
 dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
 !dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
@@ -15083,8 +15082,8 @@ dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
 ! ---       forces
 
 f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rnk(1)/(bj*bk) - scp*rnj(1)/bj**2 )
 di(2) = f1 * ( rnk(2)/(bj*bk) - scp*rnj(2)/bj**2 )
 di(3) = f1 * ( rnk(3)/(bj*bk) - scp*rnj(3)/bj**2 )
@@ -15151,7 +15150,7 @@ end subroutine qtorsion
 !-----------------------------------------------------------------------
 
 
-real(8) function randm (ig)
+real(kind=prec) function randm (ig)
 ! arguments
 integer					::	ig
 
@@ -15160,7 +15159,7 @@ integer, parameter		::	m = 100000000
 integer, parameter		::  m1 = 10000
 integer, parameter		::	mult=31415821
 integer					::	irandh,irandl,multh,multl
-real(8)					::	r
+real(kind=prec)					::	r
 integer, save				::	irand = 0
 integer, save				::  new = 0
 
@@ -15180,8 +15179,8 @@ irand = mod(irandh*multl + irandl*multh, m1) * m1 + irandl*multl
 irand = mod(irand + 1, m)
 
 ! --- convert irand to a real random number between 0 and 1.
-r = real(irand / 10) * 10 / real(m)
-if ((r .le. 0.e0) .or. (r .gt. 1.e0)) r = 0.e0
+r = real(irand / 10, kind=prec) * 10 / real(m, kind=prec)
+if ((r .le. 0.e0_prec) .or. (r .gt. 1.e0_prec)) r = 0.e0_prec
 randm = r
 ig = irand
 
@@ -15191,15 +15190,15 @@ end function randm
 
 integer function shake(xx, x)
 !arguments
-real(8)						::	xx(:), x(:)
+real(kind=prec)						::	xx(:), x(:)
 !	returns no. of iterations
 
 ! *** local variables
 integer						::	i,j,i3,j3,mol,ic,nits
-real(8)						::	xij2,diff,corr,scp,xxij2
-real(8)						::	xij(3),xxij(3)
+real(kind=prec)						::	xij2,diff,corr,scp,xxij2
+real(kind=prec)						::	xij(3),xxij(3)
 #if defined (PROFILING)
-real(8)                                         :: start_loop_time
+real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
@@ -15235,7 +15234,7 @@ do mol=1,shake_molecules
                                 xxij(2) = xx(i3+2) - xx(j3+2)
                                 xxij(3) = xx(i3+3) - xx(j3+3)
                                 scp = xij(1)*xxij(1)+xij(2)*xxij(2)+xij(3)*xxij(3)
-                                corr = diff/(2.*scp*(winv(i)+winv(j)))
+                                corr = diff/(2.0_prec*scp*(winv(i)+winv(j)))
 
                                 x(i3+1) = x(i3+1)+xxij(1)*corr*winv(i)
                                 x(i3+2) = x(i3+2)+xxij(2)*corr*winv(i)
@@ -15392,13 +15391,13 @@ end subroutine shrink_topology
 subroutine stop_cm_translation
 ! local variables
 integer						::	i,j,k
-real(8)						::	rmass,totmass
-real(8)						::	vcm(3)
+real(kind=prec)						::	rmass,totmass
+real(kind=prec)						::	vcm(3)
 
 ! calculate totmass and vcm
-totmass = 0.0
+totmass = zero
 do i=1,3
-vcm(i) = 0.0
+vcm(i) = zero
 end do
 do i=1,natom
 rmass = iaclib(iac(i))%mass
@@ -15428,7 +15427,7 @@ subroutine topology
 ! local variables
 integer					::	nat3
 integer					::	i
-real(8)					::	box_min, vtemp, vtemp1
+real(kind=prec)					::	box_min, vtemp, vtemp1
 
 !
 ! read topology
@@ -15455,7 +15454,7 @@ if (natom .eq. 0) call die('zero particles to simulate')
 
 ! convert libraries from degrees to radians
 anglib(1:nangcod)%ang0 = deg2rad*anglib(1:nangcod)%ang0
-torlib(1:ntorcod)%paths = 1.0/torlib(1:ntorcod)%paths
+torlib(1:ntorcod)%paths = one/torlib(1:ntorcod)%paths
 torlib(1:ntorcod)%deltor = deg2rad*torlib(1:ntorcod)%deltor
 implib(1:nimpcod)%imp0 = deg2rad*implib(1:nimpcod)%imp0
 
@@ -15479,10 +15478,10 @@ call die('Must have same boundary (sphere or box) in topology and input file')
 end if
 
 if( use_PBC ) then
-if( any(boxlength(:) == 0.0 ) ) then
-        inv_boxl(:) = 0.0
+if( any(boxlength(:) == zero ) ) then
+        inv_boxl(:) = zero
 else
-        inv_boxl(:) = 1.0/boxlength(:)
+        inv_boxl(:) = one/boxlength(:)
 end if
 
 !check cut-offs if periodic box used
@@ -15512,16 +15511,16 @@ end subroutine topology
 
 !-----------------------------------------------------------------------
 
-real(8) function torsion(istart, iend)
+real(kind=prec) function torsion(istart, iend)
 !arguments
 integer						::	istart, iend
 
 ! local variables
 integer						::	ip
-real(8)						::	scp,phi,dv,arg,f1
-real(8)						::	bjinv, bkinv, bj2inv, bk2inv
-real(8), save					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(8), save					::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)						::	scp,phi,dv,arg,f1
+real(kind=prec)						::	bjinv, bkinv, bj2inv, bk2inv
+real(kind=prec), save					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec), save					::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::  t
 type(TORLIB_TYPE), pointer	::	lib
 
@@ -15531,7 +15530,7 @@ type(TORLIB_TYPE), pointer	::	lib
 ! calculate the total energy of all torsion angles
 ! updates d
 
-torsion = 0.
+torsion = zero
 
 do ip = iend, istart,-1
         t => tor(ip)
@@ -15553,19 +15552,19 @@ rnk(1) = -rjk(2)*rkl(3) + rjk(3)*rkl(2)
 rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
 rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
 
-        bj2inv = 1./(rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
-bk2inv = 1./(rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
+        bj2inv = one/(rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
+bk2inv = one/(rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
         bjinv = sqrt(bj2inv)
         bkinv = sqrt(bk2inv)
 
         ! calculate scp and phi
 scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))*(bjinv*bkinv)
-if ( scp .gt.  1.0 ) then
-                scp =  1.0
-                phi = acos (1.0) ! const
-        else if ( scp .lt. -1.0 ) then
-                scp = -1.0
-                phi = acos (-1.0) ! const
+if ( scp .gt.  one ) then
+                scp =  one
+                phi = acos (one) ! const
+        else if ( scp .lt. -one ) then
+                scp = -one
+                phi = acos (-one) ! const
         else
     phi = acos ( scp )
         end if
@@ -15578,14 +15577,14 @@ if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
 ! ---       energy
 
 arg = lib%rmult*phi-lib%deltor
-torsion = torsion + lib%fk*(1.0+cos(arg))*lib%paths   !lib%paths is previously inverted 
+torsion = torsion + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
 dv = -lib%rmult*lib%fk*sin(arg)*lib%paths
 
 ! ---       forces
 
 f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-f1 =  -1.0 / f1
+if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+f1 =  -one / f1
 di(1) = f1 * ( rnk(1)*(bjinv*bkinv) - scp*rnj(1)*bj2inv )
 di(2) = f1 * ( rnk(2)*(bjinv*bkinv) - scp*rnj(2)*bj2inv )
 di(3) = f1 * ( rnk(3)*(bjinv*bkinv) - scp*rnj(3)*bj2inv )
@@ -15633,17 +15632,17 @@ end function torsion
 subroutine restrain_solvent 
 ! local variables
 integer						::	iw,i,i3
-real(8)						::	b,db,erst,dv,fexp
-real(8), save					::	dr(3)
-real(8)						::	shift
+real(kind=prec)						::	b,db,erst,dv,fexp
+real(kind=prec), save					::	dr(3)
+real(kind=prec)						::	shift
 
 ! global variables used:
 !  E, Boltz, Tfree, fk_wsphere, nwat, nat_pro, x, xwcent, rwat, Dwmz, awmz, d
 
-if(fk_wsphere /= 0.) then
+if(fk_wsphere /= zero) then
         shift = sqrt (Boltz*Tfree/fk_wsphere)
 else
-        shift = 0.
+        shift = zero
 end if
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
@@ -15658,13 +15657,13 @@ do iw = ncgp_solute + 1, ncgp
 
         ! calculate erst and dv
         if ( db > 0 ) then
-                erst = 0.5 * fk_wsphere * db**2 - Dwmz
+                erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
                 dv = fk_wsphere*db/b
         else
-                if (b > 0.0) then
+                if (b > zero) then
                   fexp = exp ( awmz*db )
-                  erst = Dwmz*(fexp*fexp-2.*fexp)
-                  dv = -2.*Dwmz*awmz*(fexp-fexp*fexp)/b
+                  erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
+                  dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
                 else
                   dv = 0
                   erst = 0
@@ -15684,17 +15683,17 @@ end subroutine restrain_solvent
 subroutine wat_sphere
 ! local variables
 integer					:: i,i3,kr,isort,int_wat,istate
-real(8)					:: rc,rnwat
-real(8), save				:: dr(3)
-real(8)					:: crgexcl
+real(kind=prec)					:: rc,rnwat
+real(kind=prec), save				:: dr(3)
+real(kind=prec)					:: crgexcl
 
 !possibly override target sphere radius from topology
-if(rwat_in > 0.) rwat = rwat_in
+if(rwat_in > zero) rwat = rwat_in
 
 
 !calc. total charge of non-excluded non-Q-atoms and excluded atoms
-crgtot = 0.0
-crgexcl = 0.0
+crgtot = zero
+crgexcl = zero
 do i = 1, nat_solute
 	if ( .not. excl(i) ) then
 		if ( iqatom(i)==0 ) then
@@ -15709,7 +15708,7 @@ write (*,60) 'excluded atoms', crgexcl
 60 format ('Total charge of ',a,t41,'= ',f10.2)
 
 !calc effective charge of simulation sphere at this lambda
-crgQtot = 0.0
+crgQtot = zero
 do i = 1, nqat
 	do istate = 1, nstates
 		crgtot = crgtot + qcrg(i,istate)*EQ(istate)%lambda
@@ -15719,7 +15718,7 @@ end do
 write (*,70) crgtot
 70 format ('Total charge of system                  = ',f10.2)
 
-if (.not. wpol_born) crgQtot = 0.0 !ignore total Q if Born corr. is off
+if (.not. wpol_born) crgQtot = zero !ignore total Q if Born corr. is off
 if ( nwat .eq. 0 ) return
 
 
@@ -15737,10 +15736,10 @@ if(fkwpol == -1) then
         fkwpol = fkwpol_default
 end if
 if(Dwmz == -1) then !Use magic function to get suitable Dwmz
-        Dwmz = 0.26*exp(-0.19*(rwat-15.))+0.74
+        Dwmz = 0.26_prec*exp(-0.19_prec*(rwat-15.0_prec))+0.74_prec
 end if
 if(awmz == -1) then !use magic for the reach of the Morse potential
-        awmz = 0.2/(1.+exp(0.4*(rwat-25.)))+0.3
+        awmz = 0.2_prec/(one+exp(0.4_prec*(rwat-25.0_prec)))+0.3_prec
 end if
 
 write (*,90) rwat, fk_wsphere, Dwmz, awmz
@@ -15768,7 +15767,7 @@ subroutine wat_shells
 ! set up the shells for polarisation restraining
 
 ! local variables
-real(8)						::	rout, dr, ri, Vshell, rshell, drs
+real(kind=prec)						::	rout, dr, ri, Vshell, rshell, drs
 integer						::	is, n_insh
 
 
@@ -15787,7 +15786,7 @@ mu_w = -crg_ow*bondlib(bndcodw)%bnd0*cos(anglib(angcodw)%ang0/2)
 drs = wpolr_layer / drout !number of drouts 
 
 ! calc number of shells based on arithmetic series sum formula
-nwpolr_shell = int(-0.5 + sqrt(2*drs + 0.25)) 
+nwpolr_shell = int(-0.5_prec + sqrt(2*drs + 0.25_prec)) 
 allocate(wshell(nwpolr_shell), stat=alloc_status)
 call check_alloc('water polarisation shell array')
 
@@ -15798,14 +15797,14 @@ if(restart) then !try to load theta_corr from restart file
         read(2, iostat=filestat) nwpolr_shell_restart
         if(filestat /= 0 .or. nwpolr_shell_restart /= nwpolr_shell) then
                 write(*,102) 
-                wshell(:)%theta_corr = 0.
+                wshell(:)%theta_corr = zero
         else
                 backspace(2)
                 read(2) nwpolr_shell_restart, wshell(:)%theta_corr
                 write(*,103)
         end if
 else
-        wshell(:)%theta_corr = 0.
+        wshell(:)%theta_corr = zero
 end if
 
 102	format('>>> WARNING: Failed to read polarisation restraint data from restart file.')
@@ -15826,16 +15825,16 @@ do is = 1, nwpolr_shell
         Vshell = rout**3 - ri**3
         n_insh = int(4 * pi/3 * Vshell * rho_wat)
         if (n_insh > n_max_insh) n_max_insh = n_insh
-rshell = (0.5*(rout**3+ri**3))**(1./3.)
+rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
 
 
         ! --- Note below: 0.98750 = (1-1/epsilon) for water
-wshell(is)%cstb = crgQtot*0.98750/(rho_wat*mu_w*4.*pi*rshell**2)
+wshell(is)%cstb = crgQtot*0.98750_prec/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
         write(*, 110) is, rout, ri
         rout = rout - dr
 end do
 
-n_max_insh = n_max_insh * 1.5 !take largest and add some extra
+n_max_insh = n_max_insh * 1.5_prec !take largest and add some extra
 call allocate_watpol_arrays
 
 end subroutine wat_shells
@@ -15845,10 +15844,10 @@ end subroutine wat_shells
 subroutine watpol
 ! local variables
 integer						:: iw,is,i,i3,il,jl,jw,imin,jmin
-real(8)						:: dr,rw,rshell,rm,rc,scp
-real(8)						:: tmin,arg,avtdum,dv,f0
-real(8), save					:: f1(9),f2(3)
-real(8), save					:: rmu(3),rcu(3)
+real(kind=prec)						:: dr,rw,rshell,rm,rc,scp
+real(kind=prec)						:: tmin,arg,avtdum,dv,f0
+real(kind=prec), save					:: f1(9),f2(3)
+real(kind=prec), save					:: rmu(3),rcu(3)
 
 ! global variables used:
 !  E, wshell, bndw0, deg2rad, angw0, nwat, theta, theta0, nat_pro, x, xwcent,
@@ -15859,16 +15858,16 @@ wshell(:)%n_insh = 0
 
 ! calculate theta(:), tdum(:), wshell%n_insh
 do iw = 1, nwat
-theta(iw)  = 0.0
-theta0(iw) = 0.0
+theta(iw)  = zero
+theta0(iw) = zero
 
 i  = nat_solute + iw*3-2
 if(excl(i)) cycle ! skip excluded topology waters
 i3 = i*3-3
 
-rmu(1) = x(i3+4) + x(i3+7) - 2.*x(i3+1)   !Water vector
-rmu(2) = x(i3+5) + x(i3+8) - 2.*x(i3+2)
-rmu(3) = x(i3+6) + x(i3+9) - 2.*x(i3+3)
+rmu(1) = x(i3+4) + x(i3+7) - 2.0_prec*x(i3+1)   !Water vector
+rmu(2) = x(i3+5) + x(i3+8) - 2.0_prec*x(i3+2)
+rmu(3) = x(i3+6) + x(i3+9) - 2.0_prec*x(i3+3)
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
@@ -15883,8 +15882,8 @@ rcu(2) = rcu(2)/rc
 rcu(3) = rcu(3)/rc
 
 scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)   !Calculate angle between water vector and radial vector
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 theta(iw) = acos( scp )
 tdum(iw) = theta(iw)
 
@@ -15901,7 +15900,7 @@ end do
 do is = 1, nwpolr_shell
 imin = 0
 do il = 1, wshell(is)%n_insh
-tmin = 2.*pi
+tmin = 2.0_prec*pi
 do jl = 1, wshell(is)%n_insh
 jw = list_sh(jl,is)
 if ( tdum(jw) .lt. tmin ) then
@@ -15911,7 +15910,7 @@ end if
 end do
 imin = imin+1
 nsort(imin,is) = jmin
-  tdum(jmin) = 99999.
+  tdum(jmin) = 99999.0_prec
 
 end do
 
@@ -15922,31 +15921,31 @@ if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0) then
 call centered_heading('Water polarisation restraint data', '-')
 write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
-wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update)
-wshell(is)%avn_insh = wshell(is)%avn_insh / real (itdis_update)
+wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update, kind=prec)
+wshell(is)%avn_insh = wshell(is)%avn_insh / real (itdis_update, kind=prec)
 wshell(is)%theta_corr = wshell(is)%theta_corr + wshell(is)%avtheta-acos(wshell(is)%cstb)
 write (*,10) is,wshell(is)%avn_insh,wshell(is)%avtheta/deg2rad, &
      acos(wshell(is)%cstb)/deg2rad,wshell(is)%theta_corr/deg2rad
 10	  format(i5,1x,f6.1,3x,f8.3,3x,f8.3,3x,f8.3)
-wshell(is)%avtheta = 0.0
-wshell(is)%avn_insh = 0.0
+wshell(is)%avtheta = zero
+wshell(is)%avn_insh = zero
 end do
 end if
 
 do is = 1, nwpolr_shell
 if(wshell(is)%n_insh == 0) cycle !skip empty shell
-avtdum = 0.0
+avtdum = zero
 do il = 1, wshell(is)%n_insh
 iw = nsort(il,is)
-arg = 1. + (1. - 2.*real(il))/real(wshell(is)%n_insh)
+arg = one + (one - 2.0_prec*real(il, kind=prec))/real(wshell(is)%n_insh, kind=prec)
 theta0(il) = acos ( arg )
-theta0(il) = theta0(il)-3.*sin(theta0(il))*wshell(is)%cstb/2.
-if ( theta0(il) .lt. 0.0 ) theta0(il) = 0.0
+theta0(il) = theta0(il)-3.0_prec*sin(theta0(il))*wshell(is)%cstb/2.0_prec
+if ( theta0(il) .lt. zero ) theta0(il) = zero
 if ( theta0(il) .gt. pi)   theta0(il) = pi
 
 avtdum = avtdum + theta(iw)
 
-E%restraint%water_pol = E%restraint%water_pol + 0.5*fkwpol* &
+E%restraint%water_pol = E%restraint%water_pol + 0.5_prec*fkwpol* &
      (theta(iw)-theta0(il)+wshell(is)%theta_corr)**2
 
 dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
@@ -15954,9 +15953,9 @@ dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
 i  = nat_solute + iw*3-2
 i3 = i*3-3
 
-rmu(1) = x(i3+4) + x(i3+7) - 2.*x(i3+1)
-rmu(2) = x(i3+5) + x(i3+8) - 2.*x(i3+2)
-rmu(3) = x(i3+6) + x(i3+9) - 2.*x(i3+3)
+rmu(1) = x(i3+4) + x(i3+7) - 2.0_prec*x(i3+1)
+rmu(2) = x(i3+5) + x(i3+8) - 2.0_prec*x(i3+2)
+rmu(3) = x(i3+6) + x(i3+9) - 2.0_prec*x(i3+3)
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
@@ -15973,16 +15972,16 @@ rcu(3) = rcu(3)/rc
 
 
 scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)
-if ( scp .gt.  1.0 ) scp =  1.0
-if ( scp .lt. -1.0 ) scp = -1.0
+if ( scp .gt.  one ) scp =  one
+if ( scp .lt. -one ) scp = -one
 f0 = sin ( acos(scp) )
-if ( abs(f0) .lt. 1.e-12 ) f0 = 1.e-12
-f0 = -1.0 / f0
+if ( abs(f0) .lt. 1.e-12_prec ) f0 = 1.e-12_prec
+f0 = -one / f0
 f0 = dv*f0
 
-f1(1) = -2.*(rcu(1)-rmu(1)*scp)/rm
-f1(2) = -2.*(rcu(2)-rmu(2)*scp)/rm
-f1(3) = -2.*(rcu(3)-rmu(3)*scp)/rm
+f1(1) = -2.0_prec*(rcu(1)-rmu(1)*scp)/rm
+f1(2) = -2.0_prec*(rcu(2)-rmu(2)*scp)/rm
+f1(3) = -2.0_prec*(rcu(3)-rmu(3)*scp)/rm
 f1(4) =     (rcu(1)-rmu(1)*scp)/rm
 f1(5) =     (rcu(2)-rmu(2)*scp)/rm
 f1(6) =     (rcu(3)-rmu(3)*scp)/rm
@@ -16005,7 +16004,7 @@ d(i3+8) = d(i3+8) + f0 * ( f1(8) )
 d(i3+9) = d(i3+9) + f0 * ( f1(9) )
 end do
 
-wshell(is)%avtheta = wshell(is)%avtheta + avtdum/real(wshell(is)%n_insh)
+wshell(is)%avtheta = wshell(is)%avtheta + avtdum/real(wshell(is)%n_insh, kind=prec)
 wshell(is)%avn_insh = wshell(is)%avn_insh + wshell(is)%n_insh
 end do
 end subroutine watpol
@@ -16151,7 +16150,7 @@ if(use_PBC .and. constant_pressure .and. istep>=nsteps ) then
         write(*,45) boxlength(1)*boxlength(2)*boxlength(3)
         write(*,*)
         write(*,46) 'total', 'accepted', 'ratio'
-        write(*,47) 'Attempts', volume_try, volume_acc, real(volume_acc)/volume_try
+        write(*,47) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
 write(*,'(80a)') '==============================================================================='
 end if
 45 format('Final volume: ', f10.3)
@@ -16199,11 +16198,11 @@ end subroutine write_xfin
 !-----------------------------------------------------------------------
 subroutine put_back_in_box
 
-real(8)				::	boxc(1:3)
+real(kind=prec)				::	boxc(1:3)
 integer				::	i, j, starten, slutet
 !the borders of the periodic box
-real(8)				::	x_max, x_min, y_max, y_min, z_max, z_min
-real(8)				:: cm(1:3)
+real(kind=prec)				::	x_max, x_min, y_max, y_min, z_max, z_min
+real(kind=prec)				:: cm(1:3)
 integer				::  mvd_mol(1:nmol) !moved molecule 1=yes, 0=no
 integer				::  k, ig
 integer				::  pbib_start, pbib_stop
@@ -16218,7 +16217,7 @@ if( .not. rigid_box_centre ) then !if the box is allowed to float around, center
                 !starten = 1
         end if
         !find center
-        boxc(:) = 0.0
+        boxc(:) = zero
         do i = 1,slutet
                 boxc(1) = boxc(1) + x( 3*i-2 )
                 boxc(2) = boxc(2) + x( 3*i-1 )
@@ -16256,7 +16255,7 @@ end if
 
 
 do i=pbib_start,pbib_stop
-        cm(:) =0.0
+        cm(:) =zero
         do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
                 cm(1) = cm(1) + x(j*3-2)*mass(j)
                 cm(2) = cm(2) + x(j*3-1)*mass(j)
@@ -16325,7 +16324,7 @@ do k=pbib_start,pbib_stop
 										lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
 								end do
 
-						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1)
+						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
 						end do
 		end if 
 end do
@@ -16335,24 +16334,24 @@ end subroutine put_back_in_box
 !----------------------------------------------------------------------------
 subroutine MC_volume()
 
-real(8)									:: old_x(1:3*nat_pro), old_xx(1:3*nat_pro), x_move(1:3*nat_pro)
+real(kind=prec)									:: old_x(1:3*nat_pro), old_xx(1:3*nat_pro), x_move(1:3*nat_pro)
 type(ENERGIES)							:: old_E, previous_E
 type(Q_ENERGIES), dimension(1:nstates)	:: old_EQ
-real(8)									:: old_boxl(1:3), old_inv(1:3)
-real(8)									:: old_V, new_V, deltaLength
-real(8)									:: deltaV, deltaE, deltaW
-real(8)									:: box_min
+real(kind=prec)									:: old_boxl(1:3), old_inv(1:3)
+real(kind=prec)									:: old_V, new_V, deltaLength
+real(kind=prec)									:: deltaV, deltaE, deltaW
+real(kind=prec)									:: box_min
 integer									:: starten, slutet, i, j, sw_no !indeces
-real(8)									:: randomno !random number
-real(8)									:: new_x, new_y, new_z
-real(8)									:: move_x, move_y, move_z
+real(kind=prec)									:: randomno !random number
+real(kind=prec)									:: new_x, new_y, new_z
+real(kind=prec)									:: move_x, move_y, move_z
 logical									:: acc
 integer									:: longest , niter
-real(8)									:: cubr_vol_ratio
-real(8)									:: cm(1:3)
-real(8)									::	old_EMorseD(max_qat)
-real(8)									::	old_dMorse_i(3,max_qat)
-real(8)									::	old_dMorse_j(3,max_qat)
+real(kind=prec)									:: cubr_vol_ratio
+real(kind=prec)									:: cm(1:3)
+real(kind=prec)									::	old_EMorseD(max_qat)
+real(kind=prec)									::	old_dMorse_i(3,max_qat)
+real(kind=prec)									::	old_dMorse_j(3,max_qat)
 type(NB_TYPE), allocatable						::old_nbpp(:)
 type(NB_TYPE), allocatable						::old_nbpw(:)
 integer(AI), allocatable						::old_nbww(:)
@@ -16439,7 +16438,7 @@ if (nodeid .eq. 0 ) then
 	randomno = randomno*2 - 1    !-1 <= randomno <= 1
 	deltaV = randomno * max_vol_displ
 	new_V = deltaV + old_V
-	cubr_vol_ratio = (new_V/old_V)**(1./3.)
+	cubr_vol_ratio = (new_V/old_V)**(one/3.0_prec)
 	write(*,4) 'old', 'new', 'delta'
 	write(*,6) 'Volume', old_V, new_V, deltaV
 	write(*,*)
@@ -16448,7 +16447,7 @@ if (nodeid .eq. 0 ) then
 	boxlength(1) = boxlength(1)*cubr_vol_ratio
 	boxlength(2) = boxlength(2)*cubr_vol_ratio
 	boxlength(3) = boxlength(3)*cubr_vol_ratio
-	inv_boxl(:) = 1.0/boxlength(:)
+	inv_boxl(:) = one/boxlength(:)
 	write(*,10) old_boxl
 	write(*,2) boxlength
 	write(*,*)
@@ -16487,7 +16486,7 @@ if (nodeid .eq. 0 ) then
 
 		!compute new coordinates after molecules and centre of mass
 		do i=1,nmol-1 !looping over all molecules but the last one
-			cm(:) =0.0
+			cm(:) =zero
 			do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
 				cm(1) = cm(1) + x(j*3-2)*mass(j)
 				cm(2) = cm(2) + x(j*3-1)*mass(j)
@@ -16508,7 +16507,7 @@ if (nodeid .eq. 0 ) then
 		end do !over molecules
 
 		! the last molecule
-		cm(:) = 0.0
+		cm(:) = zero
 		do j = istart_mol(nmol),natom
 			cm(1) = cm(1) + x(j*3-2)*mass(j)
 			cm(2) = cm(2) + x(j*3-1)*mass(j)
@@ -16588,7 +16587,7 @@ if (nodeid .eq. 0) then
 	write(*,*)
 
 	!accept or reject
-	if( deltaW<=0.0 ) then
+	if( deltaW<=zero ) then
 	acc = .true.
 	else
 	!slumpa tal mellan  0 coh 1
@@ -16668,13 +16667,13 @@ end if
 
 	write(*,11) boxlength(1)*boxlength(2)*boxlength(3)
 	write(*,12) boxlength
-	write(*,13) sum(mass(:))/(boxlength(1)*boxlength(2)*boxlength(3)*1E-24*6.02E23)
+	write(*,13) sum(mass(:))/(boxlength(1)*boxlength(2)*boxlength(3)*1E-24_prec*6.02E23_prec)
 	11 format('Final volume: ', f10.3)
 	12 format('Final boxlength: ', 3f10.3)
 	13 format('Final density (g/cm^3): ', f10.3)
 	write(*,*)
 	write(*,4) 'total', 'accepted', 'ratio'
-	write(*,7) 'Attempts', volume_try, volume_acc, real(volume_acc)/volume_try
+	write(*,7) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
 	write(*,*)
 	7 format(A,T17, 2i10, f10.3)
 	write(*,'(80a)') '==============================================================================='
@@ -16699,40 +16698,40 @@ type(ENERGIES), intent(in)		:: old
 integer							:: istate,i, numrequest
 
 !zero all energies
-E%potential = 0.0
-E%pp%el  = 0.0
-E%pp%vdw = 0.0
-E%pw%el  = 0.0
-E%pw%vdw = 0.0
-E%ww%el  = 0.0
-E%ww%vdw = 0.0
-E%qx%el    = 0.0
-E%qx%vdw   = 0.0
-E%restraint%protein = 0.0
-E%LRF      = 0.0 
-E%p%bond =  0.0
-E%w%bond =  0.0
-E%p%angle =  0.0
-E%w%angle =  0.0
-E%p%angle =  0.0
-E%w%angle =  0.0
-E%p%torsion =  0.0
-E%w%torsion =  0.0
-E%p%improper =  0.0
-E%w%improper =  0.0
+E%potential = zero
+E%pp%el  = zero
+E%pp%vdw = zero
+E%pw%el  = zero
+E%pw%vdw = zero
+E%ww%el  = zero
+E%ww%vdw = zero
+E%qx%el    = zero
+E%qx%vdw   = zero
+E%restraint%protein = zero
+E%LRF      = zero
+E%p%bond =  zero
+E%w%bond =  zero
+E%p%angle =  zero
+E%w%angle =  zero
+E%p%angle =  zero
+E%w%angle =  zero
+E%p%torsion =  zero
+E%w%torsion =  zero
+E%p%improper =  zero
+E%w%improper =  zero
 
 do istate = 1, nstates
-	EQ(istate)%qq%el = 0.0
-	EQ(istate)%qq%vdw = 0.0
-	EQ(istate)%qp%el = 0.0
-	EQ(istate)%qp%vdw = 0.0
-	EQ(istate)%qw%el = 0.0
-	EQ(istate)%qw%vdw = 0.0
-	EQ(istate)%restraint = 0.0
+	EQ(istate)%qq%el = zero
+	EQ(istate)%qq%vdw = zero
+	EQ(istate)%qp%el = zero
+	EQ(istate)%qp%vdw = zero
+	EQ(istate)%qw%el = zero
+	EQ(istate)%qw%vdw = zero
+	EQ(istate)%restraint = zero
 end do
 
 !reset derivatives ---
-d(:) = 0.0
+d(:) = zero
 
 #if defined (USE_MPI)
 !First post recieves for gathering data from slaves

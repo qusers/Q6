@@ -20,7 +20,7 @@ implicit none
 	character(*), private, parameter	:: MODULE_DATE    = '2014-01-01'
 
 !	Constants
-	real(8), private					:: pi, deg2rad	!set in sub startup
+	real(kind=prec), private					:: pi, deg2rad	!set in sub startup
 
 !-----------------------------------------------------------------------
 !	fep/evb information
@@ -47,9 +47,9 @@ implicit none
 	integer(AI), allocatable							::	iqexpnb(:), jqexpnb(:)
 
 	integer									::	nqlib
-	real(8), allocatable		::	qcrg(:,:)
-	real(8), allocatable		::	qmass(:)
-	real(8), allocatable		::	qavdw(:,:), qbvdw(:,:)
+	real(kind=prec), allocatable		::	qcrg(:,:)
+	real(kind=prec), allocatable		::	qmass(:)
+	real(kind=prec), allocatable		::	qavdw(:,:), qbvdw(:,:)
 
 	integer				::	nqbond
 
@@ -60,9 +60,9 @@ implicit none
 
 	type QBONDLIB_TYPE
 		!Morse diss. en, Morse Alpha, Morse/Harm. r0
-		real(8)					::	Dmz, amz, r0
+		real(kind=prec)					::	Dmz, amz, r0
 		!Harm. force const
-		real(8)					::	fk
+		real(kind=prec)					::	fk
 	end type QBONDLIB_TYPE
 
 	type(QBOND_TYPE), allocatable	 :: qbnd(:)
@@ -84,7 +84,7 @@ implicit none
 !Paul October 2014
 !	integer(AI), allocatable			::	iqtor(:),jqtor(:),kqtor(:),lqtor(:)
 !	integer(TINY), allocatable		::	qtorcod(:,:)
-!	real(8), allocatable					::	qfktor(:),qrmult(:),qdeltor(:)
+!	real(kind=prec), allocatable					::	qfktor(:),qrmult(:),qdeltor(:)
 
 	type QTORSION_TYPE
 		integer(AI)			:: i,j,k,l
@@ -92,11 +92,11 @@ implicit none
 	end type QTORSION_TYPE
 
 	type QTORLIB_TYPE
-		real(8)				:: fk,rmult,deltor,paths
+		real(kind=prec)				:: fk,rmult,deltor,paths
 	end type QTORLIB_TYPE
 
 	type QIMPLIB_TYPE
-		real(8)				:: fk,imp0
+		real(kind=prec)				:: fk,imp0
 	end type QIMPLIB_TYPE
 
 	type(QTORSION_TYPE),allocatable		:: qtor(:),qimp(:)
@@ -106,7 +106,7 @@ implicit none
 	integer						::	nqimp
 !	integer(AI), allocatable	::	iqimp(:),jqimp(:),kqimp(:),lqimp(:)
 !	integer(TINY), allocatable	::	qimpcod(:,:)
-!	real(8), allocatable		::	qfkimp(:),qimp0(:)
+!	real(kind=prec), allocatable		::	qfkimp(:),qimp0(:)
 
 	integer						::	nang_coupl,ntor_coupl,nimp_coupl
 	integer(AI)					::	iang_coupl(3,max_qat)
@@ -115,7 +115,7 @@ implicit none
 
 	integer						::	nqshake
 	integer(AI)				::	iqshake(max_qat),jqshake(max_qat)
-	real(8)						::	qshake_dist(max_qat,max_states)
+	real(kind=prec)						::	qshake_dist(max_qat,max_states)
 
 	integer						::	noffd
 	type(OFFDIAG_SAVE), allocatable::	offd(:)
@@ -131,8 +131,8 @@ implicit none
 	! Monitoring of nonbonded interactions between selected groups of atoms
 	type monitor_group_pair_TYPE
 		integer					::	i,j
-		real(8)					::	Vel(max_states), Vlj(max_states)
-		real(8)					::	Vwel, Vwlj, Vwsum
+		real(kind=prec)					::	Vel(max_states), Vlj(max_states)
+		real(kind=prec)					::	Vwel, Vwlj, Vwsum
 	end type  monitor_group_pair_TYPE
 
 	type(monitor_group_pair_TYPE), allocatable::monitor_group_pair(:)
@@ -154,7 +154,7 @@ implicit none
 	!type holding all scaling factors for electostatic interactions in qq-pairs
 	type qq_el_scale_TYPE
 		integer(AI)      ::iqat,jqat
-		real(8)          ::el_scale(max_states)! to hold the el_scale for different states "masoud Oct_2013"
+		real(kind=prec)          ::el_scale(max_states)! to hold the el_scale for different states "masoud Oct_2013"
 	end type qq_el_scale_TYPE
 
 	type(qq_el_scale_TYPE),allocatable             :: qq_el_scale(:)
@@ -162,8 +162,8 @@ implicit none
 	integer               ::nel_scale !number of defined scale factors
 
     	integer						::	tmpindex,numsoftlines,i2
-    	real(8), allocatable				::	sc_lookup(:,:,:), alpha_max(:,:)
-		real(8)						::	sc_aq,sc_bq,sc_aj,sc_bj,alpha_max_tmp
+    	real(kind=prec), allocatable				::	sc_lookup(:,:,:), alpha_max(:,:)
+		real(kind=prec)						::	sc_aq,sc_bq,sc_aj,sc_bj,alpha_max_tmp
 		logical						::  softcore_use_max_potential
 
 !New data structure for keeping the bond information
@@ -187,10 +187,10 @@ implicit none
 	type(Q_ENERGIES), allocatable::	EQ(:)
 !New arrays for excluded groups in group contribution calculation
 	type(Q_ENERGIES), allocatable:: EQ_gc(:,:)
-	real(8)						::	Hij(max_states,max_states)
-	real(8)						::	EMorseD(max_qat)
-	real(8)						::	dMorse_i(3,max_qat)
-	real(8)						::	dMorse_j(3,max_qat)
+	real(kind=prec)						::	Hij(max_states,max_states)
+	real(kind=prec)						::	EMorseD(max_qat)
+	real(kind=prec)						::	dMorse_i(3,max_qat)
+	real(kind=prec)						::	dMorse_j(3,max_qat)
 
 !miscellany
 	logical						::	use_new_fep_format
@@ -205,8 +205,8 @@ subroutine qatom_startup
 	call nrgy_startup
 
 	! initialise constants
-	pi = 4.0*atan(1.0)
-	deg2rad = pi/180.0
+	pi = 4.0_prec*atan(1.0_prec)
+	deg2rad = pi/180.0_prec
 
 100	format(a,' module',t30,'version ',a,t50,'(modified on ',a,')')
 end subroutine qatom_startup
@@ -586,7 +586,7 @@ logical function qatom_load_fep(fep_file)
   character(len=40)			::	section
   logical, allocatable, dimension(:)		::	type_read
   integer					::	type_count, filestat
-  real(8)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
+  real(kind=prec)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
   integer                   ::  stat
 !New temporary variables for sanity checks
 !Paul October 2014, ICM meeting used for something useful
@@ -997,8 +997,8 @@ logical function qatom_load_fep(fep_file)
 	type_read(:) = .false.
 		allocate(qanglib(nqacod))
 		!set optional params to 0
-		qanglib(:)%ureyfk = 0.
-		qanglib(:)%ureyr0 = 0.
+		qanglib(:)%ureyfk = 0.0_prec
+		qanglib(:)%ureyr0 = 0.0_prec
 		write (*,'(/,a)') 'Q-angle types:'
 		write (*,'(a)', advance='no') 'type #       force-k   theta0'
 		do i=1,type_count
@@ -1148,8 +1148,8 @@ logical function qatom_load_fep(fep_file)
 !now allocate new qanglib with nqacod+1
 			allocate(qanglib(nqacod+1),stat=alloc_status_qat)
 			call check_alloc_general(alloc_status_qat,'Allocating new qangle code lib')
-			qanglib(:)%ureyfk = 0.
-                        qanglib(:)%ureyr0 = 0.
+			qanglib(:)%ureyfk = 0.0_prec
+                        qanglib(:)%ureyr0 = 0.0_prec
 !if the old library is there, copy it into the new array
 			if (allocated(tmp_qanglib)) then
 			qanglib(1:nqacod)=tmp_qanglib(1:nqacod)
@@ -1801,7 +1801,7 @@ logical function qatom_load_fep(fep_file)
 	allocate (alpha_max(nqat,nstates),sc_lookup(nqat,natyps+nqat,nstates))
 
 	!default is no softcore, i.e. alpha=zero (sc_lookup = 0)
-	sc_lookup(:,:,:)=0.0
+	sc_lookup(:,:,:)=0.0_prec
 
 	section = 'softcore'
 	if(.not. prm_open_section(section)) then
@@ -1870,7 +1870,7 @@ logical function qatom_load_fep(fep_file)
 					end do
 
 					do j=1,nqat  !now do q-q
-						if ((alpha_max(i,i2) .gt. 1E-6) .or. (alpha_max(j,i2) .gt. 1E-6)) then !if both alphas are 0 then no need to calculate alphas
+						if ((alpha_max(i,i2) .gt. 1E-6_prec) .or. (alpha_max(j,i2) .gt. 1E-6_prec)) then !if both alphas are 0 then no need to calculate alphas
 							sc_aq = qavdw(qiac(i,i2),1)
 							sc_bq = qbvdw(qiac(i,i2),1)
 							sc_aj = qavdw(qiac(j,i2),1)

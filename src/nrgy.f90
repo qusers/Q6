@@ -13,23 +13,23 @@ implicit none
 
 	type BONDED_ENERGIES
 		sequence
-		real(8)					::	bond, angle, torsion, improper
+		real(kind=prec)					::	bond, angle, torsion, improper
 	end type BONDED_ENERGIES
 
 	type NB_ENERGIES
 		sequence
-		real(8)					::	el, vdw
+		real(kind=prec)					::	el, vdw
 	end type NB_ENERGIES
 
 	type RESTRAINT_ENERGIES
 		sequence
-		real(8)					::	total, fix, shell, protein
-		real(8)					::	solvent_radial, water_pol
+		real(kind=prec)					::	total, fix, shell, protein
+		real(kind=prec)					::	solvent_radial, water_pol
 	end type RESTRAINT_ENERGIES
 
 	type ENERGIES
 		sequence
-		real(8)					::	potential, kinetic, LRF
+		real(kind=prec)					::	potential, kinetic, LRF
 		type(BONDED_ENERGIES)	::	p, w, q
 		type(NB_ENERGIES)		::	pp, pw, ww, qx
 		type(RESTRAINT_ENERGIES)::	restraint
@@ -37,23 +37,23 @@ implicit none
 
 	type Q_ENERGIES
 		sequence
-		real(8)					::	lambda
-		real(8)					::	total
+		real(kind=prec)					::	lambda
+		real(kind=prec)					::	total
 		type(BONDED_ENERGIES)	::	q
 		type(NB_ENERGIES)		::	qx, qq, qp, qw
-		real(8)					::	restraint
+		real(kind=prec)					::	restraint
 	end type Q_ENERGIES
 
 	type OFFDIAG_SAVE
 		sequence	
 		!integer(4) avoids unaligned access & is compatible with qdyn v2
 		integer(4)				::	i,j			
-		real(8)					::	Hij, rkl
+		real(kind=prec)					::	Hij, rkl
 	end type OFFDIAG_SAVE
 
 	type OFFDIAG_AUX
 		integer(4)				::	k,l
-		real(8)					::	A, mu
+		real(kind=prec)					::	A, mu
 	end type OFFDIAG_AUX
 
 	interface operator(+)
@@ -197,8 +197,8 @@ end function scale_ene
 
 !----------------------------------------------------------------------
 
-real(8) function sum_bonded(r, eb)
-	real(8), intent(in)			::	r
+real(kind=prec) function sum_bonded(r, eb)
+	real(kind=prec), intent(in)			::	r
 	type(BONDED_ENERGIES), intent(in)::	eb
 
 	sum_bonded = r + eb%bond + eb%angle + eb%torsion + eb%improper
@@ -206,8 +206,8 @@ end function sum_bonded
 
 !----------------------------------------------------------------------
 
-real(8) function sum_non_bonded(r, enb)
-	real(8), intent(in)			::	r
+real(kind=prec) function sum_non_bonded(r, enb)
+	real(kind=prec), intent(in)			::	r
 	type(NB_ENERGIES), intent(in)::	enb
 
 	sum_non_bonded = r + enb%el + enb%vdw

@@ -420,7 +420,7 @@ end subroutine finalize_storage
 subroutine mask_get(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)			::	m
-	real(8)						::	x(:)
+	real(kind=prec)						::	x(:)
 	real						::	xmasked(:)
 	integer						::	i, i3, j
 
@@ -446,7 +446,7 @@ end subroutine mask_get
 subroutine mask_put(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)				::	m
-	real(8)     				::	x(:)
+	real(kind=prec)     				::	x(:)
 	real       					::	xmasked(:)
 	integer						::	i, i3, j
 

@@ -7,7 +7,14 @@ module	SIZES
 
         !MN 2002-11-11
         !Set a nice, portable standard for variables
-        integer, parameter  :: wp8 = SELECTED_REAL_KIND(15,307) 
+        integer, parameter  :: wp8 = SELECTED_REAL_KIND(15,307)
+
+	!Set precision for real
+	integer, parameter :: singleprecision = SELECTED_REAL_KIND(6, 37)
+	integer, parameter :: doubleprecision = SELECTED_REAL_KIND(15,307)
+	integer, parameter :: quadprecision = SELECTED_REAL_KIND(33,4931)
+
+	integer, parameter :: prec = doubleprecision 
 
 	! STORAGE SPECIFICATIONS FOR Q
 	! Change according to 

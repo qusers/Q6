@@ -118,11 +118,11 @@ default: what
 ################################################################################
 # Targets
 ################################################################################
-all:    tools serial mpi
+all:    tools serial 
 	
 
 tools:
-	@make FFLAGS="${FFLAGS} -O0" \
+	@make FFLAGS="${FFLAGS} -O3" \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 serial:	

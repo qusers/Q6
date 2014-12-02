@@ -84,9 +84,9 @@ end subroutine gc_make_array
 subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask)
 	!parameters
 	integer				:: atomi,atomj
-	real*8				:: Vel, VvdW
+	real(kind=prec)				:: Vel, VvdW
         logical(1),pointer                 :: mask(:)
-	real*8			        :: totVel,totVvdw
+	real(kind=prec)			        :: totVel,totVvdw
 	
         if(.not.((mask(atomi)).or.(mask(atomj)))) then
                 totVel = totVel  + Vel

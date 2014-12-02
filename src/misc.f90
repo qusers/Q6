@@ -131,7 +131,7 @@ integer function string_part(string, separator, start)
 
 end function string_part
 
-real(8) function rtime()
+real(kind=prec) function rtime()
 	integer :: timevals(8)
 	call date_and_time(values=timevals)
 	rtime = timevals(3)*24*3600+timevals(5)*3600+timevals(6)*60+timevals(7)+0.001*timevals(8)
@@ -183,7 +183,7 @@ end subroutine die_general
 !all credit goes to this guy
 !i hate FORTRAN for missing a basic function like this
 real function strtod(s)
-!  real(kind=8) :: strtod
+!  real(kind=prec) :: strtod
   character(len=*), intent(in) :: s
   character(len=32) :: fmt
   integer :: dot

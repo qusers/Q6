@@ -29,12 +29,12 @@ module TOPO
 	end type ANG_TYPE
 
 	type BONDLIB_TYPE
-		real(8)					::	fk, bnd0
+		real(kind=prec)					::	fk, bnd0
 	end type BONDLIB_TYPE
 
 	type ANGLIB_TYPE
-		real(8)					::	fk, ang0
-		real(8)					::	ureyfk, ureyr0
+		real(kind=prec)					::	fk, ang0
+		real(kind=prec)					::	ureyfk, ureyr0
 	end type ANGLIB_TYPE
 
 	type TOR_TYPE
@@ -58,9 +58,9 @@ module TOPO
 	end type CGP_TYPE
 
 	type IAC_TYPE
-		real(8)					::	mass
-		real(8)					::	avdw(nljtyp)
-		real(8)					::	bvdw(nljtyp)
+		real(kind=prec)					::	mass
+		real(kind=prec)					::	avdw(nljtyp)
+		real(kind=prec)					::	bvdw(nljtyp)
 	end type IAC_TYPE
 
 	type LJ2_TYPE
@@ -89,10 +89,10 @@ character(len=256)			::	prm_file
 !atom information
 	!nat_pro = total # of atoms in topology, nat_solute = # solute atoms (no water)
 	integer											::	nat_pro, nat_solute, max_atom
-	real(8), allocatable				::	xtop(:)			! topology/coordinates
+	real(kind=prec), allocatable				::	xtop(:)			! topology/coordinates
 	integer(TINY), allocatable	::	iac(:)			! integer atom codes
 	logical, allocatable				::	heavy(:)		! boolean flag, true if atom >= He
-	real(8), allocatable						::	crg(:)			! charges
+	real(kind=prec), allocatable						::	crg(:)			! charges
 	integer(AI), allocatable		::	cgpatom(:)		! charge groups
 	integer, parameter					::	SOLVENT_SPC=0, SOLVENT_3ATOM=1, SOLVENT_GENERAL=2
 	integer											::	solvent_type
@@ -102,17 +102,17 @@ character(len=256)			::	prm_file
 
 !sphere information
 	!!sim. sphere & water sphere centres
-	real(8)						::	xpcent(3), xwcent(3)
-	real(8)						::	rwat !solvation radius
-	real(8)						::	rexcl_o,rexcl_i
+	real(kind=prec)						::	xpcent(3), xwcent(3)
+	real(kind=prec)						::	rwat !solvation radius
+	real(kind=prec)						::	rexcl_o,rexcl_i
 	integer						::	nexats, nshellats, nexwat
 	logical, allocatable		::	shell(:)
 	logical, allocatable		::	excl(:)
 
 !box information
-	real(8)						::	boxlength(3) !length of the boxedges
-	real(8)						::	boxcentre(3) !center coordinates of the box
-	real(8)						::	inv_boxl(3)  !inverse of the boxedges
+	real(kind=prec)						::	boxlength(3) !length of the boxedges
+	real(kind=prec)						::	boxcentre(3) !center coordinates of the box
+	real(kind=prec)						::	inv_boxl(3)  !inverse of the boxedges
 
 !flag indication if simulation sphere (.false.) or periodic box (.true.)is used.
 	logical						::	use_PBC = .false.
@@ -157,9 +157,9 @@ character(len=256)			::	prm_file
 !force field options
 	integer						::	ivdw_rule !combination rule
 	integer, parameter			::	VDW_GEOMETRIC=1, VDW_ARITHMETIC=2
-	real(8)						::	el14_scale !scaling of 1-4 electrostatics
+	real(kind=prec)						::	el14_scale !scaling of 1-4 electrostatics
 	integer						::	iuse_switch_atom !switching atoms in charge group
-	real(8)						::	coulomb_constant !constant in Coulombs law
+	real(kind=prec)						::	coulomb_constant !constant in Coulombs law
 	!type of forcefield, one of FF_GROMOS, FF_AMBER, FF_CHARMM
 	!this only (right now) affects how improper parameters are assigned
 	integer						::	ff_type
@@ -337,7 +337,7 @@ subroutine topo_reallocate_xtop(atoms)
 !arguments
 	integer						::	atoms
 
-	real(8), allocatable		::	r8temp(:)
+	real(kind=prec), allocatable		::	r8temp(:)
 	integer						::	nat3old_array(1), nat3old
 
 	nat3old_array = ubound(xtop)
@@ -361,7 +361,7 @@ subroutine topo_reallocate(oldatoms, atoms, waters)
 !locals
 	integer						::	oldbonds, bonds
 	integer						::	oldangles, angles
-	real(8), allocatable			::	r4temp(:)
+	real(kind=prec), allocatable			::	r4temp(:)
 	integer(1), allocatable		::	i1temp(:)
 	type(BOND_TYPE), allocatable::	bndtemp(:)
 	type(ANG_TYPE), allocatable	::	angtemp(:)
@@ -502,7 +502,7 @@ logical function topo_read(u, require_version, extrabonds)
 	integer						:: filestat
 	integer(1), allocatable		:: temp_list(:,:)
 	integer						:: extra
-	real(8)						:: deprecated
+	real(kind=prec)						:: deprecated
 
 	topo_read = .false.
 	! get rid of old topology
@@ -667,8 +667,8 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(anglib(max_anglib), stat=alloc_status)
 	call topo_check_alloc('angle library')
 	!set optional parameters to zero
-	anglib(:)%ureyfk=0.
-	anglib(:)%ureyr0=0.
+	anglib(:)%ureyfk=0.0_prec
+	anglib(:)%ureyr0=0.0_prec
 
 	do i=1,nangcod
 		!handle optional Urey-Bradley params
@@ -832,7 +832,7 @@ logical function topo_read(u, require_version, extrabonds)
 	!
 	nhyds = 0
 	do i=1,nat_pro
-		if(iaclib(iac(i))%mass < 4.0) then     ! lighter than He = H
+		if(iaclib(iac(i))%mass < 4.0_prec) then     ! lighter than He = H
 			heavy(i) = .false.
 			nhyds = nhyds+1
 		else

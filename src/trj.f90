@@ -192,7 +192,7 @@ end function trj_create
 !******************************************************
 logical function trj_write(x)
 !arguments
-	real(8) 					::	x(:)
+	real(kind=prec) 					::	x(:)
 	
 	!extract coordinates
 	call mask_get(mask, x, xmasked)
@@ -217,7 +217,7 @@ end function trj_write
 !******************************************************
 logical function trj_read(x)
 !arguments
-	real(8) 					::	x(:)
+	real(kind=prec) 					::	x(:)
 	!read x record to temp variable xmasked
 	read(lun, err=900, end=900) xmasked(1:ncoords:3)
 	!read y record
