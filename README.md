@@ -46,6 +46,12 @@ To compile in Mac OSX 10.9.2 you can use native gfortran binaries which you can 
 source /sw/bin/init.sh
 ```
 
+alternatively, you can install [homebrew](http://brew.sh/) and use (confirmed for Mac OSX 10.10):
+```bash
+brew install gcc
+```
+
+
 Then you proceed as in linux
 ```bash
 git clone https://github.com/qusers/qsource.git
