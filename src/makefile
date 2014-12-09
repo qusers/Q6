@@ -23,7 +23,7 @@ ifeq ($(COMP),ifort)
 	FC=		ifort
 	#FC_OPT=         -O3 -ip -ipo -unroll -i-static
 	FC_OPT=         -xHost #speed for a accuray (+10-20% on triolith)
-	FFLAGS=         -fstack-protector -i-static #-istatic flag is only linking compiler static
+	FFLAGS=         -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler static
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
 
