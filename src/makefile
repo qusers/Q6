@@ -22,7 +22,8 @@ BUILD_NUMBER_FILE=build-number.txt
 ifeq ($(COMP),ifort)
 	FC=		ifort
 	FC_OPT=         -O3 -ip -ipo -unroll -i-static -xHost
-	FFLAGS=         -fstack-protector -i-static -r8 -fp-model precise -fp-model except#-istatic flag is only linking compiler static
+	FFLAGS=         -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler statici
+	FFLAGS_R8=	-r8
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
 
@@ -45,7 +46,8 @@ else ifeq ($(COMP),osx)
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics\
-                        -std=legacy -Wall -Wtabs -fdefault-real-8
+                        -std=legacy -Wall -Wtabs
+	FFLAGS_R8=	-fdefault-real-8
 	FPP_FLG=        -cpp
 
 	MPIFC=          mpif90
@@ -62,7 +64,8 @@ else ifeq ($(COMP),osx)
 else ifeq ($(COMP),pgi)
 	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
-	FFLAGS=		-r8
+	FFLAGS=		
+	FFLAGS_R8=	-r8
 	FPP_FLG=	-Mpreprocess
 
 	MPIFC=		mpif90
@@ -92,7 +95,8 @@ else ifeq ($(COMP),gcc)
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	MPI=		${OMPI_FCFLAGS}
 
-	FFLAGS=		--static -fdefault-real-8  ${OMPI_FCFLAGS}
+	FFLAGS=		--static ${OMPI_FCFLAGS}
+	FFLAGS_R8=	-fdefault-real-8
 
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
@@ -106,7 +110,8 @@ else
 
 	MPI=		-fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	FFLAGS=		--static -fdefault-real-8 ${MPI}
+	FFLAGS=		--static ${MPI}
+	FFLAGS_R8=	-fdefault-real-8
 endif
 
 ################################################################################
@@ -121,11 +126,11 @@ all:    tools serial
 	
 
 tools:
-	@make FFLAGS="${FFLAGS}" \
+	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 serial:	
-	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
+	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
 	qdyn5 move1 moveqdyn
 
 debug:
@@ -307,7 +312,7 @@ trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 moveqdyn:
-	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_opt
+	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_r8
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
 	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
