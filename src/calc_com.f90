@@ -2,6 +2,7 @@
 ! calc_com.f90
 ! by Martin Almlöf
 ! calculates the center of mass coordinates of whatever atom mask is specified
+!TODO: precision not fixed
 
 module CALC_COM
 	use CALC_BASE

@@ -2,6 +2,7 @@
 ! calc_entropy.f90
 ! By Jens Carlsson, PhD 
 ! Absolute entropies according to Quasiharmonic analysis, Schlitter's formula and RMS fluctuations
+!TODO: precision not fixed
 
 module CALC_ENTROPY
     

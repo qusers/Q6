@@ -4,6 +4,7 @@
 ! Implementation of a scoring function by Eldridge et al.
 ! JCAMD 11 (1997) 425-445.
 ! Integration into QCalc5 by Peter Hanspers
+!TODO: precision not fixed
 
 module CALC_CHEMSCORE
 

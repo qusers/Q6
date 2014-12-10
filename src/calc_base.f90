@@ -2,6 +2,7 @@
 ! calc_base.f90
 ! by John Marelius
 ! shared data for trajectory calculation modules
+!TODO:precision not fixed
 
 module CALC_BASE
 	use TOPO

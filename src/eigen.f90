@@ -1,3 +1,4 @@
+!TODO: precision not fixed
 !CCCCC W.F. VAN GUNSTEREN, CAMBRIDGE, JUNE 1979 CCCCCCCCCCCCCCCCCCCCCCCC
 !                                                                      C
 !     SUBROUTINE EIGEN (A,R,N,MV)                                      C

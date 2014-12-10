@@ -2,6 +2,7 @@
 ! calc_rmsf.f90
 ! by Martin Almlöf
 ! root mean square coordinate deviation
+!TODO: precision not fixed
 
 module CALC_RMSF
 	use CALC_BASE

@@ -21,9 +21,8 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=		ifort
-	#FC_OPT=         -O3 -ip -ipo -unroll -i-static
-	FC_OPT=         -xHost #speed for a accuray (+10-20% on triolith)
-	FFLAGS=         -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler static
+	FC_OPT=         -O3 -ip -ipo -unroll -i-static -xHost
+	FFLAGS=         -fstack-protector -i-static -r8 -fp-model precise -fp-model except#-istatic flag is only linking compiler static
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
 
@@ -46,7 +45,7 @@ else ifeq ($(COMP),osx)
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics\
-                        -std=legacy -Wall -Wtabs
+                        -std=legacy -Wall -Wtabs -fdefault-real-8
 	FPP_FLG=        -cpp
 
 	MPIFC=          mpif90
@@ -63,7 +62,7 @@ else ifeq ($(COMP),osx)
 else ifeq ($(COMP),pgi)
 	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
-	FFLAGS=    
+	FFLAGS=		-r8
 	FPP_FLG=	-Mpreprocess
 
 	MPIFC=		mpif90
@@ -77,7 +76,7 @@ else ifeq ($(COMP),pgi)
 else ifeq ($(COMP),ibm)
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
-	FFLAGS=
+	FFLAGS=		-qrealsize=8
 
 ################################################################################
 # GNU gcc-gfortran
@@ -93,7 +92,7 @@ else ifeq ($(COMP),gcc)
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	MPI=		${OMPI_FCFLAGS}
 
-	FFLAGS=		--static ${OMPI_FCFLAGS}
+	FFLAGS=		--static -fdefault-real-8  ${OMPI_FCFLAGS}
 
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
@@ -107,7 +106,7 @@ else
 
 	MPI=		-fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	FFLAGS=		--static ${MPI}
+	FFLAGS=		--static -fdefault-real-8 ${MPI}
 endif
 
 ################################################################################
@@ -122,7 +121,7 @@ all:    tools serial
 	
 
 tools:
-	@make FFLAGS="${FFLAGS} -O3" \
+	@make FFLAGS="${FFLAGS}" \
 	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
 
 serial:	

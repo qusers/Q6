@@ -3,6 +3,7 @@
 ! by John Marelius
 ! parts (C) 1979 W. F. van Gunsteren
 ! pair-wise superposition of coordidinate sets
+!TODO: precision not fixed
 
 module CALC_FIT
 	use CALC_BASE

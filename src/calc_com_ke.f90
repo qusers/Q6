@@ -2,6 +2,7 @@
 ! calc_kineticenergy.f90
 ! by Martin Almlöf
 ! calculates the kinetic energy of the center of mass of whatever atom mask is specified
+!TODO: precision not fixed
 
 module CALC_COM_KE
 	use CALC_BASE

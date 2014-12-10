@@ -2,6 +2,7 @@
 ! calc_rms.f90
 ! by John Marelius
 ! root mean square coordinate deviation
+!TODO: precision not fixed
 
 module CALC_RMS
 	use CALC_BASE

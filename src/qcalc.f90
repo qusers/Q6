@@ -2,6 +2,7 @@
 ! qcalc.f90
 ! by John Marelius
 ! Qcalc trajectory analysis main program
+!TODO: precision not fixed
 
 program QCALC
 	use TRJ

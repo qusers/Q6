@@ -2,6 +2,7 @@
 ! q_prep.f90
 ! by Johan Åqvist & John Marelius
 ! Qprep topology preparation main program
+!TODO: precision not fixed
 
 PROGRAM qprep5
 	use PREP

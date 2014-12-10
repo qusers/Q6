@@ -2,6 +2,7 @@
 ! average co-ordinates from Qdyn trajectory files and write pdb-structure
 ! Added to Qprep March 2004 by Martin Nervall
 ! Tested to reproduce average structures from vmd
+!TODO: precision not fixed
 
 module AVETR
   use PREP

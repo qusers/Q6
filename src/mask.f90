@@ -2,6 +2,7 @@
 ! mask.f90
 ! by John Marelius
 ! atom selection mask
+!TODO: remove default real statments and change real(4) -  in accordance with best practes
 
 module ATOM_MASK
 	use TOPO

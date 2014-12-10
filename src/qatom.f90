@@ -2,6 +2,7 @@
 ! qatom.f90
 ! by John Marelius, Johan Åqvist & Martin Almlöf
 ! Q-atom force field data and FEP file reading
+!TODO: fix in accordance with best practice
 
 module QATOM
 use SIZES

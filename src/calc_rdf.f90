@@ -4,6 +4,7 @@
 !       
 ! Calculates RDF for a center atom with respect to all atoms in
 ! target_mask, using Nbins bins from r=0 to r=rdf_radius
+!TODO: precision not fixed
 
 module CALC_RDF
 	use CALC_BASE

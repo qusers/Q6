@@ -2,6 +2,7 @@
 !	trj.f90
 !	by John Marelius
 !	Q trajectory data, access and DCD format I/O
+!TODO: fix in accordance with best practice
 
 module TRJ
 

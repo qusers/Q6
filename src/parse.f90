@@ -2,6 +2,7 @@
 ! parse.f90
 ! by John Marelius
 ! command parser 
+!TODO: remove default real statmend - in accordance with best practice
 
 module PARSE
 	use MISC

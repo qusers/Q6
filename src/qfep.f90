@@ -2,6 +2,7 @@
 ! qfep.f90
 ! by Johan Åqvist, Karin Kolmodin & John Marelius
 ! Qfep free energy analysis program for FEP, EVB & umbrella sampling
+!TODO: precision not fixed
 
 program qfep
 use NRGY

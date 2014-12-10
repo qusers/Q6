@@ -2,6 +2,7 @@
 ! calc_geom.f90
 ! by John Marelius
 ! geometry analysis functions
+!TODO: precision not fixed
 
 module CALC_GEOM
 	use CALC_BASE

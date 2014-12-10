@@ -2,6 +2,7 @@
 ! calc_xscore.f90
 ! by Peter Hanspers & Martin Nervall
 ! Qcalc trajectory analysis main program
+!TODO: precision not fixed
 
 module CALC_XSCORE
 	!	v.2003.11, Structure-Based Drug Design Toolkits, developed by Dr. Renxiao Wang

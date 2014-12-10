@@ -2,6 +2,7 @@
 ! md.f90
 ! by Johan Åqvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlöf
 ! molecular dynamics
+!TODO: remove default real statment and change real(4) - in accordance with best practice
 
 module MD
 
@@ -32,14 +33,14 @@ real(kind=prec),parameter		::	zero = 0.0_prec
 real(kind=prec),parameter		::	one = 1.0_prec
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
-real, parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3
-real, parameter		::  Boltz = 0.001986_prec
+real(kind=prec), parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3 !TODO: it is not place for that
+real(kind=prec), parameter		::  Boltz = 0.001986_prec !TODO: it is not place for that
 
 !Read status
 integer                     :: stat
 
 !print temperature if it changed more than 2% in one time step
-real, parameter				::	TEMP_PRINT_THRESHOLD=0.02_prec
+real(kind=prec), parameter				::	TEMP_PRINT_THRESHOLD=0.02_prec !TODO: it is not place for that
 
 
 !	Memory management
@@ -159,8 +160,8 @@ type(SHELL_TYPE), allocatable::	wshell(:)
 
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
-real,  parameter			::	wpolr_layer			= 3.0001_prec
-real, parameter				::	drout				= 0.5_prec
+real(kind=prec),  parameter			::	wpolr_layer			= 3.0001_prec !TODO: it is not place for that
+real(kind=prec), parameter				::	drout				= 0.5_prec !TODO: it is not place for that
 real(kind=prec), parameter			::	tau_T_default		= 100.0_prec
 real(kind=prec), parameter			::	rcpp_default		= 10.0_prec
 real(kind=prec), parameter			::	rcww_default		= 10.0_prec

@@ -3,6 +3,7 @@
 ! calc_pmfscore.f90
 !
 ! Implementation by Peter Hanspers
+!TODO: precision not fixed
 
 module CALC_PMF
 	use CALC_BASE

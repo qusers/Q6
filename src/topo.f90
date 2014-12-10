@@ -2,6 +2,7 @@
 ! topo.f90
 ! by John Marelius & Johan Åqvist
 ! molecular topology data and I/O
+!TODO: fix in accordance with best practice
 
 module TOPO
 	use SIZES

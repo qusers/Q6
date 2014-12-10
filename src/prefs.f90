@@ -2,6 +2,7 @@
 ! prefs.f90
 ! by John Marelius
 ! preference setting handler
+!TODO: precision not fixed
 
 module PREFS
 

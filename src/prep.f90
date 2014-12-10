@@ -2,6 +2,7 @@
 ! prep.f90
 ! by Johan Åqvist & John Marelius
 ! topology preparation, solvation, validation and PDB I/O
+!TODO: precision not fixed
 
 MODULE PREP
 
@@ -38,7 +39,7 @@ MODULE PREP
 
 	integer, parameter			:: max_conn = 10
 
-!default values for user-settable variables
+!default values for user-settable variables !TODO: is it should be here?
 	!minimum solvent - solute heavy atom distance for solvation
 	real, target				::	solvent_pack = 2.4
 	!average heavy atom number density of proteins

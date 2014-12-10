@@ -2,6 +2,7 @@
 ! nrgy.f90
 ! by John Marelius
 ! energy data and energy file I/O
+!TODO: remove default real statmend - in accordance with best practice
 
 module NRGY
 use SIZES

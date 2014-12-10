@@ -2,6 +2,7 @@
 ! misc.f90
 ! by John Marelius & Johan Åqvist
 ! miscellaneous utility functions
+!TODO: remove default real statment - in accordance with best practice
 
 module MISC
 
@@ -134,7 +135,7 @@ end function string_part
 real(kind=prec) function rtime()
 	integer :: timevals(8)
 	call date_and_time(values=timevals)
-	rtime = timevals(3)*24*3600+timevals(5)*3600+timevals(6)*60+timevals(7)+0.001*timevals(8)
+	rtime = timevals(3)*24*3600+timevals(5)*3600+timevals(6)*60+timevals(7)+0.001_prec*timevals(8)
 end function rtime
 
 !-----------------------------------------------------------------------

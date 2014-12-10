@@ -5,6 +5,7 @@
 ! nonbonded potential calculation &
 ! calculation of nb interactions between 'q-atoms' and
 ! protein residues
+!TODO: precision not fixed
 
 module CALC_NB
 	use CALC_BASE

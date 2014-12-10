@@ -2,6 +2,7 @@
 ! prmfile.f90
 ! by John Marelius
 ! parsing of data files with sections+keywords (input/parameter/library/FEP)
+!TODO: precision not fixed
 
 module PRMFILE
 
