@@ -422,7 +422,7 @@ subroutine mask_get(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)			::	m
 	real(kind=prec)						::	x(:)
-	real						::	xmasked(:)
+	real(4)						::	xmasked(:)
 	integer						::	i, i3, j
 
 	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then
@@ -448,7 +448,7 @@ subroutine mask_put(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)				::	m
 	real(kind=prec)     				::	x(:)
-	real       					::	xmasked(:)
+	real(4)       					::	xmasked(:)
 	integer						::	i, i3, j
 
 	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then
