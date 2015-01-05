@@ -100,7 +100,7 @@ logical						::	separate_scaling
 logical                                         ::      langevin_gauss_rand = .false.
 !Paul does not like overflow errors, increased character array length
 !Added ENUM for names to allow integer comparisson later on
-character(len=80)				::	name_thermostat
+character(len=200)				::	name_thermostat
 ENUM, bind(c) 
 	ENUMERATOR	:: BERENDSEN, LANGEVIN, NOSEHOOVER
 END ENUM
@@ -108,7 +108,7 @@ integer						::	thermostat = -1
 !Added support for different integration schemes
 !For now leap-frog and velocity-verlet
 !Alexandre Barrozo and Paul Bauer, October 2014
-character(len=80)			:: name_integrator
+character(len=200)			:: name_integrator
 integer						:: integrator = -1
 ENUM, bind(c)
 	ENUMERATOR	:: LEAPFROG,VELVERLET
@@ -1592,7 +1592,8 @@ end subroutine gauss
 !-----------------------------------------------------------------------
 subroutine get_fep
 ! local variables
-character					::	libtext*80,qaname*2
+character(len=200)			::	libtext
+character(len=2)			::	qaname
 integer					::	i,j,k,iat
 !temp. array for reallocating long-range exclusion list
 integer(AI), pointer	::	tempexlong(:,:)
@@ -1803,15 +1804,15 @@ end subroutine get_fep
 
 subroutine get_fname (text,length,filnam)
 ! arguments
-character					::	text*80,filnam*80
+character(len=200)			::	text,filnam
 integer					::	length
 ! local variables
 
 
 integer					::	i
 
-length=80
-do i=1,80
+length=200
+do i=1,200
 if ( text(i:i) .eq. ' ' ) then
 length=i-1
 goto 10
@@ -2778,11 +2779,11 @@ integer						:: num_args
 character(200)				:: infilename
 logical						::	yes
 logical						::	need_restart
-character(len=80)			::	instring
+character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
-character*80					:: gc_mask_tmp(maxmaskrows),str,str2
+character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
 
 ! this subroutine will init:
 !  nsteps, stepsize, dt

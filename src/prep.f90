@@ -187,6 +187,12 @@ MODULE PREP
 	!private subroutine
 	private						::	check_alloc
 
+! --- New stuff to make connection lists right between molecules
+	type RETTYPE
+		logical				:: new
+		integer				:: first
+	end type RETTYPE
+
 contains
 
 !-----------------------------------------------------------------------
@@ -3804,14 +3810,15 @@ subroutine readpdb()
 
 ! *** local variables
 	character(len=256)		:: pdb_file
-	CHARACTER atnam_tmp * 4, resnam_tmp * 4
+	CHARACTER(len=4)		:: atnam_tmp , resnam_tmp , resnam_tmp2
 	character(len=80)			::	line
-	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j
+	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j , oldnum2 , resnum_tmp2
 	real xtmp(3)
 	LOGICAL res_found, at_found
 	integer						::	first_res_of_mol
 	logical						::	last_line_was_gap
 	integer						::	atoms, residues, molecules
+	type(RETTYPE)					:: glob
 !.......................................................................
 
 	write( *, * )
@@ -3867,21 +3874,26 @@ subroutine readpdb()
 	!reset molecule counter
 	nmol = 1
 	istart_mol(1) = 1
-
+	glob%new = .false.
+	last_line_was_gap = .false.
 	irec = 0
 	do
 		read(3,'(a)', end=100) line
 		irec = irec + 1
 		if(adjustl(line) == 'GAP' .or. line(1:6) == 'TER   ') then
 			if(last_line_was_gap) then
+#			if(glob%new) then
 				write(*, 23) irec
 			else
 				!set gap flag - new molecule will be recognised later
+!				glob%new = .true.
 				last_line_was_gap = .true.
 			end if
 		else if(line(1:6) /= 'HETATM' .and. line(1:6) /= 'ATOM  ') then
 			!do nothing
 		else
+			resnum_tmp2 = resnum_tmp
+			resnam_tmp2 = resnam_tmp
 			READ(line, 10, end = 100, err = 200) atnam_tmp, resnam_tmp, &
 				resnum_tmp, xtmp(1:3)
 
@@ -3908,6 +3920,13 @@ subroutine readpdb()
 							end if
 						end if
 					enddo
+					if (nres>1) then
+					glob=is_new_mol(nres,nres-1,glob%new,oldnum2,resnam_tmp2,resnum_tmp2,glob%first)
+					if(last_line_was_gap) then
+						glob%new=.true.
+						last_line_was_gap = .false.
+					end if
+					end if
 				endif
 
 				!look up new residue in library
@@ -3932,39 +3951,59 @@ subroutine readpdb()
 					atom_id(i) = 0
 				enddo
 
-				!check for implicit GAP, i.e. this residue and previous
-				!have no tail or head connections, respectively.
-				!Do this unless this is the first residue
-				!Don't do it if previous line was gap (already done)
-				if(nres > 1) then
-					if(last_line_was_gap .or. &
-						lib(res(nres-1)%irc)%tail == 0 .or. &
-						lib(res(nres)%irc)%head == 0) then
-						nmol = nmol + 1
-						istart_mol(nmol) = nat_pro + 1
-						if(first_res_of_mol /= oldnum) then
-							write(*,21) res(nres-1)%name, oldnum
-						else
-							write(*,*)
-						end if
-					end if
-				end if
-				last_line_was_gap = .false.
-				!if new molecule write output
-				if(nat_pro + 1 == istart_mol(nmol)) then
-					write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
-					first_res_of_mol = resnum_tmp
-				end if
+                                if (nres .eq. 1 ) then
+                                        if(nat_pro + 1 == istart_mol(nmol)) then
+                                                write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
+                                                first_res_of_mol = resnum_tmp
+                                        end if
+                                end if
+
+
 				nat_pro = nat_pro + lib(res(nres)%irc )%nat
 				!set nat_solute = nat_pro unless residue is water
 				if(index(solvent_names, trim(resnam_tmp)) == 0) then
 					nat_solute = nat_pro
 					nres_solute = nres
 				end if
-
+				oldnum2 = oldnum
 				oldnum = resnum_tmp
 
-			endif !new residue
+			end if !new residue, first part, make check for new molecule after all information
+				!has been read in
+
+				!check for implicit GAP, i.e. this residue and previous
+				!have no tail or head connections, respectively.
+				!Do this unless this is the first residue
+				!Don't do it if previous line was gap (already done)
+!				if(nres > 1) then
+!					if(last_line_was_gap .or. &
+!						lib(res(nres-1)%irc)%tail == 0 .or. &
+!						lib(res(nres)%irc)%head == 0 ) then 
+!						nmol = nmol + 1
+!						istart_mol(nmol) = nat_pro + 1
+!						if(first_res_of_mol /= oldnum) then
+!							write(*,21) res(nres-1)%name, oldnum
+!						else
+!							write(*,*)
+!						end if
+!					end if
+!				end if
+!				last_line_was_gap = .false.
+!				!if new molecule write output
+!				if(nat_pro + 1 == istart_mol(nmol)) then
+!					write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
+!					first_res_of_mol = resnum_tmp
+!				end if
+!				nat_pro = nat_pro + lib(res(nres)%irc )%nat
+!				!set nat_solute = nat_pro unless residue is water
+!				if(index(solvent_names, trim(resnam_tmp)) == 0) then
+!					nat_solute = nat_pro
+!					nres_solute = nres
+!				end if
+!
+!				oldnum = resnum_tmp
+
+!			endif !new residue
 
 			at_found = .false.
 			do i = 1, lib(res(nres)%irc )%nat
@@ -3990,12 +4029,15 @@ subroutine readpdb()
 
 !branch here at EOF
 100	close(3)
+	if(nres>1) then
+		glob=is_new_mol(nres,nres-1,glob%new,oldnum2,resnam_tmp2,resnum_tmp2,glob%first)
+	end if
 	if(last_line_was_gap) then
 		write(*,'(a)') '>>> Warning: PDB file ends with GAP line.'
 		nmol = nmol - 1 !correct molecule count
 	else
 		!print last residue of last molecule if more than one
-		if(first_res_of_mol /= oldnum) then
+		if(glob%first /= oldnum) then
 			write(*,21) resnam_tmp, oldnum
 		else
 			write(*,*)
@@ -4045,6 +4087,61 @@ subroutine readpdb()
 	CALL clearpdb
 	pdb_file = ''
 end subroutine readpdb
+
+!move checking of new molecule to separate subroutine
+type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
+	! *** input variables
+	integer					:: thisres,prevres,old,tnum,firstres
+	logical					:: gap
+	character*4				:: tnam
+	! *** local variables
+	real*8					:: dist,xdist,ydist,zdist
+	integer					:: dhead,dtail
+	type(RETTYPE)				:: local
+
+20      format('molecule ',i4,': ',a4,i5)
+21      format(' - ',a4,i5)
+
+
+	!check for implicit GAP, i.e. this residue and previous
+	!have no tail or head connections, respectively.
+	!Do this unless this is the first residue
+	!Don't do it if previous line was gap (already done)
+
+	if(.not.gap) then
+		if (lib(res(prevres)%irc)%tail .ne. 0 .and. &
+			lib(res(thisres)%irc)%head .ne. 0 ) then
+			dtail = lib(res(prevres)%irc)%tail
+			dhead = lib(res(thisres)%irc)%head
+			dtail = res(prevres)%start - 1 + dtail
+			dhead = res(thisres)%start - 1 + dhead
+			dtail = (dtail*3)-3
+			dhead = (dhead*3)-3
+			xdist = (xtop(dtail+1)-xtop(dhead+1))
+			ydist = (xtop(dtail+2)-xtop(dhead+2))
+			zdist = (xtop(dtail+3)-xtop(dhead+3))
+			dist  = sqrt(xdist**2 + ydist**2 + zdist**2)
+		end if
+	end if
+        if(gap .or. &
+		(lib(res(prevres)%irc)%tail == 0) .or. &
+		(lib(res(thisres)%irc)%head == 0) .or. &
+		dist .gt. 5 ) then 
+		nmol = nmol + 1
+		istart_mol(nmol) = res(thisres)%start 
+		if(firstres /= old) then
+			write(*,21) res(prevres)%name, old
+		else
+			write(*,*)
+		end if
+		!if new molecule write output
+		write(*,20,advance='no') nmol, tnam, tnum 
+		firstres = tnum
+	end if
+	local%new = .false.
+	local%first = firstres
+	is_new_mol = local
+end function  is_new_mol
 
 !-----------------------------------------------------------------------
 
