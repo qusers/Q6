@@ -38,11 +38,20 @@ implicit none
 	type Q_ENERGIES
 		sequence
 		real(8)					::	lambda
-		real(8)					::	total
+		real(8),allocatable			::	total(:)
 		type(BONDED_ENERGIES)	::	q
-		type(NB_ENERGIES)		::	qx, qq, qp, qw
+		type(NB_ENERGIES),allocatable		::	qx(:), qq(:), qp(:), qw(:)
 		real(8)					::	restraint
 	end type Q_ENERGIES
+
+	type OQ_ENERGIES
+                sequence
+                real(8)                                 ::      lambda
+                real(8)                                 ::      total
+                type(BONDED_ENERGIES)   ::      q
+                type(NB_ENERGIES)               ::      qx, qq, qp, qw
+                real(8)                                 ::      restraint
+        end type OQ_ENERGIES
 
 	type OFFDIAG_SAVE
 		sequence	
@@ -55,6 +64,16 @@ implicit none
 		integer(4)				::	k,l
 		real(8)					::	A, mu
 	end type OFFDIAG_AUX
+!Header type for energy file data structure
+	type Q_ENE_HEAD
+		sequence
+		integer(4)					::	arrays
+		integer(4)					::	totresid
+		integer(4),allocatable			::	types(:)
+		integer(4),allocatable			:: 	numres(:)
+		integer(4),allocatable			::	resid(:)
+		integer(4),allocatable			::	gcnum(:)
+	end type Q_ENE_HEAD
 
 	interface operator(+)
 		module procedure add_ene
@@ -73,22 +92,25 @@ end subroutine nrgy_startup
 
 !----------------------------------------------------------------------
 
-subroutine put_ene(unit, e2, OFFD)
+subroutine put_ene(unit, e2, OFFD,arrays,nstates)
 !arguments
 	integer						::	unit
 	type(Q_ENERGIES), intent(in)::	e2(:)
 	type(OFFDIAG_SAVE), intent(in)::OFFD(:)
 
 !local variables
-	integer						::	i, bound(1), first, last
+	integer						::	i, bound(1), first, last,arrays,nstates
 
 	bound = lbound(e2)
 	first = bound(1)
 	bound = ubound(e2)
 	last = bound(1)
 	
-	do i=first, last
-		write (unit) i, e2(i)
+!	do i=first, last
+	do i=1,nstates
+		write (unit) i, e2(i)%lambda,e2(i)%total(1:arrays),e2(i)%q,&
+			e2(i)%qx(1:arrays),e2(i)%qq(1:arrays),e2(i)%qp(1:arrays),&
+			e2(i)%qw(1:arrays),e2(i)%restraint
 	end do
 
 	bound = lbound(OFFD)
@@ -103,15 +125,15 @@ end subroutine put_ene
 
 !----------------------------------------------------------------------
 
-integer function get_ene(unit, e2, OFFD, nstates, noffd)
+integer function get_ene(unit, e2, OFFD, nstates, noffd,arrays)
 !arguments
 	integer					::	unit
-	type(Q_ENERGIES), intent(out)::	e2(:)
+	type(Q_ENERGIES)		:: 	e2(:)
 	type(OFFDIAG_SAVE), intent(out)::	OFFD(:)
 	integer, optional				:: nstates, noffd
 
 !local variables
-	integer						::	i, bound(1), first, last, dummy
+	integer						::	i, bound(1), first, last, dummy,arrays
 	if(present(nstates)) then
 		first = 1
 		last = nstates
@@ -120,10 +142,13 @@ integer function get_ene(unit, e2, OFFD, nstates, noffd)
 		first = bound(1)
 		bound = ubound(e2)
 		last = bound(1)
-	end if
-		
+	end if		
 	do i=first, last
-		read (unit, end=10) dummy, e2(i)
+!	allocate(e2(i)%total(arrays),e2(i)%qx(arrays),e2(i)%qq(arrays),e2(i)%qp(arrays),e2(i)%qw(arrays))
+		read (unit, end=10) dummy,e2(i)%lambda,e2(i)%total(1:arrays),e2(i)%q,&
+                        e2(i)%qx(1:arrays),e2(i)%qq(1:arrays),e2(i)%qp(1:arrays),&
+                        e2(i)%qw(1:arrays),e2(i)%restraint
+!	deallocate(e2(i)%total,e2(i)%qx,e2(i)%qq,e2(i)%qp,e2(i)%qw)
 	end do
 	
 	if(present(noffd)) then	
@@ -151,47 +176,47 @@ end function get_ene
 !----------------------------------------------------------------------
 
 function add_ene (e1, e2)
-   type(Q_ENERGIES), INTENT (IN) :: e1 (:), e2 (SIZE (e1))
-   type(Q_ENERGIES) :: add_ene (SIZE (e1))
+   type(OQ_ENERGIES), INTENT (IN) :: e1 (:), e2 (SIZE (e1))
+   type(OQ_ENERGIES) :: add_ene (SIZE (e1))
 
-			add_ene(:)%total=e1(:)%total+e2(:)%total
-			add_ene(:)%q%bond=e1(:)%q%bond+e2(:)%q%bond
-			add_ene(:)%q%angle=e1(:)%q%angle+e2(:)%q%angle
-			add_ene(:)%q%torsion=e1(:)%q%torsion+e2(:)%q%torsion
-			add_ene(:)%q%improper=e1(:)%q%improper+e2(:)%q%improper
-			add_ene(:)%qx%el=e1(:)%qx%el+e2(:)%qx%el
-			add_ene(:)%qx%vdw=e1(:)%qx%vdw+e2(:)%qx%vdw
-			add_ene(:)%qq%el=e1(:)%qq%el+e2(:)%qq%el
-			add_ene(:)%qq%vdw=e1(:)%qq%vdw+e2(:)%qq%vdw
-			add_ene(:)%qp%el=e1(:)%qp%el+e2(:)%qp%el
-			add_ene(:)%qp%vdw=e1(:)%qp%vdw+e2(:)%qp%vdw
-			add_ene(:)%qw%el=e1(:)%qw%el+e2(:)%qw%el
-			add_ene(:)%qw%vdw=e1(:)%qw%vdw+e2(:)%qw%vdw
-			add_ene(:)%restraint=e1(:)%restraint+e2(:)%restraint
+	add_ene(:)%total	=e1(:)%total		+e2(:)%total
+	add_ene(:)%q%bond	=e1(:)%q%bond		+e2(:)%q%bond
+	add_ene(:)%q%angle	=e1(:)%q%angle		+e2(:)%q%angle
+	add_ene(:)%q%torsion	=e1(:)%q%torsion	+e2(:)%q%torsion
+	add_ene(:)%q%improper	=e1(:)%q%improper	+e2(:)%q%improper
+	add_ene(:)%qx%el	=e1(:)%qx%el		+e2(:)%qx%el
+	add_ene(:)%qx%vdw	=e1(:)%qx%vdw		+e2(:)%qx%vdw
+	add_ene(:)%qq%el	=e1(:)%qq%el		+e2(:)%qq%el
+	add_ene(:)%qq%vdw	=e1(:)%qq%vdw		+e2(:)%qq%vdw
+	add_ene(:)%qp%el	=e1(:)%qp%el		+e2(:)%qp%el
+	add_ene(:)%qp%vdw	=e1(:)%qp%vdw		+e2(:)%qp%vdw
+	add_ene(:)%qw%el	=e1(:)%qw%el		+e2(:)%qw%el
+	add_ene(:)%qw%vdw	=e1(:)%qw%vdw		+e2(:)%qw%vdw
+	add_ene(:)%restraint	=e1(:)%restraint	+e2(:)%restraint
 
 end function add_ene
 
 !----------------------------------------------------------------------
 
 function scale_ene (e1, k)
-   type(Q_ENERGIES), INTENT (IN):: e1 (:)
+   type(OQ_ENERGIES), INTENT (IN):: e1 (:)
    real, intent(in)				:: k
-   type(Q_ENERGIES)				:: scale_ene (SIZE (e1))
+   type(OQ_ENERGIES)				:: scale_ene (SIZE (e1))
 
-			scale_ene(:)%total=e1(:)%total*k
-			scale_ene(:)%q%bond=e1(:)%q%bond*k
-			scale_ene(:)%q%angle=e1(:)%q%angle*k
-			scale_ene(:)%q%torsion=e1(:)%q%torsion*k
-			scale_ene(:)%q%improper=e1(:)%q%improper*k
-			scale_ene(:)%qx%el=e1(:)%qx%el*k
-			scale_ene(:)%qx%vdw=e1(:)%qx%vdw*k
-			scale_ene(:)%qq%el=e1(:)%qq%el*k
-			scale_ene(:)%qq%vdw=e1(:)%qq%vdw*k
-			scale_ene(:)%qp%el=e1(:)%qp%el*k
-			scale_ene(:)%qp%vdw=e1(:)%qp%vdw*k
-			scale_ene(:)%qw%el=e1(:)%qw%el*k
-			scale_ene(:)%qw%vdw=e1(:)%qw%vdw*k
-			scale_ene(:)%restraint=e1(:)%restraint*k
+	scale_ene(:)%total	=e1(:)%total*k
+	scale_ene(:)%q%bond	=e1(:)%q%bond*k
+	scale_ene(:)%q%angle	=e1(:)%q%angle*k
+	scale_ene(:)%q%torsion	=e1(:)%q%torsion*k
+	scale_ene(:)%q%improper	=e1(:)%q%improper*k
+	scale_ene(:)%qx%el	=e1(:)%qx%el*k
+	scale_ene(:)%qx%vdw	=e1(:)%qx%vdw*k
+	scale_ene(:)%qq%el	=e1(:)%qq%el*k
+	scale_ene(:)%qq%vdw	=e1(:)%qq%vdw*k
+	scale_ene(:)%qp%el	=e1(:)%qp%el*k
+	scale_ene(:)%qp%vdw	=e1(:)%qp%vdw*k
+	scale_ene(:)%qw%el	=e1(:)%qw%el*k
+	scale_ene(:)%qw%vdw	=e1(:)%qw%vdw*k
+	scale_ene(:)%restraint	=e1(:)%restraint*k
 
 end function scale_ene
 

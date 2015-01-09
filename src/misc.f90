@@ -13,6 +13,16 @@ use SIZES
 	character(*), private, parameter   ::   MODULE_VERSION = '5.06'
 	character(*), private, parameter   ::   MODULE_DATE    = '2014-01-01'
 
+	! for enumeration of group contribution types
+	ENUM, bind(c)
+        	ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC
+	END ENUM
+
+	ENUM, bind(c)
+		ENUMERATOR	:: ATOM,RESIDUE
+	END ENUM
+
+
 contains
 
 subroutine centered_heading(msg, fill)

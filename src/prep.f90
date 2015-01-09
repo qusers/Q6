@@ -3882,7 +3882,7 @@ subroutine readpdb()
 		irec = irec + 1
 		if(adjustl(line) == 'GAP' .or. line(1:6) == 'TER   ') then
 			if(last_line_was_gap) then
-#			if(glob%new) then
+!			if(glob%new) then
 				write(*, 23) irec
 			else
 				!set gap flag - new molecule will be recognised later
@@ -3962,9 +3962,19 @@ subroutine readpdb()
 				nat_pro = nat_pro + lib(res(nres)%irc )%nat
 				!set nat_solute = nat_pro unless residue is water
 				if(index(solvent_names, trim(resnam_tmp)) == 0) then
-					nat_solute = nat_pro
-					nres_solute = nres
+!					nat_solute = nat_pro
+					nat_solute = nat_solute + lib(res(nres)%irc )%nat
+					nres_solute = nres_solute + 1
+					if (nat_solute .ne. nat_pro) then
+!Means we are having a molecule of solvent between solute molecules
+						write(*,*) '>>>> ERROR: Solvent molecule between solute molecules'
+						write(*,'(a,i4,a)') 'Please remove molecule ',nres-1,' and try again'
+						stop 'Abnormal termination of Qprep'
+					end if
 				end if
+!Check if er have previously set a solvent molecule and are now setting
+!again a solute molecule
+!If yes, abort topology generation to avoid mixing of solvent and solute descriptors
 				oldnum2 = oldnum
 				oldnum = resnum_tmp
 

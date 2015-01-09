@@ -186,7 +186,7 @@ implicit none
 !-----------------------------------------------------------------------
 	type(Q_ENERGIES), allocatable::	EQ(:)
 !New arrays for excluded groups in group contribution calculation
-	type(Q_ENERGIES), allocatable:: EQ_gc(:,:)
+!	type(Q_ENERGIES), allocatable:: EQ_gc(:,:)
 	real(8)						::	Hij(max_states,max_states)
 	real(8)						::	EMorseD(max_qat)
 	real(8)						::	dMorse_i(3,max_qat)
@@ -214,11 +214,17 @@ end subroutine qatom_startup
 !-------------------------------------------------------------------------
 
 subroutine qatom_shutdown
-	integer						::	alloc_status_qat
+	integer						::	alloc_status_qat,ii
+	do ii=1,nstates
+	if (allocated(EQ(ii)%qx)) deallocate(EQ(ii)%qx,stat=alloc_status_qat)
+	if (allocated(EQ(ii)%qq)) deallocate(EQ(ii)%qq,stat=alloc_status_qat)
+	if (allocated(EQ(ii)%qp)) deallocate(EQ(ii)%qp,stat=alloc_status_qat)
+	if (allocated(EQ(ii)%qw)) deallocate(EQ(ii)%qw,stat=alloc_status_qat)
+	end do
 	deallocate(EQ, stat=alloc_status_qat)
-	if (allocated(EQ_gc)) then
-		deallocate(EQ_gc,stat=alloc_status_qat)
-	end if
+!	if (allocated(EQ_gc)) then
+!		deallocate(EQ_gc,stat=alloc_status_qat)
+!	end if
 	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status_qat)
 	deallocate(qmass, stat=alloc_status_qat)
 	deallocate(qavdw, qbvdw, stat=alloc_status_qat)
@@ -299,7 +305,7 @@ logical function qatom_load_atoms(fep_file)
 
 	if(.not. prm_open_section('atoms', fep_file)) then !it's not a new file
 		write(*,'(a)') &
-			'>>> WARNING: No [atoms] section in fep file. Trying old format.'
+			'>>> WARNING: No [atoms] section in fep file. Aborting file loading.'
 		call prm_close
 		use_new_fep_format = .false.
 !We stop supporting old FEP files to make the code easier to maintain
@@ -609,6 +615,8 @@ logical function qatom_load_fep(fep_file)
   type(QTORSION_TYPE),allocatable		:: tmp_qtor(:)
   type(QIMPLIB_TYPE),allocatable		:: tmp_qimplib(:)
   type(QTORSION_TYPE),allocatable		:: tmp_qimp(:)
+!for setting vdW arrays to default
+  logical					:: vdw_from_topo = .false.
 
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
@@ -622,6 +630,8 @@ logical function qatom_load_fep(fep_file)
 !We stop supporting deprecated file formats
 !Executive decision, Paul Bauer 07102014
 !		qatom_load_fep = qatom_old_load_fep()
+		write(*,*) '>>>> ERROR: Old file format not supported'
+		qatom_load_fep = .false.
 		return
 	end if
 
@@ -701,7 +711,14 @@ logical function qatom_load_fep(fep_file)
 			write(*,31) i, qcrg(i,:)
 		end do
 		write(*,32) sum(qcrg(:,:), dim=1)
-
+	else
+!Charges are not changed, set arrays with topology charges
+!This can be done in the dark :)
+		do i=1,nqat
+			do j=1,nstates
+				qcrg(i,j)=crg(iqseq(i))
+			end do
+		end do
 	end if
 29	format('Effective Q-atom charges for all Q-atoms')
 30	format('Q atom    charge in',7(1x,a5,i2))
@@ -740,6 +757,22 @@ logical function qatom_load_fep(fep_file)
 		end do
 140		format (a8,1x,f9.2,2f8.2,f6.2,f9.2,2f8.2)
 83		format ('>>>>> ERROR: Could not enumerate q-atom type ',a,' Duplicate name?')
+	else
+!No types declared, build list with std types from topology
+!Means every atom gets its own type -> waste of space
+!Do this in the dark, set flag so that next section knows it!
+		vdw_from_topo = .true.
+		allocate(qtac(nqat))
+		call index_create(nqat)
+		allocate(qmass(nqat),qavdw(nqat,nljtyp), qbvdw(nqat,nljtyp))
+		do i=1,nqat
+			qtac(i) = tac(iqseq(i))
+			qmass(i)= iaclib(iac(iqseq(i)))%mass
+!			do k=1,nljtyp
+				qavdw(i,1:nljtyp)=iaclib(iac(iqseq(i)))%avdw(1:nljtyp)
+				qbvdw(i,1:nljtyp)=iaclib(iac(iqseq(i)))%bvdw(1:nljtyp)
+!			end do
+		end do
 	end if
 
 	! --- Set new vdw params
@@ -747,6 +780,14 @@ logical function qatom_load_fep(fep_file)
 	iat = prm_max_enum(section, type_count)
 	if(iat == 0) then
 		qvdw_flag = .false.
+!No vdW types defined, set values from topology
+		if (vdw_from_topo) then
+		do i=1,nqat
+			do j=1,nstates
+				qiac(i,j) = i
+			end do
+		end do
+		end if
 	else if(iat /= nqat .or. type_count /= nqat) then
 		write(*,'(a)') '>>>>> ERROR: Atom types of Q-atoms must be given for every Q-atom!'
 		qatom_load_fep = .false.

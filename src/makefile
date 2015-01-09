@@ -33,8 +33,8 @@ ifeq ($(COMP),ifort)
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_OPT}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FC_DEBUG}
 
 
 ################################################################################
@@ -44,6 +44,7 @@ else ifeq ($(COMP),osx)
 	FC= gfortran
 	FC_OPT=         -O3 -ffree-line-length-none -fcray-pointer -fall-intrinsics \
 	                -std=legacy -Wall -Wtabs
+	FC_DEBUG=	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	FFLAGS=         -fstack-protector ${FC_OPT} -DG95=1
 	FPP_FLG=        -cpp
 
@@ -52,8 +53,8 @@ else ifeq ($(COMP),osx)
 	OMPI_FCFLAGS=   ${FFLAGS}
 	MPI=		${OMPI_FCFLAGS}
 
-	DEBUG=          -debug  -g ${FC_OPT}
-	DEBUGMPI=       -debug  -g ${FC_OPT}
+	DEBUG=          -debug  -g ${FC_DEBUG}
+	DEBUGMPI=       -debug  -g ${FC_DEBUG}
 
 ################################################################################
 # PGI Compiler -- compiles at csb
@@ -69,6 +70,9 @@ else ifeq ($(COMP),pgi)
 	MPI=		${MPIFLAGS} ${FFLAGS}
 	MPI_FC=		${FC}
 
+	DEBUG=		mcmodel=medium -debug
+	DEBUGMPI=	-lmpi
+
 ################################################################################
 # IBM Compiler -- untested
 ################################################################################
@@ -83,7 +87,8 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1
+	DEBUG_FC=	
+	FFLAGS=		-fstack-protector ${FC_OPT} -DG95=1 -fbacktrace
 	FPP_FLG=	-cpp
 
 	MPIFC=		mpif90
