@@ -40,7 +40,7 @@
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
-\resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/Q-logo_2.pdf}}
+\resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/qlogo.png}}
 \end{center}
 \end{figure}
 
@@ -134,7 +134,7 @@ systems that are used with the periodic boundary condition.
 
 \section{USER GUIDE}
 The structure of Q resembles that of many other MD simulation
-programs. The main program is Qdyn which carries out the actual
+programs. The main program is \textbf{qdyn} which carries out the actual
 trajectory calculations. Besides normal input control data, it
 needs the type of data usually referred to as the molecular
 topology. This is a file containing information about how atoms
@@ -150,7 +150,7 @@ fep file lists atoms to be transformed, called Q-atoms and force
 field parameters for the different states in perturbation
 simulations. For analysis of the computations the main tool is
 Qfep which is a program that carries out FEP and EVB calculations
-of free energies utilising energy data produced by Qdyn. A number
+of free energies utilising energy data produced by \textbf{qdyn}. A number
 of utility programs (trajectory and energy averaging, radial
 distribution functions, ...) are also provided. The general
 outline of Q is shown in figure \ref{fig:overview}.
@@ -168,11 +168,11 @@ name extensions. The black boxes are programs.}
 In the following sections we will go through the normal sequence
 of steps for preparing a topology file with Qprep and then
 describe in detail the input data required for running MD
-simulations with Qdyn.
+simulations with \textbf{qdyn}.
 
 \subsection{Preparing a molecular topology} The topology file
 prepared with the program Qprep contains all the information about
-the molecular system needed for a simulation with Qdyn. To make a
+the molecular system needed for a simulation with \textbf{qdyn}. To make a
 topology you need
 
 \begin{itemize}
@@ -327,7 +327,7 @@ box. When a boundary has been chosen the centre and radius in the
 spherical case, and boxlengths in the periodical case are
 specified. It is important that the boundary condition defined in
 the topology file is consistent with the boundary condition used
-when running dynamics with Qdyn.
+when running dynamics with \textbf{qdyn}.
 
 \textbf{Adding solvent}\\*[0.25cm] Use the \textbf{solvate}
 command to add solvent molecules to the loaded structure. Using
@@ -371,7 +371,7 @@ atom representation.
 Note: Make sure that crystallographic water molecules and waters
 added by the solvate command have \textit{the same residue name}!
 Otherwise Qprep will mark the topology as mixed-solvent, which is
-not implemented in Qdyn at present.
+not implemented in \textbf{qdyn} at present.
 
 \textbf{Adding cross-link bonds}\\*[0.25cm] Cross-link bonds such
 as disulphide bridges in proteins are not generated automatically
@@ -457,19 +457,19 @@ value.
 The preference parameters and their default values are listed in
 the table on page \pageref{subsubsec:Qprep_preferences}.
 
-\subsection{Running dynamics with Qdyn}
+\subsection{Running dynamics with \textbf{qdyn}}
 Once a molecular topology file has been generated with Qprep, you
-can carry out MD, FEP and EVB simulations with Qdyn. The
+can carry out MD, FEP and EVB simulations with \textbf{qdyn}. The
 simulation can have either spherical or periodic boundary
 condition, and can be executed either sequentially or in parallel.
 
-In this section we will describe the basic functions of Qdyn and
+In this section we will describe the basic functions of \textbf{qdyn} and
 go through the different options that are available for control of
 the dynamics runs. There are two main input files that are used to
 set up the dynamics specifications:
 
 \begin{enumerate}
-\item The Qdyn input file that controls things like time-step, temperature,
+\item The \textbf{qdyn} input file that controls things like time-step, temperature,
 cut-offs, restraints etc. \item The FEP file which is an auxiliary
 file whose function is to redefine the topology information for
 certain atoms. This enables the explicit control over selected
@@ -490,13 +490,13 @@ simulations, this phase is composed of a series of simulations
 using intermediate potentials defined by different sets of weight
 coefficients for the FEP states.
 
-A separate Qdyn input file is used for each sub-simulation. It is
+A separate \textbf{qdyn} input file is used for each sub-simulation. It is
 therefore practical to prepare a command file (shell script or
 batch file) which executes all the sub-simulations sequentially.
-The name of the input file is passed to Qdyn as the first (and
+The name of the input file is passed to \textbf{qdyn} as the first (and
 only) argument on the command line. (It is not possible to use
 redirection of the standard input stream by the $<$ operator.) A
-simple example of such a file where Qdyn is invoked once for each
+simple example of such a file where \textbf{qdyn} is invoked once for each
 input file and the output redirected to a log file follows:
 
 \begin{table}[htbp]
@@ -504,18 +504,18 @@ input file and the output redirected to a log file follows:
 \caption{Multi-stage simulation command file}
 \begin{tabularx}{\textwidth}{|l l l X|}
   \hline
-  Qdyn4 & relax.inp & $>$ & relax.log \\
-  Qdyn4 & eq1.inp   & $>$ & eq1.log \\
-  Qdyn4 & eq2.inp   & $>$ & eq2.log \\
-  Qdyn4 & eq3.inp   & $>$ & eq3.log \\
-  Qdyn4 & data1.inp & $>$ & data1.log \\
-  Qdyn4 & data2.inp & $>$ & data2.log \\ \hline
+  \textbf{qdyn} & relax.inp & $>$ & relax.log \\
+  \textbf{qdyn} & eq1.inp   & $>$ & eq1.log \\
+  \textbf{qdyn} & eq2.inp   & $>$ & eq2.log \\
+  \textbf{qdyn} & eq3.inp   & $>$ & eq3.log \\
+  \textbf{qdyn} & data1.inp & $>$ & data1.log \\
+  \textbf{qdyn} & data2.inp & $>$ & data2.log \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
 
-\subsubsection{Output generated by Qdyn} The different data files
-generated by Qdyn are (shown in the overview in
+\subsubsection{Output generated by \textbf{qdyn}} The different data files
+generated by \textbf{qdyn} are (shown in the overview in
 \figurename~\ref{fig:overview}):
 
 \begin{itemize}
@@ -541,12 +541,12 @@ trajectory file follows the DCD format also used in other MD
 programs (Charmm, X-plor) and can be read by many visualisation
 and trajectory animation programs.
 
-\subsubsection{Preparing Qdyn input files}\label{subsubsec:prep_qdyn_inp_f}
+\subsubsection{Preparing \textbf{qdyn} input files}\label{subsubsec:prep_qdyn_inp_f}
 In this overview the various aspects of defining the simulation
-set-up are introduced. For more complete information, see Qdyn
-input file format on page \pageref{subsubsec:Qdyn_inp_file_form}.
+set-up are introduced. For more complete information, see \textbf{qdyn}
+input file format on page \pageref{subsubsec:qdyn_inp_file_form}.
 
-The Qdyn input file contains the specification of the dynamics
+The \textbf{qdyn} input file contains the specification of the dynamics
 simulation. It is a text file divided into sections, starting with
 a section heading and containing information on the different
 aspects of the simulation. The sections are of two kinds:
@@ -836,17 +836,17 @@ the [\textbf{wall{\_}restraints}] section is not used in combination with
 periodic boundary conditions. One can choose between harmonic or Morse
 potential.
 
-\subsubsection{Qdyn input file examples}
+\subsubsection{\textbf{qdyn} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
 parameters. The second is a bit more elaborate and exemplifies the
 use of many extra options such as special restraints. Detailed
 information about the data in each section is found in the section
-Qdyn input file format on page
-\pageref{subsubsec:Qdyn_inp_file_form}.
+\textbf{qdyn} input file format on page
+\pageref{subsubsec:qdyn_inp_file_form}.
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
-\caption{Minimal Qdyn input file}\\
+\caption{Minimal \textbf{qdyn} input file}\\
   \hline \textbf{Data} &              & \textbf{Description} \\
   \endhead
   \hline [MD]          &              & Basic data for the simulation  \\
@@ -860,7 +860,7 @@ Qdyn input file format on page
 \end{longtable}
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
-\caption{Advanced Qdyn input file} \\
+\caption{Advanced \textbf{qdyn} input file} \\
   \hline \textbf{Data}            &              & \textbf{Description} \\
   \endhead
   \hline [MD]                     &              & Basic data for the simulation \\
@@ -929,19 +929,19 @@ of each elementary reaction step. In such a model of a reaction
 bonds, angles, torsions, partial charges, vdW parameters etc. may
 change for many atoms.
 
-The idea behind this definition of different states is that Qdyn,
+The idea behind this definition of different states is that \textbf{qdyn},
 for each configuration of the system's particles, will keep track
 of the energies of each state and write these to the energy file.
 The mapping potential or sampling potential used to generate the
 forces controlling the dynamics is a mixture of the FEP/EVB
 states, determined by the mapping parameter or weight coefficient
-$\lambda $ given to each (pure) state in the Qdyn input file. The
+$\lambda $ given to each (pure) state in the \textbf{qdyn} input file. The
 free energy differences between FEP/EVB states can then easily be
 calculated by Qfep using the standard FEP formula or the potential
 of mean force (umbrella sampling) approach to obtain the EVB
 ground state reaction free energy profiles.
 
-The FEP file has the same overall structure as the Qdyn input file
+The FEP file has the same overall structure as the \textbf{qdyn} input file
 (see page \pageref{subsubsec:prep_qdyn_inp_f}) with various kinds
 of data grouped into sections, the majority of which are optional.
 We will describe FEP files for a couple of prototype cases,
@@ -1275,7 +1275,7 @@ group of a co-factor.
 Five groups of atoms are defined, and the interactions between
 groups 1{\-}3, 2{\-}4 and 2{\-}5 should be calculated. The
 energies are evaluated separately for different FEP states and
-presented in the energy summaries in the Qdyn output. In this
+presented in the energy summaries in the \textbf{qdyn} output. In this
 example only a single state is defined so the $\lambda $-weighted
 averages are identical to the energies in state 1.
 
@@ -1311,7 +1311,7 @@ drive. The nodes communicate through a fast network switch
 providing an environment suitable for running parallel program. Q
 has been parallelised to fit these type of machines.
 
-The part of Q that can be run in parallel is Qdyn which contain
+The part of Q that can be run in parallel is \textbf{qdyn} which contain
 the time demanding conformational sampling. The parallel version
 is suitable to run on 2 - 20 nodes depending on the size of the
 problem and the speed of the network.
@@ -1362,7 +1362,7 @@ computers is best done by assigning one job per node.
 \begin{figure}[hbt]
 \begin{center}
 \includegraphics*[scale=0.6]{\dirfig/speedup.pdf}
-\caption{Speedup of the parallel version of Qdyn.}
+\caption{Speedup of the parallel version of \textbf{qdyn}.}
 \label{fig:speedup}
 \end{center}
 \end{figure}
@@ -1370,7 +1370,7 @@ computers is best done by assigning one job per node.
 \begin{figure}[hbt]
 \begin{center}
 \includegraphics*[scale=0.6]{\dirfig/efficiency.pdf}
-\caption{Efficiency of the nodes when running Qdyn in parallel.
+\caption{Efficiency of the nodes when running \textbf{qdyn} in parallel.
 The efficiency decreases as the number of nodes increase due to
 more communication and longer summation of the forces.}
 \label{fig:efficiency}
@@ -1388,7 +1388,7 @@ MPI-flag activated. If you compile the program yourself define the
 variable USE\_MPI to the preprocessor. To check that you have the
 right version execute the program and confirm that the suffix
 "\_parallel" is added to the version info in the log file. Look at
-the top of the file where it should read "Qdyn version
+the top of the file where it should read "\textbf{qdyn} version
 X.XX\_parallel initialising....". The parallel version can be
 executed on a single node but still requires MPI installed.
 
@@ -1407,7 +1407,7 @@ commit jobs to a specified number of dedicated nodes.
 \subsubsection{Analysing structures from the simulation}
 \label{subsubsec:Analysing_struc_f_t_sim} Qprep is also used after
 the simulation to convert the binary trajectory and restart
-coordinate files generated by Qdyn to PDB or mol2 files suitable
+coordinate files generated by \textbf{qdyn} to PDB or mol2 files suitable
 for viewing in a molecular graphics program.
 
 \textbf{Making PDB or mol2 files from restart or trajectory
@@ -1447,7 +1447,7 @@ HETATM in their info section.
 programs for visualising and analysing MD trajectories, $e.g.$
 Visual Molecular Dynamics, VMD \cite{VMD, VMD_homepage} and
 gOpenMol \cite{gOM, gOM_homepage} which can read the DCD format
-trajectories generated by Qdyn. To create a PDB file with the same
+trajectories generated by \textbf{qdyn}. To create a PDB file with the same
 set of atoms as in the trajectory, as required by the
 visualisation programs,
 execute the steps below in Qprep:\\
@@ -1473,7 +1473,7 @@ energy perturbation (FEP) calculations with Q involves running a
 set of consecutive input files which have the mapping parameter
 vector $\lambda$ ranging in a desired way (usually [1, 0] to [0,
 1] for two states). Qfep is a program which reads the energy files
-generated by Qdyn and calculates the total change in free energy
+generated by \textbf{qdyn} and calculates the total change in free energy
 for the complete perturbation from state A ($\varepsilon_1$) to
 state B ($\varepsilon_2$). The difference in free energy between
 the two states is calculated by Zwanzig's formula:
@@ -1600,7 +1600,7 @@ Note that each bin has contributions from several different values
 of $\lambda$. Likewise, each value of $\lambda$ contributes to the
 sampling of several different bins.
 
-It is possible to handle more than two valence bond states in Qdyn
+It is possible to handle more than two valence bond states in \textbf{qdyn}
 and Qfep, however sampling and calibration may be a difficult task
 for more than two states.
 
@@ -1858,7 +1858,7 @@ atoms, the daring user might consider ignoring some Qprep warnings
 about missing parameters all of those interactions are to be
 redefined in a FEP file. It is possible, but in general not
 advisable, to write a topology file with missing parameters and to
-use it in Qdyn.
+use it in \textbf{qdyn}.
 \item Use build rules in your fragment library entries to control the
 positioning of hydrogens.
 \item Improve scoring accuracy by averaging over e.g. every 10:th frame
@@ -1947,7 +1947,7 @@ from the PDB file of the complex to a separate file.
 
 \subsubsection{Qprep}
 Now it is time to make the topology files. They contain all the
-information about the system and are used in the Qdyn simulation.
+information about the system and are used in the \textbf{qdyn} simulation.
 This is done in Qprep, where the sulphur bridges also are created.
 You have to make two topology files, one for the ligand in protein
 simulation and one for the ligand without the protein simulation.
@@ -1993,7 +1993,7 @@ specified in the FEP file, but none of those functions are used in
 this example.
 
 \subsubsection{Creating input files}
-The input file controls the simulation in Qdyn. It contains
+The input file controls the simulation in \textbf{qdyn}. It contains
 information on how many steps, how long steps, what temperature,
 which topology to use and a lot of other things. In this example,
 the data collection phase was split into five identical,
@@ -2022,8 +2022,8 @@ The coordinates of the water sphere must be specified in the first
 input file. In this example, a co-ordinate file with randomly
 oriented water molecules on a grid, was used.
 
-\subsubsection{Using Qdyn}
-To start the simulation, write: Qdyn filename.inp $>$
+\subsubsection{Using \textbf{qdyn}}
+To start the simulation, write: \textbf{qdyn} filename.inp $>$
 filename.log, to use a specific input file and write the output to
 a log file. When many input files are used it is much easier to
 write all the commands to a command file and then run that.
@@ -2278,7 +2278,7 @@ An atom mask defines a subset of atoms and is used:
 \begin{itemize}
 \item in Qprep to select which atoms are included when writing
 structure files (PDB and mol2)
-\item in Qdyn to select which atoms
+\item in \textbf{qdyn} to select which atoms
 to include in the trajectory and
 \item in Qcalc to select atoms
 for superposition and coordinate deviation calculations.
@@ -2769,7 +2769,7 @@ evaluated as for atoms inside the sphere. Solute atoms in the
 outermost shell of the simulation sphere are also restrained to
 their initial coordinates with a harmonic potential to avoid
 distortion of bonds across the sphere boundary. The radius
-of this shell and the force constant is given in the Qdyn input
+of this shell and the force constant is given in the \textbf{qdyn} input
 file (section [\textbf{sphere}], keywords shell\_radius and
 shell\_force). The restrained shell radius is by default equal to the outer,
 \emph{i.e.} no atoms will be restrained unless the restrained shell radius is redefined. The force constant has
@@ -2956,8 +2956,8 @@ and combinations thereof. \small
 \end{table} \normalsize
 
 \subsection{File and format descriptions}
-\subsubsection{Qdyn input file format}\label{subsubsec:Qdyn_inp_file_form}
-The name of the input file is passed to Qdyn as the first argument
+\subsubsection{\textbf{qdyn} input file format}\label{subsubsec:qdyn_inp_file_form}
+The name of the input file is passed to \textbf{qdyn} as the first argument
 on the command line. The file is divided into sections, each
 starting with a section heading enclosed in square brackets.
 Within a section are lines with a keyword and a value, or just
@@ -2968,10 +2968,10 @@ within sections is not important (but the order of table
 \ref{tab:qdyninputfileformat} is preferred). Many keywords have
 default values and can be omitted, to make it easier to set up a
 simple simulation. The use of default values will be shown in the
-output from Qdyn. Sections with no required entries are optional.
+output from \textbf{qdyn}. Sections with no required entries are optional.
 \small
 \begin{longtable}{|p{78pt}|p{158pt}|p{158pt}|}
-\caption{Qdyn input file format}
+\caption{\textbf{qdyn} input file format}
 \label{tab:qdyninputfileformat}
 \endhead
 
@@ -3169,12 +3169,12 @@ defined in the section [\textbf{off\_diagonals}].
 If vanishing or appearing atoms are part of your FEP strategy, it
 may be desirable to use a \textit{softcore} potential for the
 Q-atoms in question.\cite{Zacharias:1994} Softcore potentials have
-been implemented in Qdyn according to equation \ref{eq:softcore}.
+been implemented in \textbf{qdyn} according to equation \ref{eq:softcore}.
 Depending on the value of
 \textbf{softcore\-\_use\-\_max\-\_potential} given in the
 [\textbf{FEP}] section, the $\alpha$-values are either read
 directly from the [\textbf{softcore}] section or calculated by
-Qdyn in a pairwise manner based upon the desired potentials at
+\textbf{qdyn} in a pairwise manner based upon the desired potentials at
 $r=0$ given in the [\textbf{softcore}] section. Softcore
 potentials are only available for Q-atoms, i.e. Q-Q, Q-water and
 Q-solute interactions are treated with softcore. In the case of a
@@ -3227,7 +3227,7 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline offset\_residue & Residue/fragment number. & Optional. Set offset to the topology number of the first atom in the given residue minus one.\\
 \hline offset\_name & Residue/fragment name. & Optional. Set offset to the topology number of the first atom in the first residue with the given name minus one.\\
 \hline qq\_use\-\_library\-\_charges & This is a special feature for studying $e.g.$ electrostatic linear response. Set to 'on' to use the library charges from the topology for intra-Q-atom interactions, i. e. change only Q-atom-surrounding electrostatic interactions. &Optional, default off.\\
-\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. Qdyn will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
+\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. \textbf{qdyn} will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3377,7 +3377,7 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
-\multicolumn{3}{p{394pt}}{[\textbf{shake\_constraints}]: Define extra shake constraints. The effective constraint distance will be the sum of the distances given for each state, weighted by their $\lambda$ values. Note: constraints defined here do not override constraints imposed by setting the shake flag to \emph{on} in the Qdyn input file. To remove a constraint the bond must be redefined as a Q-bond. The order in which atoms are given is not important.}\\
+\multicolumn{3}{p{394pt}}{[\textbf{shake\_constraints}]: Define extra shake constraints. The effective constraint distance will be the sum of the distances given for each state, weighted by their $\lambda$ values. Note: constraints defined here do not override constraints imposed by setting the shake flag to \emph{on} in the \textbf{qdyn} input file. To remove a constraint the bond must be redefined as a Q-bond. The order in which atoms are given is not important.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Topology atom number of first atom.}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Topology atom number of second atom.}\\
 \hline 3... & \multicolumn{2}{p{341pt}|}{Constraint distance (Å) in state 1, state 2, ...}\\
@@ -3397,10 +3397,10 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 
 \subsection{Log files}
 \label{subsec:logfiles}
-\subsubsection{Qdyn log file}
+\subsubsection{\textbf{qdyn} log file}
 \label{subsubsec:qdynlogfiles}
 
-The information from the Qdyn simulation is gathered in a log
+The information from the \textbf{qdyn} simulation is gathered in a log
 file. This log file is divided into two parts, one showing the
 initialisation of the simulations and the other showing different
 energies form all the steps of the simulation. The units used in
@@ -3524,7 +3524,7 @@ and the simulation is initialised.
 \tiny
 \vspace{-1\baselineskip}
 \begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of Qdyn will list pair list sizes also for other nodes than node 0.}\\
+\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of \textbf{qdyn} will list pair list sizes also for other nodes than node 0.}\\
 \hline No. of Rcq indep. nb pairs involving q-atoms = 55 in state : 1\newline No. of Rcq indep. nb pairs involving q-atoms = 52 in state : 2 & The size of the Q-atom-Q-atom non-bonded pair list in each state. This list also includes interactions between Q atoms and non-Q atoms which are bonded, angled or torsioned to a Q atom.\\
 \hline \begin{tabular}{rrr}Initial temperatures are : Ttot = & 1.08 Tfree = & 1.14\end{tabular} & The initial temperature is calculated. Ttot takes all the degrees of freedom of the system into account, whereas Tfree excludes restrained degrees of freedom, $e.g.$ excluded atoms and shake constraints.\\
 \hline \end{longtable}
@@ -3591,7 +3591,7 @@ energy summaries.
 \begin{longtable}{|p{295pt}|p{111pt}|}
 \hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 &0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 &0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 &0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 &0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 &0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 &0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 &0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 &0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint&&&&\\Q-SUM & 1 &0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 &0.5000 & -430.34 & 22.63&&&&\end{tabular} & \\
 \hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & \\
-\hline QDyn version 4.15 terminated normally. & This simulation complete without errors.\\
+\hline qdyn version 4.15 terminated normally. & This simulation complete without errors.\\
 \hline
 \end{longtable}
 
@@ -3612,7 +3612,7 @@ individual bonded force field terms.
 \subsubsection{Differences in Qprep}
 
 \begin{itemize}
-\item Solvation is done in Qprep, not in Qdyn. The topology thus contains all the atoms of the simulated system.
+\item Solvation is done in Qprep, not in \textbf{qdyn}. The topology thus contains all the atoms of the simulated system.
 \item Solvent can be generated using a grid, from a solvent coordinate file or from a restart file.
 \item The simulation sphere is specified when generating the topology and exclusion of atoms takes place in Qprep and is included in the topology.
 \item Hydrogen atom coordinates are generated by steepest descent energy minimisation of the angle potentials involving the hydrogens, rather than by determining the hybridisation by heuristic rules.
@@ -3627,7 +3627,7 @@ individual bonded force field terms.
 \item When loading a topology, all libraries used to make it will be loaded automatically.
 \end{itemize}
 
-\subsubsection{Differences in Qdyn}
+\subsubsection{Differences in \textbf{qdyn}}
 \begin{itemize}
 \item Solvation and definition of the simulation sphere has been moved to Qprep.
 \item The keywords centre, radius, pack, model and water are obsolete and ignored.
@@ -3809,7 +3809,7 @@ bold face:
   listsubset    &                                & List all subset definitions.\\ \hline
   load, lo      & [pdb{\_}file]                  & Load a pdb file into memory. The extension .pdb may be omitted.\\ \hline
   loadrestart, lore &  [restart{\_}file]         & Loads new coordinates for a previously loaded pdb
-                                                   file from a Qdyn restart file. PDB file must have
+                                                   file from a \textbf{qdyn} restart file. PDB file must have
                                                    same number of atoms and same numbering as restart
                                                    file, so use only pdb files with hydrogens created
                                                    by Qprep.\\ \hline
@@ -3875,30 +3875,30 @@ bold face:
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
  function   &   Interactive, shell-like program for creating
-                sequences of Qdyn input files and a command file for running them.
+                sequences of \textbf{qdyn} input files and a command file for running them.
                 Mdsh can import existing input files, modify settings using keywords,
                 generate sequences of input files with varying lambda values for
                 perturbation simulations. It can also be used to easily set up a
                 simulation by asking a series of questions. Mdsh script files are
                 useful for managing standardized simulation protocols.\\ \hline
  Input      &   interactive commands.\\\hline
- Output     &   interactive output,Qdyn input files, command file ($e.g.$ C shell script).\\ \hline
+ Output     &   interactive output,\textbf{qdyn} input files, command file ($e.g.$ C shell script).\\ \hline
  Usage      &   \verb"mdsh"\\\hline
  notes      &   Enter \verb"help" to show a list of commands.\\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
 
-Each element of the Qdyn input file is associated with a keyword
+Each element of the \textbf{qdyn} input file is associated with a keyword
 in mdsh. The set command changes the values. The keywords in mdsh
-are identical to those in the Qdyn input file, except in the cases
+are identical to those in the \textbf{qdyn} input file, except in the cases
 listed in the following table:
 
 \begin{table}[h]
 \begin{center}
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- \textbf{Qdyn input file}[files] & \textbf{mdsh}\\ \hline
+ \textbf{\textbf{qdyn} input file}[files] & \textbf{mdsh}\\ \hline
  topology   &   topologyfile\\ \hline
  restart    &   restartfile\\ \hline
  final      &   finalfile\\ \hline
@@ -4020,12 +4020,12 @@ mdsh$>$\textbf{quit}                 & \\
 \textbf{Qave}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function:  &  Calculate average energies and RMS deviations from Qdyn log files.\\\hline
- input:     &  Qdyn log files.\\\hline
+ function:  &  Calculate average energies and RMS deviations from \textbf{qdyn} log files.\\\hline
+ input:     &  \textbf{qdyn} log files.\\\hline
  output:    &  Energy summary tables like the ones in the log file with average energies and RMS deviations
                on stdout. \\\hline
  usage:     &  \verb"Qave [-skip n_skip]logfiles"\\
-            &  \verb"logfiles: Names of one or more Qdyn log files-s,-skip"\\
+            &  \verb"logfiles: Names of one or more \textbf{qdyn} log files-s,-skip"\\
             &  \verb"Ingore the first n_skip energy summaries"\\
 \hline
 \end{tabularx}
@@ -4035,7 +4035,7 @@ mdsh$>$\textbf{quit}                 & \\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
  function:  &    Calculate average coordinates and RMS deviations from trajectories.\\\hline
- input:     &    Qdyn trajectory files. The program will prompt for file names. \\\hline
+ input:     &    \textbf{qdyn} trajectory files. The program will prompt for file names. \\\hline
  output:    &    Co-ordinate file (same format as restart file) with average coordinates and RMS deviations (instead of
                  velocities in restart file).\\\hline
  usage:     &    \verb"Qavetr"\\
@@ -4047,12 +4047,12 @@ mdsh$>$\textbf{quit}                 & \\
 \textbf{lsextr}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function: &  Extract ligand-surrounding interaction energies from Qdyn log files.\\\hline
- input:    &  Qdyn log files.\\\hline
+ function: &  Extract ligand-surrounding interaction energies from \textbf{qdyn} log files.\\\hline
+ input:    &  \textbf{qdyn} log files.\\\hline
  output:   &  Q-atom-surrounding interaction energies to stdout:\\
            &  V{\_}LJ   V{\_}el.\\\hline
  usage:    &  \verb"lsextr logfiles"\\
-           &  \verb"logfiles:    Names of one or more Qdyn log files"\\
+           &  \verb"logfiles:    Names of one or more \textbf{qdyn} log files"\\
 \hline
 \end{tabularx}
 
@@ -4111,12 +4111,12 @@ mdsh$>$\textbf{quit}                 & \\
 \textbf{bone}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function: &   Compress log files, can be used as a filter to compress Qdyn output on the fly. Bone separates numbers
+ function: &   Compress log files, can be used as a filter to compress \textbf{qdyn} output on the fly. Bone separates numbers
                (flesh) from lines of text and stores the numbers in a binary file and the text templates (bones) in a
                template library file. Compression ratio is typically 1:5.\\\hline
- input:    &   Qdyn log files (or any text file with repeated similar lines).\\\hline
+ input:    &   \textbf{qdyn} log files (or any text file with repeated similar lines).\\\hline
  output:   &   Binary data file, template library file.\\\hline
- usage:    &   \verb"Qdyn test.inp | bone > test.log.bin"\\
+ usage:    &   \verb"\textbf{qdyn} test.inp | bone > test.log.bin"\\
            &   or\\
            &   \verb"bone uncompressed.log"\\\hline
  notes:    &   Use bone -h to get information on options. Never remove the library file (bonelib.dat) or you won't
@@ -4152,13 +4152,13 @@ mdsh$>$\textbf{quit}                 & \\
 \textbf{Qdum}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function: &   Test Qdyn input files quickly.\\\hline
- input:    &   Qdyn input file.\\\hline
+ function: &   Test \textbf{qdyn} input files quickly.\\\hline
+ input:    &   \textbf{qdyn} input file.\\\hline
  output:   &   Log file, restart file.\\\hline
  usage:    &   \verb"Qdum4 test.inp"\\\hline
- notes:    &   Qdum is a version of Qdyn without the dynamics loop. It reads all input, initiates the
+ notes:    &   Qdum is a version of \textbf{qdyn} without the dynamics loop. It reads all input, initiates the
                simulation, writes a restart file and terminates. Qdum is build from the same source
-               code as Qdyn.\\
+               code as \textbf{qdyn}.\\
 \hline
 \end{tabularx}
 
@@ -4176,10 +4176,10 @@ and operating system.
 
 \subsubsection{Compilers}
 A Fortran90 compiler is required to build the main programs
-(Qdyn5, Qprep5, Qfep5, Qdum5, Qcalc5).
+(\textbf{qdyn}, Qprep5, Qfep5, Qdum5, Qcalc5).
 
 A Fortran90 compiler and a MPI library is required to build the
-parallel version of Qdyn5.
+parallel version of \textbf{qdyn}.
 
 A Fortran77 compiler is required to build some helper programs
 called by proq (disttab, repel, midpoint).
