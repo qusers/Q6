@@ -616,7 +616,7 @@ implicit none
 		stop 'ABNORMAL TERMINATION OF QFEP'
 		end if
 	end select
-	curres = curres + fileheader%numres(j)-1
+	curres = curres + fileheader%numres(j)
 	write(*,22)
 
         do ifile=1,nfiles

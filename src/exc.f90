@@ -98,13 +98,18 @@ subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
         logical(1),pointer                 :: mask(:)
 	real*8			        :: totVel,totVvdw
 	
-        if(.not.((mask(atomi)).or.(mask(atomj)))) then
+        if(((mask(atomi)).or.(mask(atomj)))) then
+		select case (gctype)
+			case (FULL)
+			!Do nothing
+			case (ELECTRO)
+			totVvdW = totVvdW + VvdW
+			case (VDW)
+			totVel = totVel  + Vel
+		end select
+	else
                 totVel = totVel  + Vel
                 totVvdW = totVvdW + VvdW
-	else if ((gctype .ne. FULL).and.(gctype .ne. VDW )) then
-		totVvdW = totVvdW + VvdW
-	else if ((gctype .ne. FULL).and.(gctype .ne. ELECTRO )) then
-		totVel = totVel  + Vel
         end if
 end subroutine set_gc_energies
 

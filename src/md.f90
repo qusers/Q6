@@ -130,6 +130,7 @@ logical						::	force_rms
 !******PWadded 2001-10-23
 integer						::	ivolume_cycle
 
+integer,allocatable				:: mvd_mol(:)
 ! --- Protein boundary
 logical						::	exclude_bonded
 real(8)						::	fk_pshell
@@ -2175,6 +2176,8 @@ call MPI_Bcast(rexcl_o, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast rexcl')
 call MPI_Bcast(nmol, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nmol')
+call MPI_Bcast(nres_solute, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nres_solute')
 call MPI_Bcast(nat_pro, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nat_pro')
 
@@ -2275,7 +2278,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 
 ! --- Periodic boundary condition data ---
 
-
+if (nodeid.ne.0) then
+allocate(mvd_mol(nmol))
+end if
 
 
 ! --- shake data ---
@@ -14587,6 +14592,7 @@ end if
 !	Prepare an array of inverse masses
 winv(:) = 1./iaclib(iac(:))%mass
 
+if(use_PBC) allocate(mvd_mol(nmol))
 
 if(use_PBC .and. control_box) then
         boxlength(:) = new_boxl(:)
@@ -16335,7 +16341,7 @@ integer				::	i, j, starten, slutet
 !the borders of the periodic box
 real(8)				::	x_max, x_min, y_max, y_min, z_max, z_min
 real(8)				:: cm(1:3)
-integer				::  mvd_mol(1:nmol) !moved molecule 1=yes, 0=no
+!integer				::  mvd_mol(1:nmol) !moved molecule 1=yes, 0=no
 integer				::  k, ig
 integer				::  pbib_start, pbib_stop
 
@@ -16379,10 +16385,14 @@ mvd_mol(:) = 0
 pbib_start = 1
 pbib_stop  = nmol
 if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
-	pbib_start = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1)) + 1    !(number of mol - number of solvent molecules + 1)
+!we have nres_solute to keep track of this stuff, don't use this crap
+	pbib_start = nmol - nres_solute + 1
+!	pbib_start = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1)) + 1    !(number of mol - number of solvent molecules + 1)
 end if
 if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
-        pbib_stop  = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1))        !(number of mol - number of solvent molecules)
+!same here, we know the residue numbers -.-
+	pbib_stop = nmol - nres_solute
+!        pbib_stop  = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1))        !(number of mol - number of solvent molecules)
 end if          
 
 
@@ -16446,6 +16456,10 @@ call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast mvd_mol(k)')
 call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_start')
+call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_stop')
 #endif
 
 do k=pbib_start,pbib_stop
@@ -16453,7 +16467,10 @@ do k=pbib_start,pbib_stop
 						do ig=iwhich_cgp(istart_mol(k)),iwhich_cgp(istart_mol(k+1)-1)
 								lrf(ig)%cgp_cent(:) = 0
 								do i  = cgp(ig)%first, cgp(ig)%last
-										lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
+										lrf(ig)%cgp_cent(1) = lrf(ig)%cgp_cent(1) + x((cgpatom(i)*3)-2)
+										lrf(ig)%cgp_cent(2) = lrf(ig)%cgp_cent(2) + x((cgpatom(i)*3)-1)
+										lrf(ig)%cgp_cent(3) = lrf(ig)%cgp_cent(3) + x((cgpatom(i)*3))
+										!lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
 								end do
 
 						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1)
@@ -16576,7 +16593,8 @@ if (nodeid .eq. 0 ) then
 	new_V = deltaV + old_V
 	cubr_vol_ratio = (new_V/old_V)**(1./3.)
 	write(*,4) 'old', 'new', 'delta'
-	write(*,6) 'Volume', old_V, new_V, deltaV
+17	format('a',3f10.3)
+	write(17,6) 'Volume', old_V, new_V, deltaV
 	write(*,*)
 
 	!compute new boxlenth and inv_boxl
@@ -16719,7 +16737,7 @@ if (nodeid .eq. 0) then
 	deltaE = E%potential - old_E%potential
 	deltaW = deltaE + pressure * deltaV - nmol*Boltz*Temp0*log(new_V/old_V)
 	write(*,4) 'old', 'new', 'delta'
-	write(*,6) 'Potential', old_E%potential, E%potential, deltaE
+	write(17,6) 'Potential', old_E%potential, E%potential, deltaE
 	write(*,*)
 
 	!accept or reject
