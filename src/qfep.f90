@@ -764,7 +764,7 @@ write(*,28)
 
 	deallocate(Hij,d,e,STAT=ERR)
 
-	return
+	STOP 'Qfep exited normally'
 
 !ok, the file has the wrong number of arrays for this index, abort!
 666	write(*,*) 'Could not read file header! Wrong number of types!'

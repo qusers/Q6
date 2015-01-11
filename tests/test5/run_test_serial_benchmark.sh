@@ -16,9 +16,9 @@
 module load intel/12.1.4 impi/4.0.3.008
 
 #set -e
-QDIR=/home/x_pauba/glob/debug/noseho/bin
+QDIR=/data/work/q_source/src
 BENCHMARKS=20
-PARALLEL=14
+PARALLEL=4
 RUNNING=0
 wd=`pwd`
 qbinary=$QDIR/qdyn5
