@@ -16593,8 +16593,8 @@ if (nodeid .eq. 0 ) then
 	new_V = deltaV + old_V
 	cubr_vol_ratio = (new_V/old_V)**(1./3.)
 	write(*,4) 'old', 'new', 'delta'
-17	format('a',3f10.3)
-	write(17,6) 'Volume', old_V, new_V, deltaV
+17	format('Volume',8x,f10.3,2x,f10.3,2x,f10.3)
+	write(*,17) old_V, new_V, deltaV
 	write(*,*)
 
 	!compute new boxlenth and inv_boxl
@@ -16737,7 +16737,8 @@ if (nodeid .eq. 0) then
 	deltaE = E%potential - old_E%potential
 	deltaW = deltaE + pressure * deltaV - nmol*Boltz*Temp0*log(new_V/old_V)
 	write(*,4) 'old', 'new', 'delta'
-	write(17,6) 'Potential', old_E%potential, E%potential, deltaE
+18	format('Potential',7x,f10.3,2x,f10.3,2x,f10.3)
+	write(*,18) old_E%potential, E%potential, deltaE
 	write(*,*)
 
 	!accept or reject
