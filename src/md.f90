@@ -129,6 +129,8 @@ integer						::	itemp_cycle, iout_cycle
 logical						::	force_rms
 !******PWadded 2001-10-23
 integer						::	ivolume_cycle
+!PB added for box control			
+integer						:: nsolvent = 0,nsolute = 0
 
 integer,allocatable				:: mvd_mol(:)
 ! --- Protein boundary
@@ -268,7 +270,8 @@ real(8)						::	grms !RMS force
 !-----------------------------------------------------------------------
 !	Energies , EQ is defined in qatom.f90
 !-----------------------------------------------------------------------
-type(ENERGIES)				::	E
+type(ENERGIES)				::	E,old_E,previous_E
+!added the variables for the MC_volume function as globals
 real(8)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
 real(8)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
 
@@ -303,13 +306,13 @@ end type NBQ_TYPE
 
 integer						::	nbpp_pair !current no solute-solute pairs
 type(NB_TYPE), allocatable, target::nbpp(:)
-
+type(NB_TYPE), allocatable, target::old_nbpp(:)
 integer	::	nbww_pair,nbww_true_pair !current no solvent-solvent pairs, implicit and explicit
 integer(AI), allocatable, target::nbww(:)
-
+integer(AI), allocatable, target::old_nbww(:)
 integer						::	nbpw_pair !current no solute-solvent pairs
 type(NB_TYPE), allocatable, target::nbpw(:)
-
+type(NB_TYPE), allocatable, target::old_nbpw(:)
 integer						::	nbqq_max !max number of q-q pairs in any state
 integer(TINY), allocatable	::	qconn(:,:,:) !Q-atom connectivity list
 integer						::	nbqq_pair(max_states)
@@ -317,7 +320,7 @@ type(NBQ_TYPE), allocatable ::nbqq(:,:)
 
 integer						::	nbqp_pair !current no of qatom-solute pairs
 type(NBQP_TYPE), allocatable, target::nbqp(:)
-
+type(NBQP_TYPE), allocatable, target::old_nbqp(:)
 integer						::	nbqw_pair !current no of q-atom-water mol. pairs
 integer(AI), allocatable	::	nbqw(:)
 
@@ -325,10 +328,15 @@ integer(AI), allocatable	::	nbqw(:)
 !these three used only under periodic conditions
 integer						:: nbpp_cgp_pair !number of solute-solute chargegroups interacting
 type(CGP_PAIR_TYPE), allocatable:: nbpp_cgp(:)
+type(CGP_PAIR_TYPE), allocatable:: old_nbpp_cgp(:)
 integer						:: nbpw_cgp_pair
 type(CGP_PAIR_TYPE), allocatable :: nbpw_cgp(:)
+type(CGP_PAIR_TYPE), allocatable :: old_nbpw_cgp(:)
 integer						::	nbqp_cgp_pair
 type(CGP_PAIR_TYPE), allocatable :: nbqp_cgp(:)
+type(CGP_PAIR_TYPE), allocatable :: old_nbqp_cgp(:)
+
+!Note: all the variables for the MC_volume function are now added here
 
 !special monitoring of pairs
 integer (TINY),allocatable  :: special_LJcod(:,:,:,:)
@@ -657,6 +665,12 @@ if (allocated(ene_header%types)) deallocate(ene_header%types)
 if (allocated(ene_header%numres)) deallocate(ene_header%numres)
 if (allocated(ene_header%resid)) deallocate(ene_header%resid)
 if (allocated(ene_header%gcnum)) deallocate(ene_header%gcnum)
+!variables for MC_volume function
+if (allocated(old_nbww)) deallocate(old_nbww)
+if (allocated(old_nbpw)) deallocate(old_nbpw)
+if (allocated(old_nbpp)) deallocate(old_nbpp)
+if (allocated(old_nbqp)) deallocate(old_nbqp)
+
 
 #if defined (USE_MPI)
 !MPI arrays
@@ -1434,6 +1448,28 @@ call check_alloc('Qatom - water non-bond list')
 	call check_alloc('solute-solvent non-bond charge group pair list')
 	allocate(nbqp_cgp(calculation_assignment%qp%max / 2), stat=alloc_status)
 	call check_alloc('qatom-solute non-bond charge group pair list')
+!we now allocate the storage arrays for MC_volume update here, so we don't have to realloc every time the 
+!the function is called
+        allocate(old_nbpp_cgp(calculation_assignment%pp%max / 2), stat=alloc_status)
+        call check_alloc('solute-solute non-bond charge group pair list')
+        allocate(old_nbpw_cgp(calculation_assignment%pw%max / 2), stat=alloc_status)
+        call check_alloc('solute-solvent non-bond charge group pair list')
+        allocate(old_nbqp_cgp(calculation_assignment%qp%max / 2), stat=alloc_status)
+        call check_alloc('qatom-solute non-bond charge group pair list')
+
+allocate(old_nbpp(calculation_assignment%pp%max), stat=alloc_status)
+call check_alloc('solute-solute non-bond list')
+
+allocate(old_nbpw(calculation_assignment%pw%max), stat=alloc_status)
+call check_alloc('solute-solvent non-bond list')
+
+allocate(old_nbww(calculation_assignment%ww%max), stat=alloc_status)
+call check_alloc('solvent-solvent non-bond list')
+
+allocate(old_nbqp(calculation_assignment%qp%max), stat=alloc_status)
+call check_alloc('Qatom - solute non-bond list')
+
+
   end if	
 
 !Kanske deallokera nbxx_per_cgp TODO
@@ -2435,7 +2471,12 @@ qbvdw(nqlib,nljtyp), &
 EQ(nstates), &
 sc_lookup(nqat,natyps+nqat,nstates), &
 stat=alloc_status)
+!if we use PBC, we allocate the storage for the old energies here
+if( use_PBC ) then
+allocate(old_EQ(nstates))
+end if
 call check_alloc('Q-atom arrays')
+
 end if
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
@@ -2521,6 +2562,12 @@ do jj=1,nstates
 allocate(EQ(jj)%qx(ene_header%arrays),EQ(jj)%qq(ene_header%arrays),&
 	EQ(jj)%qp(ene_header%arrays),EQ(jj)%qw(ene_header%arrays),&
 	EQ(jj)%total(ene_header%arrays),stat=alloc_status)
+!same as above, storage for old arrays is allocated here
+if( use_PBC ) then
+allocate(old_EQ(jj)%qx(ene_header%arrays),old_EQ(jj)%qq(ene_header%arrays),&
+        old_EQ(jj)%qp(ene_header%arrays),old_EQ(jj)%qw(ene_header%arrays),&
+        old_EQ(jj)%total(ene_header%arrays),stat=alloc_status)
+end if
 call check_alloc('Group contrib EQ arrays slave nodes')
 end do
 end if
@@ -14587,6 +14634,10 @@ if(use_LRF .or. use_PBC) then
                         iwhich_cgp(cgpatom(i)) = ig
                 end do
         end do
+!set nsolvent and nsolute to values from topology
+!for box control later
+	nsolvent = nres - nres_solute
+	nsolute = nmol - nsolvent
 end if
 
 !	Prepare an array of inverse masses
@@ -14741,6 +14792,17 @@ end if
 		EQ(i)%qp(ene_header%arrays),EQ(i)%qw(ene_header%arrays),&
 		EQ(i)%total(ene_header%arrays))
 	end do
+
+!if using PBC, alredy allocate the old_EQ arrays so we don't have to do it
+!every time we update the volume
+if( use_PBC ) then
+	allocate(old_EQ(nstates))
+        do i=1,nstates
+        allocate(old_EQ(i)%qx(ene_header%arrays),old_EQ(i)%qq(ene_header%arrays),&
+                old_EQ(i)%qp(ene_header%arrays),old_EQ(i)%qw(ene_header%arrays),&
+                old_EQ(i)%total(ene_header%arrays))
+        end do
+end if
 !and we can write the header to the energy file :)
 write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
 	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
@@ -16344,7 +16406,9 @@ real(8)				:: cm(1:3)
 !integer				::  mvd_mol(1:nmol) !moved molecule 1=yes, 0=no
 integer				::  k, ig
 integer				::  pbib_start, pbib_stop
-
+!the function can be run exclusivly on node 0
+!no gain from doing it on each node
+if (nodeid.eq.0) then
 if( .not. rigid_box_centre ) then !if the box is allowed to float around, center on solute if present, otherwise center on solvent
         if( nat_solute > 0) then
                 slutet = nat_solute
@@ -16370,7 +16434,6 @@ else
         !starten = 1
 end if
 
-if (nodeid .eq. 0) then
 !calculate the borders of the periodic box
 x_max = boxc(1) + boxlength(1)/2
 x_min = boxc(1) - boxlength(1)/2
@@ -16385,13 +16448,13 @@ mvd_mol(:) = 0
 pbib_start = 1
 pbib_stop  = nmol
 if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
-!we have nres_solute to keep track of this stuff, don't use this crap
-	pbib_start = nmol - nres_solute + 1
+!we now have nsolute to keep track of this stuff, don't use this old way
+	pbib_start = nsolute + 1
 !	pbib_start = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1)) + 1    !(number of mol - number of solvent molecules + 1)
 end if
 if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
-!same here, we know the residue numbers -.-
-	pbib_stop = nmol - nres_solute
+!same here, we know the molecule numbers
+	pbib_stop = nsolute
 !        pbib_stop  = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1))        !(number of mol - number of solvent molecules)
 end if          
 
@@ -16404,7 +16467,7 @@ do i=pbib_start,pbib_stop
                 cm(3) = cm(3) + x(j*3  )*mass(j)
         end do
         cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
-		
+!mol_mass is actually 1/mol_mass
         !x-direction
         if( cm(1) .gt. x_max) then !position of centre of mass
 
@@ -16412,7 +16475,7 @@ do i=pbib_start,pbib_stop
 						x(j*3-2) = x(j*3-2) - boxlength(1)
 				        end do
 						mvd_mol(i) = 1
-		else if ( cm(1) .lt. x_min ) then
+	else if ( cm(1) .lt. x_min ) then
                         do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
 						x(j*3-2) = x(j*3-2) + boxlength(1)
 				        end do
@@ -16446,6 +16509,13 @@ do i=pbib_start,pbib_stop
   		end if
 end do !over molecules
 end if !if(nodeid .eq. 0)
+!now that node 0 has done the job, broadcast the changes to the slaves
+#if defined(USE_MPI)
+call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+#endif
 
 !LRF: if molecule moved update all cgp_centers from first charge group to the last one
 if (use_LRF) then
@@ -16454,8 +16524,7 @@ if (use_LRF) then
 #if defined(USE_MPI)
 call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast mvd_mol(k)')
-call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+!broadcast start and stop molecule so that each node can do its job
 call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_start')
 call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -16484,8 +16553,6 @@ end subroutine put_back_in_box
 subroutine MC_volume()
 
 real(8)									:: old_x(1:3*nat_pro), old_xx(1:3*nat_pro), x_move(1:3*nat_pro)
-type(ENERGIES)							:: old_E, previous_E
-type(Q_ENERGIES), dimension(1:nstates)	:: old_EQ
 real(8)									:: old_boxl(1:3), old_inv(1:3)
 real(8)									:: old_V, new_V, deltaLength
 real(8)									:: deltaV, deltaE, deltaW
@@ -16501,14 +16568,6 @@ real(8)									:: cm(1:3)
 real(8)									::	old_EMorseD(max_qat)
 real(8)									::	old_dMorse_i(3,max_qat)
 real(8)									::	old_dMorse_j(3,max_qat)
-type(NB_TYPE), allocatable						::old_nbpp(:)
-type(NB_TYPE), allocatable						::old_nbpw(:)
-integer(AI), allocatable						::old_nbww(:)
-type(NBQP_TYPE), allocatable						::old_nbqp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbpp_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbpw_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbww_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbqp_cgp(:)
 integer									:: old_nbww_pair, old_nbww_true_pair , old_nbpw_pair , old_nbpw_cgp_pair 
 integer									:: old_nbpp_pair , old_nbpp_cgp_pair , old_nbqp_pair , old_nbqp_cgp_pair
 integer									:: old_ww_max, old_pw_max, old_pp_max, old_qp_max
@@ -16547,13 +16606,23 @@ if (use_LRF) then
 	old_nbpw_cgp_pair = nbpw_cgp_pair
 	old_nbpp_cgp_pair = nbpp_cgp_pair
 	old_nbqp_cgp_pair = nbqp_cgp_pair
-	allocate(old_nbww(calculation_assignment%ww%max))
-	allocate(old_nbpw(calculation_assignment%pw%max))
-	allocate(old_nbpp(calculation_assignment%pp%max))
-	allocate(old_nbqp(calculation_assignment%qp%max))
-	allocate(old_nbpw_cgp(size(nbpw_cgp, 1)))
-	allocate(old_nbpp_cgp(size(nbpp_cgp, 1)))
-	allocate(old_nbqp_cgp(size(nbqp_cgp, 1)))
+!now only reallocate if the old size was too small
+	if(calculation_assignment%ww%max.gt.SIZE(old_nbww,1)) then
+		if (allocated(old_nbww)) deallocate(old_nbww)
+		allocate(old_nbww(calculation_assignment%ww%max))
+	endif
+        if(calculation_assignment%pw%max.gt.SIZE(old_nbpw,1)) then
+                if (allocated(old_nbpw)) deallocate(old_nbpw)
+                allocate(old_nbpw(calculation_assignment%pw%max))
+        endif
+        if(calculation_assignment%pp%max.gt.SIZE(old_nbpp,1)) then
+                if (allocated(old_nbpp)) deallocate(old_nbpp)
+                allocate(old_nbpp(calculation_assignment%pp%max))
+        endif
+        if(calculation_assignment%qp%max.gt.SIZE(old_nbqp,1)) then
+                if (allocated(old_nbqp)) deallocate(old_nbqp)
+                allocate(old_nbqp(calculation_assignment%qp%max))
+        endif
 	old_nbww = nbww
 	old_nbpw = nbpw
 	old_nbpp = nbpp
@@ -16578,10 +16647,6 @@ call new_potential(previous_E)   !compute energies from previous md-step
 
 if (nodeid .eq. 0 ) then
 	old_E = E                !Update to fresh E before changing volume
-	do jj=1,nstates
-	allocate(old_EQ(jj)%qx(ene_header%arrays),old_EQ(jj)%qq(ene_header%arrays),&
-	old_EQ(jj)%qp(ene_header%arrays),old_EQ(jj)%qw(ene_header%arrays))
-	end do
 	old_EQ(1:nstates) = EQ(1:nstates)
 	old_V = old_boxl(1) * old_boxl(2) * old_boxl(3)
 
@@ -16639,13 +16704,14 @@ if (nodeid .eq. 0 ) then
 
 
 		!compute new coordinates after molecules and centre of mass
-		do i=1,nmol-1 !looping over all molecules but the last one
+		do i=1,nmol !looping over all molecules, can also do the last because of nmol +1 ...
 			cm(:) =0.0
 			do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
 				cm(1) = cm(1) + x(j*3-2)*mass(j)
 				cm(2) = cm(2) + x(j*3-1)*mass(j)
 				cm(3) = cm(3) + x(j*3  )*mass(j)
 			end do
+!but mol_mass is actually 1/mol_mass
 			cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
 
 			move_x = ( ( cm(1)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - cm(1)
@@ -16660,25 +16726,7 @@ if (nodeid .eq. 0 ) then
 
 		end do !over molecules
 
-		! the last molecule
-		cm(:) = 0.0
-		do j = istart_mol(nmol),natom
-			cm(1) = cm(1) + x(j*3-2)*mass(j)
-			cm(2) = cm(2) + x(j*3-1)*mass(j)
-			cm(3) = cm(3) + x(j*3  )*mass(j)
-		end do
-
-		cm(:) = cm(:) * mol_mass(nmol)
-
-		move_x = ( ( cm(1)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - cm(1)
-		move_y = ( ( cm(2)-boxcentre(2) )*boxlength(2)/old_boxl(2) + boxcentre(2) ) - cm(2)
-		move_z = ( ( cm(3)-boxcentre(3) )*boxlength(3)/old_boxl(3) + boxcentre(3) ) - cm(3)
-
-		do j=istart_mol(nmol) , natom
-			x(j*3-2) = x(j*3-2) + move_x
-			x(j*3-1) = x(j*3-1) + move_y
-			x(j*3  ) = x(j*3  ) + move_z		
-		end do
+!we have nmol+1 to be able to iterate over all molecules
 
 	else ! atom_based_scaling = .true.
 	!move xx also if shake
@@ -16737,7 +16785,7 @@ if (nodeid .eq. 0) then
 	deltaE = E%potential - old_E%potential
 	deltaW = deltaE + pressure * deltaV - nmol*Boltz*Temp0*log(new_V/old_V)
 	write(*,4) 'old', 'new', 'delta'
-18	format('Potential',7x,f10.3,2x,f10.3,2x,f10.3)
+18	format('Potential',7x,f14.3,2x,f14.3,2x,f14.3)
 	write(*,18) old_E%potential, E%potential, deltaE
 	write(*,*)
 
@@ -16767,9 +16815,6 @@ else
         x(:) = old_x(:)
         E = previous_E
         EQ(1:nstates) = old_EQ(1:nstates)
-	do jj=1,nstates
-	deallocate(old_EQ(jj)%qx,old_EQ(jj)%qq,old_EQ(jj)%qp,old_EQ(jj)%qw)
-	end do
         boxlength(:) = old_boxl(:)
         inv_boxl(:) = old_inv(:)
         EMorseD = old_EMorseD
@@ -16787,24 +16832,26 @@ else
 		nbpw_cgp_pair = old_nbpw_cgp_pair
 		nbpp_cgp_pair = old_nbpp_cgp_pair
 		nbqp_cgp_pair = old_nbqp_cgp_pair
-		deallocate(nbww)
-		deallocate(nbpw)
-		deallocate(nbpp)
-		deallocate(nbqp)
-		deallocate(nbpw_cgp)
-		deallocate(nbpp_cgp)
-		deallocate(nbqp_cgp)
 		calculation_assignment%ww%max = old_ww_max
 		calculation_assignment%pw%max = old_pw_max
 		calculation_assignment%pp%max = old_pp_max
 		calculation_assignment%qp%max = old_qp_max
-		allocate(nbww(calculation_assignment%ww%max))
-		allocate(nbpw(calculation_assignment%pw%max))
-		allocate(nbpp(calculation_assignment%pp%max))
-		allocate(nbqp(calculation_assignment%qp%max))
-		allocate(nbpw_cgp(size(old_nbpw_cgp, 1)))
-		allocate(nbpp_cgp(size(old_nbpp_cgp, 1)))
-		allocate(nbqp_cgp(size(old_nbqp_cgp, 1)))
+        if(calculation_assignment%ww%max.gt.SIZE(nbww,1)) then
+                if (allocated(nbww)) deallocate(nbww)
+                allocate(nbww(calculation_assignment%ww%max))
+        endif
+        if(calculation_assignment%pw%max.gt.SIZE(nbpw,1)) then
+                if (allocated(nbpw)) deallocate(nbpw)
+                allocate(nbpw(calculation_assignment%pw%max))
+        endif
+        if(calculation_assignment%pp%max.gt.SIZE(nbpp,1)) then
+                if (allocated(nbpp)) deallocate(nbpp)
+                allocate(nbpp(calculation_assignment%pp%max))
+        endif
+        if(calculation_assignment%qp%max.gt.SIZE(nbqp,1)) then
+                if (allocated(nbqp)) deallocate(nbqp)
+                allocate(nbqp(calculation_assignment%qp%max))
+        endif
 		nbww(1:old_ww_max) = old_nbww(1:old_ww_max)
 		nbpw(1:old_pw_max) = old_nbpw(1:old_pw_max)
 		nbpp(1:old_pp_max) = old_nbpp(1:old_pp_max)
@@ -16813,13 +16860,6 @@ else
 		nbpp_cgp(:) = old_nbpp_cgp(:)
 		nbqp_cgp(:) = old_nbqp_cgp(:)
 		lrf(:) = old_lrf(:)
-		deallocate(old_nbww)
-		deallocate(old_nbpw)
-		deallocate(old_nbpp)
-		deallocate(old_nbqp)
-		deallocate(old_nbpw_cgp)
-		deallocate(old_nbpp_cgp)
-		deallocate(old_nbqp_cgp)
 	end if
 end if
 

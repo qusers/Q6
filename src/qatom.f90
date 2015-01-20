@@ -185,6 +185,7 @@ implicit none
 !	fep/evb energies
 !-----------------------------------------------------------------------
 	type(Q_ENERGIES), allocatable::	EQ(:)
+	type(Q_ENERGIES), allocatable:: old_EQ(:)
 !New arrays for excluded groups in group contribution calculation
 !	type(Q_ENERGIES), allocatable:: EQ_gc(:,:)
 	real(8)						::	Hij(max_states,max_states)
