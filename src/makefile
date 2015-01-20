@@ -155,7 +155,7 @@ clean:
 nuke:
 	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
-qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: misc.o mpiglob.o
+qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: version.o misc.o mpiglob.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
@@ -280,26 +280,26 @@ prep.o: prep.f90 maskmanip.o sizes.o parse.o prmfile.o trj.o index.o prefs.o
 prmfile.o: prmfile.f90 misc.o mpiglob.o
 	${FC} ${FFLAGS} -c $<
 
-q_prep.o: q_prep.f90 prep.o avetr.o
+q_prep.o: q_prep.f90 prep.o avetr.o version.o
 	${FC} ${FFLAGS} -c $<
 
 qatom.o: qatom.f90 misc.o nrgy.o prmfile.o sizes.o index.o topo.o
 	${FC} ${FFLAGS} -c $<
 
-qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o
+qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
-qdyn.o: qdyn.f90 md.o mpiglob.o
+qdyn.o: qdyn.f90 md.o mpiglob.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qdyn.f90
 
-qdyn_dum.o: qdyn.f90 md.o mpiglob.o
+qdyn_dum.o: qdyn.f90 md.o mpiglob.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DDUM -c qdyn.f90 -o qdyn_dum.o
 
-qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o
+qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o version.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
         -c qdyn.f90 -o qdyn_mpi.o
 
-qfep.o: qfep.f90 nrgy.o parse.o
+qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
 sizes.o: sizes.f90
@@ -310,6 +310,9 @@ topo.o:  topo.f90 misc.o mpiglob.o sizes.o
 
 trj.o:  trj.f90 mask.o misc.o
 	${FC} ${FFLAGS} -c $<
+
+version.o: version.f90
+	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c $<
 
 moveqdyn:
 	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_r8

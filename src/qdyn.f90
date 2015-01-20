@@ -6,6 +6,7 @@
 
 program Qdyn5
   use MD
+  use VERSION
   use MPIGLOB ! use MPI global data
 #if defined (_DF_VERSION_)
   use dfport  ! portability lib for signals, used by Compaq Visual Fortran compiler
@@ -14,6 +15,7 @@ program Qdyn5
   implicit none
 
   ! version data
+  character(10)					:: QDYN_NAME = 'Qdyn'
   character(10)					:: QDYN_VERSION = '5.06'
   character(12)					:: QDYN_DATE    = '2014-03-14'
 #if defined (USE_MPI)
@@ -118,34 +120,38 @@ contains
 ! startup/shutdown code
 
 subroutine startup
-  integer						::	i
-  integer                       :: datum(8)
 
   if (nodeid .eq. 0) then
-	! start-of-header
-	write (*,'(79a)') ('#',i=1,79)
-#if defined (DUM)
-	write(*,'(a,a,a)') 'QDum input checker version ', trim(QDYN_VERSION), ' initialising'
-#elif defined(EVAL)
-	write(*,'(a,a,a)') 'QDyn evaluation version ', trim(QDYN_VERSION), ' initialising'
-	write(*,'(a)') 'This version is for evaluation purposes only.'
-	write(*,'(a)') 'Optimisations are disabled - runs at <20% of maximum speed.'
-#endif
-#if defined (BUILD_USERNAME) && defined (BUILD_HOSTNAME) && defined (BUILD_DATE) && defined (BUILD_SOURCE) && defined (BUILD_NUMBER) && defined(BUILD_COMPILER)
-	write(*,'(a,a)') 'Build number ', BUILD_NUMBER
-	write(*,'(a,a)') 'Build date   ', BUILD_DATE
-	write(*,'(a)')   'Built:       '
-	write(*,'(a,a)') '      by     ', BUILD_USERNAME
-	write(*,'(a,a)') '      on     ', BUILD_HOSTNAME
-	write(*,'(a,a)') '      git id ', BUILD_SOURCE
-	write(*,'(a,a)') '      with   ', BUILD_COMPILER
-#else
-	write(*,'(a,a,a,a)') 'QDyn version ', trim(QDYN_VERSION), trim(QDYN_SUFFIX),' initialising'
-#endif
-	call date_and_time(values=datum)
-	write(*,130) datum(1),datum(2),datum(3),datum(5),datum(6),datum(7)
-130	format('Current date ',i4,'-',i2,'-',i2,' and time ',i2,':',i2,':',i2)
+    call version_check(QDYN_NAME, QDYN_VERSION, QDYN_DATE, QDYN_SUFFIX) ! print version and chack for flags
   end if
+!  integer						::	i
+!  integer                       :: datum(8)
+
+!  if (nodeid .eq. 0) then
+	! start-of-header
+!	write (*,'(79a)') ('#',i=1,79)
+!#if defined (DUM)
+!	write(*,'(a,a,a)') 'QDum input checker version ', trim(QDYN_VERSION), ' initialising'
+!#elif defined(EVAL)
+!	write(*,'(a,a,a)') 'QDyn evaluation version ', trim(QDYN_VERSION), ' initialising'
+!	write(*,'(a)') 'This version is for evaluation purposes only.'
+!	write(*,'(a)') 'Optimisations are disabled - runs at <20% of maximum speed.'
+!#endif
+!#if defined (BUILD_USERNAME) && defined (BUILD_HOSTNAME) && defined (BUILD_DATE) && defined (BUILD_SOURCE) && defined (BUILD_NUMBER) && defined(BUILD_COMPILER)
+!	write(*,'(a,a)') 'Build number ', BUILD_NUMBER
+!	write(*,'(a,a)') 'Build date   ', BUILD_DATE
+!	write(*,'(a)')   'Built:       '
+!	write(*,'(a,a)') '      by     ', BUILD_USERNAME
+!	write(*,'(a,a)') '      on     ', BUILD_HOSTNAME
+!	write(*,'(a,a)') '      git id ', BUILD_SOURCE
+!	write(*,'(a,a)') '      with   ', BUILD_COMPILER
+!#else
+!	write(*,'(a,a,a,a)') 'QDyn version ', trim(QDYN_VERSION), trim(QDYN_SUFFIX),' initialising'
+!#endif
+!	call date_and_time(values=datum)
+!	write(*,130) datum(1),datum(2),datum(3),datum(5),datum(6),datum(7)
+!130	format('Current date ',i4,'-',i2,'-',i2,' and time ',i2,':',i2,':',i2)
+!  end if
 
 
   ! initialise used modules

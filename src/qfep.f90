@@ -5,12 +5,15 @@
 !TODO: precision not fixed
 
 program qfep
+use VERSION
 use NRGY
 use PARSE
 
 implicit none
+	character(*), parameter			::	MODULE_NAME    = 'Qfep'
 	character(*), parameter			::	MODULE_VERSION = '5.06'
 	character(*), parameter			::	MODULE_DATE    = '2014-04-21'
+	character(*), parameter			::	MODULE_SUFFIX  = ''
 
 	integer,parameter ::mxpts=200000,mxbin=1000,mxstates=4
 	character(80)      ::filnam, line
@@ -49,9 +52,11 @@ implicit none
 	integer								::	f,gas=0,error,dummyno !!!!!!!!!masoud
 	real								::	dummy
 	character(100)							::	iline !!!!!!! masoud
+
 	!header
-	write(*,100) MODULE_VERSION,  MODULE_DATE
-	write(*,*)
+	call version_check(MODULE_NAME, MODULE_VERSION, MODULE_DATE, MODULE_SUFFIX) ! print version and chack for flags
+!	write(*,100) MODULE_VERSION,  MODULE_DATE
+!	write(*,*)
 100	format('# Qfep',t30,'version ',a,t50,'(modified on ',a,')')
 
 	!------------------------------------------
