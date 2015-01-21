@@ -4284,7 +4284,8 @@ if (detail_temps) then
 
 	Temp_solvent  = 2.0_prec*Temp_solvent /Boltz/real(Ndegf_solvent, kind =prec)
 	Tfree_solvent = 2.0_prec*Tfree_solvent/Boltz/real(Ndegfree_solvent, kind=prec)
-	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0_prec*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent, kind=prec)
+	if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0_prec*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent,&
+			 kind=prec)
 end if
 
 if (thermostat == BERENDSEN) then

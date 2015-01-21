@@ -25,10 +25,10 @@ program QCALC
 	implicit none
 
 	! version data
-	character(*), parameter	::	PROGRAM_NAME    = 'Qcalc'
-	character(*), parameter	::	PROGRAM_VERSION = '5.06'
-	character(*), parameter	::	PROGRAM_DATE    = '2014-01-01'
-	character(*), parameter	:: 	PROGRAM_SUFFIX  = ''
+	character(10)	::	PROGRAM_NAME    = 'Qcalc'
+	character(10)	::	PROGRAM_VERSION = '5.06'
+	character(12)	::	PROGRAM_DATE    = '2014-01-01'
+	character(10)	:: 	PROGRAM_SUFFIX  = ''
 
 	!constants
 	integer, parameter			::	MAX_CALCS = 99
@@ -103,11 +103,8 @@ program QCALC
 contains
 
 subroutine startup
-!	integer						::	i
 
 	call version_check(PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_DATE, PROGRAM_SUFFIX) ! print version and chack for flags
-!	write(*,'(79a)')('#',i=1,79)
-!	write(*,'(a,a)') 'Welcome to Qcalc version ',PROGRAM_VERSION
 	
 	call mask_startup	! mask_startup calls topo_startup, which is empty
 	write(*,*)

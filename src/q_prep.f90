@@ -10,10 +10,10 @@ PROGRAM qprep5
 	use AVETR
 	IMPLICIT none
 
-	character(*), parameter	::	PROGRAM_NAME    = 'Qprep'
-	character(*), parameter	::	PROGRAM_VERSION = '5.06'
-	character(*), parameter	::	PROGRAM_DATE    = '2014-04-21'
-	character(*), parameter	:: 	PROGRAM_SUFFIX  = ''
+	character(10)	::	PROGRAM_NAME    = 'Qprep'
+	character(10)	::	PROGRAM_VERSION = '5.06'
+	character(12)	::	PROGRAM_DATE    = '2014-04-21'
+	character(10)	:: 	PROGRAM_SUFFIX  = ''
 	logical                 ::  use_inputfile
 	character(200)          ::  fileName=''
 !.......................................................................
@@ -273,11 +273,9 @@ end subroutine help
 !-----------------------------------------------------------------------
 
 subroutine startup
-!	integer						::	i
 
 	call version_check(PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_DATE, PROGRAM_SUFFIX) ! print version and chack for flags
-!	write(*,'(79a)')('#',i=1,79)
-!	write(*,'(a,a)') 'Welcome to Qprep version ',PROGRAM_VERSION
+
 	call prep_startup
 	write(*,*)
 
