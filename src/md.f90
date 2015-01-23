@@ -54,7 +54,7 @@ integer(TINY), allocatable		::	iqatom(:)
 ! --- water topology
 ! atoms of water, total water molecules, excluded water molecules
 integer						::	nwat
-real(8)						::	crg_ow, crg_hw, mu_w
+real(4)						::	crg_ow, crg_hw, mu_w
 
 
 !-------------------------------------------------------------------
@@ -263,7 +263,7 @@ real(8), allocatable		::	d(:)
 real(8), allocatable		::	x(:)
 real(8), allocatable		::	xx(:) !for shake
 real(8), allocatable		::	v(:)
-real(8), allocatable			::	winv(:)
+real, allocatable			::	winv(:)
 real(8)						::	grms !RMS force
 
 
@@ -707,14 +707,11 @@ subroutine reallocate_nonbondlist_pp
 
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-!make it safer and add some padding
-!memory is cheap
 old_max = calculation_assignment%pp%max
-temp_max = int(calculation_assignment%pp%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpp(1:old_max)
 
@@ -742,15 +739,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpp_cgp, 1)
-!making some padding already here
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -772,15 +767,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpw_cgp, 1)
-!again, giving some padding
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpw_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpw_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpw_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpw_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -802,14 +795,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbqp_cgp, 1)
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbqp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbqp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbqp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbqp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -828,12 +820,11 @@ end subroutine reallocate_nbqp_cgp
 subroutine reallocate_nonbondlist_pw
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%pw%max
-temp_max = int(calculation_assignment%pw%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpw(1:old_max)
 
@@ -858,12 +849,11 @@ end subroutine reallocate_nonbondlist_pw
 subroutine reallocate_nonbondlist_qp
 ! variables
 type(NBQP_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%qp%max
-temp_max = int(old_max * 1.05 ) +200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbqp(1:old_max)
 
@@ -888,15 +878,13 @@ end subroutine reallocate_nonbondlist_qp
 subroutine reallocate_nonbondlist_ww
 ! variables
 integer(AI), allocatable		:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-old_max = calculation_assignment%ww%max
-temp_max = int(old_max * 1.05 ) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(calculation_assignment%ww%max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:old_max) = nbww(1:old_max)
-!old_max = calculation_assignment%ww%max
+old_nbxx(1:calculation_assignment%ww%max) = nbww(1:calculation_assignment%ww%max)
+old_max = calculation_assignment%ww%max
 
 ! deallocate and copy back
 deallocate(nbww)
@@ -1506,7 +1494,6 @@ end subroutine close_input_files
 !-----------------------------------------------------------------------
 
 subroutine close_output_files
-integer :: iii
 close (3)
 if ( itrj_cycle .gt. 0 ) close (10)
 if ( iene_cycle .gt. 0 ) close (11)
@@ -2144,9 +2131,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast NBcycle')
 
 
 ! water parameters: crg_ow, crg_hw (used by nonbond_ww)
-call MPI_Bcast(crg_ow, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_ow, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_ow')
-call MPI_Bcast(crg_hw, 1, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg_hw, 1, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg_hw')
 
 ! cutoffs: Rcpp, Rcww, Rcpw, Rcq, RcLRF (used by pair list generating functions)
@@ -2298,7 +2285,7 @@ call MPI_Bcast(v, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast v')
 
 !Setting all vars not sent to slaves to 2147483647. To avoid conflicts.
-!winv is an array of type real8 -> set to maxreal
+!winv is an array of type real4 -> set to maxreal
 if (nodeid .ne. 0) then 
 winv(:)=maxreal
 end if
@@ -2415,7 +2402,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast istart_mol')
 ! Bcast iac, crg and cgpatom 
 call MPI_Bcast(iac, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iac')
-call MPI_Bcast(crg, natom, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(crg, natom, MPI_REAL, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg')
 call MPI_Bcast(cgpatom, natom, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(AI)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast cgpatom')
@@ -2484,8 +2471,8 @@ if( use_PBC ) then
 allocate(old_EQ(nstates))
 end if
 call check_alloc('Q-atom arrays')
-
 end if
+
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
 call MPI_Bcast(sc_lookup, size(sc_lookup), MPI_REAL8, 0, MPI_COMM_WORLD,ierr)
@@ -2979,12 +2966,10 @@ if(.not. prm_get_real8_by_key('temperature', Temp0)) then
         write(*,*) '>>> ERROR: temperature not specified (section MD)'
         initialize = .false.
 end if
-
 if(.not. prm_get_real8_by_key('bath_coupling', tau_T)) then
         write(*,*) 'Temperature bath relaxation time tau_T set to default'
         tau_T = tau_T_default
 end if
-
 write (*,15) Temp0,tau_T
 tau_T=0.020462*tau_T
 if(Temp0 <= 0) then
@@ -4350,6 +4335,120 @@ end if
 end subroutine temperature
 
 !----------------------------------------------------------------------
+! Subroutines for velocity update, one for each thermostat
+subroutine newvel_ber(step,tempscale,startatom,endatom)!dt_mod,Tscale_solute,i,nat_solute)
+real(8)				:: step,tempscale
+integer				:: startatom, endatom
+
+!locals
+integer				:: i,i3
+
+do i=startatom,endatom
+	i3=i*3-3
+	v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
+	xx(i3+1) = x(i3+1)
+	x(i3+1) = x(i3+1) + v(i3+1)*step
+
+	v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step ) * tempscale
+	xx(i3+2) = x(i3+2)
+	x(i3+2) = x(i3+2) + v(i3+2)*step
+
+	v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step ) * tempscale
+	xx(i3+3) = x(i3+3)
+	x(i3+3) = x(i3+3) + v(i3+3)*step
+
+	if (integrator == VELVERLET) then
+		v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
+		v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step ) * tempscale
+		v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step ) * tempscale
+	end if
+
+end do
+
+end subroutine newvel_ber
+
+subroutine newvel_lan(step,lfriction,rands,rande)!dt_mod,dv_friction)
+real(8)				:: step,lfriction
+real(8)				:: rands(natom),rande(natom,3)
+!locals
+integer				:: i,j,i3,randnum
+
+
+if (.not.langevin_gauss_rand) then
+!using uniform random numbers, default
+	do i=1,natom
+	do j=1,3
+	randnum = randm(iseed)
+	rande(i,j) =  rands(i) * ( randnum  - 0.5 )
+	end do 
+	end do
+else
+!using gaussian random numbers, not default
+	do i=1,natom
+	do j=1,3
+	call gauss(zero,rands(i),rande(i,j),iseed)
+	end do 
+	end do
+	end if  
+
+do i=1,natom
+	i3=i*3-3
+!	dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*step
+!	dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*step
+!	dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*step
+
+	v(i3+1)  = (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
+	xx(i3+1) = x(i3+1)
+	x(i3+1)  = x(i3+1) + v(i3+1)*step
+
+	v(i3+2)  = (v(i3+2)*lfriction) -(d(i3+2)-rande(i,2))*winv(i)*step
+	xx(i3+2) = x(i3+2)
+	x(i3+2)  = x(i3+2) + v(i3+2)*step
+
+	v(i3+3)  = (v(i3+3)*lfriction) -(d(i3+3)-rande(i,3))*winv(i)*step
+	xx(i3+3) = x(i3+3)
+	x(i3+3)  = x(i3+3) + v(i3+3)*step
+
+	if (integrator == VELVERLET) then
+		v(i3+1)= (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
+		v(i3+2)= (v(i3+2)*lfriction) -(d(i3+2)-rande(i,2))*winv(i)*step
+		v(i3+3)= (v(i3+3)*lfriction) -(d(i3+3)-rande(i,3))*winv(i)*step
+	end if
+end do
+
+
+end subroutine newvel_lan
+
+subroutine newvel_nos(step)
+real(8)				:: step
+
+!locals
+integer				:: i,i3
+
+do i=1,natom
+        i3=i*3-3
+        v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )
+        xx(i3+1) = x(i3+1)
+        x(i3+1) = x(i3+1) + v(i3+1)*step
+
+        v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step )
+        xx(i3+2) = x(i3+2)
+        x(i3+2) = x(i3+2) + v(i3+2)*step
+
+        v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step )
+        xx(i3+3) = x(i3+3)
+        x(i3+3) = x(i3+3) + v(i3+3)*step
+
+        if (integrator == VELVERLET) then
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step )
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step )
+        end if
+
+end do
+
+end subroutine newvel_nos
+
 ! Subroutine for the Nosé-Hoover chain propagation
 subroutine nh_prop
 
@@ -4486,27 +4585,19 @@ end if
 !moved here to have definition before we do every step
 if (nodeid.eq.0) then
 !	allocate temp control arrays
+	if ( thermostat == LANGEVIN ) then
 	allocate(randva(natom))
 	call check_alloc('Random variable temperature control array')
 	allocate(randfa(natom,3))
 	call check_alloc('Random variable temperature control array 2')
-        allocate(dv(nat3))
-        call check_alloc('Delta v array for temperature control')
+	end if
 ! if velocity verlet is used, take half steps
 if ( integrator == VELVERLET ) then
         dv_mod = dt2
 else
         dv_mod = dt
 end if
-if ( thermostat == BERENDSEN ) then
-	dv_friction = 1
-	n_max = nat_solute
-	randfa(:,:) = 0
-else if ( thermostat == NOSEHOOVER )then
-	dv_friction = 1
-	randfa(:,:) = 0
-	n_max = natom
-else if ( thermostat == LANGEVIN ) then
+if ( thermostat == LANGEVIN ) then
 	dv_friction = (1-friction*dv_mod)
 	if (.not.langevin_gauss_rand) then
 !we use the fast random number generation from unifrom random numbers
@@ -4517,10 +4608,6 @@ else if ( thermostat == LANGEVIN ) then
     gkT = 2*friction*Boltz*Temp0/dv_mod
 	end if
 	randva(:)= sqrt (gkT/winv(:))
-	n_max = natom
-else
-	write(*,*) 'No such thermostat'
-	call die('Thermostat variable corruption')
 end if
 end if !nodeid .eq. 0
 
@@ -4636,89 +4723,17 @@ if(nodeid .eq. 0) then
 start_loop_time1 = rtime()
 #endif
 
-! if Berendsen thermostat was chosen, applied here
-!because Tscale changes all the time
+
+! new selection and subfunction for thermostats
+!if Berendsen thermostat was chosen, icall two times for diff scaling
 if( thermostat == BERENDSEN ) then
-		Tscale = Tscale_solute
-else
-		Tscale = 1
-end if
-if (thermostat == LANGEVIN ) then
-	if (.not.langevin_gauss_rand) then
-!using uniform random numbers, default
-        do i=1,natom
-                do j=1,3
-		randnum = randm(iseed)
-		randfa(i,j) =  randva(i) * ( randnum  - 0.5 )
-                end do 
-        end do
-	else
-!using gaussian random numbers, not default
-        do i=1,natom
-                do j=1,3
-	        call gauss(zero,randva(i),randfa(i,j),iseed)
-                end do 
-        end do
-	end if	
-end if
-if (thermostat == NOSEHOOVER ) then
+	call newvel_ber(dv_mod,Tscale_solute,1,nat_solute)
+	call newvel_ber(dv_mod,Tscale_solvent,nat_solute+1,natom)
+else if (thermostat == LANGEVIN ) then
+	call newvel_lan(dv_mod,dv_friction,randfa,randva)
+else if (thermostat == NOSEHOOVER ) then
 	call nh_prop
-end if
-!Now general equation for all thermostats
-!to reduce code duplication
-!Paul Bauer October 2014
-	dv_mod2 = dv_mod * Tscale
-        do i=1,n_max
-                i3=i*3-3
-		dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*dv_mod2
-		dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*dv_mod2
-		dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*dv_mod2
-
-                v(i3+1)  = (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
-                xx(i3+1) = x(i3+1)
-                x(i3+1)  = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)  = (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
-                xx(i3+2) = x(i3+2)
-                x(i3+2)  = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)  = (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
-                xx(i3+3) = x(i3+3)
-                x(i3+3)  = x(i3+3) + v(i3+3)*dt
-
-		if (integrator == VELVERLET) then
-			v(i3+1)= (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
-			v(i3+2)= (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
-			v(i3+3)= (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
-		end if
-        end do
-if( thermostat == BERENDSEN ) then
-	Tscale = Tscale_solvent
-	dv_mod2 = dv_mod * Tscale
-        do i=n_max+1,natom
-                i3=i*3-3
-		dv(i3+1) = d(i3+1)*winv(i)*dv_mod2
-		dv(i3+2) = d(i3+2)*winv(i)*dv_mod2
-		dv(i3+3) = d(i3+3)*winv(i)*dv_mod2
-
-                v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
-                xx(i3+1) = x(i3+1)
-                x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
-                xx(i3+2) = x(i3+2)
-                x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
-                xx(i3+3) = x(i3+3)
-                x(i3+3) = x(i3+3) + v(i3+3)*dt
-
-		if (integrator == VELVERLET) then
-			v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
-			v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
-			v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
-		end if
-        end do
+	call newvel_nos(dv_mod)
 end if
 ! --- end of thermostat section ---
 
@@ -14062,7 +14077,7 @@ subroutine pot_energy
 ! local variables
 
 
-integer					:: istate, i, nat3, numrequest
+integer					:: istate, i, nat3
 integer					:: is, j,jj
 #if defined (PROFILING)
 real(8)					:: start_loop_time1
@@ -14202,10 +14217,10 @@ else  !Slave nodes
 call gather_nonbond
 #endif
 end if
+
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-numrequest = 3
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll(numnodes-1,request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -14221,9 +14236,9 @@ do i=1,numnodes-1
   E%lrf     = E%lrf    + E_recv(i)%lrf
 	do istate=1,nstates
 	do jj=1,ene_header%arrays
-  EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + EQ_recv(istate,i,jj)%qp%el
+  EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el  + EQ_recv(istate,i,jj)%qp%el
   EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + EQ_recv(istate,i,jj)%qp%vdw
-  EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + EQ_recv(istate,i,jj)%qw%el
+  EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el  + EQ_recv(istate,i,jj)%qw%el
   EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + EQ_recv(istate,i,jj)%qw%vdw
 	end do
 	end do
@@ -14235,7 +14250,7 @@ do istate = 1, nstates
 ! update EQ
 do jj=1,ene_header%arrays
 EQ(istate)%qx(jj)%el  = EQ(istate)%qq(jj)%el +EQ(istate)%qp(jj)%el +EQ(istate)%qw(jj)%el
-EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw  +EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
+EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw+EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
 
 EQ(istate)%total(jj) =  EQ(istate)%q%bond + EQ(istate)%q%angle   &
   + EQ(istate)%q%torsion  + EQ(istate)%q%improper + EQ(istate)%qx(jj)%el &
@@ -15126,10 +15141,8 @@ if ( sgn .lt. 0 ) phi = -phi
 ! ---       energy
 
 arg = phi - qimplib(ic)%imp0
-!arg = phi - qimp0(ic)
 arg = arg - 2.*pi*nint(arg/(2.*pi))
-dv = qimplib(ic)%fk*arg
-!dv  = qfkimp(ic)*arg
+dv  = qimplib(ic)%fk*arg
 pe  = 0.5*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
@@ -15216,7 +15229,6 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 do ip = 1,nqtor
 
 ic = qtor(ip)%cod(istate)
-!ic = qtorcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -15233,14 +15245,10 @@ do im = 1, ntor_coupl
    end if
 end do
 
-i = qtor(ip)%i
-j = qtor(ip)%j
-k = qtor(ip)%k
-l = qtor(ip)%l
-!i  = iqtor(ip)
-!j  = jqtor(ip)
-!k  = kqtor(ip)
-!l  = lqtor(ip)
+i  = qtor(ip)%i
+j  = qtor(ip)%j
+k  = qtor(ip)%k
+l  = qtor(ip)%l
 
 i3=i*3-3
 j3=j*3-3
@@ -15280,12 +15288,9 @@ if ( sgn .lt. 0 ) phi = -phi
 ! ---       energy
 
 arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
-pe = qtorlib(ic)%fk*(1.0+cos(arg))
-!arg = qrmult(ic)*phi-qdeltor(ic)
-!pe  = qfktor(ic)*(1.0+cos(arg))
+pe  = qtorlib(ic)%fk*(1.0+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
-!dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
+dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
@@ -16544,10 +16549,7 @@ do k=pbib_start,pbib_stop
 						do ig=iwhich_cgp(istart_mol(k)),iwhich_cgp(istart_mol(k+1)-1)
 								lrf(ig)%cgp_cent(:) = 0
 								do i  = cgp(ig)%first, cgp(ig)%last
-										lrf(ig)%cgp_cent(1) = lrf(ig)%cgp_cent(1) + x((cgpatom(i)*3)-2)
-										lrf(ig)%cgp_cent(2) = lrf(ig)%cgp_cent(2) + x((cgpatom(i)*3)-1)
-										lrf(ig)%cgp_cent(3) = lrf(ig)%cgp_cent(3) + x((cgpatom(i)*3))
-										!lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
+										lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
 								end do
 
 						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1)
@@ -17106,8 +17108,6 @@ do i = 1,numnodes-1
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
   call MPI_IRecv(EQ_recv(1,i,1), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
 	request_recv(i,3),ierr)
-!  call MPI_IRecv(EQ_recv(1,i), nstates*2*2, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
-!       request_recv(i,3),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
 

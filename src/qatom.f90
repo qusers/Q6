@@ -309,6 +309,7 @@ logical function qatom_load_atoms(fep_file)
 			'>>> WARNING: No [atoms] section in fep file. Aborting file loading.'
 		call prm_close
 		use_new_fep_format = .false.
+		qatom_load_atoms = .false.
 !We stop supporting old FEP files to make the code easier to maintain
 !Executive decision, Paul Bauer 07102014
 !		qatom_load_atoms = qatom_old_load_atoms(fep_file)
@@ -712,14 +713,7 @@ logical function qatom_load_fep(fep_file)
 			write(*,31) i, qcrg(i,:)
 		end do
 		write(*,32) sum(qcrg(:,:), dim=1)
-	else
-!Charges are not changed, set arrays with topology charges
-!This can be done in the dark :)
-		do i=1,nqat
-			do j=1,nstates
-				qcrg(i,j)=crg(iqseq(i))
-			end do
-		end do
+
 	end if
 29	format('Effective Q-atom charges for all Q-atoms')
 30	format('Q atom    charge in',7(1x,a5,i2))
