@@ -2510,10 +2510,10 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qiac')
 end if
 ! real(4) ::  qcrg(nqat,nstates)
 if (nstates.ne.0) then
-call MPI_Bcast(qcrg, size(qcrg), MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, size(qcrg), MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 else
-call MPI_Bcast(qcrg, nstates, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(qcrg, nstates, MPI_REAL4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcrg')
 end if
 
