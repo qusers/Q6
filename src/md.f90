@@ -522,6 +522,14 @@ allocate(x(natom*3), &
                 iqatom(natom), &
                 stat=alloc_status)
 call check_alloc('atom data arrays')
+!set arrays to zero after allocation
+!we can not trust the compiler to do this
+	x(:)=0.0
+	xx(:)=0.0
+	v(:)=0.0
+	d(:)=0.0
+	winv(:)=0.0
+	iqatom(:)=0
 end subroutine allocate_natom_arrays
 
 !----------------------------------------------------------------------
