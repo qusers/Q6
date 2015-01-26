@@ -4368,8 +4368,8 @@ end do
 end subroutine newvel_ber
 
 subroutine newvel_lan(step,lfriction,rands,rande)!dt_mod,dv_friction)
-real(8)				:: step,lfriction
-real(8)				:: rands(natom),rande(natom,3)
+real(8)					:: step,lfriction
+real(8)					:: rands(:),rande(:,:)!natom,3)
 !locals
 integer				:: i,j,i3,randnum
 
@@ -4507,7 +4507,7 @@ real(8)				::Tscale_solute,Tscale_solvent
 !new for temperature control
 real(8)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
 integer				:: n_max = -1
-real(8),allocatable	::randva(:),randfa(:,:),dv(:)
+real(8),allocatable	::randva(:),randfa(:,:)
 !Random variable temperature control array
 real(8)				:: time0, time1, time_per_step, startloop
 integer(4)				:: time_completion
@@ -4730,7 +4730,7 @@ if( thermostat == BERENDSEN ) then
 	call newvel_ber(dv_mod,Tscale_solute,1,nat_solute)
 	call newvel_ber(dv_mod,Tscale_solvent,nat_solute+1,natom)
 else if (thermostat == LANGEVIN ) then
-	call newvel_lan(dv_mod,dv_friction,randfa,randva)
+	call newvel_lan(dv_mod,dv_friction,randva,randfa)
 else if (thermostat == NOSEHOOVER ) then
 	call nh_prop
 	call newvel_nos(dv_mod)
@@ -4841,9 +4841,8 @@ end if
 
 if (nodeid .eq. 0) then
 !Deallocate temperature control arrays
-        deallocate(randfa)
-        deallocate(randva)
-        deallocate(dv)
+        if (allocated(randfa)) deallocate(randfa)
+        if (allocated(randva)) deallocate(randva)
 
 	time1 = rtime()
 	write (*,202) time1 - startloop
