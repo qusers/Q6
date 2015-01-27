@@ -328,6 +328,7 @@ subroutine topo_deallocate (keep_ff)
 	if(allocated(list14long)) deallocate(list14long)
 	if(allocated(excl)) deallocate(excl)
 	if(allocated(shell)) deallocate(shell)
+	if(allocated(lj2)) deallocate(lj2)
 	deallocate(listexlong, stat=alloc_status)
 end subroutine topo_deallocate
 

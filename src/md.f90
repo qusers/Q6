@@ -375,7 +375,7 @@ end type SHAKE_BOND_TYPE
 
 type SHAKE_MOL_TYPE
         integer					::	nconstraints
-        type(SHAKE_BOND_TYPE), pointer :: bond(:)
+        type(SHAKE_BOND_TYPE), allocatable	:: bond(:)
 end type SHAKE_MOL_TYPE
 
 
@@ -440,9 +440,14 @@ end subroutine md_startup
 
 subroutine md_shutdown
 ! call used modules' shutdown subroutines
+if (use_excluded_groups) then
+call excluded_shutdown(ngroups_gc)
+end if
 call md_deallocate
 call topo_deallocate
 call qatom_shutdown
+call index_shutdown
+call trj_shutdown
 end subroutine md_shutdown
 
 !----------------------------------------------------------------------
@@ -607,6 +612,34 @@ end subroutine allocate_watpol_arrays
 
 !----------------------------------------------------------------------
 
+subroutine reallocate_watpol_arrays
+!local variables
+integer(AI), allocatable        ::      old_list_sh(:,:), old_nsort(:,:)
+integer				::	old_n_max_insh
+
+old_n_max_insh = n_max_insh
+allocate(old_list_sh(old_n_max_insh,nwpolr_shell),old_nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
+call check_alloc('water polarisation shell arrays reallocation')
+
+old_list_sh(1:old_n_max_insh,1:nwpolr_shell)=list_sh(1:old_n_max_insh,1:nwpolr_shell)
+old_nsort(1:old_n_max_insh,1:nwpolr_shell)=nsort(1:old_n_max_insh,1:nwpolr_shell)
+
+deallocate(list_sh,nsort)
+
+n_max_insh = n_max_insh * 1.5 ! make array a big larger, again ...
+allocate(list_sh(n_max_insh,nwpolr_shell),nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
+call check_alloc('water polarisation shell arrays new allocation')
+
+list_sh(1:old_n_max_insh,1:nwpolr_shell)=old_list_sh(1:old_n_max_insh,1:nwpolr_shell)
+nsort(1:old_n_max_insh,1:nwpolr_shell)=old_nsort(1:old_n_max_insh,1:nwpolr_shell)
+
+deallocate(old_list_sh,old_nsort)
+call check_alloc('water polarisation shell arrays')
+
+end subroutine reallocate_watpol_arrays
+
+!----------------------------------------------------------------------
+
 subroutine check_alloc(message)
 
 ! argument
@@ -637,6 +670,14 @@ deallocate (d, stat=alloc_status)
 deallocate (winv, stat=alloc_status)
 deallocate (iqatom, stat=alloc_status)
 
+! shake stuff
+if(allocated(shake_mol)) then
+	do ii=1,nmol
+		if (allocated(shake_mol(ii)%bond)) deallocate(shake_mol(ii)%bond)
+!		if (associated(shake_mol(ii)%bond))nullify(shake_mol(ii)%bond)	
+	end do
+	deallocate(shake_mol)
+end if
 ! Nosé-Hoover array
 if ( thermostat == NOSEHOOVER) then
 deallocate (xnh, stat=alloc_status)
@@ -646,6 +687,21 @@ deallocate (Gnh, stat=alloc_status)
 end if
 ! nonbond lists
 deallocate(nbpp, nbpw, nbww, nbqq, nbqp, nbqw, qconn, stat=alloc_status)
+! nonbond charge groups
+if (allocated(nbpp_per_cgp)) deallocate(nbpp_per_cgp)
+if (allocated(nbww_per_cgp)) deallocate(nbww_per_cgp)
+if (allocated(nbqp_per_cgp)) deallocate(nbqp_per_cgp)
+if (allocated(nbqw_per_cgp)) deallocate(nbqw_per_cgp)
+if (allocated(nbpw_per_cgp)) deallocate(nbpw_per_cgp)
+
+! stuff for PBC
+if (allocated(nbqp_cgp)) deallocate(nbqp_cgp)
+if (allocated(nbpp_cgp)) deallocate(nbpp_cgp)
+if (allocated(nbpw_cgp)) deallocate(nbpw_cgp)
+if (allocated(mvd_mol)) deallocate(mvd_mol)
+if (allocated(old_lrf)) deallocate(old_lrf)
+if (allocated(mol_mass)) deallocate(mol_mass)
+if (allocated(mass)) deallocate(mass)
 
 ! watpol arrays
 deallocate(wshell, stat=alloc_status)
@@ -668,6 +724,9 @@ deallocate(rstwal, stat=alloc_status)
 ! excluded groups
 deallocate(ST_gc, stat=alloc_status)
 
+! new file header for energy file
+deallocate(ene_header%types,ene_header%numres,ene_header%gcnum,ene_header%resid)
+
 ! header data for energy file
 if (allocated(ene_header%types)) deallocate(ene_header%types)
 if (allocated(ene_header%numres)) deallocate(ene_header%numres)
@@ -679,6 +738,10 @@ if (allocated(old_nbpw)) deallocate(old_nbpw)
 if (allocated(old_nbpp)) deallocate(old_nbpp)
 if (allocated(old_nbqp)) deallocate(old_nbqp)
 
+!more variables for MC_Volume ...
+if (allocated(old_nbpp_cgp)) deallocate(old_nbpp_cgp)
+if (allocated(old_nbpw_cgp)) deallocate(old_nbpw_cgp)
+if (allocated(old_nbqp_cgp)) deallocate(old_nbqp_cgp)
 
 #if defined (USE_MPI)
 !MPI arrays
@@ -2714,7 +2777,6 @@ do while(src <= nmol)
                 shake_mol(trg) = shake_mol(src)
                 !clear source
                 shake_mol(src)%nconstraints = 0
-                nullify(shake_mol(src)%bond) 
                 src = src + 1
         else
                 trg = trg + 1
@@ -3097,13 +3159,6 @@ if(force_rms) then
         write(*,22) 
 end if
 22	format ('R.M.S. force will be calculated.')
-
-!if(.not. prm_get_string_by_key('group_contribuyion', gc_type_name)) then
-!        gc_type = FULL
-!else if( gc_type_name == 'full' ) then
-!        gc_type = FULL
-!else if ( gc_type_name == 'electro
-
 
 
 ! --- Rcpp, Rcww, Rcpw, Rcq, RcLRF
@@ -15077,7 +15132,6 @@ real(8)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 do ip = 1,nqimp
 
 ic = qimp(ip)%cod(istate)
-!ic = qimpcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -15100,10 +15154,6 @@ i = qimp(ip)%i
 j = qimp(ip)%j
 k = qimp(ip)%k
 l = qimp(ip)%l
-!i  = iqimp(ip)
-!j  = jqimp(ip)
-!k  = kqimp(ip)
-!l  = lqimp(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -16104,6 +16154,9 @@ if ( rc > wshell(nwpolr_shell)%rout-wshell(nwpolr_shell)%dr ) then
         if(rc <= wshell(is)%rout) exit
   end do
   wshell(is)%n_insh = wshell(is)%n_insh + 1
+  if (wshell(is)%n_insh .ge. n_max_insh) then
+	call reallocate_watpol_arrays
+  end if
   list_sh(wshell(is)%n_insh,is) = iw
 end if
 end do
@@ -16462,12 +16515,10 @@ pbib_stop  = nmol
 if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
 !we now have nsolute to keep track of this stuff, don't use this old way
 	pbib_start = nsolute + 1
-!	pbib_start = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1)) + 1    !(number of mol - number of solvent molecules + 1)
 end if
 if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
 !same here, we know the molecule numbers
 	pbib_stop = nsolute
-!        pbib_stop  = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1))        !(number of mol - number of solvent molecules)
 end if          
 
 
@@ -17009,8 +17060,7 @@ end if
 
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-        numrequest = 3
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -17069,7 +17119,6 @@ end subroutine new_potential
 !***********************
 ! Use the global vars
 !  request_recv, E_send,EQ_send,E_recv,EQ_Recv,d_recv
-! and now also the EQ_gc variables from the group contributions
 ! Allocate  - status
 
 

@@ -221,11 +221,20 @@ subroutine qatom_shutdown
 	if (allocated(EQ(ii)%qq)) deallocate(EQ(ii)%qq,stat=alloc_status_qat)
 	if (allocated(EQ(ii)%qp)) deallocate(EQ(ii)%qp,stat=alloc_status_qat)
 	if (allocated(EQ(ii)%qw)) deallocate(EQ(ii)%qw,stat=alloc_status_qat)
+	if (allocated(EQ(ii)%total)) deallocate(EQ(ii)%total)
 	end do
-	deallocate(EQ, stat=alloc_status_qat)
-!	if (allocated(EQ_gc)) then
-!		deallocate(EQ_gc,stat=alloc_status_qat)
-!	end if
+	deallocate(EQ, stat=alloc_status_qat)	
+
+	if (allocated(old_EQ)) then
+        	do ii=1,nstates
+			if (allocated(old_EQ(ii)%qx)) deallocate(old_EQ(ii)%qx)
+			if (allocated(old_EQ(ii)%qq)) deallocate(old_EQ(ii)%qq)
+			if (allocated(old_EQ(ii)%qp)) deallocate(old_EQ(ii)%qp)
+			if (allocated(old_EQ(ii)%qw)) deallocate(old_EQ(ii)%qw)
+			if (allocated(old_EQ(ii)%total)) deallocate(old_EQ(ii)%total)
+		end do
+		deallocate(old_EQ, stat=alloc_status_qat)
+	end if
 	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status_qat)
 	deallocate(qmass, stat=alloc_status_qat)
 	deallocate(qavdw, qbvdw, stat=alloc_status_qat)
@@ -236,13 +245,15 @@ subroutine qatom_shutdown
 	deallocate(qimp, stat=alloc_status_qat)
 	deallocate(qtorlib, stat=alloc_status_qat)
 	deallocate(qimplib, stat=alloc_status_qat)
-!	deallocate(iqtor, jqtor, kqtor, lqtor, qtorcod, stat=alloc_status_qat)
-!	deallocate(qfktor, qrmult, qdeltor, stat=alloc_status_qat)
-!	deallocate(iqimp, jqimp, kqimp, lqimp, qimpcod, stat=alloc_status_qat)
-!	deallocate(qfkimp,qimp0, stat=alloc_status_qat)
 	deallocate(exspec, stat=alloc_status_qat)
 	deallocate(offd, offd2, stat=alloc_status_qat)
 	if (allocated(qq_el_scale)) deallocate(qq_el_scale)
+	if (allocated(monitor_atom_group)) deallocate(monitor_atom_group)
+	if (allocated(monitor_group_pair)) deallocate(monitor_group_pair)
+	if (allocated(qtac)) deallocate(qtac)
+	if (allocated(alpha_max)) deallocate(alpha_max)
+	if (allocated(sc_lookup)) deallocate(sc_lookup)
+
 end subroutine qatom_shutdown
 
 !-------------------------------------------------------------------------
@@ -1245,12 +1256,9 @@ logical function qatom_load_fep(fep_file)
 		do i=1,type_count
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) j, qtorlib(j)%fk, qtorlib(j)%rmult,qtorlib(j)%deltor
-!			read(line,*, err=1000) j, qfktor(j),qrmult(j),qdeltor(j)
 			type_read(j) = .true.
 			write (*,225) j,qtorlib(j)%fk, qtorlib(j)%rmult,qtorlib(j)%deltor
-!			write (*,225) j,qfktor(j),qrmult(j),qdeltor(j)
 			qtorlib(j)%deltor = deg2rad*qtorlib(j)%deltor
-!			qdeltor(j) = deg2rad*qdeltor(j)
 		end do
 		write (*,*)
 	end if
@@ -1261,11 +1269,6 @@ logical function qatom_load_fep(fep_file)
 		write (*,360) nqtor
 		write(*,361) ('state',i,i=1,nstates)
 360		format (/,'No. of changing torsions = ',i5)
-!		allocate(iqtor(nqtor), &
-!			jqtor(nqtor), &			kqtor(nqtor), &
-!			kqtor(nqtor), &
-!			lqtor(nqtor), &
-!			qtorcod(nqtor,nstates))
 
 		allocate(qtor(nqtor),stat=alloc_status_qat)
 		call check_alloc_general(alloc_status_qat,'Allocating qtorsion array')
@@ -1273,17 +1276,11 @@ logical function qatom_load_fep(fep_file)
 		do i=1,nqtor
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) qtor(i)%i,qtor(i)%j,qtor(i)%k,qtor(i)%l,qtor(i)%cod(1:nstates)
-!			read(line,*, err=1000) iqtor(i),jqtor(i),kqtor(i),lqtor(i),qtorcod(i,:)
 			qtor(i)%i = qtor(i)%i + offset
 			qtor(i)%j = qtor(i)%j + offset
 			qtor(i)%k = qtor(i)%k + offset
 			qtor(i)%l = qtor(i)%l + offset
-!			iqtor(i) = iqtor(i) + offset
-!			jqtor(i) = jqtor(i) + offset
-!			kqtor(i) = kqtor(i) + offset
-!			lqtor(i) = lqtor(i) + offset
 			write (*,362) qtor(i)%i,qtor(i)%j,qtor(i)%k,qtor(i)%l,qtor(i)%cod(1:nstates)
-!			write (*,362) iqtor(i),jqtor(i),kqtor(i),lqtor(i), qtorcod(i,:)
 			!check types
 			do j=1,nstates
                                 if(qtor(i)%cod(j) > 0) then

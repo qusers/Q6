@@ -47,6 +47,11 @@ subroutine mask_shutdown
 	call finalize_storage
 end subroutine mask_shutdown
 
+subroutine mask_deallocate(m)
+!arguments
+	type(MASK_TYPE)				::	m
+	if(associated(m%mask)) deallocate(m%mask)
+end subroutine mask_deallocate
 
 subroutine mask_initialize(m)
 !arguments

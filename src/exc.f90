@@ -113,5 +113,16 @@ subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
         end if
 end subroutine set_gc_energies
 
+subroutine	excluded_shutdown(nexc)
+!arguments
+integer			:: nexc
+!locals
+integer			:: i
+do i=1,nexc
+        call mask_deallocate(ST_gc(i)%gcmask)
+end do
+
+end subroutine excluded_shutdown
+
 end module EXC
 
