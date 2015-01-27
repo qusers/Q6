@@ -12199,15 +12199,17 @@ do jw = 1, nbqw_pair
                         ! update q-water energies
 !                        EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
 !                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a - V_b
-	                EQ(istate)%qw(1)%el  = EQ(istate)%qw(1)%el + VelT
-        	        EQ(istate)%qw(1)%vdw = EQ(istate)%qw(1)%vdw + V_a - V_b
-        		if (use_excluded_groups) then
-		                do jj = 2, ene_header%arrays
-			                call set_gc_energies(i,j,VelT,(V_a-V_b),EQ(istate)%qw(jj)%el, &
-			                EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
-			                ST_gc(ene_header%gcnum(jj))%caltype)
-		                end do
-		        end if
+			do jj=1,ene_header%arrays
+	                EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+        	        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+			end do
+!       		if (use_excluded_groups) then
+!		                do jj = 2, ene_header%arrays
+!			                call set_gc_energies(i,j,VelT,(V_a-V_b),EQ(istate)%qw(jj)%el, &
+!			                EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+!			                ST_gc(ene_header%gcnum(jj))%caltype)
+!		                end do
+!		        end if
 
                 end do !istate
 				
@@ -12344,15 +12346,17 @@ subroutine nonbond_qw_spc_box
         	                ! update q-water energies
 	!                        EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
 	!                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a - V_b
-	                        EQ(istate)%qw(1)%el  = EQ(istate)%qw(1)%el + VelT
-	                        EQ(istate)%qw(1)%vdw = EQ(istate)%qw(1)%vdw + V_a - V_b
-	                        if (use_excluded_groups) then
-	                                do jj = 2, ene_header%arrays
-	                                        call set_gc_energies(i,j,VelT,(V_a-V_b),EQ(istate)%qw(jj)%el, &
-	                                        EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
-	                                        ST_gc(ene_header%gcnum(jj))%caltype)
-	                                end do
-	                        end if
+				do jj=1,ene_header%arrays
+	                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+	                        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+				end do
+!	                        if (use_excluded_groups) then
+!	                                do jj = 2, ene_header%arrays
+!	                                        call set_gc_energies(i,j,VelT,(V_a-V_b),EQ(istate)%qw(jj)%el, &
+!	                                        EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+!	                                        ST_gc(ene_header%gcnum(jj))%caltype)
+!	                                end do
+!	                        end if
 
 			end do !istate			
 			! update forces on Q-atom
@@ -12485,15 +12489,17 @@ do jw = 1, nbqw_pair
 !                        EQ(istate)%qw%el  = EQ(istate)%qw%el + Vel1 + Vel2 + Vel3
 !                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a1 - V_b1 &
 !                                + V_a2 - V_b2 + V_a3 - V_b3
-			EQ(istate)%qw(1)%el  = EQ(istate)%qw(1)%el + VelT
-			EQ(istate)%qw(1)%vdw = EQ(istate)%qw(1)%vdw + VvdWT
-			if (use_excluded_groups) then
-			        do jj = 2, ene_header%arrays
-			                call set_gc_energies(i,j,VelT,VvdWT,EQ(istate)%qw(jj)%el, &
-			                EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
-			                ST_gc(ene_header%gcnum(jj))%caltype)
-			        end do
-			end if
+			do jj=1,ene_header%arrays
+			EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+			EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+			end do
+!			if (use_excluded_groups) then
+!			        do jj = 2, ene_header%arrays
+!			                call set_gc_energies(i,j,VelT,VvdWT,EQ(istate)%qw(jj)%el, &
+!			                EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+!			                ST_gc(ene_header%gcnum(jj))%caltype)
+!			        end do
+!			end if
 
                 end do !istate			
                 ! update forces on Q-atom
@@ -12646,15 +12652,17 @@ subroutine nonbond_qw_3atom_box
 !					+ V_a2 - V_b2 + V_a3 - V_b3
 	                        VelT = Vel1 + Vel2 + Vel3
 	                        VvdWT = V_a1 - V_b1 + V_a2 - V_b2 + V_a3 - V_b3
-	                        EQ(istate)%qw(1)%el  = EQ(istate)%qw(1)%el + VelT
-	                        EQ(istate)%qw(1)%vdw = EQ(istate)%qw(1)%vdw + VvdWT
-	                        if (use_excluded_groups) then
-	                                do jj = 2, ene_header%arrays
-	                                        call set_gc_energies(i,j,VelT,VvdWT,EQ(istate)%qw(jj)%el, &
-	                                        EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
-	                                        ST_gc(ene_header%gcnum(jj))%caltype)
-	                                end do
-	                        end if
+				do jj = 1, ene_header%arrays
+	                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+	                        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+				end do
+!	                        if (use_excluded_groups) then
+!	                                do jj = 2, ene_header%arrays
+!	                                        call set_gc_energies(i,j,VelT,VvdWT,EQ(istate)%qw(jj)%el, &
+!	                                        EQ(istate)%qw(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+!	                                        ST_gc(ene_header%gcnum(jj))%caltype)
+!	                                end do
+!	                        end if
 
 			end do !istate			
 			! update forces on Q-atom

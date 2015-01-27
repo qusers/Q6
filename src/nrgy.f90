@@ -144,11 +144,9 @@ integer function get_ene(unit, e2, OFFD, nstates, noffd,arrays)
 		last = bound(1)
 	end if		
 	do i=first, last
-!	allocate(e2(i)%total(arrays),e2(i)%qx(arrays),e2(i)%qq(arrays),e2(i)%qp(arrays),e2(i)%qw(arrays))
 		read (unit, end=10) dummy,e2(i)%lambda,e2(i)%total(1:arrays),e2(i)%q,&
                         e2(i)%qx(1:arrays),e2(i)%qq(1:arrays),e2(i)%qp(1:arrays),&
                         e2(i)%qw(1:arrays),e2(i)%restraint
-!	deallocate(e2(i)%total,e2(i)%qx,e2(i)%qq,e2(i)%qp,e2(i)%qw)
 	end do
 	
 	if(present(noffd)) then	
@@ -160,7 +158,6 @@ integer function get_ene(unit, e2, OFFD, nstates, noffd,arrays)
 		bound = ubound(OFFD)
 		last = bound(1)
 	end if
-!	read(unit, end=20) (OFFD(i)%i, OFFD(i)%j, OFFD(i)%Hij, OFFD(i)%rkl, i=first, last)
 	read(unit, end=20) OFFD(first:last)
 
 	get_ene = 0 !it's OK

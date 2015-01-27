@@ -65,6 +65,15 @@ implicit none
 	integer								::	f,gas=0,error,dummyno !!!!!!!!!masoud
 	real								::	dummy
 	character(100)							::	iline !!!!!!! masoud
+
+
+! making qfep5 memory save
+        A(:,:) = 0.0
+        mu(:,:) = 0.0
+        eta(:,:) = 0.0
+        rxy0(:,:) = 0.0
+
+
 	!header
 	write(*,100) MODULE_VERSION,  MODULE_DATE
 	write(*,*)
@@ -181,11 +190,7 @@ implicit none
 ! Energy files are opened and read
 !---------------------------------
 	binsum(:,:)=0.
-!	gapmin=999.
-!	gapmax=-999.
 	f = freefile()
-!	FEPtmp%c1(:,:) = 0.
-!	FEPtmp%c2(:,:) = 0.
 
 	write(*,*)
 	write(*,*)
@@ -248,7 +253,15 @@ implicit none
 		allocate(avEQ(jj)%qx(fileheader%arrays),avEQ(jj)%qq(fileheader%arrays),&
 		avEQ(jj)%qp(fileheader%arrays), &
 		avEQ(jj)%qw(fileheader%arrays),avEQ(jj)%total(fileheader%arrays),STAT=ERR)
-		avEQ(jj)%total(:)=0
+		avEQ(jj)%total(:)=0.0
+		avEQ(jj)%qx(:)%el= 0.0
+		avEQ(jj)%qq(:)%el= 0.0
+		avEQ(jj)%qp(:)%el= 0.0
+		avEQ(jj)%qw(:)%el= 0.0
+		avEQ(jj)%qx(:)%vdw= 0.0
+		avEQ(jj)%qq(:)%vdw= 0.0
+		avEQ(jj)%qp(:)%vdw= 0.0
+		avEQ(jj)%qw(:)%vdw= 0.0
 		if(ERR /= 0) then
 			stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 12'
 		end if
@@ -272,6 +285,8 @@ implicit none
 		gapmax(:)=-999
 		FEPtmp%c1(:,:)=0
 		FEPtmp%c2(:,:)=0
+		FEP(ifile)%lambda(1:mxstates)=0
+		EQ(:)%lambda=0
 		 !size of secular determinant is allocated
 	
 	        allocate(Hij(nstates,nstates,fileheader%arrays),d(nstates),e(nstates),STAT=ERR)
@@ -579,7 +594,7 @@ implicit none
 !		write(*,22)
 21		format('# Part 1: Free energy perturbation summary:')
 22		format('# lambda(1)      dGf sum(dGf)      dGr sum(dGr)     <dG>')
-        dG(j,:)=0.0
+        dG(j,1)=0.0
         do ifile=2,nfiles
             dG(j,ifile)=dG(j,ifile-1)+0.5*(dgf(j,ifile-1)-dgr(j,ifile))
         end do
@@ -589,8 +604,6 @@ implicit none
 !	write(*,21)
 	curres = 1
 	do j=1,fileheader%arrays
-        binsum(:,:)=0.
-	ptsum(:)=0.
 66	format(/,'Calculation for full system')
 67	format(/,'Calculation for system with full exclusion, residues',2x,10i4)
 68	format(/,'Calculation for system with electrostatic exclusion, residues',2x,10i4)
@@ -645,17 +658,25 @@ implicit none
 26		format(2x,f9.6,i5,2x,4f9.2,2x,i5,2f9.3)
 		gaprange=gapmax(j)-gapmin(j)      !Range of reaction coordinate
 		xint=gaprange/real(nbins)   !Divide R.C. into bins
+                        binsum(:,:) = 0
+                        sumg(:)=0
+                        sumv(:,:)=0
+                        ptsum(:)=0
+                        sumg2(:)=0
+                        sumv2(:,:)=0
+                        ibin = 0
+                        dGv(:)=0
 		do ifile=1,nfiles
-			avdvv=0.
-			avdvg=0.
+			avdvv(:,:)=0.
+			avdvg(:)=0.
 			sumv=0.
 			sumg=0.
-		    avc1=0.
-            avc2=0.
+		    	avc1(:)=0.
+            		avc2(:)=0.
 			avr=0.
 			dvv=0.
 			dvg=0.
-			nbinpts=0
+			nbinpts(:)=0
 
 			do ipt=nskip+1,FEP(ifile)%npts
 				ibin=int((FEP(ifile)%gap(j,ipt)-gapmin(j))/xint)+1
@@ -669,16 +690,16 @@ implicit none
 				dvg=FEP(ifile)%vg(j,ipt)-veff
 				avdvv(:,ibin)=avdvv(:,ibin)+dvv(:)
 				avdvg(ibin)=avdvg(ibin)+dvg
-	         	avc1(ibin)=avc1(ibin)+FEP(ifile)%c1(j,ipt)
-                avc2(ibin)=avc2(ibin)+FEP(ifile)%c2(j,ipt)
+	         		avc1(ibin)=avc1(ibin)+FEP(ifile)%c1(j,ipt)
+                		avc2(ibin)=avc2(ibin)+FEP(ifile)%c2(j,ipt)
 				!Only gives first r_xy distance
 				if(nnoffd > 0)	avr(ibin)=avr(ibin)+FEP(ifile)%r(j,1,ipt)
 				nbinpts(ibin)=nbinpts(ibin)+1
 			end do          !ipt
 			do ibin=1,nbins
 				if ( nbinpts(ibin) .ne. 0 ) then
-                    avc1(ibin)=avc1(ibin)/real(nbinpts(ibin))
-                    avc2(ibin)=avc2(ibin)/real(nbinpts(ibin))
+			                avc1(ibin)=avc1(ibin)/real(nbinpts(ibin))
+			                avc2(ibin)=avc2(ibin)/real(nbinpts(ibin))
 					avr(ibin)=avr(ibin)/real(nbinpts(ibin))
 					avdvv(:,ibin)=avdvv(:,ibin)/nbinpts(ibin)
 					avdvg(ibin)=avdvg(ibin)/nbinpts(ibin)
@@ -764,11 +785,14 @@ write(*,28)
 
 	deallocate(Hij,d,e,STAT=ERR)
 
-	STOP 'Qfep exited normally'
-
-!ok, the file has the wrong number of arrays for this index, abort!
-666	write(*,*) 'Could not read file header! Wrong number of types!'
-	stop 'Qfep5 failed to load file header'
+	if (allocated(fileheader%types))  deallocate(fileheader%types)
+	if (allocated(fileheader%numres)) deallocate(fileheader%numres)
+	if (allocated(fileheader%gcnum))  deallocate(fileheader%gcnum)
+	if (allocated(fileheader%resid))  deallocate(fileheader%resid)
+	do istate=1,nstates
+		deallocate(EQ(istate)%qx,EQ(istate)%qq,EQ(istate)%qp,EQ(istate)%qw,EQ(istate)%total)
+		deallocate(avEQ(istate)%qx,avEQ(istate)%qq,avEQ(istate)%qp,avEQ(istate)%qw,avEQ(istate)%total)
+	end do
 
 
 !.......................................................................
