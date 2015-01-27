@@ -584,7 +584,7 @@ if(nodeid .eq. 0) then
          request_recv(numnodes-1,3), &
          d_recv(natom*3,numnodes-1), &
          E_recv(numnodes-1), &
-         EQ_recv(nstates,numnodes-1,ene_header%arrays), &
+         EQ_recv(nstates,ene_header%arrays,numnodes-1), &
          stat=alloc_status)
  call check_alloc('MPI data arrays head node')
 else
@@ -14290,10 +14290,10 @@ do i=1,numnodes-1
   E%lrf     = E%lrf    + E_recv(i)%lrf
 	do istate=1,nstates
 	do jj=1,ene_header%arrays
-  EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el  + EQ_recv(istate,i,jj)%qp%el
-  EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + EQ_recv(istate,i,jj)%qp%vdw
-  EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el  + EQ_recv(istate,i,jj)%qw%el
-  EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + EQ_recv(istate,i,jj)%qw%vdw
+  EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el  + EQ_recv(istate,jj,i)%qp%el
+  EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + EQ_recv(istate,jj,i)%qp%vdw
+  EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el  + EQ_recv(istate,jj,i)%qw%el
+  EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + EQ_recv(istate,jj,i)%qw%vdw
 	end do
 	end do
 end do
@@ -17076,10 +17076,10 @@ end do
 	  E%lrf     = E%lrf    + E_recv(i)%lrf
 		do ii=1,nstates
 		do jj=1,ene_header%arrays
-	  EQ(ii)%qp(jj)%el  = EQ(ii)%qp(jj)%el  + EQ_recv(ii,i,jj)%qp%el
-	  EQ(ii)%qp(jj)%vdw = EQ(ii)%qp(jj)%vdw + EQ_recv(ii,i,jj)%qp%vdw
-	  EQ(ii)%qw(jj)%el  = EQ(ii)%qw(jj)%el  + EQ_recv(ii,i,jj)%qw%el
-	  EQ(ii)%qw(jj)%vdw = EQ(ii)%qw(jj)%vdw + EQ_recv(ii,i,jj)%qw%vdw
+	  EQ(ii)%qp(jj)%el  = EQ(ii)%qp(jj)%el  + EQ_recv(ii,jj,i)%qp%el
+	  EQ(ii)%qp(jj)%vdw = EQ(ii)%qp(jj)%vdw + EQ_recv(ii,jj,i)%qp%vdw
+	  EQ(ii)%qw(jj)%el  = EQ(ii)%qw(jj)%el  + EQ_recv(ii,jj,i)%qw%el
+	  EQ(ii)%qw(jj)%vdw = EQ(ii)%qw(jj)%vdw + EQ_recv(ii,jj,i)%qw%vdw
 		end do
 		end do
 	end do
@@ -17154,7 +17154,7 @@ do i = 1,numnodes-1
   call MPI_IRecv(E_recv(i), 3*2+1, MPI_REAL8, i, tag(2,i), MPI_COMM_WORLD, &
        request_recv(i,2),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
-  call MPI_IRecv(EQ_recv(1,i,1), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
+  call MPI_IRecv(EQ_recv(1,1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
 	request_recv(i,3),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
