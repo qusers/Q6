@@ -1074,12 +1074,12 @@ logical function qatom_load_fep(fep_file)
             qq_el_scale(i)%iqat=j
             qq_el_scale(i)%jqat=k
             qq_el_scale(i)%el_scale(1:nstates)=el_scale(1:nstates) !assigning scale factor to qq_el_scale variable "masoud Oct_2013"
-			write (*,156) qq_el_scale(i)%iqat,qq_el_scale(i)%jqat,qq_el_scale(i)%el_scale
+			write (*,156) qq_el_scale(i)%iqat,qq_el_scale(i)%jqat,qq_el_scale(i)%el_scale(h), h=1, nstates)
 		end do
 	end if
 154	format (/,'No. of el. scaling factors between q-q-atoms = ',i5)
 155	format('q-atom_i q-atom_j el_scale' , 7(1x,a5,i2))
-156	format (i8,1x,i8,1x,7f8.2) !print out up to 7 states "masoud Oct_2013"
+156	format (i8,1x,i8,7x,7f8.2) !print out up to 7 states "masoud Oct_2013"
 
 ! --- Read special exclusions among quantum atoms
 	section='excluded_pairs'
