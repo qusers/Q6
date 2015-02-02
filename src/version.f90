@@ -4,7 +4,7 @@
 ! by Ireneusz Szeler
 ! Q version and halp print info
 
-module VERSION
+module VERSIONS
 
   implicit none
 
@@ -155,4 +155,4 @@ subroutine version_print(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
 
 end subroutine version_print
 
-end module VERSION
+end module VERSIONS

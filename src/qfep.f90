@@ -5,7 +5,7 @@
 !TODO: precision not fixed
 
 program qfep
-use VERSION
+use VERSIONS
 use NRGY
 use PARSE
 

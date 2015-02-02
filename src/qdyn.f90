@@ -6,7 +6,7 @@
 
 program Qdyn5
   use MD
-  use VERSION
+  use VERSIONS
   use MPIGLOB ! use MPI global data
 #if defined (_DF_VERSION_)
   use dfport  ! portability lib for signals, used by Compaq Visual Fortran compiler

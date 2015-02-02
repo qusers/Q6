@@ -5,7 +5,7 @@
 !TODO: precision not fixed
 
 program QCALC
-	use VERSION
+	use VERSIONS
 	use TRJ
 	use CALC_BASE
 	use CALC_RMS

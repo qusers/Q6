@@ -5,7 +5,7 @@
 !TODO: precision not fixed
 
 PROGRAM qprep5
-	use VERSION
+	use VERSIONS
 	use PREP
 	use AVETR
 	IMPLICIT none
