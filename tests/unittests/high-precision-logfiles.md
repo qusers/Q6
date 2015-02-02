@@ -1,3 +1,4 @@
+#create high precisoin logfiles, enabled with a compilation flag.
 to shorten tests, and to see temperature drifts early, the precison of output, in 
 temperature, engries etc. should be increased to single, doulbe or quad precision, depending on the precision 
 the code was  compiled (new feature that is curretly implemented by irek).
