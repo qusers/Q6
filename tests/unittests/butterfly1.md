@@ -1,4 +1,4 @@
-Generate two topologies, and change a very small thing in one of the two 
+#Generate two topologies, and change a very small thing in one of the two 
 (for example rotate a random water by 45 degrees). run the two simulations and compare.
 
 predicted outcome: energy should be the same after equlibration, but temperature, energy etc
