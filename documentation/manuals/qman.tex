@@ -1,54 +1,52 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main Latex Settings for Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[a4paper,11pt]{article}
 \usepackage[latin1]{inputenc}
 \usepackage[dvips,pdftex]{graphicx}
-\usepackage [small]{caption2} %Set text in Figure captions
-\usepackage{parskip}          %ger noindent och snygga styckeavstånd
+\usepackage[small]{caption}  %Set text in Figure captions
+\usepackage{parskip}         %does noindent in general and nice margin distance
 \usepackage{fancyhdr}
-\usepackage{subfigure}        %fixar att stapla bilder
+\usepackage{subfigure}       %fix where figures go
 \usepackage{amsmath}
 \usepackage{courier}
-\usepackage{longtable}        %fix long tables over various pages.
+\usepackage{longtable}       %fix long tables over various pages.
 \usepackage{supertabular}
-\usepackage{tabularx}         %fix long tables
-\usepackage{multirow}         %fix nested tables
+\usepackage{tabularx}        %fix long tables
+\usepackage{multirow}        %fix nested tables
 \usepackage{bigstrut}
 \newcommand{\dirfig}{./pictures}
 \usepackage{hyperref}
-%\usepackage[linkbordercolor=1 1 1]{hyperref}
-%\usepackage{epsfig}
-\pagestyle{fancy} %\setlength{\headheight}{13.6pt}
-%\newcommand{\topcaption}{\setlength{\abovecaptionskip}{0pt}\setlength{\belowcaptionskip}{10pt}\caption}
-%\pagestyle{plain}
-
-%\includeonly{pdf2ps_omslag.ps}
-
-%Ta bort detta alt ändra det så att det blir som ett korrekt uppslag ska vara.
+\pagestyle{fancy}
+%Overrides all other setting to show what we want.
 \textwidth = 430pt \textheight = 640pt \voffset = -50pt
 \hoffset=-20pt
-%\linespread{1.6}
-
 \setcounter{page}{0}
 \renewcommand{\thesection}{\Alph{section}}
 
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The document begins here with the title page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
-\setcaptionmargin{0.5cm} %Fixar bildtext
+\setcaptionmargin{0.5cm} %Fix caption margins
 %\setlength{\oddsidemargin}{0.75in} % odd page left margin
 %\setlength{\evensidemargin}{0.75in} % even page left margin
-
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
 \resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/qlogo.png}}
 \end{center}
 \end{figure}
-
 \begin{center}
 %\Huge{M}\huge{ANUAL}\\
 %\huge{FOR}\\
 \huge{\textbf{our}} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
 \huge{PACKAGE}\\% \Huge{Q}\\
-
 \vspace{0.7cm}
 \large{Version 5.7\\
 February 6, 2015}\\
@@ -56,12 +54,29 @@ February 6, 2015}\\
 \large{\url{http://xray.bmc.uu.se/~aqwww/q}}
 \end{center}
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Table of contents
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \newpage
 
 \tableofcontents
 
 \newpage
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Preface
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{PREFACE}
 Q started its development sometime in the nineteen nineties originally
 by  Johan \AA  qvist,  and since  then a  list  of collaborators  have
@@ -81,6 +96,14 @@ on  how to  obtain the  code  can be  found online  at the  Q-website:
 
 %History of logo and the many possible identities of what Q stands for.
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION} 
 Molecular  dynamics  (MD)  simulations  can  be  used  to  sample  the
 thermally   accessible  regions   of  conformational   space  using a
@@ -141,15 +164,68 @@ especially useful when simulating large systems, $e.g.$ the
 systems that are used with the periodic boundary condition.
 \end{itemize}
 
-%Old stuff:
-%The program is thus not intended for simulations of, let's say,
-%the dynamics of an entire protein in a large periodic box of
-%solvent. A main reason for this restriction of the scope is to
-%keep things as simple and efficient as possible and, since the
-%focus is on free energy calculations, to allow simulations that
-%take into account long-range electrostatics properly without the
-%use of cut-offs.
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Installation and Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INSTALLATION AND SETUP}
+\subsection{System requirements} 
+Q 5.7 can  be compiled and run  in Windows 7, Mac OSX  and Linux.  The
+parallel version of  the main dynamics program  \textbf{qdyn} has been
+greatly improved  from that of  version 5.0  which was using  an older
+Message Passing  Interface (MPI) standard and  one-sided communication
+instead of the more portable point to point communication.
+
+The memory requirements vary with the size of the simulated system but
+are, in general, modest.  A system of  18 Å radius with a cutoff of 10
+Å  in non-bonded  interactions uses  about  3 to  7 Mb  of RAM  memory
+depending slightly on the computer and operating system.
+
+\subsubsection{Compilers} 
+A  modern Fortran  compiler is  required  to build  the main  programs
+(\textbf{qdyn},   \textbf{qprep},   \textbf{qfep},   \textbf{qdum}   ,
+\textbf{qcalc}).
+
+A  Fortran compiler  and  an  MPI library  is  required  to build  the
+parallel version of \textbf{qdyn}.
+
+\subsection{Installation}
+The following components, available from the Q web site
+\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
+\begin{enumerate}
+\item Executable images (available for some popular platforms).
+\item Or source code (to compile on your own system).
+\item Force field parameter and library files.
+\end{enumerate}
+Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
+and download the files to this directory.
+
+\subsubsection{Installing executable images}
+\textbf{Windows 7}
+
+\textbf{Linux}
+
+\textbf{Mac OSX}
+
+\subsubsection{Building the programs from source code}
+\textbf{Windows 7}
+
+\textbf{Linux} 
+
+\textbf{Mac OSX}
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main user guide.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{USER GUIDE}
 The  structure  of  Q  resembles  that of  many  other  MD  simulation
 programs.  The main  program is  \textbf{qdyn} which  carries out  the
@@ -201,7 +277,7 @@ library entries.
 \item Coordinates for all (non-solvent) atoms in the form of a PDB file.
 \end{itemize}
 
-\subsubsection{Preparing coordinates} The PDB file format
+\subsubsection{\textbf{qprep} - Preparing coordinates} The PDB file format
 \cite{pdb} used for co-ordinate input to \textbf{qprep} is a fixed format,
 $i.e.$, the number of spaces between columns of data is significant
 and tab characters are not permitted. Case is significant -
@@ -1598,27 +1674,26 @@ atoms. By choosing $\mu $ and $\eta $ differently, H$_{ij}$ can
 either be a constant, an exponential function or a gaussian
 function.
 
-The EVB method allows calibration of simulated reference reactions
-to experimental data obtained from gas-phase or solution
-experiments. The two EVB parameters H$_{ij}$ (mostly A$_{ij})$ and
-$\Delta \alpha _{ij}$ are varied until the calculated profile and
-the experimental data coincide. $\Delta \alpha _{ij}$ is a
-constant energy shift between the states that represents their
-difference in heat of formation, which is not included in the
-force field. Generalised, the $\Delta \alpha _{ij}$ parameter
-determines the $\Delta $G$^{\circ}$ level and H$_{ij}$ regulates
-the degree of mixing of the states at the transition state $i.e.$
-the $\Delta$G$^{\ddag }$ level.
+The EVB method allows calibration  of simulated reference reactions to
+experimental data obtained from gas-phase or solution experiments. The
+two  EVB  parameters H$_{ij}$  (mostly  A$_{ij})$  and $\Delta  \alpha
+_{ij}$ are  varied until the  calculated profile and  the experimental
+data  coincide.  $\Delta \alpha  _{ij}$  is  a constant  energy  shift
+between  the  states  that  represents their  difference  in  heat  of
+formation, which is not included  in the force field. Generalized, the
+$\Delta \alpha  _{ij}$ parameter  determines the  $\Delta $G$^{\circ}$
+level and H$_{ij}$ regulates the degree of mixing of the states at the
+transition state $i.e.$ the $\Delta$G$^{\ddag }$ level.
 
-The energies describing the FEP functions and the reaction free
-energy profile are summarised in the last table generated by \textbf{qfep}.
-Note that each bin has contributions from several different values
-of $\lambda$. Likewise, each value of $\lambda$ contributes to the
+The energies describing the FEP functions and the reaction free energy
+profile are summarized  in the last table  generated by \textbf{qfep}.
+Note that each bin has  contributions from several different values of
+$\lambda$.  Likewise,  each  value  of $\lambda$  contributes  to  the
 sampling of several different bins.
 
-It is possible to handle more than two valence bond states in \textbf{qdyn}
-and \textbf{qfep}, however sampling and calibration may be a difficult task
-for more than two states.
+It  is  possible to  handle  more  than  two  valence bond  states  in
+\textbf{qdyn} and \textbf{qfep}, however  sampling and calibration may
+be a difficult task for more than two states.
 
 \begin{figure}[h]
 \caption{Example \textbf{qfep} output file}
@@ -1627,68 +1702,11 @@ for more than two states.
 \label{fig:Qfep-out}
 \end{figure}
 
-\subsubsection{Reaction free energy averaging using avefep}
-
-In the reaction free energy calculations described above, several
-mapping potentials (different $\lambda$'s) will sample each
-interval X$_{m}$. The resulting values for the potential of mean
-force have to be averaged to obtain the final values of $\Delta $G
-associated with each interval X$_{m}$. Avefep calculates the
-average values (weighted by sample size) of $\Delta$G
-corresponding to each interval from \textbf{qfep} output data.
-
-Input is an output-file created by \textbf{qfep}.
-
-Output is a table with the average $\Delta$G corresponding to the
-reaction co-ordinate X.
-
-\begin{table}[h]
-\begin{center}
-\begin{tabular}{|p{28pt}|l|}
-\hline \textbf{col.}   &   \textbf{description} \\
-\hline 1               &   Bin number \\
-\hline 2               &   Energy gap, X \\
-\hline 3               &   Average $\Delta$G \\
-\hline 4               &   Average $\Delta$G, lowest point at 0. \\
-\hline 5               &   Number of points in bin \\
-\hline
-\end{tabular}
-\label{tab:avefep}
-\end{center}
-\end{table}
-
-
-Usage: perl avefep.pl $<$ qfep.out $>$ avefep.out
-
-\subsubsection{Simple energy averaging using Qave}
-Qave calculates average energies and RMS deviations from
-.log-files. The program uses one line of input:
-
-perl Qave.pl \textit{[-s nskip]} files
-
-The value \textit{nskip} is the number of steps to be discarded at
-the beginning of the log-file. Default is zero. A number of
-log-files can be listed after one another and the average energies
-calculated from all files will be returned.
-
-\subsubsection{Trajectory averaging using Qavetr}
-Average structures from trajectory files are generated by the
-program Qavetr. Execute the program by typing:
-
-Qavetr
-
-The program will ask for the trajectory file to be processed. More
-than one trajectory file may be used in the averaging. Enter the
-files one at a time and end with a blank line. Enter the name of
-the output file that will contain the coordinates of the average
-structure. The output file is binary but can be converted to a
-pdb-file by using the program \textbf{qprep}. Root mean
-square coordinate deviation is given in {\AA}.
 
 \subsection{Scoring}\label{subsection:scoring} 
-Three     scoring    functions     are    implemented     in    QCalc:
+Three   scoring   functions   are   implemented   in   \textbf{qcalc}:
 X-Score\cite{Wang:2002},       ChemScore\cite{Eldridge:1997}       and
-PMF-Score\cite{Muegge:1999}.  X-Score  and  ChemScore  are  empiricial
+PMF-Score\cite{Muegge:1999}.   X-Score  and ChemScore  are  empiricial
 whilst PMF-Score is knowledge based.
 
 All  scoring functions  require  the  topology to  be  loaded and  the
@@ -1696,7 +1714,8 @@ correct mask be specified. The initial topology (with coordinates from
 the .top-file) can be scored to verify atom typing.
 
 Both trajectory and restart files can be scored. The following options
-are avaliable in QCalc when specifying trajectory or restart files:
+are available in \textbf{qcalc}  when specifying trajectory or restart
+files:
 \begin{itemize}
   \item{adding \emph{,frames=every n} means  calculations will only be
 performed on every $n$:th frame.}
@@ -1742,15 +1761,34 @@ confusion, examples of typical inputs will be given.
     \label{xinput}
   \end{minipage}
 
-    \subparagraph{Cofactors}
-    X-Score uses different typing schemes to assign atoms types to protein and ligands atoms. If needed, atoms in parts of the protein can be typed using the ligand atom-typing procedure by defining a cofactor. This is useful if the protein has some special residue, like HEM in P450, that is not defined in the X-Score residue library (file RESIDUE\_DEF\_XTOOL.dat). Ligand atoms are typed on the individual atom level, in contrast to the residue level for protein atoms, using data in file ATOM\_DEF\_XTOOL.dat.
-    Cofactor definitions are made on separate lines and has the form: restype=RES, where RES is the residue name, e.g. HEM. All atoms, regardless of their proximity to each other, in residues named RES will be included in the cofactor RES and typed as if they were ligand atoms (though in every other respect they are considered as part of the protein). Any number of cofactors can be defined.
+\subparagraph{Cofactors}
+X-Score uses  different typing  schemes to  assign atoms  types to
+protein and  ligands atoms. If needed,  atoms in parts of  the protein
+can  be typed  using the  ligand atom-typing  procedure by  defining a
+cofactor. This is useful if the protein has some special residue, like
+HEM in P450, that is not  defined in the X-Score residue library (file
+RESIDUE\_DEF\_XTOOL.dat).  Ligand atoms  are typed  on the  individual
+atom level, in contrast to the  residue level for protein atoms, using
+data in  file ATOM\_DEF\_XTOOL.dat.  Cofactor definitions  are made on
+separate lines and has the form: restype=RES, where RES is the residue
+name,  e.g. HEM.  All atoms,  regardless  of their  proximity to  each
+other, in residues named RES will  be included in the cofactor RES and
+typed as if they were ligand atoms (though in every other respect they
+are considered as part of the protein). Any number of cofactors can be
+defined.
 
-    \subparagraph{Force field}
-    A force field translation key has to be given to allow for the translation of atom types according to the Q convention to types according to the Sybyl convention. The translation tables are in the file ATOM\_TYPE\_CONVERSIONS.dat (shared with PMF-Score). A different translation file can be specified in the input file (see below).
+\subparagraph{Force field}
+A  force field  translation  key has  to  be given  to  allow for  the
+translation  of atom  types according  to  the Q  convention to  types
+according to the  Sybyl convention. The translation tables  are in the
+file ATOM\_TYPE\_CONVERSIONS.dat (shared  with PMF-Score). A different
+translation file can be specified in the input file (see below).
 
-    \subparagraph{Parameters}
-    Scoring parameters, output specifications and data files are specified in an input file. Default parameters can be used by specifying \emph{default} when asked for scoring parameters. In that case the following parameters and filenames are used:
+\subparagraph{Parameters}
+Scoring parameters, output specifications and data files are specified
+in  an  input file.  Default  parameters  can  be used  by  specifying
+\emph{default} when  asked for  scoring parameters.  In that  case the
+following parameters and filenames are used:
 
     \begin{tabular}{lll}
     SHOW\_ABS      & 'NO'  &          ! Show binding score for each atom? \\
@@ -1772,7 +1810,7 @@ confusion, examples of typical inputs will be given.
     ATOM\_TRANSLATIONS   &   atom\_type\_conversions.dat  \\
     \end{tabular}
 
-    Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang:2002}.
+Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang:2002}.
 
   \paragraph{Output}
   When SHOW\_LIGAND and/or SHOW\_PROTEIN is specified, a list of ligand and/or protein atoms is displayed, showing the atom type, residue, atomic properties, neighbouring atoms and bonds for each atom. In  addition, a list of bonds and aromatic rings detected are output.
@@ -2040,7 +2078,7 @@ The coordinates  of the water  sphere must  be specified in  the first
 input file. In this example, a co-ordinate file with randomly oriented
 water molecules on a grid, was used.
 
-\subsubsection{Using \textbf{qdyn}}
+\subsubsection{\textbf{qdyn}}
 To  start  the  simulation,   write:  \textbf{qdyn}  filename.inp  $>$
 filename.log, to use  a specific input file and write  the output to a
 log file. When  many input files are  used it is much  easier to write
@@ -2133,11 +2171,12 @@ and topology modules.
 The figure does not show the dependence of some modules on others.
 
 \subsection{Force field reference information}
-Q is not associated with any  particular force field. The force fields
-are  defined in  parameter files,  separate from  the program  and the
-choice of force field is thus  simply a matter of which parameter file
-to use. Any force field could be  used with the program, as long as it
-shares the common functional form of eq.  \ref{eq:V_pot}.
+Q is  not associated with  any particular  force field, that  is, it's
+force-field agnostic. The force fields are defined in parameter files,
+separate from the program and the choice of force field is thus simply
+a matter of which parameter file to use. Any force field could be used
+with the program,  as long as it shares the  common functional form of
+eq.  \ref{eq:V_pot}.
 
 \begin{multline}
 \label{eq:V_pot}
@@ -4184,106 +4223,6 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
                code as \textbf{qdyn}.\\
 \hline
 \end{tabularx}
-
-\section{SYSTEM GUIDE}
-\subsection{System requirements}
-The Q programs will run under many operating systems including MS
-Windows NT/XP, Digital UNIX, LINUX, SGI IRIX, Sun Solaris, Cray
-UNICOS. A parallel version using the Message Passing Interface
-(MPI) standard is included in Q 5.0.
-
-The memory requirements vary with the size of the simulated system
-but are, in general, modest. A system of 18 Å radius with 10 Å
-non-bonded cut-off takes about 3 to 7 Mb depending on the computer
-and operating system.
-
-\subsubsection{Compilers}
-A Fortran90 compiler is required to build the main programs
-(\textbf{qdyn}, \textbf{qprep}, \textbf{qfep}, \textbf{qdum} , \textbf{qcalc}).
-
-A Fortran90 compiler and a MPI library is required to build the
-parallel version of \textbf{qdyn}.
-
-%A Fortran77 compiler is required to build some helper programs
-%called by proq (disttab, repel, midpoint).
-
-A C compiler is required to build some of the analysis programs
-(tstart, ineff).
-
-%A PERL interpreter is required to run most of the utility programs
-%(bone, enob, lsextr, mdsh, mkfep, proq, Qave).
-
-\subsection{Installation}
-The following components, available from the Q web site
-\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
-\begin{enumerate}
-\item   Either executable images (available for some popular
-        platforms) or source code (to compile on your own system).
-\item   Force field files.
-\item   Solvent files.
-\end{enumerate}
-Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
-and download the files to this directory.
-
-\subsubsection{Installing executable images}
-\textbf{MS Windows systems}
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the programs,
-        such as C:$\backslash$Q$\backslash$bin.
-\item   Uncompress the Pkzip archive file containing the windows
-        executables to this directory using $e.g.$ unzip or WinZip.
-\item   Add this directory to your search path by modifying the PATH
-        environment variable in the system properties control panel.
-\end{enumerate}
-
-\textbf{UNIX system}
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the executables, such as Q/bin.
-\item   Extract the executables from the gzip compressed tar archive file into this directory, $e.g.$\\
-        \verb"gunzip -c Q_DigitalUNIX4_Alpha21164.tar.gz | (cd bin; tar -xvf -)"
-\item   Add the bin directory to your search path by modifying the PATH environment variable
-(typically in $\sim$/.cshrc)
-\end{enumerate}
-
-\subsubsection{Building the programs from source code}
-\textbf{MS Windows systems} Project files and workspace file for
-Digital Visual Fortran v.6 are provided in the Windows source code
-distribution. After extracting the files from the zip archive,
-open the workspace file and build the programs using the
-configurations (Alpha or x86) that match your system.
-
-\textbf{UNIX systems} The makefile included in the UNIX source
-code distribution contains settings (compiler flags) for some
-popular platforms including Compaq Tru64 UNIX, Linux and SGI Irix.
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the executables, such as Q/bin.
-\item   Create a subdirectory in the Q directory for the
-        source files, such as Q/src.
-\item   Extract the source files from the gzip compressed tar
-        archive file into this directory, $e.g.$\\
-        \verb"gunzip -c Q4_src.tar.gz |(cd src; tar -xvf -)".
-\item   Type make in the source directory. This will list the platforms supported in the makefile.
-\item
-\begin{enumerate}
-\item   If your platform is on the list, enter the appropriate make command, $e.g.$\\
-        \verb"make alpha-osf1-ev6".
-\item   Please note that the compiler optimisation settings
-        in the makefile are in no way guaranteed to produce the fastest
-        code. Feel free to try different settings and if you can improve
-        the result, please notify us.
-\end{enumerate}
-\item
-\begin{enumerate}
-\item   If your platform in not on the list, you need to find the appropriate compiler flags yourself and
-        edit the makefile accordingly. Consult your F90 manual. Use the generic settings as s starting point:\\
-        \verb"make generic".
-\item   When you have updated the make file for your system, please e-mail it to us, and we will merge your
-        changes into the distributed makefile.
-\end{enumerate}
-\item   Move the executables to the bin directory.
-\item   Add the bin directory to your search path by modifying the PATH environment variable (typically in
-$\sim$/.cshrc).
-\end{enumerate}
 
 \newpage
 
