@@ -6,6 +6,7 @@
 module	MPIGLOB
 
 use NRGY
+!$ use omp_lib
 
     ! types and variables used for calculation assignment
     type PAIR_ASSIGNMENT_TYPE
@@ -56,6 +57,13 @@ use NRGY
  integer,allocatable  :: nbqp_per_cgp(:)
  integer,allocatable  :: nbqw_per_cgp(:)
 
+#ifdef _OPENMP
+ !for omp use
+ integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter
+ real(kind=prec)  :: mp_real_tmp
+
+ !$omp threadprivate(thread_id, mp_real_tmp, mp_start, mp_end, mp_counter)
+#endif
 
 end module MPIGLOB
 

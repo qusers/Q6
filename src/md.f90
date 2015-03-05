@@ -17,6 +17,7 @@ use EXC
 use DFPORT
 use DFLIB
 #endif
+!$ use omp_lib
 implicit none
 #if defined (USE_MPI)
 include "mpif.h"
@@ -914,6 +915,10 @@ real(kind=prec)						::	bjiinv, bjkinv, bji2inv, bjk2inv
 real(kind=prec)						::	scp,angv,da,dv,f1
 real(kind=prec)						::  rji(3),rjk(3),di(3),dk(3) 
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 ! global variables used:
 ! ang, x, anglib, d
 
@@ -923,7 +928,24 @@ real(kind=prec)						::  rji(3),rjk(3),di(3),dk(3)
 ! reset Eangle
 angle = zero			!zero = 0.0_prec
 
+!$omp parallel default(none) shared(threads_num, istart, iend, ang, x, anglib, d, angle) private(remainder, quotient,i,j,k,ia,ic,i3,j3,k3,bjiinv,bjkinv,bji2inv,bjk2inv,scp,angv,da,dv,f1,rji,rjk,di,dk)
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (iend - istart + 1)/threads_num
+remainder = MOD(iend - istart + 1, threads_num)
+mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+mp_real_tmp = zero
+
+do ia=mp_start,mp_end
+#else
 do ia=istart,iend
+#endif
         ! for each angle in range:
 
         i  = ang(ia)%i
@@ -959,7 +981,11 @@ angv = acos(scp)
 
         ! calculate da and dv
 da = angv - anglib(ic)%ang0
-angle = angle + 0.5_prec*anglib(ic)%fk*da**2
+#ifdef _OPENMP
+    mp_real_tmp = mp_real_tmp + 0.5_prec*anglib(ic)%fk*da**2
+#else 
+    angle = angle + 0.5_prec*anglib(ic)%fk*da**2
+#endif
 dv = anglib(ic)%fk*da
 
         ! calculate f1
@@ -990,6 +1016,12 @@ d(j3+1) = d(j3+1) - dv*( di(1) + dk(1) )
 d(j3+2) = d(j3+2) - dv*( di(2) + dk(2) )
 d(j3+3) = d(j3+3) - dv*( di(3) + dk(3) )
 end do
+
+#ifdef _OPENMP
+!$omp atomic update
+angle = angle + mp_real_tmp
+#endif
+!$omp end parallel
 
 end function angle
 
@@ -1054,13 +1086,34 @@ integer						::	i,j,ib,ic,i3,j3
 real(kind=prec)						::	b,db,dv
 real(kind=prec)						::	rij(3)
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 ! global variables used:
 ! bnd, x, bondlib, d
 
 ! reset Ebond
 bond = zero
 
+!$omp parallel default(none) shared(threads_num, istart, iend, bnd, x, bondlib, d, bond) private(remainder, quotient,i,j,ib,ic,i3,j3,b,db,dv,rij)
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (iend - istart + 1)/threads_num
+remainder = MOD(iend - istart + 1, threads_num)
+mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+mp_real_tmp = zero
+
+do ib=mp_start,mp_end
+#else
 do ib=istart,iend
+#endif
         ! for each bond in range:
 
         i  = bnd(ib)%i
@@ -1076,7 +1129,11 @@ do ib=istart,iend
         ! calculate b and db, update Ebond
         b = sqrt ( rij(1)**2 + rij(2)**2 + rij(3)**2 )
         db = b - bondlib(ic)%bnd0
+#ifdef _OPENMP
+    mp_real_tmp = mp_real_tmp + 0.5_prec*bondlib(ic)%fk*db**2
+#else  
         bond = bond + 0.5_prec*bondlib(ic)%fk*db**2
+#endif
 
         ! calculate dv and update d
         dv = bondlib(ic)%fk*db/b
@@ -1087,6 +1144,12 @@ do ib=istart,iend
         d(i3+2) = d(i3+2) - rij(2)*dv
         d(i3+3) = d(i3+3) - rij(3)*dv
 end do
+
+#ifdef _OPENMP
+!$omp atomic update
+bond = bond + mp_real_tmp
+#endif
+!$omp end parallel
 
 end function bond
 !-----------------------------------------------------------------------
@@ -1839,12 +1902,33 @@ real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 ! global variables used:
 !  imp, implib, x, pi, d
 
 improper = zero
 
+!$omp parallel default(none) shared(threads_num, istart, iend, imp, implib, x, pi, d, improper) private(quotient, remainder,ip,scp,phi,dv,arg,f1,bjinv,bkinv,bj2inv,bk2inv,rji,rjk,rkl,rnj,rnk,rki,rlj,dp,di,dl,t,lib)
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (iend - istart + 1)/threads_num
+remainder = MOD(iend - istart + 1, threads_num)
+mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+mp_real_tmp = zero
+
+do ip = mp_end, mp_start,-1
+#else
 do ip = iend, istart,-1
+#endif
         t => imp(ip)
         lib => implib(t%cod)
 rji(1) = x(t%i*3-2) - x(t%j*3-2)
@@ -1889,7 +1973,11 @@ if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
 arg = phi - lib%imp0
 arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 dv  = lib%fk*arg
-improper = improper + 0.5_prec*dv*arg
+#ifdef _OPENMP
+    mp_real_tmp = mp_real_tmp + 0.5_prec*dv*arg
+#else 
+    improper = improper + 0.5_prec*dv*arg
+#endif
 
 ! ---       forces
 
@@ -1936,6 +2024,13 @@ d(t%l*3-2) = d(t%l*3-2) + dv*dp(10)
 d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
+
+#ifdef _OPENMP
+!$omp atomic update
+improper = improper + mp_real_tmp
+#endif
+!$omp end parallel
+
 end function improper
 
 !-----------------------------------------------------------------------
@@ -1953,12 +2048,33 @@ real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 ! global variables used:
 ! imp, implib, x, pi, d
 
 improper2 = zero
 
+!$omp parallel default(none) shared(threads_num, istart, iend, imp, implib, x, pi, d, improper2) private(remainder, quotient,ip,scp,phi,dv,arg,f1,bjinv,bkinv,bj2inv,bk2inv,rji,rjk,rkl,rnj,rnk,rki,rlj,dp,di,dl,t,lib)
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (iend - istart + 1)/threads_num
+remainder = MOD(iend - istart + 1, threads_num)
+mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+mp_real_tmp = zero
+
+do ip = mp_end, mp_start,-1
+#else
 do ip = iend, istart,-1
+#endif
         t => imp(ip)
         lib => implib(t%cod)
 rji(1) = x(t%i*3-2) - x(t%j*3-2)
@@ -2000,7 +2116,11 @@ if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
 ! ---       energy
 
 arg = 2*phi - lib%imp0
-improper2 = improper2 + lib%fk * (1 + cos(arg))
+#ifdef _OPENMP
+    mp_real_tmp = mp_real_tmp + lib%fk * (1 + cos(arg))
+#else
+    improper2 = improper2 + lib%fk * (1 + cos(arg))
+#endif
 dv  = -2*lib%fk * sin(arg)
 
 ! ---       forces
@@ -2050,6 +2170,13 @@ d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
+
+#ifdef _OPENMP
+!$omp atomic update
+improper2 = improper2 + mp_real_tmp
+#endif
+!$omp end parallel
+
 end function improper2
 
 !-----------------------------------------------------------------------
@@ -15521,10 +15648,14 @@ integer						::	istart, iend
 integer						::	ip
 real(kind=prec)						::	scp,phi,dv,arg,f1
 real(kind=prec)						::	bjinv, bkinv, bj2inv, bk2inv
-real(kind=prec), save					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(kind=prec), save					::	rki(3),rlj(3),dp(12),di(3),dl(3)
+real(kind=prec)					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
+real(kind=prec)					::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::  t
 type(TORLIB_TYPE), pointer	::	lib
+
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 
 ! global variables used:
 !  tor, torlib, x, d
@@ -15534,7 +15665,24 @@ type(TORLIB_TYPE), pointer	::	lib
 
 torsion = zero
 
+!$omp parallel default(none) shared(threads_num, istart, iend, istep, tor, torlib, x, d, torsion) private(quotient, remainder,ip,scp,phi,dv,arg,f1,bjinv,bkinv,bj2inv,bk2inv,rji,rjk,rkl,rnj,rnk,rki,rlj,dp,di,dl,t,lib)
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (iend - istart + 1)/threads_num
+remainder = MOD(iend - istart + 1, threads_num)
+mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+mp_real_tmp = zero
+
+do ip = mp_end, mp_start,-1
+#else
 do ip = iend, istart,-1
+#endif
         t => tor(ip)
         lib => torlib(t%cod)
 rji(1) = x(t%i*3-2) - x(t%j*3-2)
@@ -15579,7 +15727,11 @@ if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
 ! ---       energy
 
 arg = lib%rmult*phi-lib%deltor
-torsion = torsion + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
+#ifdef _OPENMP
+    mp_real_tmp = mp_real_tmp + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
+#else    
+    torsion = torsion + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
+#endif
 dv = -lib%rmult*lib%fk*sin(arg)*lib%paths
 
 ! ---       forces
@@ -15627,6 +15779,12 @@ d(t%l*3-2) = d(t%l*3-2) + dv*dp(10)
 d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
+
+#ifdef _OPENMP
+!$omp atomic update
+torsion = torsion + mp_real_tmp
+#endif
+!$omp end parallel
 
 end function torsion
 

@@ -20,22 +20,24 @@ BUILD_NUMBER_FILE=build-number.txt
 # Intel Fortran ifort ( tested in linux and osx)
 ################################################################################
 ifeq ($(COMP),ifort)
-	FC=		ifort
-	FC_OPT=         -O3 -ip -ipo -unroll -i-static -xHost
-	FFLAGS=         -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler statici
+	FC=			ifort 
+	FC_OPT=     -O3 -ip -ipo -unroll -i-static -xHost
+	FFLAGS=     -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler statici
 	FFLAGS_R8=	-r8
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
 
-	MPIFC=		mpif90
+	MPIFC=		mpif90 
 	MPIFLAGS=	-f90=${FC} -Nmpi
 	OMPI_FC=	${FC}
 	MPI_FC=		${FC}
 	MPI_FCFLAGS=	${FFLAGS}
 	MPI=		${MPI_FCFLAGS}
+	MPFLAG=		-openmp ${MPI}
 
 	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUGMP=        -openmp -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 
 
 ################################################################################
@@ -72,6 +74,7 @@ else ifeq ($(COMP),pgi)
 	MPIFLAGS=	-lmpi#-f90=${FC}
 	MPI=		${MPIFLAGS} ${FFLAGS}
 	MPI_FC=		${FC}
+	MPFLAG=		-mp ${MPI}
 
 ################################################################################
 # IBM Compiler -- untested
@@ -94,12 +97,14 @@ else ifeq ($(COMP),gcc)
 	OMPI_FCFLAGS=	-fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
 	MPI=		${OMPI_FCFLAGS}
+	MPFLAG=		-fopenmp ${MPI}
 
 	FFLAGS=		--static ${OMPI_FCFLAGS}
 	FFLAGS_R8=	-fdefault-real-8
 
 	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	DEBUGMP=        -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 
 	PROF=		-pg ${DEBUG}
 
@@ -110,6 +115,7 @@ else
 
 	MPI=		-fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	MPFLAG=		-fopenmp ${MPI}
 	FFLAGS=		--static ${MPI}
 	FFLAGS_R8=	-fdefault-real-8
 endif
@@ -149,19 +155,27 @@ mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
 	qdyn5p move1 move3
 
+hybrid:
+	@make FFLAGS="${MPFLAG}" \
+	qdyn5h move1 move4
+
+hybriddebug:
+	@make FFLAGS="${DEBUGMP}" \
+	qdyn5h move1 move4
+
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il *.oo
 
 nuke:
-	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
+	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5h qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
-qcalc5 qdyn5 qdum5 qdyn5p qprep5 qfep5: version.o misc.o mpiglob.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5: version.o misc.o mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qfep5: nrgy.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p: qatom.o exc.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o
 
 qcalc5 qprep5 qfep5: parse.o
 
@@ -187,6 +201,9 @@ qdum5 : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5p : md_mpi.o qdyn_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
+
+qdyn5h : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
@@ -263,7 +280,7 @@ misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
 
 mpiglob.o: mpiglob.f90 sizes.o nrgy.o
-	${FC} ${FFLAGS} -c $<
+	${FC} ${FFLAGS} ${FPP_FLG} -c $<
 
 nrgy.o: nrgy.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
@@ -327,6 +344,9 @@ move2:
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/
 
+move4:
+	mkdir -p ../bin ; mv qdyn5h ../bin/
+
 
 
 include buildnumber.mak
@@ -346,6 +366,8 @@ what:
 	@echo "debug            Tools with debug information (stacktraces)."
 	@echo "mpi              qdyn5p using a currently loaded MPI library"
 	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
+	@echo "hybrid           qdyn5h using a currently loaded MPI library and OpenMP library"
+	@echo "hybriddebug      qdyn5h with debug information (stacktraces)."
 	@echo
 	@echo "For compiler/os pick one of:"
 	@echo "ifort            Intel Fortran compiler"

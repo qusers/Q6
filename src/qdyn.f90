@@ -11,6 +11,7 @@ program Qdyn5
 #if defined (_DF_VERSION_)
   use dfport  ! portability lib for signals, used by Compaq Visual Fortran compiler
 #endif
+!$ use omp_lib
 
   implicit none
 
@@ -63,6 +64,12 @@ program Qdyn5
   call startup
 
   if (nodeid .eq. 0) then
+#ifdef _OPENMP
+!$omp parallel
+  threads_num = omp_get_num_threads()
+!$omp end parallel
+#endif
+
 	! master node: read input and initialise
 
 	if(.not. initialize()) call die('Invalid data in input file')						! read input data
