@@ -34,7 +34,7 @@ MODULE PREP
 
 	!Topology
 	integer, parameter			::	max_lib = 1000
-	integer, parameter			::	max_long = 10000
+	integer, parameter			::	max_long = 100000
 
 	integer, parameter			:: max_conn = 10
 

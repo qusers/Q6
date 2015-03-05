@@ -725,8 +725,9 @@ deallocate(rstwal, stat=alloc_status)
 deallocate(ST_gc, stat=alloc_status)
 
 ! new file header for energy file
+if (allocated(ene_header%types)) then
 deallocate(ene_header%types,ene_header%numres,ene_header%gcnum,ene_header%resid)
-
+end if
 ! header data for energy file
 if (allocated(ene_header%types)) deallocate(ene_header%types)
 if (allocated(ene_header%numres)) deallocate(ene_header%numres)
