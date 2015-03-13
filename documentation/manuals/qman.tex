@@ -3044,7 +3044,8 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
 \hline shake\_solvent & Enable (on) or disable (off) shake constraining of bonds and angles of water. & Optional, default on. We recommend the use of shake for water.\\
-\hline shake\_solute & Shake constraining of solute bonds on or off. & Optional, default off.\\
+\hline shake\_solute &  Shake constraining of bonds  to hydrogen atoms
+in solute bonds on or off. & Optional, default off.\\
 \hline shake\_hydrogens & Shake constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default off. \\
 \hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
 \hline
@@ -3478,7 +3479,8 @@ and the simulation is initialised.
 \hline \begin{tabular}{p{101.5pt} p{101.5pt}} Number of MD steps = 1 & Stepsize (fs) = 0.200 \end{tabular}&\\
 \hline \begin{tabular}{p{101.5pt}p{101.5pt}}Target temperature  =  1.00 & T-relax time  =  1.00 \end{tabular} & Temperature bath temperature and time constant for coupling.\\
 \hline Initial velocities will be generated from Maxwell distribution:\newline Maxwell temperature= 1.00  Random number seed= 4320 & Initial velocities are random values from Maxwell's velocity dirstibution at 1 K.\\
-\hline Shake constraints on all solvent bonds: on \newline{}Shake constaints on all solute bonds: off \newline Shake constaints on all bonds to hydrogen: off & \\
+\hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake
+constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
 \hline Nonbonded method   = LRF Taylor expansion outside cut-off & Local reaction field approximation applied beyond cut-off.\\
 \hline Cut-off radii for non-bonded interactions:\newline \begin{tabular}{ll}Solute-solute:&10.00\\Solvent-solvent:&10.00\\Solute-solvent:&10.00\\Q-atom-non-Q-atom:&99.00\\LRF:&99.00 \end{tabular} & \\
 \hline \begin{tabular}{lll}Shell restraint force constant    &     =  & 50.00 \end{tabular} & Heavy solute atoms in the shell region defined in the topology will be restrained to their initial positions by harmonic potentials with force constant 50 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
