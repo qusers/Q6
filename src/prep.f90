@@ -4108,6 +4108,7 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 	! *** local variables
 	real*8					:: dist,xdist,ydist,zdist
 	integer					:: dhead,dtail
+	integer,allocatable			:: start_temp(:)
 	type(RETTYPE)				:: local
 
 20      format('molecule ',i4,': ',a4,i5)
@@ -4139,6 +4140,14 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 		(lib(res(thisres)%irc)%head == 0) .or. &
 		dist .gt. 5 ) then 
 		nmol = nmol + 1
+		if (nmol .gt. size(istart_mol)) then
+			allocate(start_temp(nmol))
+			start_temp(1:nmol-1)=istart_mol(1:nmol-1)
+			deallocate(istart_mol)
+			allocate(istart_mol(nmol))
+			istart_mol(1:nmol-1)=start_temp(1:nmol-1)
+			deallocate(start_temp)
+		end if
 		istart_mol(nmol) = res(thisres)%start 
 		if(firstres /= old) then
 			write(*,21) res(prevres)%name, old
