@@ -1,0 +1,5 @@
+this change must not have any impact: 
+generate a topology, and switch two chemically identical atoms, eg switch a water H1 with H2.
+eg. switch ASP OD1 and OD2, eg swithc GLU OE1 OE2 etc.
+
+predicted outcome: 100% exactly the same logfile.

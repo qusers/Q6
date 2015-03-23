@@ -13,11 +13,11 @@ module CALC_RMSF
 	integer, parameter			::	MAX_MASKS = 10
 !module variables
 	integer, private			:: frames(MAX_MASKS), apa
-	real(8), allocatable		:: rmsf(:)
+	real(kind=prec), allocatable		:: rmsf(:)
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type RMSF_COORD_TYPE
-		real, pointer		::	x(:), x0(:), x2(:)
+		real(kind=prec), pointer		::	x(:), x0(:), x2(:)
 	end type RMSF_COORD_TYPE
 	type(RMSF_COORD_TYPE), private	::	coords(MAX_MASKS)
 contains
@@ -68,7 +68,7 @@ subroutine RMSF_calc(i)
 	integer, intent(in)			::	i
 
 	!locals
-	real(8)						::	r
+	real(kind=prec)						::	r
 
 	if(i < 1 .or. i > Nmasks) return
 

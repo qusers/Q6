@@ -236,11 +236,11 @@ end function get_int_arg
 
 !--------------------------------------------------------------------------
 
-real function get_real_arg(prompt)
+real(kind=prec) function get_real_arg(prompt)
 !arguments
 	character(*), optional, intent(in)	::	prompt
 !locals
-	real						::	value
+	real(kind=prec)						::	value
 
 1	do while(argp > argc)
 		if(present(prompt))	write(unit=*, fmt='(a)', advance='no') prompt

@@ -11,6 +11,12 @@ shake_hydrogens           off
 lrf                       on
 
 [PBC]
+constant_pressure	on
+max_volume_displ	5
+pressure_seed		1337
+pressure		1.01
+put_solvent_back_in_box	on
+put_solute_back_in_box	off
 
 [cut-offs]
 q_atom			24

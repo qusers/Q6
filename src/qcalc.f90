@@ -139,6 +139,7 @@ character*80				:: lambda
 	else
 		get_fepfile=prm_open(fep_file)
 		use_fep=.true.
+		write(*,*) 'Loaded FEP file ',fep_file
 		call get_fep
 	write(*,*)'Give a value for the reaction coordinate (lambda values)'
 	call getlin(lambda,'')

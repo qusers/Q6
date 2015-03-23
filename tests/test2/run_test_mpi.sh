@@ -16,7 +16,7 @@
 module load intel/12.1.4 impi/4.0.3.008
 
 #set -e
-QDIR=/home/x_pauba/glob/debug/noseho/bin
+QDIR=/data/simulations/Q_metal/q_github_paul/bin
 
 qbinary=$QDIR/qdyn5p
 wd=`pwd`
@@ -62,7 +62,7 @@ do
  cd ${tdir}
  echo "Entering temporary directory"
  echo "Now in ${tdir}"
- mpprun --nranks=$CORES $qbinary eq${step}.inp > eq${step}.log
+ mpirun -n $CORES $qbinary eq${step}.inp > eq${step}.log
  check=$( grep "terminated normally" eq${step}.log | wc -l)
  if [ ! $check -eq 0 ]
  then echo -e "$OK\nCopying back the files"
@@ -88,7 +88,7 @@ do
  cd ${tdir}
  echo "Entering temporary directory"
  echo "Now in ${tdir}"
- mpprun --nranks=$CORES $qbinary dc${step}.inp > dc${step}.log
+ mpirun -n $CORES $qbinary dc${step}.inp > dc${step}.log
  check=$( grep "terminated normally" dc${step}.log | wc -l)
  if [ ! $check -eq 0 ]
  then echo -e "$OK\nCopying back the files"
@@ -119,6 +119,7 @@ done
 # nodes.
 #CORES=`grep processor /proc/cpuinfo | wc -l`
 CORES=$SLURM_NPROCS
+CORES=2
 echo "Running simulation on $CORES cores."
 
 rm -rf $wd/run-mpitest

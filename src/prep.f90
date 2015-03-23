@@ -35,17 +35,17 @@ MODULE PREP
 
 	!Topology
 	integer, parameter			::	max_lib = 1000
-	integer, parameter			::	max_long = 10000
+	integer, parameter			::	max_long = 100000
 
 	integer, parameter			:: max_conn = 10
 
 !default values for user-settable variables !TODO: is it should be here?
 	!minimum solvent - solute heavy atom distance for solvation
-	real, target				::	solvent_pack = 2.4
+	real(kind=prec), target				::	solvent_pack = 2.4_prec
 	!average heavy atom number density of proteins
-	real, target				::  rho_solute = 0.05794  ! atoms / A**3
+	real(kind=prec), target				::  rho_solute = 0.05794_prec  ! atoms / A**3
 	!maximum cross-linking bond distance
-	real, target				::	max_xlink = 2.1
+	real(kind=prec), target				::	max_xlink = 2.1_prec
 	character(len=200), target	::	solvent_names = ''
 	!Random numbers for H generation
 	integer, target				::	random_seed_solute = 179857
@@ -67,7 +67,7 @@ MODULE PREP
 	type LIB_RULE_TYPE
 		integer					::	kind
 		integer					::	atom(4)
-		real					::	value
+		real(kind=prec)					::	value
 	end type LIB_RULE_TYPE
 
 	integer, parameter		::	BUILD_RULE_TORSION = 1
@@ -76,12 +76,12 @@ MODULE PREP
 		integer					::	nat, nbnd, nimp, ncgp, nrules
 		integer					::	head, tail
 		logical					::	HETATM, solvent
-		real					::	density
+		real(kind=prec)					::	density
 		character(len=4)		::	nam
 		character(len=8)		::	SYBYLTYPE
 		character(len=4), pointer	::	atnam(:)
 		character(len=KEYLENGTH), pointer :: tac_lib(:)
-		real, pointer			::	crg_lib(:)
+		real(kind=prec), pointer			::	crg_lib(:)
 		type(LIB_RULE_TYPE), pointer::rules(:)
 		type(LIB_BOND_TYPE), pointer::bnd(:)
 		type(LIB_IMP_TYPE), pointer::imp(:)
@@ -168,9 +168,9 @@ MODULE PREP
 
 	integer, allocatable		::	iconn(:,:)
 
-	real(8)						::	pi, deg2rad
+	real(kind=prec)						::	pi, deg2rad
 	!temporary storage for solvent coordinates
-	real(8), allocatable		::	xw(:,:,:) !solvent coordinates zyx,atom,molecule
+	real(kind=prec), allocatable		::	xw(:,:,:) !solvent coordinates zyx,atom,molecule
 	!flag for solvent molecules not clashing with any solute heavy atom
 	logical, allocatable		::	keep(:)
 	!residue code for solvent
@@ -187,6 +187,12 @@ MODULE PREP
 	integer, private			::	alloc_status
 	!private subroutine
 	private						::	check_alloc
+
+! --- New stuff to make connection lists right between molecules
+	type RETTYPE
+		logical				:: new
+		integer				:: first
+	end type RETTYPE
 
 contains
 
@@ -208,8 +214,8 @@ subroutine prep_startup
 	l = pref_add('solute_density', rval=rho_solute)
 	l = pref_add('random_seed_solute', ival=random_seed_solute)
 	l = pref_add('random_seed_solvent', ival=random_seed_solvent)
-	pi = 4.0 * atan(1.0)
-	deg2rad = pi/180.0
+	pi = 4.0_prec * atan(1.0_prec)
+	deg2rad = pi/180.0_prec
 
 	!make sure all arrays are allocated so that solvation can be done
 	!without reading solute pdb file
@@ -269,7 +275,7 @@ end subroutine check_alloc
 subroutine addbond
 ! *** local variables
 	integer						::	ia, ja
-	real(8)						::	bond_dist, rij(3)
+	real(kind=prec)						::	bond_dist, rij(3)
 	character(len=80)			::	reply
 	integer						::	readstat
 
@@ -349,15 +355,15 @@ end subroutine clearbond
 subroutine angle_ene(emax, nlarge, av_ene)
 ! *** local variables
 	integer i, j, k, ia, ic, istart, iend, i3, j3, k3, nlarge
-	real rji(3), rjk(3), bji, bjk, scp, angle, da, ae, dv, f1, di(3),&
+	real(kind=prec) rji(3), rjk(3), bji, bjk, scp, angle, da, ae, dv, f1, di(3),&
 	dk(3)
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 
 	istart = 1
 	iend = nangles
 	nlarge = 0
-	av_ene = 0
+	av_ene = zero
 
 	do ia = istart, iend
 
@@ -382,22 +388,22 @@ subroutine angle_ene(emax, nlarge, av_ene)
 	bjk = sqrt(rjk(1) **2 + rjk(2) **2 + rjk(3) **2)
 	scp =(rji(1) * rjk(1) + rji(2) * rjk(2) + rji(3) * rjk(3) )
 	scp = scp /(bji * bjk)
-	if(scp>1.0) scp = 1.0
-	if(scp< - 1.0) scp = - 1.0
+	if(scp>one) scp = one
+	if(scp< -one) scp = -one
 	angle = acos(scp)
-	da = angle - anglib(ic)%ang0 * pi / 180.
-	ae = 0.5 * anglib(ic)%fk * da**2
+	da = angle - anglib(ic)%ang0 * pi / 180.0_prec
+	ae = 0.5_prec * anglib(ic)%fk * da**2.0_prec
 	av_ene = av_ene+ae
 
 	if(ae>emax) then
 		nlarge = nlarge+1
 		write( * , '(5i5,4f8.2)') ia, i, j, k, ic, anglib(ic)%fk ,&
-			anglib(ic)%ang0, angle * 180. / pi, ae
+			anglib(ic)%ang0, angle * 180.0_prec / pi, ae
 	endif
 
 	enddo
 
-	if(nangles/=0) av_ene = av_ene / real(nangles)
+	if(nangles/=0) av_ene = av_ene / real(nangles,kind=prec)
 
 !.......................................................................
 end subroutine angle_ene
@@ -438,14 +444,14 @@ end function anglecode
 subroutine bond_ene(emax, nlarge, av_ene)
 ! *** local variables
 	integer i, j, ib, ic, istart, iend, i3, j3, nlarge
-	real rij(3), b, db, be, dv, emax, av_ene
+	real(kind=prec) rij(3), b, db, be, dv, emax, av_ene
 
 !.......................................................................
 
 	istart = 1
 	iend = nbonds
 	nlarge = 0
-	av_ene = 0
+	av_ene = zero
 
 	do ib = istart, iend
 
@@ -464,7 +470,7 @@ subroutine bond_ene(emax, nlarge, av_ene)
 	rij(3) = xtop(j3 + 3) - xtop(i3 + 3)
 	b = sqrt(rij(1) **2 + rij(2) **2 + rij(3) **2)
 	db = b - bondlib(ic)%bnd0
-	be = 0.5 * bondlib(ic)%fk * db**2
+	be = 0.5_prec * bondlib(ic)%fk * db**2.0_prec
 	av_ene = av_ene+be
 
 	if(be>emax) then
@@ -475,7 +481,7 @@ subroutine bond_ene(emax, nlarge, av_ene)
 
 	enddo
 
-	if(nbonds/=0) av_ene = av_ene / real(nbonds)
+	if(nbonds/=0) av_ene = av_ene / real(nbonds,kind=prec)
 
 	return
 !.......................................................................
@@ -532,7 +538,7 @@ end function bondcode
 subroutine changeimp
 ! *** local variables
 	integer ii, ip, i, j, k, l, noptimp, nchange, nlarge
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -580,7 +586,7 @@ end subroutine changeimp
 subroutine checkangs
 ! *** local variables
 	integer nlarge
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -603,7 +609,7 @@ end subroutine checkangs
 subroutine checkbonds
 ! *** local variables
 	integer nlarge
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -626,7 +632,7 @@ end subroutine checkbonds
 subroutine checkimps
 ! *** local variables
 	integer nlarge
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -652,7 +658,7 @@ end subroutine checkimps
 subroutine checktors
 ! *** local variables
 	integer nlarge
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -675,7 +681,7 @@ end subroutine checktors
 !-----------------------------------------------------------------------
 
 function cross_product(a,b)
-	real(8)						::	a(3), b(3), cross_product(3)
+	real(kind=prec)						::	a(3), b(3), cross_product(3)
 
 	cross_product(1) = a(2) * b(3) - a(3) * b(2)
 	cross_product(2) = a(3) * b(1) - a(1) * b(3)
@@ -690,7 +696,7 @@ subroutine xlink
 !locals
 	integer						::	ires, jres, iat, jat, i, j, b
 	integer						::	irc, jrc
-	real						::	d2
+	real(kind=prec)						::	d2
 	character(len=1)			::	reply
 
 	if(.not. check_residues()) then
@@ -1104,15 +1110,15 @@ end function impcode
 subroutine impr_ene(emax, nlarge, av_ene, mode)
 ! *** local variables
 	integer i, j, k, l, ip, ic, i3, j3, k3, l3, nlarge, mode
-	real rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
+	real(kind=prec) rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
 	phi, sgn, pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
 	dl(3)
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
 	nlarge = 0
-	av_ene = 0
+	av_ene = zero
 
 	do ip = 1, nimps
 
@@ -1144,27 +1150,27 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 		rnk(1) = - rjk(2) * rkl(3) + rjk(3) * rkl(2)
 		rnk(2) = - rjk(3) * rkl(1) + rjk(1) * rkl(3)
 		rnk(3) = - rjk(1) * rkl(2) + rjk(2) * rkl(1)
-		bj = sqrt(rnj(1) **2 + rnj(2) **2 + rnj(3) **2)
-		bk = sqrt(rnk(1) **2 + rnk(2) **2 + rnk(3) **2)
+		bj = sqrt(rnj(1) **2.0_prec + rnj(2) **2.0_prec + rnj(3) **2.0_prec)
+		bk = sqrt(rnk(1) **2.0_prec + rnk(2) **2.0_prec + rnk(3) **2.0_prec)
 		scp =(rnj(1) * rnk(1) + rnj(2) * rnk(2) + rnj(3) * rnk(3) )/(bj * bk)
-		if(scp>1.0) scp = 1.0
-		if(scp< - 1.0) scp = - 1.0
+		if(scp>one) scp = one
+		if(scp< -one) scp = -one
 		phi = acos(scp)
 		sgn = rjk(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) + rjk(2)&
 		*(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) + rjk(3) *(rnj(1)   &
 		* rnk(2) - rnj(2) * rnk(1) )
-		if(sgn<0) phi = - phi
+		if(sgn<zero) phi = - phi
 
 ! ---	energy
 		if(imp_type == 1) then !harmonic
-			arg = phi - implib(ic)%imp0 * pi / 180.
-			arg = arg - 2. * pi * nint(arg /(2. * pi) )
+			arg = phi - implib(ic)%imp0 * pi / 180.0_prec
+			arg = arg - 2.0_prec * pi * nint(arg /(2.0_prec * pi) )
 			dv = implib(ic)%fk * arg
-			pe = 0.5 * dv * arg
+			pe = 0.5_prec * dv * arg
 		else !periodic
-			arg = 2*phi - implib(ic)%imp0 * pi / 180.
+			arg = 2.0_prec*phi - implib(ic)%imp0 * pi / 180.0_prec
 			pe = implib(ic)%fk * (1 + cos(arg))
-			dv = -2*implib(ic)%fk * sin(arg)
+			dv = -2.0_prec*implib(ic)%fk * sin(arg)
 		end if
 
 		av_ene = av_ene+pe
@@ -1172,7 +1178,7 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 		if(pe>emax) then
 			nlarge = nlarge+1
 			if(mode==0) write( * , '(6i5,5f8.2)') ip, i, j, k, l, ic, &
-			implib(ic)%fk , implib(ic)%imp0 , phi * 180. / pi, pe
+			implib(ic)%fk , implib(ic)%imp0 , phi * 180.0_prec / pi, pe
 			if(mode==1) then
 				imp(ip)%i = i
 				imp(ip)%j = j
@@ -1183,7 +1189,7 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 
 	enddo
 
-	if(nimps/=0) av_ene = av_ene / real(nimps)
+	if(nimps/=0) av_ene = av_ene / real(nimps,kind=prec)
 
 !.......................................................................
 end subroutine impr_ene
@@ -1670,7 +1676,7 @@ end subroutine makeexlist
 subroutine makehyds
 !local variables
 	integer						::	i, nH_solute, nH_solvent, nH_required
-	real						::	r
+	real(kind=prec)						::	r
 	integer						::	atom, residue
 
 	nH_required = 0
@@ -1678,7 +1684,7 @@ subroutine makehyds
 	!reassign heavy atom flag based on masses from parameter file
 	do i = 1, nat_pro
 		heavy(i) = .false.
-		if(iaclib(iac(i))%mass >=4.0) heavy(i) = .true.
+		if(iaclib(iac(i))%mass >=4.0_prec) heavy(i) = .true.
 		if(makeH(i)) nH_required = nH_required+1
 	enddo
 
@@ -1714,30 +1720,30 @@ integer function genH(j, residue)
 !arguments
 	integer, intent(in)			::	j, residue
 !locals
-	real(8)						::	xj(3), xk(3)
+	real(kind=prec)						::	xj(3), xk(3)
 	integer						::	ligand, H, kt, lt
-	real(8)						::	old_xH(3), xH(3), V, Vtot, dV(3), dvLast(3), gamma, dVtot(3)
-	real(8)						::	VtotLast
-	real(8)						::	dx(3), dx_line, rms_dV
-	real(8),parameter			::	convergence_criterum = 0.1
-	real(8),parameter			::	dV_scale = 0.025
-	real(8),parameter			::	max_dx = 1. !max_dx is max distance of line search step in first CG iteration (Å)
-	real(8)						::	local_min = 30
-	real(8)						::	tors_fk = 10.
+	real(kind=prec)						::	old_xH(3), xH(3), V, Vtot, dV(3), dvLast(3), gamma, dVtot(3)
+	real(kind=prec)						::	VtotLast
+	real(kind=prec)						::	dx(3), dx_line, rms_dV
+	real(kind=prec),parameter			::	convergence_criterum = 0.1_prec
+	real(8),parameter			::	dV_scale = 0.025_prec
+	real(8),parameter			::	max_dx = 1.0_prec !max_dx is max distance of line search step in first CG iteration (Å)
+	real(kind=prec)						::	local_min = 30
+	real(kind=prec)						::	tors_fk = 10.0_prec
 	integer, parameter			::	max_cg_iterations = 100, max_line_iterations = 35
 	integer						::	cgiter, lineiter
-	real(8)						::	bnd0
+	real(kind=prec)						::	bnd0
 	integer						::	nHang, Hang_atom(max_conn)
 	integer						::	Hang_code(max_conn)
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
 	integer						::	a, b, axis
-	real(8)						::	bond_length, db
-	real(8)						::	rjH(3), rjk(3), bjHinv, bjkinv
-	real(8)						::	scp, angle, angle_deg, dVangle, da, f1
-	real(8)						::	xkt(3), xlt(3), rjkt(3), rktlt(3)
-	real(8)						::	rnj(3), rnk(3), bj, bk
-	real(8)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
+	real(kind=prec)						::	bond_length, db
+	real(kind=prec)						::	rjH(3), rjk(3), bjHinv, bjkinv
+	real(kind=prec)						::	scp, angle, angle_deg, dVangle, da, f1
+	real(kind=prec)						::	xkt(3), xlt(3), rjkt(3), rktlt(3)
+	real(kind=prec)						::	rnj(3), rnk(3), bj, bk
+	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
 	logical						::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
@@ -1761,7 +1767,7 @@ integer function genH(j, residue)
 					if(bnd(b)%cod > 0) then
 						bnd0 = bondlib(bnd(b)%cod)%bnd0
 					else
-						bnd0 = 1. !default when missing parameters
+						bnd0 = 1.0_prec !default when missing parameters
 					endif
 					exit
 				end if
@@ -1809,7 +1815,7 @@ integer function genH(j, residue)
 			!generate initial co-ordinates for H
 			!random vector
 			do axis = 1,3
-				xH(axis) = randm() - .5
+				xH(axis) = randm() - 0.5_prec
 			end do
 			!normalise to unit length and scale by bond length from lib.
 			bond_length = sqrt(dot_product(xH,xH))
@@ -1823,40 +1829,40 @@ integer function genH(j, residue)
 !				write(*,9, advance='no') cgiter
 9	format('cg step',i3,':')
 				!do line search
-				dx_line = max_dx*2.**(-cgiter)
+				dx_line = max_dx*2.0_prec**(-cgiter)
 				flipped = .false.
 				do lineiter = 1, max_line_iterations
-					Vtot = 0
-					dVtot(:) = 0
+					Vtot = zero
+					dVtot(:) = zero
 					!calc. potential & gradient
 					!angles
 					rjH(:) = xH(:) - xj(:)
 					do a = 1, nHang
 						xk(:) = xtop(3*Hang_atom(a)-2:3*Hang_atom(a))
 						rjk(:) = xk(:) - xj(:)
-						bjHinv = 1./sqrt(dot_product(rjH, rjH))
-						bjkinv = 1./sqrt(dot_product(rjk, rjk))
+						bjHinv = one/sqrt(dot_product(rjH, rjH))
+						bjkinv = one/sqrt(dot_product(rjk, rjk))
 						! calculate scp and angv
 						scp = dot_product(rjH, rjk) * bjHinv*bjkinv
-						if(scp >  1.) then
-							scp =  1.
-						else if(scp < -1.) then
-							scp = -1.0
+						if(scp >  one) then
+							scp =  one
+						else if(scp < -one) then
+							scp = -one
 						end if
 						angle = acos(scp)
 						angle_deg = angle / deg2rad
 						! calculate da and dv
 						da = angle - anglib(Hang_code(a))%ang0*deg2rad
-						V = 0.5*anglib(Hang_code(a))%fk*da**2
+						V = 0.5_prec*anglib(Hang_code(a))%fk*da**2
 						Vtot = Vtot + V
 						dVangle = anglib(Hang_code(a))%fk*da
 						! calculate f1
 						f1 = sin ( angle )
 						! avoid division by zero
-						if ( abs(f1) < 1.e-12 ) then
-							f1 = -1.e12
+						if ( abs(f1) < 1.e-12_prec ) then
+							f1 = -1.e12_prec
 						else
-							f1 =  -1.0 / f1
+							f1 =  -one / f1
 						end if
 						dV(:) = dVangle &
 							* (f1*(rjk(:)*bjHinv*bjkinv - scp*rjH(:)*bjHinv*bjHinv))
@@ -1870,8 +1876,8 @@ integer function genH(j, residue)
 						rnj(3) = rjH(1) * rjkt(2) - rjH(2) * rjkt(1)
 						bj = sqrt(dot_product(rnj, rnj))
 						scp =dot_product(rnj, rnk)/(bj * bk)
-						if(scp>1.0) scp = 1.0
-						if(scp< - 1.0) scp = - 1.0
+						if(scp>one) scp = one
+						if(scp< -one) scp = -one
 						phi = acos(scp)
 						phi_deg = phi / deg2rad
 						sgn = rjkt(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) &
@@ -1879,15 +1885,15 @@ integer function genH(j, residue)
 							+ rjkt(3) *(rnj(1) * rnk(2) - rnj(2) * rnk(1) )
 						if(sgn<0) phi = - phi
 						arg = phi-lp%rules(rule)%value*deg2rad
-						V = tors_fk*(1.0+cos(arg))
+						V = tors_fk*(one+cos(arg))
 						!note changed sign of dVtors to get min (not max) at rule value
 						dVtors = +tors_fk*sin(arg)
 
 						! ---       forces
 
 						f1 = sin ( phi )
-						if ( abs(f1) .lt. 1.e-12 ) f1 = 1.e-12
-						f1 =  -1.0 / f1
+						if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+						f1 =  -one/ f1
 						dH(:) = f1*(rnk(:)/(bj*bk) - scp*rnj(:)/(bj*bj))
 						dV(:) = dVtors*cross_product(rjk, dH)
 						dVtot(:) = dVtot(:) + dV(:)
@@ -1906,7 +1912,7 @@ integer function genH(j, residue)
 
 					!update position in line search
 					dx(:) = -dVLast(:) / sqrt(dot_product(dVlast, dVLast)) * dx_line
-					if(flipped) dx_line = 0.5 * dx_line !reduce step size only after first change of direction
+					if(flipped) dx_line = 0.5_prec * dx_line !reduce step size only after first change of direction
 					VtotLast = Vtot
 					xH(:) = xH(:) + dx(:)
 				end do !lineiter
@@ -1946,7 +1952,7 @@ integer function genH(j, residue)
 					end if
 			end do !setH
 			!check if not converged
-			if(cgiter >= max_cg_iterations .and. Vtot > 3.0) then
+			if(cgiter >= max_cg_iterations .and. Vtot > 3.0_prec) then
 				!display warning
 				write(*,900) H, j, Vtot
 900				format('>>> WARNING: Positioning of hydrogen',i6,&
@@ -2428,7 +2434,7 @@ real FUNCTION randm(seed, seed_only)
 	integer, parameter			::	m = 100000000, m1 = 10000, mult = 31415821
 	integer, save				::	irand = 0
 	integer						::	irandh, irandl, multh, multl
-	real						::	r
+	real(kind=prec)						::	r
 
 	if(present(seed)) then
 		irand = mod(iabs(seed), m)
@@ -2449,8 +2455,8 @@ real FUNCTION randm(seed, seed_only)
 !
 ! --- convert irand to a real random number between 0 and 1.
 !
-	r = real(irand / 10) * 10 / real(m)
-	if((r<=0.e0) .or.(r>1.e0) ) r = 0.e0
+	r = real(irand / 10_prec,kind=prec) * 10_prec / real(m,kind=prec)
+	if((r<=0.e0_prec) .or.(r>1.e0_prec) ) r = 0.e0_prec
 	randm = r
 
 !.......................................................................
@@ -2464,7 +2470,7 @@ subroutine oldreadlib(filnam)
 ! *** local variables
 	CHARACTER					::	line*80
 	integer						::	irec, i, iat, ires, j, igp, ntot
-	real						::	qtot, qgrp, qtot_grp
+	real(kind=prec)						::	qtot, qgrp, qtot_grp
 
 	!some extra arrays used only for allocation. This circumvents
 	!an unaligned access error on Digitail UNIX 4.0 / Digital FORTRAN
@@ -2472,7 +2478,7 @@ subroutine oldreadlib(filnam)
 
 	character(len=KEYLENGTH), pointer::	tac_lib(:)
 	character(len=4), pointer	::	atnam(:)
-	real, pointer				::	crg_lib(:)
+	real(kind=prec), pointer				::	crg_lib(:)
 	integer(AI), pointer		::	natcgp(:), switch(:)
 	integer(AI), pointer		::	atcgp(:,:)
 	type(LIB_BOND_TYPE), pointer::bnd(:)
@@ -2565,7 +2571,7 @@ subroutine oldreadlib(filnam)
 		lib(nlibres)%natcgp => natcgp
 		lib(nlibres)%switch => switch
 
-		qtot_grp = 0.
+		qtot_grp = zero
 		ntot = 0
 		do i = 1, lib(nlibres)%ncgp
 			READ(1, * ) lib(nlibres)%natcgp(i), lib(nlibres)%switch(i)
@@ -2578,7 +2584,7 @@ subroutine oldreadlib(filnam)
 				qgrp = qgrp + lib(nlibres)%crg_lib(igp)
 			enddo
 			!check fractional charges
-			if(abs(qgrp - nint(qgrp) ) >0.000001)  then
+			if(abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
 				write( *, 130) qgrp, i
 			end if
 			qtot_grp = qtot_grp + qgrp
@@ -2587,7 +2593,7 @@ subroutine oldreadlib(filnam)
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(abs(qtot - qtot_grp)  >0.000001) then
+		if(abs(qtot - qtot_grp)  >0.000001_prec) then
 			write(*,160)
 		end if
 	enddo
@@ -2611,7 +2617,7 @@ subroutine readlib(file)
 ! *** local variables
 	CHARACTER					::	line*80, filnam*80
 	integer						::	irec, i, iat, ires, j, igp, ntot
-	real						::	qtot, qgrp, qtot_grp
+	real(kind=prec)						::	qtot, qgrp, qtot_grp
 	character(len=80)			::	resnam
 	integer						::	res_count
 	logical						::	prm_res
@@ -2623,7 +2629,7 @@ subroutine readlib(file)
 
 	character(len=KEYLENGTH), pointer::	tac_lib(:)
 	character(len=4), pointer	::	atnam(:)
-	real, pointer				::	crg_lib(:)
+	real(kind=prec), pointer				::	crg_lib(:)
 	integer(AI), pointer		::	natcgp(:), switch(:)
 	integer(AI), pointer		::	atcgp(:,:)
 	type(LIB_BOND_TYPE), pointer::	bnd(:)
@@ -2696,7 +2702,7 @@ subroutine readlib(file)
 			if(lib(nlibres)%solvent) then
 				solvent_names = trim(solvent_names)//lib(nlibres)%nam//','
 			end if
-			yes=prm_get_real_by_key('density',lib(nlibres)%density,0.)
+			yes=prm_get_real_by_key('density',lib(nlibres)%density,0.0_prec)
 		end if
 
 ! ---	   Read no. of atoms, at. no., name, iac, charge
@@ -2724,7 +2730,7 @@ subroutine readlib(file)
 		allocate(crg_lib(lib(nlibres)%nat))
 		lib(nlibres)%crg_lib => crg_lib
 
-		qtot = 0
+		qtot = zero
 		do i = 1, lib(nlibres)%nat
 			prm_res = prm_get_line(line)
 			READ(line, *) iat
@@ -2893,7 +2899,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 			lib(nlibres)%natcgp => natcgp
 			lib(nlibres)%switch => switch
 
-			qtot_grp = 0.
+			qtot_grp = zero
 			ntot = 0
 			do i = 1, lib(nlibres)%ncgp
 				qgrp = 0.
@@ -2912,7 +2918,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 				ntot = ntot + lib(nlibres)%natcgp(i)
 
 				!check fractional charges
-				if(abs(qgrp - nint(qgrp) ) >0.000001)  then
+				if(abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
 					write( *, 130) qgrp, i
 				end if
 				qtot_grp = qtot_grp + qgrp
@@ -2923,7 +2929,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(abs(qtot - qtot_grp)  >0.000001) then
+		if(abs(qtot - qtot_grp)  >0.000001_prec) then
 			write(*,160)
 		end if
 	end do !entries
@@ -3181,7 +3187,7 @@ subroutine readparm(filnam)
 ! *** local variables
 	integer						::	i, ityp, j
 	character(len=200)			::	line, restofline
-	real						::	rdummy
+	real(kind=prec)						::	rdummy
 	logical						::	ldummy
 	character(len=KEYLENGTH)	::	taci, tacj, tack, tacl
 	integer						::	iaci, iacj, iack, iacl
@@ -3701,7 +3707,7 @@ logical function countpdb(pdb_fileno, atoms, residues, molecules)
 	integer						::	resno, oldno
 	character(len=4)			::	resnam, atnam, oldresnam
 	character(len=80)			::	line
-	real						::	xtmp(3)
+	real(kind=prec)						::	xtmp(3)
 	integer						::	atoms_in_res, atoms_in_file
 	integer						::	rescode, oldrescode
 
@@ -3805,14 +3811,15 @@ subroutine readpdb()
 
 ! *** local variables
 	character(len=256)		:: pdb_file
-	CHARACTER atnam_tmp * 4, resnam_tmp * 4
+	CHARACTER(len=4)		:: atnam_tmp , resnam_tmp , resnam_tmp2
 	character(len=80)			::	line
-	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j
-	real xtmp(3)
+	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j , oldnum2 , resnum_tmp2
+	real(kind=prec)				:: xtmp(3)
 	LOGICAL res_found, at_found
 	integer						::	first_res_of_mol
 	logical						::	last_line_was_gap
 	integer						::	atoms, residues, molecules
+	type(RETTYPE)					:: glob
 !.......................................................................
 
 	write( *, * )
@@ -3868,21 +3875,26 @@ subroutine readpdb()
 	!reset molecule counter
 	nmol = 1
 	istart_mol(1) = 1
-
+	glob%new = .false.
+	last_line_was_gap = .false.
 	irec = 0
 	do
 		read(3,'(a)', end=100) line
 		irec = irec + 1
 		if(adjustl(line) == 'GAP' .or. line(1:6) == 'TER   ') then
 			if(last_line_was_gap) then
+!			if(glob%new) then
 				write(*, 23) irec
 			else
 				!set gap flag - new molecule will be recognised later
+!				glob%new = .true.
 				last_line_was_gap = .true.
 			end if
 		else if(line(1:6) /= 'HETATM' .and. line(1:6) /= 'ATOM  ') then
 			!do nothing
 		else
+			resnum_tmp2 = resnum_tmp
+			resnam_tmp2 = resnam_tmp
 			READ(line, 10, end = 100, err = 200) atnam_tmp, resnam_tmp, &
 				resnum_tmp, xtmp(1:3)
 
@@ -3909,6 +3921,13 @@ subroutine readpdb()
 							end if
 						end if
 					enddo
+					if (nres>1) then
+					glob=is_new_mol(nres,nres-1,glob%new,oldnum2,resnam_tmp2,resnum_tmp2,glob%first)
+					if(last_line_was_gap) then
+						glob%new=.true.
+						last_line_was_gap = .false.
+					end if
+					end if
 				endif
 
 				!look up new residue in library
@@ -3933,39 +3952,69 @@ subroutine readpdb()
 					atom_id(i) = 0
 				enddo
 
+                                if (nres .eq. 1 ) then
+                                        if(nat_pro + 1 == istart_mol(nmol)) then
+                                                write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
+                                                first_res_of_mol = resnum_tmp
+                                        end if
+                                end if
+
+
+				nat_pro = nat_pro + lib(res(nres)%irc )%nat
+				!set nat_solute = nat_pro unless residue is water
+				if(index(solvent_names, trim(resnam_tmp)) == 0) then
+!					nat_solute = nat_pro
+					nat_solute = nat_solute + lib(res(nres)%irc )%nat
+					nres_solute = nres_solute + 1
+					if (nat_solute .ne. nat_pro) then
+!Means we are having a molecule of solvent between solute molecules
+						write(*,*) '>>>> ERROR: Solvent molecule between solute molecules'
+						write(*,'(a,i4,a)') 'Please remove molecule ',nres-1,' and try again'
+						stop 'Abnormal termination of Qprep'
+					end if
+				end if
+!Check if er have previously set a solvent molecule and are now setting
+!again a solute molecule
+!If yes, abort topology generation to avoid mixing of solvent and solute descriptors
+				oldnum2 = oldnum
+				oldnum = resnum_tmp
+
+			end if !new residue, first part, make check for new molecule after all information
+				!has been read in
+
 				!check for implicit GAP, i.e. this residue and previous
 				!have no tail or head connections, respectively.
 				!Do this unless this is the first residue
 				!Don't do it if previous line was gap (already done)
-				if(nres > 1) then
-					if(last_line_was_gap .or. &
-						lib(res(nres-1)%irc)%tail == 0 .or. &
-						lib(res(nres)%irc)%head == 0) then
-						nmol = nmol + 1
-						istart_mol(nmol) = nat_pro + 1
-						if(first_res_of_mol /= oldnum) then
-							write(*,21) res(nres-1)%name, oldnum
-						else
-							write(*,*)
-						end if
-					end if
-				end if
-				last_line_was_gap = .false.
-				!if new molecule write output
-				if(nat_pro + 1 == istart_mol(nmol)) then
-					write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
-					first_res_of_mol = resnum_tmp
-				end if
-				nat_pro = nat_pro + lib(res(nres)%irc )%nat
-				!set nat_solute = nat_pro unless residue is water
-				if(index(solvent_names, trim(resnam_tmp)) == 0) then
-					nat_solute = nat_pro
-					nres_solute = nres
-				end if
+!				if(nres > 1) then
+!					if(last_line_was_gap .or. &
+!						lib(res(nres-1)%irc)%tail == 0 .or. &
+!						lib(res(nres)%irc)%head == 0 ) then 
+!						nmol = nmol + 1
+!						istart_mol(nmol) = nat_pro + 1
+!						if(first_res_of_mol /= oldnum) then
+!							write(*,21) res(nres-1)%name, oldnum
+!						else
+!							write(*,*)
+!						end if
+!					end if
+!				end if
+!				last_line_was_gap = .false.
+!				!if new molecule write output
+!				if(nat_pro + 1 == istart_mol(nmol)) then
+!					write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
+!					first_res_of_mol = resnum_tmp
+!				end if
+!				nat_pro = nat_pro + lib(res(nres)%irc )%nat
+!				!set nat_solute = nat_pro unless residue is water
+!				if(index(solvent_names, trim(resnam_tmp)) == 0) then
+!					nat_solute = nat_pro
+!					nres_solute = nres
+!				end if
+!
+!				oldnum = resnum_tmp
 
-				oldnum = resnum_tmp
-
-			endif !new residue
+!			endif !new residue
 
 			at_found = .false.
 			do i = 1, lib(res(nres)%irc )%nat
@@ -3991,12 +4040,15 @@ subroutine readpdb()
 
 !branch here at EOF
 100	close(3)
+	if(nres>1) then
+		glob=is_new_mol(nres,nres-1,glob%new,oldnum2,resnam_tmp2,resnum_tmp2,glob%first)
+	end if
 	if(last_line_was_gap) then
 		write(*,'(a)') '>>> Warning: PDB file ends with GAP line.'
 		nmol = nmol - 1 !correct molecule count
 	else
 		!print last residue of last molecule if more than one
-		if(first_res_of_mol /= oldnum) then
+		if(glob%first /= oldnum) then
 			write(*,21) resnam_tmp, oldnum
 		else
 			write(*,*)
@@ -4046,6 +4098,61 @@ subroutine readpdb()
 	CALL clearpdb
 	pdb_file = ''
 end subroutine readpdb
+
+!move checking of new molecule to separate subroutine
+type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
+	! *** input variables
+	integer					:: thisres,prevres,old,tnum,firstres
+	logical					:: gap
+	character*4				:: tnam
+	! *** local variables
+	real*8					:: dist,xdist,ydist,zdist
+	integer					:: dhead,dtail
+	type(RETTYPE)				:: local
+
+20      format('molecule ',i4,': ',a4,i5)
+21      format(' - ',a4,i5)
+
+
+	!check for implicit GAP, i.e. this residue and previous
+	!have no tail or head connections, respectively.
+	!Do this unless this is the first residue
+	!Don't do it if previous line was gap (already done)
+
+	if(.not.gap) then
+		if (lib(res(prevres)%irc)%tail .ne. 0 .and. &
+			lib(res(thisres)%irc)%head .ne. 0 ) then
+			dtail = lib(res(prevres)%irc)%tail
+			dhead = lib(res(thisres)%irc)%head
+			dtail = res(prevres)%start - 1 + dtail
+			dhead = res(thisres)%start - 1 + dhead
+			dtail = (dtail*3)-3
+			dhead = (dhead*3)-3
+			xdist = (xtop(dtail+1)-xtop(dhead+1))
+			ydist = (xtop(dtail+2)-xtop(dhead+2))
+			zdist = (xtop(dtail+3)-xtop(dhead+3))
+			dist  = sqrt(xdist**2 + ydist**2 + zdist**2)
+		end if
+	end if
+        if(gap .or. &
+		(lib(res(prevres)%irc)%tail == 0) .or. &
+		(lib(res(thisres)%irc)%head == 0) .or. &
+		dist .gt. 5 ) then 
+		nmol = nmol + 1
+		istart_mol(nmol) = res(thisres)%start 
+		if(firstres /= old) then
+			write(*,21) res(prevres)%name, old
+		else
+			write(*,*)
+		end if
+		!if new molecule write output
+		write(*,20,advance='no') nmol, tnam, tnum 
+		firstres = tnum
+	end if
+	local%new = .false.
+	local%first = firstres
+	is_new_mol = local
+end function  is_new_mol
 
 !-----------------------------------------------------------------------
 
@@ -4259,8 +4366,8 @@ subroutine set_cgp
 ! *** local variables
 	integer ires, igp, i, ntot, ntot_solute, i3
 	integer						::	switchatom, ia, ncgp_skipped = 0
-	real						::	r2
-	real(8)						::	cgp_cent(3)
+	real(kind=prec)						::	r2
+	real(kind=prec)						::	cgp_cent(3)
 	integer						::	nheavy
 
 	ntot = 0
@@ -4578,7 +4685,7 @@ logical function set_simulation_sphere()
 	character(len=80)			::	line
 	integer						::	filestat
 	integer						::	centre_atom
-	real						::	rwat_in, xwat_in
+	real(kind=prec)						::	rwat_in, xwat_in
 
 	set_simulation_sphere = .false.
 
@@ -4635,7 +4742,7 @@ logical function set_solvent_box()
 	character(len=80)		::	line
 	integer					::	centre_atom
 	integer					::	filestat
-	real					::	xwat_in, coord_in
+	real(kind=prec)					::	xwat_in, coord_in
 
 	have_solvent_boundary = .false.
 	set_solvent_box = .false.
@@ -4677,14 +4784,14 @@ logical function set_solvent_box()
 	coord_in = get_real_arg('-----> Boxlength z-direction: ')
 	boxlength(3) = coord_in
 
-	if( any(boxlength(:) == 0.0) ) then
-		inv_boxl(:) = 0.0
+	if( any(boxlength(:) == zero) ) then
+		inv_boxl(:) = zero
 	else
-		inv_boxl(:) = 1.0/boxlength(:)
+		inv_boxl(:) = one/boxlength(:)
 	end if
 
 	do i=1,3
-		if( boxlength(i) < 0 ) then
+		if( boxlength(i) < zero ) then
 			write(*, '(a)') '>>>>> WARNING: Boxlength with negative sign. Converting to positive.'
 			boxlength(i) = -boxlength(i)
 		end if
@@ -4755,11 +4862,11 @@ subroutine solvate_box_grid
 
 	!locals
 
-	real(8)						::	xmin, xmax, ymin, ymax, zmin, zmax
-	real(8)						::	xgrid, ygrid, zgrid
+	real(kind=prec)						::	xmin, xmax, ymin, ymax, zmin, zmax
+	real(kind=prec)						::	xgrid, ygrid, zgrid
 	integer						::	max_wat !max number of molecules
 	integer						::	waters_in_box
-	real(8)						::	radius2, solvent_grid
+	real(kind=prec)						::	radius2, solvent_grid
 	character(len=200)			::	solvent
 
 	!set water residue name
@@ -4792,12 +4899,12 @@ subroutine solvate_box_grid
 	call check_alloc('water sphere co-ordinate array')
 
 
-	xmin = boxcentre(1) - boxlength(1)/2 + solvent_grid/2
-	xmax = boxcentre(1) + boxlength(1)/2 - solvent_grid/2
-	ymin = boxcentre(2) - boxlength(2)/2 + solvent_grid/2
-	ymax = boxcentre(2) + boxlength(2)/2 - solvent_grid/2
-	zmin = boxcentre(3) - boxlength(3)/2 + solvent_grid/2
-	zmax = boxcentre(3) + boxlength(3)/2 - solvent_grid/2
+	xmin = boxcentre(1) - boxlength(1)/2.0_prec + solvent_grid/2.0_prec
+	xmax = boxcentre(1) + boxlength(1)/2.0_prec - solvent_grid/2.0_prec
+	ymin = boxcentre(2) - boxlength(2)/2.0_prec + solvent_grid/2.0_prec
+	ymax = boxcentre(2) + boxlength(2)/2.0_prec - solvent_grid/2.0_prec
+	zmin = boxcentre(3) - boxlength(3)/2.0_prec + solvent_grid/2.0_prec
+	zmax = boxcentre(3) + boxlength(3)/2.0_prec - solvent_grid/2.0_prec
 
 	write(*,100) boxlength(1), boxlength(2), boxlength(3), solvent_grid
 100	format('New boxlength                     = ',3f8.2,' A',/ &
@@ -4838,11 +4945,11 @@ subroutine solvate_box_file
 	character(len=80)		::	xwat_file
 	integer 				::	fstat
 	character(len=80)		::	line
-	real(8) 				::	boxl, waterbox_v, waterbox(1:3)
+	real(kind=prec) 				::	boxl, waterbox_v, waterbox(1:3)
 	character(len=6)		::	sphere
 	logical					::	replicate
 	integer					::	extension(1:3)
-	real(8)					::	extensionbox_v, ext(3,3)
+	real(kind=prec)					::	extensionbox_v, ext(3,3)
 	integer					::	nw, nnw !water molecule counters
 	integer					::	i, j, k !loop indecis
 	integer					::	filestat !error variable
@@ -4851,10 +4958,10 @@ subroutine solvate_box_file
 	integer					::	resno(3)
 	integer					::	nbox !number of replicated boxes
 	integer					::	nwat_allocate
-	real(8)					::	xcm(3) !center of the waterbox
-	real(8)					::	wshift(3) !distanse to move waters
+	real(kind=prec)					::	xcm(3) !center of the waterbox
+	real(kind=prec)					::	wshift(3) !distanse to move waters
 	integer					::	nwat_keep !how many waters to keep
-	real(8)					::	temp(3) !temporary coordinate
+	real(kind=prec)					::	temp(3) !temporary coordinate
 
 !get the name of the file and open the file in unit 13
 	call get_string_arg(xwat_file, '-----> Solvent file name: ')
@@ -4917,14 +5024,14 @@ subroutine solvate_box_file
 !Estimate amount of memory to allocate for temporary waters
 	if( all(boxlength(:)<waterbox(1)) ) then ! don't need to replicate. 5% margin
 		replicate = .false.
-		nwat_allocate = int( lib(irc_solvent)%density*1.05*waterbox_v )
+		nwat_allocate = int( lib(irc_solvent)%density*1.05_prec*waterbox_v )
 
 	else !the waterbox is not big enough
 		replicate = .true.
 		!find out in wich direction replication is needed
 		extension(:) = ceiling( boxlength(:)/boxl )
 		extensionbox_v = extension(1)*extension(2)*extension(3)*waterbox_v
-		nwat_allocate = int( lib(irc_solvent)%density*1.05*extensionbox_v )
+		nwat_allocate = int( lib(irc_solvent)%density*1.05_prec*extensionbox_v )
 	end if
 
 	allocate( xw(3, lib(irc_solvent)%nat, nwat_allocate), keep(nwat_allocate), stat=alloc_status )
@@ -4974,9 +5081,9 @@ subroutine solvate_box_file
 !Replicate if necessary
 	if(replicate) then
 		write(*, '(a)') 'Replicating box of water...'
-		ext(:,1) = (/boxl, 0._8, 0._8/)
-		ext(:,2) = (/0._8, boxl, 0._8/)
-		ext(:,3) = (/0._8, 0._8, boxl/)
+		ext(:,1) = (/boxl, 0.0_prec, 0.0_prec/)
+		ext(:,2) = (/0.0_prec, boxl, 0.0_prec/)
+		ext(:,3) = (/0.0_prec, 0.0_prec, boxl/)
 
 		nbox = 0
 		do k=1,3 !the three coordinates
@@ -5012,8 +5119,8 @@ subroutine solvate_box_file
 	do i = 1,nw
 		temp = xw(:,1,i)
 
-		if(all(temp(:)<xcm(:)+0.5*boxlength(:)) &
-			.and. all(temp(:)>xcm(:)-0.5*boxlength(:))) then
+		if(all(temp(:)<xcm(:)+0.5_prec*boxlength(:)) &
+			.and. all(temp(:)>xcm(:)-0.5_prec*boxlength(:))) then
 			!keep this molecule
 			nwat_keep = nwat_keep + 1
 			keep(i) = .true.
@@ -5083,7 +5190,7 @@ logical function set_solvent_sphere()
 	character(len=80)			::	line
 	integer						::	filestat
 	integer						::	centre_atom
-	real						::	rwat_in, xwat_in
+	real(kind=prec)						::	rwat_in, xwat_in
 
 	set_solvent_sphere = .false.
 	have_solvent_boundary = .false.
@@ -5148,11 +5255,11 @@ subroutine solvate_sphere_grid
 
 	!locals
 
-	real(8)						::	xmin, xmax, ymin, ymax, zmin, zmax
-	real(8)						::	xgrid, ygrid, zgrid
+	real(kind=prec)						::	xmin, xmax, ymin, ymax, zmin, zmax
+	real(kind=prec)						::	xgrid, ygrid, zgrid
 	integer						::	max_wat !max number of molecules
 	integer						::	waters_in_sphere
-	real(8)						::	radius2, solvent_grid
+	real(kind=prec)						::	radius2, solvent_grid
 	character(len=200)			::	solvent
 
 	!set water residue name
@@ -5171,7 +5278,7 @@ subroutine solvate_sphere_grid
 		return
 	end if
 
-	max_wat = (2*rwat+solvent_grid)**3 / solvent_grid**3
+	max_wat = (2.0_prec*rwat+solvent_grid)**3 / solvent_grid**3
 	radius2 = rwat**2
 
 	allocate(xw(3,lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
@@ -5229,16 +5336,16 @@ subroutine solvate_sphere_file(shift)
 ! local variables
 	integer						::	i,j,nw,nnw
 	integer						::	nwat_allocate, nwat_keep
-	real(8)						::	rmax2,dx2,boxl, newboxl
-	real(8), save				::	xcm(3),wshift(3)
+	real(kind=prec)						::	rmax2,dx2,boxl, newboxl
+	real(kind=prec), save				::	xcm(3),wshift(3)
 	integer						::	fstat
 	logical						::	is_box
 	character(len=6)			::	sphere
 	character(len=80)			::	line
-	real(8)						::	volume
+	real(kind=prec)						::	volume
 	real						::	r4dum
 	character(len=80)			::	xwat_file
-	real(8)						::	xwshift(3,7)
+	real(kind=prec)						::	xwshift(3,7)
 	integer						::	box
 	character(len=3)			::	atomnames
 	integer						::	filestat
@@ -5246,7 +5353,7 @@ subroutine solvate_sphere_file(shift)
 	integer						::	resno(3)
 	character(len=4)			::	resnam(3)
 
-	real(8)						::	xwtmp(3, max_atlib)
+	real(kind=prec)						::	xwtmp(3, max_atlib)
 	integer						::	at_id(max_atlib)
 
 	call get_string_arg(xwat_file, '-----> Solvent file name: ')
@@ -5274,7 +5381,7 @@ subroutine solvate_sphere_file(shift)
 	read(line, *, iostat=fstat) boxl, sphere
 	call upcase(sphere)
 	if(sphere == 'SPHERE') then
-		volume = boxl**3*4*pi/3.
+		volume = boxl**3*4.0_prec*pi/3.0_prec
 		is_box = .false.
 		write(*,3) boxl
 	else
@@ -5353,12 +5460,12 @@ subroutine solvate_sphere_file(shift)
      do while ( abs(rwat) .gt. boxl/2. )
         write (*,'(a)') 'Replicating periodic box...'
 
-		xwshift(:,1) = (/boxl, 0._8, 0._8/)
-		xwshift(:,2) = (/0._8, boxl, 0._8/)
-		xwshift(:,3) = (/0._8, 0._8, boxl/)
-		xwshift(:,4) = (/boxl, boxl, 0._8/)
-		xwshift(:,5) = (/boxl, 0._8, boxl/)
-		xwshift(:,6) = (/0._8, boxl, boxl/)
+		xwshift(:,1) = (/boxl, 0.0_prec, 0.0_prec/)
+		xwshift(:,2) = (/0.0_prec, boxl, 0.0_prec/)
+		xwshift(:,3) = (/0.0_prec, 0.0_prec, boxl/)
+		xwshift(:,4) = (/boxl, boxl, 0.0_prec/)
+		xwshift(:,5) = (/boxl, 0.0_prec, boxl/)
+		xwshift(:,6) = (/0.0_prec, boxl, boxl/)
 		xwshift(:,7) = (/boxl, boxl, boxl/)
 
         do i=1,nw
@@ -5432,7 +5539,7 @@ subroutine solvate_restart
 	integer(4)					::	natom, nat3, waters_added
 	character(len=80)			::	xfile
 	integer						::	u, fstat
-	real(8),allocatable			::	xtmp(:)
+	real(kind=prec),allocatable			::	xtmp(:)
 	character(len=200)			::	solvent
 
 	u=freefile()
@@ -5480,7 +5587,7 @@ subroutine solvate_restart
 
 	!allow very tight packing of waters to solute - this is a restart file!
 	call add_solvent_to_topology(waters_in_sphere=waters_added, &
-		max_waters=waters_added, make_hydrogens=.false., pack=0.)
+		max_waters=waters_added, make_hydrogens=.false., pack=0.0_prec)
 	deallocate(xtmp,xw,keep)
 
 end subroutine solvate_restart
@@ -5491,13 +5598,13 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	integer						::	waters_in_sphere
 	integer						::	max_waters
 	logical						::	make_hydrogens
-	real						::	pack
+	real(kind=prec)						::	pack
 !locals
 	integer						::	waters_added
-	real(8)						::	rpack2
+	real(kind=prec)						::	rpack2
 	integer						::	w_at, w_mol, p_atom
 	logical						::	wheavy(max_atlib)
-	real(8)						::	dx, dy, dz, r2
+	real(kind=prec)						::	dx, dy, dz, r2
 	integer						::	next_wat, next_atom
 
 	if(use_PBC) then
@@ -5622,7 +5729,7 @@ subroutine grow_arrays_for_solvent(nmore, atoms_per_molecule)
 !arguments
 	integer, intent(in)			::	nmore, atoms_per_molecule
 !locals
-	real(8), allocatable		::	r8temp(:)
+	real(kind=prec), allocatable		::	r8temp(:)
 	logical, allocatable		::	ltemp(:)
 	integer, allocatable		::	itemp(:)
 	integer						::	new_nat, nat3old
@@ -5700,14 +5807,14 @@ end subroutine grow_arrays_for_solvent
 
 !-----------------------------------------------------------------------
 
-real function rwat_eff()
+real(kind=prec) function rwat_eff()
   ! local variables
   integer						:: i,kr,isort,bins
-  real(8)						:: rc,rnwat
+  real(kind=prec)						:: rc,rnwat
   integer, allocatable			:: npro_of_r(:)
-	real(8)						::	rho_ratio, solvent_volume, rho_solvent
+	real(kind=prec)						::	rho_ratio, solvent_volume, rho_solvent
 
-	rwat_eff = 0
+	rwat_eff = zero
 	if ( nwat .eq. 0 ) return
 
 	!make sure to include all waters in topology
@@ -5739,11 +5846,11 @@ real function rwat_eff()
 	! --- rho_ratio (0.577) comes from dividing the average volume of
 	!     protein atoms (17.26 A**3) by the volume of a water molecule (29.9 A**3).
 	rho_ratio = rho_solvent/rho_solute
-	rnwat = 0.0
+	rnwat = zero
 	do kr = 1, bins
-		rc = real(kr)*0.01
-		rnwat = rnwat + 4.*pi*rc*rc*rho_solvent &
-			*0.01-rho_ratio*npro_of_r(kr)
+		rc = real(kr,kind=prec)*0.01_prec
+		rnwat = rnwat + 4.0_prec*pi*rc*rc*rho_solvent &
+			*0.01_prec-rho_ratio*npro_of_r(kr)
 		if ( int(rnwat) >= nwat - nexwat ) exit
 	end do
 	rwat_eff = rc
@@ -5853,15 +5960,15 @@ end function torcode
 subroutine tors_ene(emax, nlarge, av_ene)
 ! *** local variables
 	integer i, j, k, l, ip, ic, i3, j3, k3, l3, nlarge
-	real rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
+	real(kind=prec) rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
 	phi, sgn, pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
 	dl(3)
-	real emax, av_ene
+	real(kind=prec) emax, av_ene
 
 !.......................................................................
 
 	nlarge = 0
-	av_ene = 0
+	av_ene = zero
 
 	do ip = 1, ntors
 
@@ -5897,18 +6004,18 @@ subroutine tors_ene(emax, nlarge, av_ene)
 	bk = sqrt(rnk(1) **2 + rnk(2) **2 + rnk(3) **2)
 	scp =(rnj(1) * rnk(1) + rnj(2) * rnk(2) + rnj(3) * rnk(3) )&
 	/(bj * bk)
-	if(scp>1.0) scp = 1.0
-	if(scp< - 1.0) scp = - 1.0
+	if(scp>one) scp = one
+	if(scp< -one) scp = -one
 	phi = acos(scp)
 	sgn = rjk(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) + rjk(2)&
 	*(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) + rjk(3) *(rnj(1)   &
 	* rnk(2) - rnj(2) * rnk(1) )
-	if(sgn<0) phi = - phi
+	if(sgn<zero) phi = - phi
 
 ! ---	energy
 
-	arg = torlib(ic)%rmult * phi - torlib(ic)%deltor * pi / 180.
-	pe = torlib(ic)%fk *(1.0 + cos(arg) ) / real(torlib(ic)%paths )
+	arg = torlib(ic)%rmult * phi - torlib(ic)%deltor * pi / 180.0_prec
+	pe = torlib(ic)%fk *(one + cos(arg) ) / real(torlib(ic)%paths )
 
 	av_ene = av_ene+pe
 
@@ -5920,7 +6027,7 @@ subroutine tors_ene(emax, nlarge, av_ene)
 
 	enddo
 
-	if(ntors/=0) av_ene = av_ene / real(ntors)
+	if(ntors/=0) av_ene = av_ene / real(ntors,kind=prec)
 
 end subroutine tors_ene
 
@@ -6270,8 +6377,8 @@ end subroutine set
 subroutine make_shell2
 ! *** Local variables
 	integer						::	i,ig,i3,k
-	real(8)						::	rout2,rin2,r2
-	real(8), allocatable		::	cgp_cent(:,:)
+	real(kind=prec)						::	rout2,rin2,r2
+	real(kind=prec), allocatable		::	cgp_cent(:,:)
 	nshellats = 0
 
 	rexcl_i = get_real_arg('-----> Inner radius of restrained shell ')
@@ -6282,7 +6389,7 @@ subroutine make_shell2
 
 	allocate(cgp_cent(3,ncgp+nwat))
 
-	cgp_cent(:,:) = 0.
+	cgp_cent(:,:) = zero
 
 	do ig=1,ncgp_solute
     if (.not. excl(cgp(ig)%iswitch)) then
@@ -6312,13 +6419,13 @@ end subroutine make_shell2
 !*  and returns centre of mass for a mask of atoms in the vector 'centre'
 !*************************************************************************
 logical function get_centre_by_mass(centre)
-real(8), intent(OUT)   :: centre(3)
+real(kind=prec), intent(OUT)   :: centre(3)
 type(MASK_TYPE)        :: mask
 integer                :: ats, imaskat, iat
-real(8)                :: totmass, mass
+real(kind=prec)                :: totmass, mass
 get_centre_by_mass = .false.
-centre = 0
-totmass=0
+centre = zero
+totmass=zero
 call mask_initialize(mask)
 ats = maskmanip_make_pretop(mask)
 if (.not. allocated(iac))allocate(iac(nat_pro))

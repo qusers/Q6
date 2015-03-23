@@ -6,6 +6,7 @@
 
 module PREFS
 
+use MISC
 	implicit none
 
 !constants
@@ -21,7 +22,7 @@ module PREFS
 		character(len=40)		::	name
 		logical					::	is_integer, is_real, is_string
 		integer, pointer		::	ival
-		real, pointer			::	rval
+		real(kind=prec), pointer			::	rval
 		character(len=PREF_LEN), pointer		::	sval
 	end type PREF
 	
@@ -56,7 +57,7 @@ logical function pref_add(name, ival, rval, sval)
 	!args
 	character(*), target	::	name
 	integer, target, optional::  ival
-	real, target, optional::  rval
+	real(kind=prec), target, optional::  rval
 	character(*), target, optional::  sval
 
 	if(nprefs == max_prefs) then

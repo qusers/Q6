@@ -10,8 +10,8 @@ module AVETR
 
 	integer, parameter             :: AVE_PDB = 11
 	integer(4), private            :: ncoords, N_sets = 0
-	real(4), allocatable, private  :: x_in(:), x_sum(:), x2_sum(:)
-	real(8), private               :: rmsd
+	real(kind=prec), allocatable, private  :: x_in(:), x_sum(:), x2_sum(:)
+	real(kind=prec), private               :: rmsd
 contains
 !TODO: *choose which frames, add more trajectories, divide x_sum every 100 steps
 

@@ -15,7 +15,7 @@ implicit none
 
 ! Constants
 
-real(8)										:: pi_val, hs, R, ref_vol, e, u, kb, cm   ! pi, plancs constant, R, reference_volume
+real(kind=prec)										:: pi_val, hs, R, ref_vol, e, u, kb, cm   ! pi, plancs constant, R, reference_volume
 
 !module variables
 
@@ -24,17 +24,17 @@ real(8)										:: pi_val, hs, R, ref_vol, e, u, kb, cm   ! pi, plancs constant
 	integer, private						:: Nmasks = 0
 
     type COVARIANCE_MATRIX                                                  ! Numbers stored for covariance matrix calculation
-	    real(8)								:: Exy, Ex, Ey					! C[X,Y] = E[XY] - E[X] -E[Y]
+	    real(kind=prec)								:: Exy, Ex, Ey					! C[X,Y] = E[XY] - E[X] -E[Y]
 	end type COVARIANCE_MATRIX
 
 
 	type ENTROPY_COORD_TYPE
-		real, pointer						:: x(:), xref(:)				! , Reference structure for rotational fit 				
-        real(8), pointer					:: xr(:)
-		real(8)								:: xrcm(3) 
+		real(kind=prec), pointer						:: x(:), xref(:)				! , Reference structure for rotational fit 				
+        real(kind=prec), pointer					:: xr(:)
+		real(kind=prec)								:: xrcm(3) 
 		integer								:: interval, Calc_type			! Interval of calculations, 
 		character(len=9)					:: Calc_select
-		real(8)								:: Temperature					! Temperature
+		real(kind=prec)								:: Temperature					! Temperature
 	    integer								:: tot_no_frames				! Total number of frames
 	    
 	end type ENTROPY_COORD_TYPE
@@ -44,11 +44,11 @@ real(8)										:: pi_val, hs, R, ref_vol, e, u, kb, cm   ! pi, plancs constant
 
     type trajectory
 	    type(COVARIANCE_MATRIX), pointer	 :: COV_DATA(:,:)													! E[XY], E[X], E[Y] - for calculation of Covariance matrix
-		real(8), pointer					 :: C(:,:),  VIZ(:), massvector(:), Xcm(:,:), Xrot(:) , X(:,:)
+		real(kind=prec), pointer					 :: C(:,:),  VIZ(:), massvector(:), Xcm(:,:), Xrot(:) , X(:,:)
 	    integer								 :: startframe, endframe, no_atoms, no_frames, store_cov, Temperature, Calc_type 
 		! Under development:
-		real(8), dimension(3,3)			     :: ROT    
-		real(8)								 :: masstot					! Total mass
+		real(kind=prec), dimension(3,3)			     :: ROT    
+		real(kind=prec)								 :: masstot					! Total mass
      end type trajectory
    
 contains
@@ -145,14 +145,14 @@ subroutine construct_trajectory(t, Temp, startframe, endframe, no_atoms, Calc_ty
  
     type(trajectory)		 :: t
 	integer					 :: startframe, endframe, no_frames, no_atoms, i,j, Calc_type
-    real(8)					 :: Temp
+    real(kind=prec)					 :: Temp
 	character(len=20)		         :: dcd, top
     
 	t%startframe = startframe						! Starting frame
     t%endframe = endframe							! Ending frame	
     t%no_frames = endframe-startframe+1				! Calculate total number of frames
     t%no_atoms = no_atoms							! Number of atoms in mask
-		t%Temperature = Temp							! Temperature
+		t%Temperature = int(Temp)							! Temperature
     t%Calc_type = Calc_type							! Store choice of calculation
     
  end subroutine construct_trajectory
@@ -204,10 +204,10 @@ subroutine entropy_calc(i)
 
  integer, intent(in)		:: i
  integer					:: j,k,l,n,m,o
- real(8)					:: det, gauss, uniform !, ref_vol
+ real(kind=prec)					:: det, gauss, uniform !, ref_vol
  type(trajectory)			:: t                                                                     
 
- real(8), dimension(3)	    :: uin,vin        
+ real(kind=prec), dimension(3)	    :: uin,vin        
  ! Go on with entropy calculation
  
   if( start == 1) then
@@ -385,7 +385,7 @@ subroutine SchlittersFormula(t, det)
 
  type(trajectory)			:: t
  integer					:: i, k
- real(8)					:: det
+ real(kind=prec)					:: det
    
  call MultiplyMatrices(t)            !  MCM + 1
  call CholeskyFactorization(t)       !  Coleskyfactorized matrix, L (C = L*L ), is stored in C 
@@ -408,7 +408,7 @@ subroutine MultiplyMatrices(t)
  
    type(trajectory)				:: t
    integer						:: i,j,k,l,n
-   real(8)						:: det, c !, kb, hs, e, c, u
+   real(kind=prec)						:: det, c !, kb, hs, e, c, u
 
   ! Set constants
 
@@ -475,8 +475,8 @@ subroutine RotationAndTranslation(t,i)
  integer, intent(in)   :: i
  integer               :: at, j, k
  integer               :: lsqstatus
- real(8)               :: totmass, error
- real(8)               :: xcm(3)	
+ real(kind=prec)               :: totmass, error
+ real(kind=prec)               :: xcm(3)	
  type(trajectory)      :: t
  
 	!calc. mass centre of xin
@@ -564,7 +564,7 @@ subroutine fit_make_reference(i)
 	integer						::	i
 	!locals
 	integer						::	at
-    real(8)                     ::  totmass
+    real(kind=prec)                     ::  totmass
 
 	if(i < 1 .or. i > Nmasks) return
 	!calc centre vector of mass
@@ -600,8 +600,8 @@ end subroutine fit_make_reference
 subroutine Quasiharmonic_analysis(i, t, det)
 
 type(trajectory)					:: t
-real(8), dimension(:,:), pointer	:: R     ! can I remove this
-real(8)								:: det
+real(kind=prec), dimension(:,:), pointer	:: R     ! can I remove this
+real(kind=prec)								:: det
 integer								:: i
 
 call massweight(t)                      ! Massweighting of the Covariancematrix sqrt(M)*C*sqrt(M)
@@ -664,7 +664,7 @@ subroutine entropy_ho(m, t, det)
 
 type(trajectory) :: t
 integer :: i,k,no_freq,m
-real(8) :: det, hswkT, w, cm, scaling ! , hs, kb, u, ,pi
+real(kind=prec) :: det, hswkT, w, cm, scaling ! , hs, kb, u, ,pi
 
 ! kb = 1.380658				! 10**(-23)
 ! hs = 1.05457266			! 10**(-34)
@@ -723,8 +723,8 @@ subroutine PCA(t,det)
 
 type(trajectory) :: t
 integer :: i,j,k, rotation
-real(8), dimension(:,:), pointer :: R
-real(8) :: det
+real(kind=prec), dimension(:,:), pointer :: R
+real(kind=prec) :: det
 
 ! Can only be done if center off mass has been removed
 
@@ -769,7 +769,7 @@ end subroutine PCA
 subroutine Euler_angles(t)
 
 type(trajectory) :: t
-real(8) :: phi, psi, theta, delta
+real(kind=prec) :: phi, psi, theta, delta
 integer :: i,j,k
 	
 theta =  acos(t%ROT(3,3))											! Calculate Euler angles                   

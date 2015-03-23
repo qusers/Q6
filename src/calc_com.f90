@@ -15,22 +15,22 @@ module CALC_COM
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type COM_COORD_TYPE
-		real, pointer		::	x(:), y(:), z(:), mass(:)
+		real(kind=prec), pointer		::	x(:), y(:), z(:), mass(:)
 	end type COM_COORD_TYPE
 	type(COM_COORD_TYPE), private	::	coords_mass(MAX_MASKS)
 	
 	type COORD_TYPE
-		real, pointer		::	xyz(:)
+		real(kind=prec), pointer		::	xyz(:)
 	end type COORD_TYPE
 	type(COORD_TYPE), private	::	coords(MAX_MASKS)
 
 
 	type MASS_AVE_TYPE
-		real		::	x,y,z
+		real(kind=prec)		::	x,y,z
 	end type MASS_AVE_TYPE
 	type(MASS_AVE_TYPE), private	::	mass_ave(MAX_MASKS)
 	
-	real,private			:: tot_mass(MAX_MASKS)
+	real(kind=prec),private			:: tot_mass(MAX_MASKS)
 	
 contains
 
@@ -116,7 +116,7 @@ end subroutine COM_calc
 
 subroutine COM_put_mass(i)
 	integer						::	k,j,i,at
-	real						::	mass
+	real(kind=prec)						::	mass
 
 	if(i < 1 .or. i > Nmasks) return
 

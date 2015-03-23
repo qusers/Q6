@@ -15,7 +15,7 @@ module CALC_RMS
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type RMS_COORD_TYPE
-		real, pointer		::	x(:), x0(:)
+		real(kind=prec), pointer		::	x(:), x0(:)
 	end type RMS_COORD_TYPE
 	type(RMS_COORD_TYPE), private	::	coords(MAX_MASKS)
 contains
@@ -64,7 +64,7 @@ subroutine RMS_calc(i)
 	integer, intent(in)			::	i
 
 	!locals
-	real(8)						::	r
+	real(kind=prec)						::	r
 
 	if(i < 1 .or. i > Nmasks) return
 

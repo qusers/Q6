@@ -14,6 +14,18 @@ use SIZES
 	character(*), private, parameter   ::   MODULE_VERSION = '5.06'
 	character(*), private, parameter   ::   MODULE_DATE    = '2014-01-01'
 
+	! for enumeration of group contribution types
+	ENUM, bind(c)
+        	ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC
+	END ENUM
+
+	ENUM, bind(c)
+		ENUMERATOR	:: ATOM,RESIDUE
+	END ENUM
+	real(kind=prec),parameter               ::      zero = 0.0_prec
+	real(kind=prec),parameter               ::      one = 1.0_prec
+
+
 contains
 
 subroutine centered_heading(msg, fill)
@@ -183,8 +195,7 @@ end subroutine die_general
 !written by abbot
 !all credit goes to this guy
 !i hate FORTRAN for missing a basic function like this
-real function strtod(s)
-!  real(kind=prec) :: strtod
+real(kind=prec) function strtod(s)
   character(len=*), intent(in) :: s
   character(len=32) :: fmt
   integer :: dot

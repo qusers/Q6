@@ -30,8 +30,6 @@ include "mpif.h"
 !-----------------------------------------------------------------------
 !	Constants
 real(kind=prec)			::	pi, deg2rad	!set in sub startup
-real(kind=prec),parameter		::	zero = 0.0_prec
-real(kind=prec),parameter		::	one = 1.0_prec
 character*(*), parameter	::	MD_VERSION = '5.06'
 character*(*), parameter	::	MD_DATE    = '2014-04-21'
 real(kind=prec), parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3 !TODO: it is not place for that
@@ -132,7 +130,10 @@ integer						::	itemp_cycle, iout_cycle
 logical						::	force_rms
 !******PWadded 2001-10-23
 integer						::	ivolume_cycle
+!PB added for box control			
+integer						:: nsolvent = 0,nsolute = 0
 
+integer,allocatable				:: mvd_mol(:)
 ! --- Protein boundary
 logical						::	exclude_bonded
 real(kind=prec)						::	fk_pshell
@@ -202,6 +203,7 @@ character(len=200)			::	xwat_file
 integer					:: ngroups_gc
 logical					:: use_excluded_groups
 type(MASK_TYPE)                         :: allmask
+type(Q_ENE_HEAD)			:: ene_header
 
 ! --- Restraints
 integer						::	implicit_rstr_from_file
@@ -269,7 +271,8 @@ real(kind=prec)						::	grms !RMS force
 !-----------------------------------------------------------------------
 !	Energies , EQ is defined in qatom.f90
 !-----------------------------------------------------------------------
-type(ENERGIES)				::	E
+type(ENERGIES)				::	E,old_E,previous_E
+!added the variables for the MC_volume function as globals
 real(kind=prec)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
 real(kind=prec)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
 
@@ -305,12 +308,15 @@ end type NBQ_TYPE
 integer						::	nbpp_pair !current no solute-solute pairs
 type(NB_TYPE), allocatable, target::nbpp(:)
 
+type(NB_TYPE), allocatable, target::old_nbpp(:)
 integer	::	nbww_pair,nbww_true_pair !current no solvent-solvent pairs, implicit and explicit
 integer(AI), allocatable, target::nbww(:)
 
+integer(AI), allocatable, target::old_nbww(:)
 integer						::	nbpw_pair !current no solute-solvent pairs
 type(NB_TYPE), allocatable, target::nbpw(:)
 
+type(NB_TYPE), allocatable, target::old_nbpw(:)
 integer						::	nbqq_max !max number of q-q pairs in any state
 integer(TINY), allocatable	::	qconn(:,:,:) !Q-atom connectivity list
 integer						::	nbqq_pair(max_states)
@@ -319,6 +325,7 @@ type(NBQ_TYPE), allocatable ::nbqq(:,:)
 integer						::	nbqp_pair !current no of qatom-solute pairs
 type(NBQP_TYPE), allocatable, target::nbqp(:)
 
+type(NBQP_TYPE), allocatable, target::old_nbqp(:)
 integer						::	nbqw_pair !current no of q-atom-water mol. pairs
 integer(AI), allocatable	::	nbqw(:)
 
@@ -326,10 +333,15 @@ integer(AI), allocatable	::	nbqw(:)
 !these three used only under periodic conditions
 integer						:: nbpp_cgp_pair !number of solute-solute chargegroups interacting
 type(CGP_PAIR_TYPE), allocatable:: nbpp_cgp(:)
+type(CGP_PAIR_TYPE), allocatable:: old_nbpp_cgp(:)
 integer						:: nbpw_cgp_pair
 type(CGP_PAIR_TYPE), allocatable :: nbpw_cgp(:)
+type(CGP_PAIR_TYPE), allocatable :: old_nbpw_cgp(:)
 integer						::	nbqp_cgp_pair
 type(CGP_PAIR_TYPE), allocatable :: nbqp_cgp(:)
+type(CGP_PAIR_TYPE), allocatable :: old_nbqp_cgp(:)
+
+!Note: all the variables for the MC_volume function are now added here
 
 !special monitoring of pairs
 integer (TINY),allocatable  :: special_LJcod(:,:,:,:)
@@ -368,7 +380,7 @@ end type SHAKE_BOND_TYPE
 
 type SHAKE_MOL_TYPE
         integer					::	nconstraints
-        type(SHAKE_BOND_TYPE), pointer :: bond(:)
+        type(SHAKE_BOND_TYPE), allocatable	:: bond(:)
 end type SHAKE_MOL_TYPE
 
 
@@ -433,9 +445,14 @@ end subroutine md_startup
 
 subroutine md_shutdown
 ! call used modules' shutdown subroutines
+if (use_excluded_groups) then
+call excluded_shutdown(ngroups_gc)
+end if
 call md_deallocate
 call topo_deallocate
 call qatom_shutdown
+call index_shutdown
+call trj_shutdown
 end subroutine md_shutdown
 
 !----------------------------------------------------------------------
@@ -515,6 +532,14 @@ allocate(x(natom*3), &
                 iqatom(natom), &
                 stat=alloc_status)
 call check_alloc('atom data arrays')
+!set arrays to zero after allocation
+!we can not trust the compiler to do this
+	x(:)=0.0
+	xx(:)=0.0
+	v(:)=0.0
+	d(:)=0.0
+	winv(:)=0.0
+	iqatom(:)=0
 end subroutine allocate_natom_arrays
 
 !----------------------------------------------------------------------
@@ -562,27 +587,17 @@ subroutine allocate_mpi
 
 if(nodeid .eq. 0) then
  allocate(mpi_status(MPI_STATUS_SIZE,numnodes-1), & 
-         request_recv(numnodes-1,4), &
+         request_recv(numnodes-1,3), &
          d_recv(natom*3,numnodes-1), &
          E_recv(numnodes-1), &
-         EQ_recv(nstates,numnodes-1), &
+         EQ_recv(nstates,ene_header%arrays,numnodes-1), &
          stat=alloc_status)
- call check_alloc('MPI data arrays')
- if (use_excluded_groups) then
-	allocate(EQ_gc_recv(ngroups_gc,nstates,numnodes-1), &
-        stat=alloc_status)
-	call check_alloc('MPI data array excluded groups')
- end if
+ call check_alloc('MPI data arrays head node')
 else
  allocate(E_send(1), &
-          EQ_send(nstates), &
+          EQ_send(nstates,ene_header%arrays), &
           stat=alloc_status)
- call check_alloc('MPI data arrays')
- if (use_excluded_groups) then
-	allocate(EQ_gc_send(ngroups_gc,nstates), &
-	stat=alloc_status)
-	call check_alloc('MPI data array excluded groups')
- end if
+ call check_alloc('MPI data arrays slave nodes')
 end if
 end subroutine allocate_mpi
 #endif
@@ -599,6 +614,33 @@ stat=alloc_status)
 call check_alloc('water polarisation shell arrays')
 
 end subroutine allocate_watpol_arrays
+!----------------------------------------------------------------------
+
+subroutine reallocate_watpol_arrays
+!local variables
+integer(AI), allocatable        ::      old_list_sh(:,:), old_nsort(:,:)
+integer				::	old_n_max_insh
+
+old_n_max_insh = n_max_insh
+allocate(old_list_sh(old_n_max_insh,nwpolr_shell),old_nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
+call check_alloc('water polarisation shell arrays reallocation')
+
+old_list_sh(1:old_n_max_insh,1:nwpolr_shell)=list_sh(1:old_n_max_insh,1:nwpolr_shell)
+old_nsort(1:old_n_max_insh,1:nwpolr_shell)=nsort(1:old_n_max_insh,1:nwpolr_shell)
+
+deallocate(list_sh,nsort)
+
+n_max_insh = int(n_max_insh * 1.5_prec) ! make array a big larger, again ...
+allocate(list_sh(n_max_insh,nwpolr_shell),nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
+call check_alloc('water polarisation shell arrays new allocation')
+
+list_sh(1:old_n_max_insh,1:nwpolr_shell)=old_list_sh(1:old_n_max_insh,1:nwpolr_shell)
+nsort(1:old_n_max_insh,1:nwpolr_shell)=old_nsort(1:old_n_max_insh,1:nwpolr_shell)
+
+deallocate(old_list_sh,old_nsort)
+call check_alloc('water polarisation shell arrays')
+
+end subroutine reallocate_watpol_arrays
 
 !----------------------------------------------------------------------
 
@@ -621,6 +663,8 @@ end subroutine check_alloc
 subroutine md_deallocate
 ! deallocatde this module's own arrays. Called by shutdown
 
+! local variables for deallocation loop
+	integer			:: ii, jj
 ! use status to avoid errors if not allocated
 
 ! atom arrays
@@ -631,6 +675,14 @@ deallocate (d, stat=alloc_status)
 deallocate (winv, stat=alloc_status)
 deallocate (iqatom, stat=alloc_status)
 
+! shake stuff
+if(allocated(shake_mol)) then
+	do ii=1,nmol
+		if (allocated(shake_mol(ii)%bond)) deallocate(shake_mol(ii)%bond)
+!		if (associated(shake_mol(ii)%bond))nullify(shake_mol(ii)%bond)	
+	end do
+	deallocate(shake_mol)
+end if
 ! Nosé-Hoover array
 if ( thermostat == NOSEHOOVER) then
 deallocate (xnh, stat=alloc_status)
@@ -640,6 +692,21 @@ deallocate (Gnh, stat=alloc_status)
 end if
 ! nonbond lists
 deallocate(nbpp, nbpw, nbww, nbqq, nbqp, nbqw, qconn, stat=alloc_status)
+! nonbond charge groups
+if (allocated(nbpp_per_cgp)) deallocate(nbpp_per_cgp)
+if (allocated(nbww_per_cgp)) deallocate(nbww_per_cgp)
+if (allocated(nbqp_per_cgp)) deallocate(nbqp_per_cgp)
+if (allocated(nbqw_per_cgp)) deallocate(nbqw_per_cgp)
+if (allocated(nbpw_per_cgp)) deallocate(nbpw_per_cgp)
+
+! stuff for PBC
+if (allocated(nbqp_cgp)) deallocate(nbqp_cgp)
+if (allocated(nbpp_cgp)) deallocate(nbpp_cgp)
+if (allocated(nbpw_cgp)) deallocate(nbpw_cgp)
+if (allocated(mvd_mol)) deallocate(mvd_mol)
+if (allocated(old_lrf)) deallocate(old_lrf)
+if (allocated(mol_mass)) deallocate(mol_mass)
+if (allocated(mass)) deallocate(mass)
 
 ! watpol arrays
 deallocate(wshell, stat=alloc_status)
@@ -661,6 +728,25 @@ deallocate(rstwal, stat=alloc_status)
 
 ! excluded groups
 deallocate(ST_gc, stat=alloc_status)
+! new file header for energy file
+if (allocated(ene_header%types)) then
+deallocate(ene_header%types,ene_header%numres,ene_header%gcnum,ene_header%resid)
+endif
+! header data for energy file
+if (allocated(ene_header%types)) deallocate(ene_header%types)
+if (allocated(ene_header%numres)) deallocate(ene_header%numres)
+if (allocated(ene_header%resid)) deallocate(ene_header%resid)
+if (allocated(ene_header%gcnum)) deallocate(ene_header%gcnum)
+!variables for MC_volume function
+if (allocated(old_nbww)) deallocate(old_nbww)
+if (allocated(old_nbpw)) deallocate(old_nbpw)
+if (allocated(old_nbpp)) deallocate(old_nbpp)
+if (allocated(old_nbqp)) deallocate(old_nbqp)
+
+!more variables for MC_Volume ...
+if (allocated(old_nbpp_cgp)) deallocate(old_nbpp_cgp)
+if (allocated(old_nbpw_cgp)) deallocate(old_nbpw_cgp)
+if (allocated(old_nbqp_cgp)) deallocate(old_nbqp_cgp)
 #if defined (USE_MPI)
 !MPI arrays
 deallocate(nbpp_per_cgp ,stat=alloc_status)
@@ -674,15 +760,9 @@ if(nodeid .eq. 0) then
    deallocate(d_recv, stat=alloc_status)
    deallocate(E_recv, stat=alloc_status)
    deallocate(EQ_recv, stat=alloc_status)
-   if (allocated(EQ_gc_recv)) then
-	deallocate(EQ_gc_recv,stat=alloc_status)
-   end if
 else
    deallocate(E_send, stat=alloc_status)
    deallocate(EQ_send, stat=alloc_status)
-   if (allocated(EQ_gc_send)) then
-	deallocate(EQ_gc_send,stat=alloc_status)
-   end if
 end if
 #endif
 
@@ -694,14 +774,11 @@ subroutine reallocate_nonbondlist_pp
 
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-!make it safer and add some padding
-!memory is cheap
 old_max = calculation_assignment%pp%max
-temp_max = int(calculation_assignment%pp%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpp(1:old_max)
 
@@ -729,15 +806,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpp_cgp, 1)
-!making some padding already here
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -759,15 +834,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbpw_cgp, 1)
-!again, giving some padding
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbpw_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbpw_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbpw_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbpw_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -789,14 +862,13 @@ integer						:: old_max, new_max
 
 ! copy
 old_max = size(nbqp_cgp, 1)
-new_max = int( old_max*1.05) + 200
-allocate(old_nbxx(new_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 old_nbxx(1:old_max) = nbqp_cgp(1:old_max)
 
 ! deallocate and copy back
 deallocate(nbqp_cgp)
-!new_max = int( old_max*1.05) + 200
+new_max = int( old_max*1.05) + 200
 allocate(nbqp_cgp(new_max), stat = alloc_status)
 call check_alloc('reallocating non-bonded charge group list')
 nbqp_cgp(1:old_max) = old_nbxx(1:old_max)
@@ -815,12 +887,11 @@ end subroutine reallocate_nbqp_cgp
 subroutine reallocate_nonbondlist_pw
 ! variables
 type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%pw%max
-temp_max = int(calculation_assignment%pw%max * 1.05) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbpw(1:old_max)
 
@@ -845,12 +916,11 @@ end subroutine reallocate_nonbondlist_pw
 subroutine reallocate_nonbondlist_qp
 ! variables
 type(NBQP_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
 old_max = calculation_assignment%qp%max
-temp_max = int(old_max * 1.05 ) +200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(old_max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
 old_nbxx(1:old_max) = nbqp(1:old_max)
 
@@ -875,15 +945,14 @@ end subroutine reallocate_nonbondlist_qp
 subroutine reallocate_nonbondlist_ww
 ! variables
 integer(AI), allocatable		:: old_nbxx(:)
-integer						:: old_max,temp_max
+integer						:: old_max
 
 ! copy
-old_max = calculation_assignment%ww%max
-temp_max = int(old_max * 1.05 ) + 200
-allocate(old_nbxx(temp_max), stat=alloc_status)
+allocate(old_nbxx(calculation_assignment%ww%max), stat=alloc_status)
 call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:old_max) = nbww(1:old_max)
-!old_max = calculation_assignment%ww%max
+old_nbxx(1:calculation_assignment%ww%max) = nbww(1:calculation_assignment%ww%max)
+old_max = calculation_assignment%ww%max
+
 
 ! deallocate and copy back
 deallocate(nbww)
@@ -918,7 +987,6 @@ real(kind=prec)						::  rji(3),rjk(3),di(3),dk(3)
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
-
 ! global variables used:
 ! ang, x, anglib, d
 
@@ -943,6 +1011,7 @@ endif
 mp_real_tmp = zero
 
 do ia=mp_start,mp_end
+
 #else
 do ia=istart,iend
 #endif
@@ -1016,7 +1085,6 @@ d(j3+1) = d(j3+1) - dv*( di(1) + dk(1) )
 d(j3+2) = d(j3+2) - dv*( di(2) + dk(2) )
 d(j3+3) = d(j3+3) - dv*( di(3) + dk(3) )
 end do
-
 #ifdef _OPENMP
 !$omp atomic update
 angle = angle + mp_real_tmp
@@ -1089,7 +1157,6 @@ real(kind=prec)						::	rij(3)
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
-
 ! global variables used:
 ! bnd, x, bondlib, d
 
@@ -1111,6 +1178,7 @@ endif
 mp_real_tmp = zero
 
 do ib=mp_start,mp_end
+
 #else
 do ib=istart,iend
 #endif
@@ -1144,7 +1212,6 @@ do ib=istart,iend
         d(i3+2) = d(i3+2) - rij(2)*dv
         d(i3+3) = d(i3+3) - rij(3)*dv
 end do
-
 #ifdef _OPENMP
 !$omp atomic update
 bond = bond + mp_real_tmp
@@ -1505,6 +1572,26 @@ call check_alloc('Qatom - water non-bond list')
 	call check_alloc('solute-solvent non-bond charge group pair list')
 	allocate(nbqp_cgp(calculation_assignment%qp%max / 2), stat=alloc_status)
 	call check_alloc('qatom-solute non-bond charge group pair list')
+!we now allocate the storage arrays for MC_volume update here, so we don't have to realloc every time the 
+!the function is called
+        allocate(old_nbpp_cgp(calculation_assignment%pp%max / 2), stat=alloc_status)
+        call check_alloc('solute-solute non-bond charge group pair list')
+        allocate(old_nbpw_cgp(calculation_assignment%pw%max / 2), stat=alloc_status)
+        call check_alloc('solute-solvent non-bond charge group pair list')
+        allocate(old_nbqp_cgp(calculation_assignment%qp%max / 2), stat=alloc_status)
+        call check_alloc('qatom-solute non-bond charge group pair list')
+
+allocate(old_nbpp(calculation_assignment%pp%max), stat=alloc_status)
+call check_alloc('solute-solute non-bond list')
+
+allocate(old_nbpw(calculation_assignment%pw%max), stat=alloc_status)
+call check_alloc('solute-solvent non-bond list')
+
+allocate(old_nbww(calculation_assignment%ww%max), stat=alloc_status)
+call check_alloc('solvent-solvent non-bond list')
+
+allocate(old_nbqp(calculation_assignment%qp%max), stat=alloc_status)
+call check_alloc('Qatom - solute non-bond list')
   end if	
 
 !Kanske deallokera nbxx_per_cgp TODO
@@ -1533,22 +1620,15 @@ end subroutine close_input_files
 !-----------------------------------------------------------------------
 
 subroutine close_output_files
-integer :: iii
 close (3)
 if ( itrj_cycle .gt. 0 ) close (10)
 if ( iene_cycle .gt. 0 ) close (11)
 
-if (use_excluded_groups) then
-        do iii=1,ngroups_gc
-        close (ST_gc(iii)%fileunit)
-        end do
-end if
 end subroutine close_output_files
 
 !-----------------------------------------------------------------------
 
 subroutine open_files
-	integer :: iii
 ! --> restart file (2)
 if(restart) then
 open (unit=2, file=restart_file, status='old', form='unformatted', action='read', err=2)
@@ -1560,12 +1640,6 @@ open (unit=3, file=xfin_file, status='unknown', form='unformatted', action='writ
 ! --> energy output file (11)
 if ( iene_cycle .gt. 0 ) then
 open (unit=11, file=ene_file, status='unknown', form='unformatted', action='write', err=11)
-	if (use_excluded_groups) then
-		do iii=1,ngroups_gc
-                ST_gc(iii)%fileunit=freefile()
-		open (unit=ST_gc(iii)%fileunit,file=ST_gc(iii)%filename,status='unknown',form='unformatted',action='write',err=11)
-		end do
-	end if
 end if
 
 ! --> external file for implicit position restraints (12)
@@ -1657,7 +1731,8 @@ end subroutine gauss
 !-----------------------------------------------------------------------
 subroutine get_fep
 ! local variables
-character					::	libtext*80,qaname*2
+character(len=200)			::	libtext
+character(len=2)			::	qaname
 integer					::	i,j,k,iat
 !temp. array for reallocating long-range exclusion list
 integer(AI), pointer	::	tempexlong(:,:)
@@ -1748,11 +1823,6 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
 				(tor(i)%i.eq.qtor(j)%l .and. tor(i)%j.eq.qtor(j)%k .and. &
 				tor(i)%k.eq.qtor(j)%j .and. tor(i)%l.eq.qtor(j)%i )) .and. &
 				tor(i)%cod .ne. 0) then
-!			if(( (tor(i)%i.eq.iqtor(j) .and. tor(i)%j.eq.jqtor(j) .and. &
-!			        tor(i)%k.eq.kqtor(j) .and. tor(i)%l.eq.lqtor(j)) .or. &
-!                               (tor(i)%i.eq.lqtor(j) .and. tor(i)%j.eq.kqtor(j) .and. &
-!				tor(i)%k.eq.jqtor(j) .and. tor(i)%l.eq.iqtor(j)) ) .and. &
-!                                tor(i)%cod /= 0) then
                                 tor(i)%cod = 0
                                 write (*,231) 'torsion', tor(i)%i,tor(i)%j,tor(i)%k,tor(i)%l
 						end if
@@ -1777,19 +1847,6 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
 					(imp(i)%k.eq.qimp(j)%k) .or. &
 					(imp(i)%k.eq.qimp(j)%l))) .and. &
 				     (	imp(i)%cod .ne. 0)) then
-!                                if(((imp(i)%i .eq. iqimp(j)) .or. &
-!                                        (imp(i)%i .eq. lqimp(j)) .or. &
-!                                        (imp(i)%l .eq. iqimp(j)) .or. &
-!                                        (imp(i)%l .eq. lqimp(j))) .and. &
-!                                        ((imp(i)%j .eq. iqimp(j)) .or. &
-!                                        (imp(i)%j .eq. jqimp(j))  .or. &
-!                                        (imp(i)%j .eq. kqimp(j))  .or. &
-!                                        (imp(i)%j .eq. lqimp(j))) .and. &
-!                                        ((imp(i)%k .eq. iqimp(j)) .or. &
-!                                        (imp(i)%k .eq. jqimp(j)) .or. &
-!                                        (imp(i)%k .eq. kqimp(j)) .or. &
-!                                        (imp(i)%k .eq. lqimp(j))) .and. &
-!                                        imp(i)%cod /= 0) then
                                         imp(i)%cod = 0
                                         write (*,231) &
                                         'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
@@ -1810,9 +1867,6 @@ if(nqbond > 0 .or. nqangle > 0 .or. nqtor > 0 .or. nqimp > 0 ) then
                                 (imp(i)%k.eq.qimp(j)%i) .and. (imp(i)%l.eq.qimp(j)%k)) .or. &
                                 ((imp(i)%i.eq.qimp(j)%l) .and. (imp(i)%j.eq.qimp(j)%j) .and. &
                                 (imp(i)%k.eq.qimp(j)%k) .and. (imp(i)%l.eq.qimp(j)%i))) then
-!                        if(((imp(i)%j.eq.jqimp(j) .and. imp(i)%k.eq.kqimp(j)) .or. &
-!                                (imp(i)%j.eq.kqimp(j) .and. imp(i)%k.eq.jqimp(j))) .and. &
-!                                imp(i)%cod ne. 0) then
                                 imp(i)%cod = 0
                                 write(*,231)'improper',imp(i)%i,imp(i)%j,imp(i)%k,imp(i)%l
                         end if
@@ -1868,15 +1922,15 @@ end subroutine get_fep
 
 subroutine get_fname (text,length,filnam)
 ! arguments
-character					::	text*80,filnam*80
+character(len=200)			::	text,filnam
 integer					::	length
 ! local variables
 
 
 integer					::	i
 
-length=80
-do i=1,80
+length=200
+do i=1,200
 if ( text(i:i) .eq. ' ' ) then
 length=i-1
 goto 10
@@ -1901,7 +1955,6 @@ real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
 real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
-
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -1926,6 +1979,7 @@ endif
 mp_real_tmp = zero
 
 do ip = mp_end, mp_start,-1
+
 #else
 do ip = iend, istart,-1
 #endif
@@ -2024,13 +2078,11 @@ d(t%l*3-2) = d(t%l*3-2) + dv*dp(10)
 d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
-
 #ifdef _OPENMP
 !$omp atomic update
 improper = improper + mp_real_tmp
 #endif
 !$omp end parallel
-
 end function improper
 
 !-----------------------------------------------------------------------
@@ -2047,7 +2099,6 @@ real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
 real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::	t
 type(IMPLIB_TYPE), pointer	::	lib
-
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -2072,6 +2123,7 @@ endif
 mp_real_tmp = zero
 
 do ip = mp_end, mp_start,-1
+
 #else
 do ip = iend, istart,-1
 #endif
@@ -2170,13 +2222,11 @@ d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
-
 #ifdef _OPENMP
 !$omp atomic update
 improper2 = improper2 + mp_real_tmp
 #endif
 !$omp end parallel
-
 end function improper2
 
 !-----------------------------------------------------------------------
@@ -2343,6 +2393,8 @@ call MPI_Bcast(rexcl_o, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast rexcl')
 call MPI_Bcast(nmol, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nmol')
+call MPI_Bcast(nres_solute, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nres_solute')
 call MPI_Bcast(nat_pro, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nat_pro')
 
@@ -2353,9 +2405,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nstates')
 call MPI_Bcast(use_excluded_groups,1,MPI_LOGICAL, 0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast use_excluded_groups')
 
-!first time force syncing so that everyone knows and has all parameters to this
-!point, should give no hits to performance
-!Paul Bauer 2014
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 
@@ -2392,6 +2441,8 @@ if (use_excluded_groups) then
                 end do
         end if
         deallocate(tempmask,stat=alloc_status)
+	call MPI_Bcast(ST_gc(1:ngroups_gc)%caltype,ngroups_gc,MPI_INTEGER, 0,MPI_COMM_WORLD,ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib calc types')
 end if
 
 !Setting all vars not sent to slaves to 2147483647. To avoid hidden bugs.
@@ -2402,8 +2453,6 @@ Ndegf=maxint
 Ndegfree=maxint
 xwcent(:)=maxreal 
 end if
-!first part completed, syncing again
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 ! --- MD data, second batch ---
 
@@ -2451,6 +2500,9 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 ! --- Periodic boundary condition data ---
 
 
+if (nodeid.ne.0) then
+allocate(mvd_mol(nmol))
+end if
 
 
 ! --- shake data ---
@@ -2469,8 +2521,6 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 ! ADD CODE HERE to broadcast shake data
 !end if
 
-!and syncing again
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- lrf data ---
 
 if (use_LRF) then
@@ -2510,8 +2560,6 @@ call MPI_Type_free(mpitype_batch, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Type_free')
 end if !(use_LRF)
 
-!sync to make sure everything is there
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 ! --- data from the TOPO module ---
 
 if (nodeid .eq. 0) write (*,'(80a)') 'TOPO data'
@@ -2594,8 +2642,6 @@ call MPI_Bcast(list14long, 2*n14long, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(A
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
-!end of part -> sync
-call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 
 ! --- data from the QATOM module ---
 
@@ -2611,11 +2657,11 @@ qbvdw(nqlib,nljtyp), &
 EQ(nstates), &
 sc_lookup(nqat,natyps+nqat,nstates), &
 stat=alloc_status)
+!if we use PBC, we allocate the storage for the old energies here
+if( use_PBC ) then
+allocate(old_EQ(nstates))
+end if
 call check_alloc('Q-atom arrays')
-	if (use_excluded_groups) then
-		allocate(EQ_gc(ngroups_gc,nstates),stat=alloc_status)
-		call check_alloc('Q-energy arrays excluded groups')
-	end if
 end if
 !Broadcast sc_lookup(nqat,natyps+nqat,nstates)
 if (nstates.ne.0) then
@@ -2673,13 +2719,53 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast EQ%lambda')
 if (nodeid .ne. 0) EQ(1:nstates)%lambda = temp_lambda(1:nstates)
 deallocate(temp_lambda)
 end if
+!Final Bcast for the group contribution header data type
+call MPI_Bcast(ene_header%arrays,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
+call MPI_Bcast(ene_header%totresid,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib totresid')
+
+if (nodeid .ne. 0 ) then
+allocate(ene_header%types(ene_header%arrays),ene_header%numres(ene_header%arrays),&
+	ene_header%resid(ene_header%totresid),ene_header%gcnum(ene_header%arrays),&
+	stat=alloc_status)
+call check_alloc('Group contrib type arrays')
+end if
+call MPI_Bcast(ene_header%types,ene_header%arrays,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
+call MPI_Bcast(ene_header%numres,ene_header%arrays,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
+call MPI_Bcast(ene_header%gcnum,ene_header%arrays,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
+call MPI_Bcast(ene_header%resid,ene_header%totresid,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
+
+!Now make sure the nodes have all the EQ arrays allocated, too
+if (nodeid .ne. 0) then
+do jj=1,nstates
+allocate(EQ(jj)%qx(ene_header%arrays),EQ(jj)%qq(ene_header%arrays),&
+	EQ(jj)%qp(ene_header%arrays),EQ(jj)%qw(ene_header%arrays),&
+	EQ(jj)%total(ene_header%arrays),stat=alloc_status)
+!same as above, storage for old arrays is allocated here
+if( use_PBC ) then
+allocate(old_EQ(jj)%qx(ene_header%arrays),old_EQ(jj)%qq(ene_header%arrays),&
+        old_EQ(jj)%qp(ene_header%arrays),old_EQ(jj)%qw(ene_header%arrays),&
+        old_EQ(jj)%total(ene_header%arrays),stat=alloc_status)
+end if
+call check_alloc('Group contrib EQ arrays slave nodes')
+end do
+end if
+
+!And the last -> length of bytes to recieve from the EQ arrays
+call MPI_Bcast(reclength,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast EQ array byte length')
 
 if (nodeid .eq. 0) then 
 call centered_heading('End of initiation', '-')
 print *
 end if
 
-!and we sync again
+!and we sync before the end :)
 call MPI_BARRIER(MPI_COMM_WORLD, ierr)
 !Finally allocate for  slaves:E_send, EQ_send
 !For master :E_recv,d_recv
@@ -2817,7 +2903,6 @@ do while(src <= nmol)
                 shake_mol(trg) = shake_mol(src)
                 !clear source
                 shake_mol(src)%nconstraints = 0
-                nullify(shake_mol(src)%bond) 
                 src = src + 1
         else
                 trg = trg + 1
@@ -2894,7 +2979,7 @@ end subroutine initial_shaking
 !-----------------------------------------------------------------------
 logical function initialize()                  
 ! local variables
-character					:: text*80
+character					:: text*200
 integer						:: i,j,length,ii
 real(kind=prec)						:: stepsize
 real(kind=prec)						:: lamda_tmp(max_states)
@@ -2907,11 +2992,11 @@ integer						:: num_args
 character(200)				:: infilename
 logical						::	yes
 logical						::	need_restart
-character(len=80)			::	instring
+character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
-character*80					:: gc_mask_tmp(maxmaskrows),str,str2
+character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
 
 ! this subroutine will init:
 !  nsteps, stepsize, dt
@@ -3573,19 +3658,17 @@ end if
 !energy calculation to provide 'real' group contribution
 !Added Paul Bauer 2014
 use_excluded_groups = .false.
-ngroups_gc = prm_count('exclude_groups')
+ngroups_gc = prm_count('group_contribution')
 write (*,'(/,a)') 'List of excluded atom groups'
 if ( ngroups_gc .gt. 0 ) then
 !allocate new EQ arrays for each group
-777 format (/,'No of excluded group calculations =',i10)
+777 format ('Number of excluded group calculations =',i4)
 	write (*,777) ngroups_gc
 	allocate(ST_gc(ngroups_gc), stat=alloc_status)
 	call check_alloc('gc param store')
-	allocate(EQ_gc(ngroups_gc,nstates), stat=alloc_status)
-	call check_alloc('gc excluded list')
-778 format ('groupno	contains')
-	write (*,778)
+778 format ('Groupnumber ',i4,'	contains')
 	do i=1,ngroups_gc
+		write(*,778,advance='no') i
 		!read numbers from string
 		number = 0
 		do while (prm_get_field(instring))
@@ -3598,37 +3681,40 @@ if ( ngroups_gc .gt. 0 ) then
                 	end if
 		end do
 
-		mask_rows = number - 1
+		mask_rows = number - 2
 		ST_gc(i)%seltype = trim(gc_mask_tmp(1))
+		ST_gc(i)%caltypen = trim(gc_mask_tmp(2))
 		if ((trim(ST_gc(i)%seltype) /= 'atom' ).and. (trim(ST_gc(i)%seltype) /= 'residue')) then
 779 format (/,'Could not understand name of the selection , ',a)
-			write (*,779) text
+			write (*,779) trim(ST_gc(i)%seltype)
                 	initialize = .false.
+			exit
+		end if
+		if ((trim(ST_gc(i)%caltypen) /= 'full').and.(trim(ST_gc(i)%caltypen) /= 'electro') .and. &
+			(trim(ST_gc(i)%caltypen) /= 'vdw').and.(trim(ST_gc(i)%caltypen) /= 'all')) then
+781 format (/,'Could not understand name of the calculation type , ',a)
+			write (*,781) trim(ST_GC(i)%caltypen)
+			initialize = .false.
+			exit
 		end if
 		if(iene_cycle > 0) then
         	if(mask_rows == 0) then
 !You are not as funny as you think ...
-                	write(*,780) i
-780 format (/,'No atoms excluded for group ',i10)
+                	write(*,780)
+780 format ('no atoms')
                 	ST_gc(i)%count=0
         	else
-!			call mask_initialize(ST_gc(i)%gcmask)
 			ST_gc(i)%count=mask_rows
 			allocate(ST_gc(i)%maskarray(mask_rows),stat=alloc_status)
 			call check_alloc('gc maskarray')
 			
-	                do ii=2,mask_rows+1
+	                do ii=3,mask_rows+2
                 	        yes = gc_store_mask(ST_gc(i),gc_mask_tmp(ii))
 	                end do
 			use_excluded_groups = .true.
-!			ST_gc(i)%fileunit=freefile()
-			write (str,'(i10)') i
-			ST_gc(i)%filename=trim(adjustl(str))//'_'
-                        str2=ene_file
-                        str=trim(ST_gc(i)%filename)//trim(str2)
-			ST_gc(i)%filename=trim(str)
-781 format (/,i10,i10,' atom groups')
-                        write(*,781) i,mask_rows 
+			write (str,'(i4)') i
+782 format (i4,' atom groups')
+                        write(*,782) mask_rows 
 	        end if
 		elseif(mask_rows == 0) then
 		        write(*,'(a)') 'Ignoring section for excluding atoms.'
@@ -3795,7 +3881,7 @@ logical function old_initialize(fu)
 integer						::	fu
 ! local variables
 integer						::	iuse_indip, shake_flag
-character					:: text*80, watmodel*80
+character					:: text*200, watmodel*80
 integer						:: i,j,length
 integer						:: irestart
 real(kind=prec)						:: stepsize
@@ -4433,6 +4519,119 @@ end if
 end subroutine temperature
 
 !----------------------------------------------------------------------
+! Subroutines for velocity update, one for each thermostat
+subroutine newvel_ber(step,tempscale,startatom,endatom)!dt_mod,Tscale_solute,i,nat_solute)
+real(kind=prec)				:: step,tempscale
+integer				:: startatom, endatom
+
+!locals
+integer				:: i,i3
+
+do i=startatom,endatom
+	i3=i*3-3
+	v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
+	xx(i3+1) = x(i3+1)
+	x(i3+1) = x(i3+1) + v(i3+1)*step
+
+	v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step ) * tempscale
+	xx(i3+2) = x(i3+2)
+	x(i3+2) = x(i3+2) + v(i3+2)*step
+
+	v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step ) * tempscale
+	xx(i3+3) = x(i3+3)
+	x(i3+3) = x(i3+3) + v(i3+3)*step
+
+	if (integrator == VELVERLET) then
+		v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
+		v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step ) * tempscale
+		v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step ) * tempscale
+	end if
+
+end do
+
+end subroutine newvel_ber
+
+subroutine newvel_lan(step,lfriction,rands,rande)!dt_mod,dv_friction)
+real(kind=prec)					:: step,lfriction
+real(kind=prec)					:: rands(:),rande(:,:)!natom,3)
+!locals
+integer				:: i,j,i3,randnum
+
+
+if (.not.langevin_gauss_rand) then
+!using uniform random numbers, default
+	do i=1,natom
+	do j=1,3
+	randnum = randm(iseed)
+	rande(i,j) =  rands(i) * ( randnum  - 0.5_prec )
+	end do 
+	end do
+else
+!using gaussian random numbers, not default
+	do i=1,natom
+	do j=1,3
+	call gauss(zero,rands(i),rande(i,j),iseed)
+	end do 
+	end do
+	end if  
+
+do i=1,natom
+	i3=i*3-3
+!	dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*step
+!	dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*step
+!	dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*step
+
+	v(i3+1)  = (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
+	xx(i3+1) = x(i3+1)
+	x(i3+1)  = x(i3+1) + v(i3+1)*step
+
+	v(i3+2)  = (v(i3+2)*lfriction) -(d(i3+2)-rande(i,2))*winv(i)*step
+	xx(i3+2) = x(i3+2)
+	x(i3+2)  = x(i3+2) + v(i3+2)*step
+
+	v(i3+3)  = (v(i3+3)*lfriction) -(d(i3+3)-rande(i,3))*winv(i)*step
+	xx(i3+3) = x(i3+3)
+	x(i3+3)  = x(i3+3) + v(i3+3)*step
+
+	if (integrator == VELVERLET) then
+		v(i3+1)= (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
+		v(i3+2)= (v(i3+2)*lfriction) -(d(i3+2)-rande(i,2))*winv(i)*step
+		v(i3+3)= (v(i3+3)*lfriction) -(d(i3+3)-rande(i,3))*winv(i)*step
+	end if
+end do
+
+
+end subroutine newvel_lan
+
+subroutine newvel_nos(step)
+real(kind=prec)				:: step
+
+!locals
+integer				:: i,i3
+
+do i=1,natom
+        i3=i*3-3
+        v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )
+        xx(i3+1) = x(i3+1)
+        x(i3+1) = x(i3+1) + v(i3+1)*step
+
+        v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step )
+        xx(i3+2) = x(i3+2)
+        x(i3+2) = x(i3+2) + v(i3+2)*step
+
+        v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step )
+        xx(i3+3) = x(i3+3)
+        x(i3+3) = x(i3+3) + v(i3+3)*step
+
+        if (integrator == VELVERLET) then
+                v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )
+                v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step )
+                v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step )
+        end if
+
+end do
+
+end subroutine newvel_nos
 ! Subroutine for the Nosé-Hoover chain propagation
 subroutine nh_prop
 
@@ -4491,11 +4690,13 @@ real(kind=prec)				::Tscale_solute,Tscale_solvent
 !new for temperature control
 real(kind=prec)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
 integer				:: n_max = -1
-real(kind=prec),allocatable	::randva(:),randfa(:,:),dv(:)
+real(kind=prec),allocatable	::randva(:),randfa(:,:)
 !Random variable temperature control array
 real(kind=prec)				:: time0, time1, time_per_step, startloop
 integer(4)				:: time_completion
 
+!Local variables for file writing to energy files
+integer				:: loc_arrays
 #if defined(PROFILING)
 real(kind=prec)                                         :: start_loop_time1, start_loop_time2
 
@@ -4529,6 +4730,8 @@ node_times(:) = zero
 #endif
 #endif
 
+!Define array length for EQ array in local usage
+loc_arrays=ene_header%arrays
 
 !Define number of coord to send/recieve
 nat3=natom*3
@@ -4566,41 +4769,29 @@ end if
 !moved here to have definition before we do every step
 if (nodeid.eq.0) then
 !	allocate temp control arrays
+	if ( thermostat == LANGEVIN ) then
 	allocate(randva(natom))
 	call check_alloc('Random variable temperature control array')
 	allocate(randfa(natom,3))
 	call check_alloc('Random variable temperature control array 2')
-        allocate(dv(nat3))
-        call check_alloc('Delta v array for temperature control')
+	end if
 ! if velocity verlet is used, take half steps
 if ( integrator == VELVERLET ) then
         dv_mod = dt2
 else
         dv_mod = dt
 end if
-if ( thermostat == BERENDSEN ) then
-	dv_friction = 1
-	n_max = nat_solute
-	randfa(:,:) = 0
-else if ( thermostat == NOSEHOOVER )then
-	dv_friction = 1
-	randfa(:,:) = 0
-	n_max = natom
-else if ( thermostat == LANGEVIN ) then
-	dv_friction = (1-friction*dv_mod)
+if ( thermostat == LANGEVIN ) then
+	dv_friction = (1.0_prec-friction*dv_mod)
 	if (.not.langevin_gauss_rand) then
 !we use the fast random number generation from unifrom random numbers
 !this is the default! -- Paul and Alex October 2014
-	gkT = 24*friction*Boltz*Temp0/dv_mod ! this 24 comes from the fact that we are using uniform random numbers
+	gkT = 24.0_prec*friction*Boltz*Temp0/dv_mod ! this 24 comes from the fact that we are using uniform random numbers
 	else
 !we use gaussian random numbers
-    gkT = 2*friction*Boltz*Temp0/dv_mod
+    gkT = 2.0_prec*friction*Boltz*Temp0/dv_mod
 	end if
 	randva(:)= sqrt (gkT/winv(:))
-	n_max = natom
-else
-	write(*,*) 'No such thermostat'
-	stop
 end if
 end if !nodeid .eq. 0
 
@@ -4716,89 +4907,16 @@ if(nodeid .eq. 0) then
 start_loop_time1 = rtime()
 #endif
 
-! if Berendsen thermostat was chosen, applied here
-!because Tscale changes all the time
+! new selection and subfunction for thermostats
+!if Berendsen thermostat was chosen, call two times for diff scaling
 if( thermostat == BERENDSEN ) then
-		Tscale = Tscale_solute
-else
-		Tscale = 1
-end if
-if (thermostat == LANGEVIN ) then
-	if (.not.langevin_gauss_rand) then
-!using uniform random numbers, default
-        do i=1,natom
-                do j=1,3
-		randnum = randm(iseed)
-		randfa(i,j) =  randva(i) * ( randnum  - 0.5_prec )
-                end do 
-        end do
-	else
-!using gaussian random numbers, not default
-        do i=1,natom
-                do j=1,3
-	        call gauss(zero,randva(i),randfa(i,j),iseed)
-                end do 
-        end do
-	end if	
-end if
-if (thermostat == NOSEHOOVER ) then
+	call newvel_ber(dv_mod,Tscale_solute,1,nat_solute)
+	call newvel_ber(dv_mod,Tscale_solvent,nat_solute+1,natom)
+else if (thermostat == LANGEVIN ) then
+	call newvel_lan(dv_mod,dv_friction,randva,randfa)
+else if (thermostat == NOSEHOOVER ) then
 	call nh_prop
-end if
-!Now general equation for all thermostats
-!to reduce code duplication
-!Paul Bauer October 2014
-	dv_mod2 = dv_mod * Tscale
-        do i=1,n_max
-                i3=i*3-3
-		dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*dv_mod2
-		dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*dv_mod2
-		dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*dv_mod2
-
-                v(i3+1)  = (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
-                xx(i3+1) = x(i3+1)
-                x(i3+1)  = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)  = (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
-                xx(i3+2) = x(i3+2)
-                x(i3+2)  = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)  = (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
-                xx(i3+3) = x(i3+3)
-                x(i3+3)  = x(i3+3) + v(i3+3)*dt
-
-		if (integrator == VELVERLET) then
-			v(i3+1)= (v(i3+1)*Tscale*dv_friction) -dv(i3+1)
-			v(i3+2)= (v(i3+2)*Tscale*dv_friction) -dv(i3+2)
-			v(i3+3)= (v(i3+3)*Tscale*dv_friction) -dv(i3+3)
-		end if
-        end do
-if( thermostat == BERENDSEN ) then
-	Tscale = Tscale_solvent
-	dv_mod2 = dv_mod * Tscale
-        do i=n_max+1,natom
-                i3=i*3-3
-		dv(i3+1) = d(i3+1)*winv(i)*dv_mod2
-		dv(i3+2) = d(i3+2)*winv(i)*dv_mod2
-		dv(i3+3) = d(i3+3)*winv(i)*dv_mod2
-
-                v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
-                xx(i3+1) = x(i3+1)
-                x(i3+1) = x(i3+1) + v(i3+1)*dt
-
-                v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
-                xx(i3+2) = x(i3+2)
-                x(i3+2) = x(i3+2) + v(i3+2)*dt
-
-                v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
-                xx(i3+3) = x(i3+3)
-                x(i3+3) = x(i3+3) + v(i3+3)*dt
-
-		if (integrator == VELVERLET) then
-			v(i3+1)= (v(i3+1)*Tscale) -dv(i3+1)
-			v(i3+2)= (v(i3+2)*Tscale) -dv(i3+2)
-			v(i3+3)= (v(i3+3)*Tscale) -dv(i3+3)
-		end if
-        end do
+	call newvel_nos(dv_mod)
 end if
 ! --- end of thermostat section ---
 
@@ -4831,7 +4949,7 @@ end if !if(nodeid .eq. 0)
 
 #if defined(USE_MPI)
 call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+if (ierr .ne. 0) call die('MD Bcast x')
 #endif
 
         ! print [intermediate] results (master node only)
@@ -4844,13 +4962,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
                 ! energies
                 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
                 ! nrgy_put_ene(unit, e2, OFFD): print 'e2'=EQ and OFFD to unit 'unit'=11
-                        call put_ene(11, EQ, OFFD)
-		! for new excluded groups, write more files for each group
-			if(use_excluded_groups) then
-				do iii=1,ngroups_gc
-				call put_ene(ST_gc(iii)%fileunit,EQ_gc(iii,:),OFFD)
-				end do
-			end if
+                        call put_ene(11, EQ, OFFD,loc_arrays,nstates)
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
@@ -4912,9 +5024,8 @@ end if
 
 if (nodeid .eq. 0) then
 !Deallocate temperature control arrays
-        deallocate(randfa)
-        deallocate(randva)
-        deallocate(dv)
+        if (allocated(randfa)) deallocate(randfa)
+        if (allocated(randva)) deallocate(randva)
 
 	time1 = rtime()
 	write (*,202) time1 - startloop
@@ -10185,23 +10296,25 @@ do ip = 1, nbqq_pair(istate)
 
   ! update energies
   if ( jq /= 0 ) then
-        EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
-        EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
+        EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qq(jj)%el, &
+                EQ(istate)%qq(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask,&
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   else
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   end if
 end do ! ip
 
@@ -10305,23 +10418,25 @@ do ip = 1, nbqq_pair(istate)
 
   ! update energies
   if ( jq /= 0 ) then
-        EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
-        EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
+        EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qq(jj)%el, &
+                EQ(istate)%qq(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   else
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   end if
 end do ! ip
 
@@ -10411,12 +10526,13 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein or q-water energies
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do 
         end if
 end do ! istate
@@ -10522,12 +10638,13 @@ subroutine nonbon2_qp_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 	
 	  ! update q-protein or q-water energies
-		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
         end if
 	end do ! istate
@@ -10540,12 +10657,12 @@ end subroutine nonbon2_qp_box
 subroutine nonbon2_qw
 
 ! local variables
-integer						:: jw,iq,i,j,iLJO, iLJH, iaci
+integer						:: jw,iq,i,j,iLJO, iLJH, iaci,jj
 integer						:: istate
 real(kind=prec)						::	aLJO, bLJO, aLJH, bLJH
 real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
 real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
-real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2, VelT, VvdWT
 real(kind=prec)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2 
 real(kind=prec), save				::	aO(2), bO(2), aH(2), bH(2)
 integer, save				::	iac_ow, iac_hw
@@ -10653,8 +10770,13 @@ do jw = 1, nbqw_pair
                         dvH1 = dvH1 + r2H1*( -VelH1 -(12.0_prec*V_aH1 -6.0_prec*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda
                         dvH2 = dvH2 + r2H2*( -VelH2 -(12.0_prec*V_aH2 -6.0_prec*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda
                         ! update q-water energies
-                        EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
-                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2 
+						VelT = VelO + VelH1 + VelH2
+						VvdWT = V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2
+						do jj = 1, ene_header%arrays
+						EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+						EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+						end do
+
                 end do !istate
 
                 ! update forces on Q-atom
@@ -10681,12 +10803,12 @@ end subroutine nonbon2_qw
 !******PWadded 2001-10-23
 subroutine nonbon2_qw_box
 	! local variables
-	integer						:: jw,iq,i,j,iLJO, iLJH, iaci
+	integer						:: jw,iq,i,j,iLJO, iLJH, iaci,jj
 	integer						:: istate
 	real(kind=prec)						::	aLJO, bLJO, aLJH, bLJH
 	real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
 	real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2,r6O_hc,r6H1_hc,r6H2_hc
-	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2, VelT, VvdWT
 	real(kind=prec)						:: V_ao, V_bo, V_ah1, V_bh1, V_ah2, V_bh2
 	real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz 
 	real(kind=prec), save				::	aO(2), bO(2), aH(2), bH(2)
@@ -10812,8 +10934,12 @@ subroutine nonbon2_qw_box
 				dvH1 = dvH1 + r2H1*( -VelH1 -(12.0_prec*V_aH1 -6.0_prec*V_bH1)*r6H1/r6H1_hc)*EQ(istate)%lambda  !r6H1/r6H1_hc softcore
 				dvH2 = dvH2 + r2H2*( -VelH2 -(12.0_prec*V_aH2 -6.0_prec*V_bH2)*r6H2/r6H2_hc)*EQ(istate)%lambda  !r6H2/r6H2_hc softcore
 				! update q-water energies
-				EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
-				EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2 
+				VelT = VelO + VelH1 + VelH2
+				VvdWT = V_aO + V_aH1 + V_aH2 - V_bO - V_bH1 - V_bH2
+				do jj = 1, ene_header%arrays
+				EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+				EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+				end do
 			end do !istate
 			
 			! update forces on Q-atom
@@ -11598,21 +11724,23 @@ do ip = 1, nbqq_pair(istate)
 
   ! update energies
   if ( jq /= 0 ) then
-        EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
-        EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
+        EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qq(jj)%el, &
+                EQ(istate)%qq(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   else
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
         end if
   end if
@@ -11717,21 +11845,23 @@ do ip = 1, nbqq_pair(istate)
 
   ! update energies
   if ( jq /= 0 ) then
-        EQ(istate)%qq%el  = EQ(istate)%qq%el + Vel
-        EQ(istate)%qq%vdw = EQ(istate)%qq%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qq%el &
-                ,EQ_gc(jj,istate)%qq%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
+        EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qq(jj)%el, &
+                EQ(istate)%qq(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
   else  ! j is not a qatom
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
         end if
   end if
@@ -11802,12 +11932,13 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein energies
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
         end if
 end do ! istate
@@ -11897,12 +12028,13 @@ subroutine nonbond_qp_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 
 	  ! update q-protein energies
-		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
         end if
 	end do ! istate
@@ -11973,14 +12105,15 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein energies
-        EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-        EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
-	if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+		if (use_excluded_groups) then
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do
-	end if
+		end if
 end do ! istate
 
 end do
@@ -12073,12 +12206,13 @@ subroutine nonbond_qp_qvdw_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 
 	  ! update q-protein energies
-		EQ(istate)%qp%el  = EQ(istate)%qp%el + Vel
-		EQ(istate)%qp%vdw = EQ(istate)%qp%vdw + V_a - V_b
+		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
         if (use_excluded_groups) then
-                do jj = 1, ngroups_gc
-                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ_gc(jj,istate)%qp%el &
-                ,EQ_gc(jj,istate)%qp%vdw,ST_gc(jj)%gcmask%mask)
+                do jj = 2, ene_header%arrays
+                call set_gc_energies(i,j,Vel,(V_a-V_b),EQ(istate)%qp(jj)%el, &
+                EQ(istate)%qp(jj)%vdw,ST_gc(ene_header%gcnum(jj))%gcmask%mask, &
+				ST_gc(ene_header%gcnum(jj))%caltype)
                 end do 
         end if
 	end do ! istate
@@ -12093,12 +12227,12 @@ subroutine nonbond_qw_spc
 !(optimisations rely on LJ params = 0 for water H) using geometric comb. rule
 
 ! local variables
-integer						:: jw,iq,i,j,iLJ
+integer						:: jw,iq,i,j,iLJ,jj
 integer						:: istate
 real(kind=prec)						::	aLJ, bLJ
 real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
 real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
-real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2, VelT
 real(kind=prec)						::  V_a, V_b, r6O_sc, r6O_hc
 real(kind=prec), save				::	aO(2), bO(2)
 integer, save				::	iac_ow = 0, iac_hw = 0
@@ -12172,9 +12306,12 @@ do jw = 1, nbqw_pair
                         dvO  = dvO  + r2O*( -VelO -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
                         dvH1 = dvH1 - r2H1*VelH1*EQ(istate)%lambda
                         dvH2 = dvH2 - r2H2*VelH2*EQ(istate)%lambda
+						VelT = VelO + VelH1 + VelH2
                         ! update q-water energies
-                        EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
-                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a - V_b
+					do jj=1,ene_header%arrays
+	                EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+        	        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+					end do
                 end do !istate
 				
 				! if qvdw_flag is true, then r6O is not the usual 1/rO^6, but rather rO^6. be careful!!! MPA
@@ -12206,12 +12343,12 @@ subroutine nonbond_qw_spc_box
 	!(optimisations rely on LJ params = 0 for water H) using geometric comb. rule
 
 	! local variables
-	integer						:: jw,iq,i,j,iLJ
+	integer						:: jw,iq,i,j,iLJ,jj
 	integer						:: istate
 	real(kind=prec)						::	aLJ, bLJ
 	real(kind=prec)						::	dxO, dyO, dzO, dxH1, dyH1, dzH1, dxH2, dyH2, dzH2
 	real(kind=prec)						::	rO, r2O, r6O, rH1, r2H1, r6H1, rH2, r2H2, r6H2
-	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2
+	real(kind=prec)						::	VelO, VelH1, VelH2, dvO, dvH1, dvH2, VelT
 	real(kind=prec)						:: V_a, V_b, r6O_sc, r6O_hc
 	real(kind=prec)						:: dx, dy, dz, boxshiftx, boxshifty, boxshiftz
 	real(kind=prec), save				::	aO(2), bO(2)
@@ -12306,9 +12443,12 @@ subroutine nonbond_qw_spc_box
 				dvO  = dvO  + r2O*( -VelO -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6O_hc/r6O_sc) ))*EQ(istate)%lambda
 				dvH1 = dvH1 - r2H1*VelH1*EQ(istate)%lambda
 				dvH2 = dvH2 - r2H2*VelH2*EQ(istate)%lambda
-				! update q-water energies
-				EQ(istate)%qw%el  = EQ(istate)%qw%el + VelO + VelH1 + VelH2
-				EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a - V_b
+	            VelT = VelO + VelH1 + VelH2
+        	    ! update q-water energies
+				do jj=1,ene_header%arrays
+	            EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+	            EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+				end do
 			end do !istate			
 			! update forces on Q-atom
 			d(3*i-2) = d(3*i-2) - dvO*dxO - dvH1*dxH1 - dvH2*dxH2
@@ -12336,11 +12476,11 @@ subroutine nonbond_qw_3atom
 !using geometric comb. rule
 
 ! local variables
-integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci
+integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci,jj
 integer						:: istate
 real(kind=prec)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
 real(kind=prec)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
-real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
+real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3, VelT, VvdWT
 real(kind=prec)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
 real(kind=prec), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
 integer, save				::	iac1, iac2, iac3
@@ -12434,10 +12574,13 @@ do jw = 1, nbqw_pair
                         dv1 = dv1 + r2_1*(-Vel1- ((12.0_prec*V_a1-6.0_prec*V_b1)*(r6_1_hc/r6_1_sc)) )*EQ(istate)%lambda
                         dv2 = dv2 + r2_2*(-Vel2- ((12.0_prec*V_a2-6.0_prec*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
                         dv3 = dv3 + r2_3*(-Vel3- ((12.0_prec*V_a3-6.0_prec*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
+						VelT = Vel1 + Vel2 + Vel3
+						VvdWT = V_a1 - V_b1 + V_a2 - V_b2 + V_a3 - V_b3
                         ! update q-water energies
-                        EQ(istate)%qw%el  = EQ(istate)%qw%el + Vel1 + Vel2 + Vel3
-                        EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a1 - V_b1 &
-                                + V_a2 - V_b2 + V_a3 - V_b3
+						do jj=1,ene_header%arrays
+						EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+						EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+						end do
                 end do !istate			
                 ! update forces on Q-atom
                 d(3*i-2) = d(3*i-2) - dv1*dx1 - dv2*dx2 - dv3*dx3
@@ -12464,11 +12607,11 @@ subroutine nonbond_qw_3atom_box
 	!calculate non-bonded interactions between Q-atoms and 3-atom solvent molecules
 	!using geometric comb. rule
 	! local variables
-	integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci
+	integer						:: jw,iq,i,j,iLJ1, iLJ2, iLJ3, iaci,jj
 	integer						:: istate
 	real(kind=prec)						::	dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3
 	real(kind=prec)						::	r_1, r2_1, r6_1, r_2, r2_2, r6_2, r_3, r2_3, r6_3
-	real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3
+	real(kind=prec)						::	Vel1, Vel2, Vel3, dv1, dv2, dv3, VelT, VvdwT
 	real(kind=prec)						:: V_a1,V_b1, V_a2, V_b2, V_a3, V_b3,r6_1_sc,r6_2_sc,r6_3_sc,r6_1_hc,r6_2_hc,r6_3_hc
 	real(kind=prec)						:: boxshiftx, boxshifty, boxshiftz, dx, dy, dz
 	real(kind=prec), save				::	a1(2), b1(2), a2(2), b2(2), a3(2), b3(2)
@@ -12584,9 +12727,12 @@ subroutine nonbond_qw_3atom_box
 				dv2 = dv2 + r2_2*(-Vel2- ((12.0_prec*V_a2-6.0_prec*V_b2)*(r6_2_hc/r6_2_sc)) )*EQ(istate)%lambda
 				dv3 = dv3 + r2_3*(-Vel3- ((12.0_prec*V_a3-6.0_prec*V_b3)*(r6_3_hc/r6_3_sc)) )*EQ(istate)%lambda
 				! update q-water energies
-				EQ(istate)%qw%el  = EQ(istate)%qw%el + Vel1 + Vel2 + Vel3
-				EQ(istate)%qw%vdw = EQ(istate)%qw%vdw + V_a1 - V_b1 &
-					+ V_a2 - V_b2 + V_a3 - V_b3
+                VelT = Vel1 + Vel2 + Vel3
+	            VvdWT = V_a1 - V_b1 + V_a2 - V_b2 + V_a3 - V_b3
+				do jj = 1, ene_header%arrays
+	            EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + VelT
+	            EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + VvdWT
+				end do
 			end do !istate			
 			! update forces on Q-atom
 			d(3*i-2) = d(3*i-2) - dv1*dx1 - dv2*dx2 - dv3*dx3
@@ -14062,8 +14208,8 @@ subroutine pot_energy
 ! local variables
 
 
-integer					:: istate, i, nat3, numrequest
-integer					:: is, j
+integer					:: istate, i, nat3
+integer					:: is, j,jj
 #if defined (PROFILING)
 real(kind=prec)					:: start_loop_time1
 real(kind=prec)					:: start_loop_time2
@@ -14110,21 +14256,15 @@ EQ(istate)%q%torsion = zero
 EQ(istate)%q%improper = zero
 !EQ(istate)%qx%el = zero	! assigned its final value later
 !EQ(istate)%qx%vdw = zero	! assigned its final value later
-EQ(istate)%qq%el = zero
-EQ(istate)%qq%vdw = zero
-EQ(istate)%qp%el = zero
-EQ(istate)%qp%vdw = zero
-EQ(istate)%qw%el = zero
-EQ(istate)%qw%vdw = zero
+do jj=1,ene_header%arrays
+EQ(istate)%qq(jj)%el = zero
+EQ(istate)%qq(jj)%vdw = zero
+EQ(istate)%qp(jj)%el = zero
+EQ(istate)%qp(jj)%vdw = zero
+EQ(istate)%qw(jj)%el = zero
+EQ(istate)%qw(jj)%vdw = zero
+end do
 EQ(istate)%restraint = zero
-if (use_excluded_groups) then
-        do j=1,ngroups_gc
-        EQ_gc(j,istate)%qq%el = zero
-        EQ_gc(j,istate)%qq%vdw = zero
-        EQ_gc(j,istate)%qp%el = zero
-        EQ_gc(j,istate)%qp%vdw = zero
-        end do
-end if
 end do
 
 !reset derivatives ---
@@ -14210,12 +14350,7 @@ call gather_nonbond
 end if
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-if (use_excluded_groups) then
-        numrequest = 4
-else
-        numrequest = 3
-end if
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll(numnodes-1,request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -14229,53 +14364,37 @@ do i=1,numnodes-1
   E%ww%el   = E%ww%el  + E_recv(i)%ww%el
   E%ww%vdw  = E%ww%vdw + E_recv(i)%ww%vdw
   E%lrf     = E%lrf    + E_recv(i)%lrf
-  EQ(1:nstates)%qp%el  = EQ(1:nstates)%qp%el  + EQ_recv(1:nstates,i)%qp%el
-  EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
-  EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
-  EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
-if (use_excluded_groups) then
-!	do j=1,ngroups_gc
-	EQ_gc(1:ngroups_gc,1:nstates)%qp%el = EQ_gc(1:ngroups_gc,1:nstates)%qp%el + &
-						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%el
-	EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw + &
-						EQ_gc_recv(1:ngroups_gc,1:nstates,i)%qp%vdw
-!	end do
-end if
+	do istate=1,nstates
+	do jj=1,ene_header%arrays
+  EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el  + EQ_recv(istate,jj,i)%qp%el
+  EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + EQ_recv(istate,jj,i)%qp%vdw
+  EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el  + EQ_recv(istate,jj,i)%qw%el
+  EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + EQ_recv(istate,jj,i)%qw%vdw
+	end do
+	end do
 end do
 #endif
-if (use_excluded_groups) then
-	do j=1,ngroups_gc
-	EQ_gc(j,1:nstates)%qw%el = EQ(1:nstates)%qw%el
-	EQ_gc(j,1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
-	EQ_gc(j,1:nstates)%q = EQ(1:nstates)%q
-	EQ_gc(j,1:nstates)%restraint = EQ(1:nstates)%restraint
-	do istate=1,nstates
-	EQ_gc(j,istate)%qx%el = EQ_gc(j,istate)%qq%el + EQ_gc(j,istate)%qp%el + EQ_gc(j,istate)%qw%el
-	EQ_gc(j,istate)%qx%vdw = EQ_gc(j,istate)%qq%vdw + EQ_gc(j,istate)%qp%vdw + EQ_gc(j,istate)%qw%vdw
-	EQ_gc(j,istate)%total = EQ_gc(j,istate)%q%bond + EQ_gc(j,istate)%q%angle &
- + EQ_gc(j,istate)%q%torsion + EQ_gc(j,istate)%q%improper + EQ_gc(j,istate)%qx%el &
- + EQ_gc(j,istate)%qx%vdw + EQ_gc(j,istate)%restraint
-	end do
-	end do
-end if
-
 ! q-atom energy summary
 do istate = 1, nstates
 ! update EQ
-EQ(istate)%qx%el  = EQ(istate)%qq%el +EQ(istate)%qp%el +EQ(istate)%qw%el
-EQ(istate)%qx%vdw = EQ(istate)%qq%vdw+EQ(istate)%qp%vdw+EQ(istate)%qw%vdw
+do jj=1,ene_header%arrays
+EQ(istate)%qx(jj)%el  = EQ(istate)%qq(jj)%el +EQ(istate)%qp(jj)%el +EQ(istate)%qw(jj)%el
+EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw+EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
 
-EQ(istate)%total =  EQ(istate)%q%bond + EQ(istate)%q%angle   &
-  + EQ(istate)%q%torsion  + EQ(istate)%q%improper + EQ(istate)%qx%el &
-  + EQ(istate)%qx%vdw  + EQ(istate)%restraint
+EQ(istate)%total(jj) =  EQ(istate)%q%bond + EQ(istate)%q%angle   &
+  + EQ(istate)%q%torsion  + EQ(istate)%q%improper + EQ(istate)%qx(jj)%el &
+  + EQ(istate)%qx(jj)%vdw  + EQ(istate)%restraint
+end do
 
 ! update E with an average of all states
 E%q%bond  = E%q%bond  + EQ(istate)%q%bond *EQ(istate)%lambda
 E%q%angle = E%q%angle + EQ(istate)%q%angle*EQ(istate)%lambda
 E%q%torsion   = E%q%torsion   + EQ(istate)%q%torsion  *EQ(istate)%lambda
 E%q%improper   = E%q%improper   + EQ(istate)%q%improper  *EQ(istate)%lambda
-E%qx%el    = E%qx%el    + EQ(istate)%qx%el   *EQ(istate)%lambda
-E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx%vdw  *EQ(istate)%lambda
+! only use full system to update total system energy -> what if we change this
+! to get the effects on the total trajectory? (entropic stuff and so)???
+E%qx%el    = E%qx%el    + EQ(istate)%qx(1)%el   *EQ(istate)%lambda
+E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx(1)%vdw  *EQ(istate)%lambda
 
 ! update E%restraint%protein with an average of all states
 E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda
@@ -14610,7 +14729,9 @@ end subroutine init_trj
 !-----------------------------------------------------------------------
 subroutine prep_sim
 ! local variables
-integer						:: i, j, ig, istate
+integer						:: i, j, ig, istate,runvar
+integer,parameter				::canary=1337
+type(Q_ENE_HEAD)				:: tempheader
 
 if (nodeid .eq. 0) then	
         write(*,*)
@@ -14667,11 +14788,16 @@ if(use_LRF .or. use_PBC) then
                         iwhich_cgp(cgpatom(i)) = ig
                 end do
         end do
+!set nsolvent and nsolute to values from topology
+!for box control later
+	nsolvent = nres - nres_solute
+	nsolute = nmol - nsolvent
 end if
 
 !	Prepare an array of inverse masses
 winv(:) = one/iaclib(iac(:))%mass
 
+if(use_PBC) allocate(mvd_mol(nmol))
 
 if(use_PBC .and. control_box) then
         boxlength(:) = new_boxl(:)
@@ -14727,18 +14853,115 @@ if(nqat > 0) then
         qcrg(:,:) = qcrg(:,:) * sqrt(coulomb_constant)
 end if
 if (use_excluded_groups) then
+!start writing the energy file header with the needed information
+!one array for each group + 1 for the default environment
+	write(*,*)
+	write(*,*) 'Preparing residue groups for group contribution calculation'
+	ene_header%arrays = ngroups_gc + 1
+	allocate(ene_header%types(ngroups_gc+1),ene_header%numres(ngroups_gc+1),&
+			ene_header%gcnum(ngroups_gc+1))
+	runvar = 2
         do i=1,ngroups_gc
                 call mask_initialize(ST_gc(i)%gcmask)
                 call gc_make_array(ST_gc(i))
-                do j=1,ST_gc(i)%count
-                stat = mask_add(ST_gc(i)%gcmask,ST_gc(i)%sendtomask(j))
-                end do
-                do j=1,nstates
-                EQ_gc(i,j)%lambda=EQ(j)%lambda
-                end do
+		ene_header%numres(runvar)=ST_gc(i)%count
+		select case (trim(ST_gc(i)%caltypen))
+			case ('full')
+			ene_header%types(runvar)=FULL
+			ene_header%gcnum(runvar)=i
+			case ('electro')
+			ene_header%types(runvar)=ELECTRO
+			ene_header%gcnum(runvar)=i
+			case ('vdw')
+			ene_header%types(runvar)=VDW
+			ene_header%gcnum(runvar)=i
+			case ('all')
+!special case, do all the calculations together
+!needs reallocation of header arrays
+			allocate(tempheader%types(runvar),tempheader%numres(runvar),tempheader%gcnum(runvar))
+			tempheader%types(1:runvar)=ene_header%types(1:runvar)
+			tempheader%numres(1:runvar)=ene_header%numres(1:runvar)
+			tempheader%gcnum(1:runvar)=ene_header%gcnum(1:runvar)
+			deallocate(ene_header%types,ene_header%numres,ene_header%gcnum)
+!add two more calculations
+!			runvar = ene_header%arrays + 2
+			allocate(ene_header%types(ene_header%arrays+2),&
+			ene_header%numres(ene_header%arrays+2),&
+			ene_header%gcnum(ene_header%arrays+2))
+			ene_header%types(1:runvar)=tempheader%types(1:runvar)
+			ene_header%types(runvar)=FULL
+			ene_header%types(runvar+1)=ELECTRO
+			ene_header%types(runvar+2)=VDW
+			ene_header%numres(1:runvar)=tempheader%numres(1:runvar)
+			ene_header%numres(runvar+1)=ene_header%numres(runvar)
+			ene_header%numres(runvar+2)=ene_header%numres(runvar)
+			ene_header%gcnum(1:runvar)=tempheader%gcnum(1:runvar)
+			ene_header%gcnum(runvar)=i
+			ene_header%gcnum(runvar+1)=i
+			ene_header%gcnum(runvar+2)=i
+			ene_header%arrays=ene_header%arrays+2
+			runvar = runvar + 2
+			deallocate(tempheader%types,tempheader%numres,tempheader%gcnum)
 
+
+			case default
+!should never ever reach this, end execution now!
+			write(*,*) 'Unrecognized statement in group contribution case list'
+			call die('group contribution case list')
+		end select
+                do j=1,ST_gc(i)%count
+                	stat = mask_add(ST_gc(i)%gcmask,ST_gc(i)%sendtomask(j))
+                end do
+		runvar = runvar + 1
+	write (*,*) 'Finished group ',i
+        end do
+	do i=2,ene_header%arrays
+		ene_header%totresid = ene_header%totresid + ene_header%numres(i)
+	end do
+else
+!no extra groups, write minimal info to header
+	ene_header%arrays = 1
+	ene_header%totresid = 0 ! to prevent allocation errors
+	allocate(ene_header%types(1),ene_header%numres(1),ene_header%gcnum(1))
+end if
+	ene_header%totresid = ene_header%totresid + 1
+	allocate(ene_header%resid(ene_header%totresid))
+	ene_header%types(1)=NOGC
+	ene_header%numres(1)=1
+	ene_header%resid(1)=-1
+	ene_header%gcnum(1)=-1
+	runvar=2
+	do i=2,ene_header%arrays
+!give each residue its topology number
+		do j=1,ene_header%numres(i)
+			ene_header%resid(runvar)=get_from_mask(ST_gc(ene_header%gcnum(i)),j)
+			runvar = runvar + 1
+		end do
+	end do
+!now that we know how many arrays we need -> allocate them in EQ
+	do i=1,nstates
+	allocate(EQ(i)%qx(ene_header%arrays),EQ(i)%qq(ene_header%arrays),&
+		EQ(i)%qp(ene_header%arrays),EQ(i)%qw(ene_header%arrays),&
+		EQ(i)%total(ene_header%arrays))
+	end do
+
+!if using PBC, alredy allocate the old_EQ arrays so we don't have to do it
+!every time we update the volume
+if( use_PBC ) then
+	allocate(old_EQ(nstates))
+        do i=1,nstates
+        allocate(old_EQ(i)%qx(ene_header%arrays),old_EQ(i)%qq(ene_header%arrays),&
+                old_EQ(i)%qp(ene_header%arrays),old_EQ(i)%qw(ene_header%arrays),&
+                old_EQ(i)%total(ene_header%arrays))
         end do
 end if
+!and we can write the header to the energy file :)
+write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
+	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
+	ene_header%gcnum(1:ene_header%arrays)
+#if defined (USE_MPI)
+	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
+#endif
 end subroutine prep_sim
 
 !-----------------------------------------------------------------------
@@ -14984,7 +15207,6 @@ real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 do ip = 1,nqimp
 
 ic = qimp(ip)%cod(istate)
-!ic = qimpcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -15007,10 +15229,6 @@ i = qimp(ip)%i
 j = qimp(ip)%j
 k = qimp(ip)%k
 l = qimp(ip)%l
-!i  = iqimp(ip)
-!j  = jqimp(ip)
-!k  = kqimp(ip)
-!l  = lqimp(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -15047,10 +15265,8 @@ if ( sgn .lt. 0 ) phi = -phi
 ! ---       energy
 
 arg = phi - qimplib(ic)%imp0
-!arg = phi - qimp0(ic)
 arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 dv = qimplib(ic)%fk*arg
-!dv  = qfkimp(ic)*arg
 pe  = 0.5_prec*dv*arg
 EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
 dv = dv*gamma*EQ(istate)%lambda
@@ -15137,7 +15353,6 @@ real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
 do ip = 1,nqtor
 
 ic = qtor(ip)%cod(istate)
-!ic = qtorcod(ip,istate)
 
 if ( ic > 0 ) then
 
@@ -15158,10 +15373,6 @@ i = qtor(ip)%i
 j = qtor(ip)%j
 k = qtor(ip)%k
 l = qtor(ip)%l
-!i  = iqtor(ip)
-!j  = jqtor(ip)
-!k  = kqtor(ip)
-!l  = lqtor(ip)
 
 i3=i*3-3
 j3=j*3-3
@@ -15202,11 +15413,8 @@ if ( sgn .lt. 0 ) phi = -phi
 
 arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
 pe = qtorlib(ic)%fk*(one+cos(arg))
-!arg = qrmult(ic)*phi-qdeltor(ic)
-!pe  = qfktor(ic)*(one+cos(arg))
 EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
-!dv = -qrmult(ic)*qfktor(ic)*sin(arg)*gamma*EQ(istate)%lambda
+dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
@@ -15652,7 +15860,6 @@ real(kind=prec)					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
 real(kind=prec)					::	rki(3),rlj(3),dp(12),di(3),dl(3)
 type(TOR_TYPE), pointer		::  t
 type(TORLIB_TYPE), pointer	::	lib
-
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -15680,6 +15887,7 @@ endif
 mp_real_tmp = zero
 
 do ip = mp_end, mp_start,-1
+
 #else
 do ip = iend, istart,-1
 #endif
@@ -15779,7 +15987,6 @@ d(t%l*3-2) = d(t%l*3-2) + dv*dp(10)
 d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
 d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
 end do
-
 #ifdef _OPENMP
 !$omp atomic update
 torsion = torsion + mp_real_tmp
@@ -16052,6 +16259,9 @@ if ( rc > wshell(nwpolr_shell)%rout-wshell(nwpolr_shell)%dr ) then
         if(rc <= wshell(is)%rout) exit
   end do
   wshell(is)%n_insh = wshell(is)%n_insh + 1
+  if (wshell(is)%n_insh .ge. n_max_insh) then
+	call reallocate_watpol_arrays
+  end if
   list_sh(wshell(is)%n_insh,is) = iw
 end if
 end do
@@ -16236,33 +16446,33 @@ end if
 write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
 
 do istate =1, nstates
-  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq%el, EQ(istate)%qq%vdw
+  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq(1)%el, EQ(istate)%qq(1)%vdw
 end do
 write(*,*)
 if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
   do istate =1, nstates
-        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp%el, EQ(istate)%qp%vdw
+        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp(1)%el, EQ(istate)%qp(1)%vdw
   end do
   write(*,*)
 end if
 
 if(nwat > 0) then
   do istate =1, nstates
-        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw%el, EQ(istate)%qw%vdw
+        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw(1)%el, EQ(istate)%qw(1)%vdw
   end do
   write(*,*)
 end if
 
 do istate =1, nstates
   write (*,32) 'Q-surr.',istate, EQ(istate)%lambda, &
-                EQ(istate)%qp%el + EQ(istate)%qw%el, EQ(istate)%qp%vdw &
-                + EQ(istate)%qw%vdw
+                EQ(istate)%qp(1)%el + EQ(istate)%qw(1)%el, EQ(istate)%qp(1)%vdw &
+                + EQ(istate)%qw(1)%vdw
 end do
 write(*,*)
 
 do istate = 1, nstates
-  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx%el,&
-                EQ(istate)%qx%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
+  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx(1)%el,&
+                EQ(istate)%qx(1)%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
                 EQ(istate)%q%torsion, EQ(istate)%q%improper
 end do
 write(*,*)
@@ -16270,7 +16480,7 @@ write(*,*)
 write(*,22) 'total', 'restraint'
 do istate = 1, nstates
   write (*,32) 'Q-SUM', istate, EQ(istate)%lambda,&
-                EQ(istate)%total, EQ(istate)%restraint
+                EQ(istate)%total(1), EQ(istate)%restraint
 end do
 do i=1,noffd
   write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &
@@ -16363,10 +16573,12 @@ integer				::	i, j, starten, slutet
 !the borders of the periodic box
 real(kind=prec)				::	x_max, x_min, y_max, y_min, z_max, z_min
 real(kind=prec)				:: cm(1:3)
-integer				::  mvd_mol(1:nmol) !moved molecule 1=yes, 0=no
 integer				::  k, ig
 integer				::  pbib_start, pbib_stop
 
+!the function can be run exclusivly on node 0
+!no gain from doing it on each node
+if (nodeid.eq.0) then
 if( .not. rigid_box_centre ) then !if the box is allowed to float around, center on solute if present, otherwise center on solvent
         if( nat_solute > 0) then
                 slutet = nat_solute
@@ -16392,7 +16604,6 @@ else
         !starten = 1
 end if
 
-if (nodeid .eq. 0) then
 !calculate the borders of the periodic box
 x_max = boxc(1) + boxlength(1)/2
 x_min = boxc(1) - boxlength(1)/2
@@ -16407,10 +16618,12 @@ mvd_mol(:) = 0
 pbib_start = 1
 pbib_stop  = nmol
 if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
-	pbib_start = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1)) + 1    !(number of mol - number of solvent molecules + 1)
+!we now have nsolute to keep track of this stuff, don't use this old way
+	pbib_start = nsolute + 1
 end if
 if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
-        pbib_stop  = nmol - (natom - nat_solute)/(istart_mol(nmol) - istart_mol(nmol-1))        !(number of mol - number of solvent molecules)
+!same here, we know the molecule numbers
+	pbib_stop = nsolute
 end if          
 
 
@@ -16422,7 +16635,7 @@ do i=pbib_start,pbib_stop
                 cm(3) = cm(3) + x(j*3  )*mass(j)
         end do
         cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
-		
+!mol_mass is actually 1/mol_mass
         !x-direction
         if( cm(1) .gt. x_max) then !position of centre of mass
 
@@ -16464,7 +16677,13 @@ do i=pbib_start,pbib_stop
   		end if
 end do !over molecules
 end if !if(nodeid .eq. 0)
-
+!now that node 0 has done the job, broadcast the changes to the slaves
+#if defined(USE_MPI)
+call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+#endif
 !LRF: if molecule moved update all cgp_centers from first charge group to the last one
 if (use_LRF) then
 
@@ -16472,8 +16691,11 @@ if (use_LRF) then
 #if defined(USE_MPI)
 call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast mvd_mol(k)')
-call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+!broadcast start and stop molecule so that each node can do its job
+call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_start')
+call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_stop')
 #endif
 
 do k=pbib_start,pbib_stop
@@ -16495,8 +16717,6 @@ end subroutine put_back_in_box
 subroutine MC_volume()
 
 real(kind=prec)									:: old_x(1:3*nat_pro), old_xx(1:3*nat_pro), x_move(1:3*nat_pro)
-type(ENERGIES)							:: old_E, previous_E
-type(Q_ENERGIES), dimension(1:nstates)	:: old_EQ
 real(kind=prec)									:: old_boxl(1:3), old_inv(1:3)
 real(kind=prec)									:: old_V, new_V, deltaLength
 real(kind=prec)									:: deltaV, deltaE, deltaW
@@ -16512,14 +16732,6 @@ real(kind=prec)									:: cm(1:3)
 real(kind=prec)									::	old_EMorseD(max_qat)
 real(kind=prec)									::	old_dMorse_i(3,max_qat)
 real(kind=prec)									::	old_dMorse_j(3,max_qat)
-type(NB_TYPE), allocatable						::old_nbpp(:)
-type(NB_TYPE), allocatable						::old_nbpw(:)
-integer(AI), allocatable						::old_nbww(:)
-type(NBQP_TYPE), allocatable						::old_nbqp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbpp_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbpw_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbww_cgp(:)
-type(CGP_PAIR_TYPE), allocatable					:: old_nbqp_cgp(:)
 integer									:: old_nbww_pair, old_nbww_true_pair , old_nbpw_pair , old_nbpw_cgp_pair 
 integer									:: old_nbpp_pair , old_nbpp_cgp_pair , old_nbqp_pair , old_nbqp_cgp_pair
 integer									:: old_ww_max, old_pw_max, old_pp_max, old_qp_max
@@ -16558,13 +16770,23 @@ if (use_LRF) then
 	old_nbpw_cgp_pair = nbpw_cgp_pair
 	old_nbpp_cgp_pair = nbpp_cgp_pair
 	old_nbqp_cgp_pair = nbqp_cgp_pair
-	allocate(old_nbww(calculation_assignment%ww%max))
-	allocate(old_nbpw(calculation_assignment%pw%max))
-	allocate(old_nbpp(calculation_assignment%pp%max))
-	allocate(old_nbqp(calculation_assignment%qp%max))
-	allocate(old_nbpw_cgp(size(nbpw_cgp, 1)))
-	allocate(old_nbpp_cgp(size(nbpp_cgp, 1)))
-	allocate(old_nbqp_cgp(size(nbqp_cgp, 1)))
+!now only reallocate if the old size was too small
+	if(calculation_assignment%ww%max.gt.SIZE(old_nbww,1)) then
+		if (allocated(old_nbww)) deallocate(old_nbww)
+		allocate(old_nbww(calculation_assignment%ww%max))
+	endif
+        if(calculation_assignment%pw%max.gt.SIZE(old_nbpw,1)) then
+                if (allocated(old_nbpw)) deallocate(old_nbpw)
+                allocate(old_nbpw(calculation_assignment%pw%max))
+        endif
+        if(calculation_assignment%pp%max.gt.SIZE(old_nbpp,1)) then
+                if (allocated(old_nbpp)) deallocate(old_nbpp)
+                allocate(old_nbpp(calculation_assignment%pp%max))
+        endif
+        if(calculation_assignment%qp%max.gt.SIZE(old_nbqp,1)) then
+                if (allocated(old_nbqp)) deallocate(old_nbqp)
+                allocate(old_nbqp(calculation_assignment%qp%max))
+        endif
 	old_nbww = nbww
 	old_nbpw = nbpw
 	old_nbpp = nbpp
@@ -16589,7 +16811,7 @@ call new_potential(previous_E)   !compute energies from previous md-step
 
 if (nodeid .eq. 0 ) then
 	old_E = E                !Update to fresh E before changing volume
-	old_EQ = EQ(1:nstates)
+	old_EQ(1:nstates) = EQ(1:nstates)
 	old_V = old_boxl(1) * old_boxl(2) * old_boxl(3)
 
 
@@ -16600,7 +16822,8 @@ if (nodeid .eq. 0 ) then
 	new_V = deltaV + old_V
 	cubr_vol_ratio = (new_V/old_V)**(one/3.0_prec)
 	write(*,4) 'old', 'new', 'delta'
-	write(*,6) 'Volume', old_V, new_V, deltaV
+17	format('Volume',8x,f10.3,2x,f10.3,2x,f10.3)
+	write(*,17) old_V, new_V, deltaV
 	write(*,*)
 
 	!compute new boxlenth and inv_boxl
@@ -16645,13 +16868,14 @@ if (nodeid .eq. 0 ) then
 
 
 		!compute new coordinates after molecules and centre of mass
-		do i=1,nmol-1 !looping over all molecules but the last one
+		do i=1,nmol !looping over all molecules, can also do the last because of nmol +1 ...
 			cm(:) =zero
 			do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
 				cm(1) = cm(1) + x(j*3-2)*mass(j)
 				cm(2) = cm(2) + x(j*3-1)*mass(j)
 				cm(3) = cm(3) + x(j*3  )*mass(j)
 			end do
+!but mol_mass is actually 1/mol_mass
 			cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
 
 			move_x = ( ( cm(1)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - cm(1)
@@ -16666,25 +16890,7 @@ if (nodeid .eq. 0 ) then
 
 		end do !over molecules
 
-		! the last molecule
-		cm(:) = zero
-		do j = istart_mol(nmol),natom
-			cm(1) = cm(1) + x(j*3-2)*mass(j)
-			cm(2) = cm(2) + x(j*3-1)*mass(j)
-			cm(3) = cm(3) + x(j*3  )*mass(j)
-		end do
-
-		cm(:) = cm(:) * mol_mass(nmol)
-
-		move_x = ( ( cm(1)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - cm(1)
-		move_y = ( ( cm(2)-boxcentre(2) )*boxlength(2)/old_boxl(2) + boxcentre(2) ) - cm(2)
-		move_z = ( ( cm(3)-boxcentre(3) )*boxlength(3)/old_boxl(3) + boxcentre(3) ) - cm(3)
-
-		do j=istart_mol(nmol) , natom
-			x(j*3-2) = x(j*3-2) + move_x
-			x(j*3-1) = x(j*3-1) + move_y
-			x(j*3  ) = x(j*3  ) + move_z		
-		end do
+!we have nmol+1 to be able to iterate over all molecules
 
 	else ! atom_based_scaling = .true.
 	!move xx also if shake
@@ -16743,7 +16949,8 @@ if (nodeid .eq. 0) then
 	deltaE = E%potential - old_E%potential
 	deltaW = deltaE + pressure * deltaV - nmol*Boltz*Temp0*log(new_V/old_V)
 	write(*,4) 'old', 'new', 'delta'
-	write(*,6) 'Potential', old_E%potential, E%potential, deltaE
+18	format('Potential',7x,f14.3,2x,f14.3,2x,f14.3)
+	write(*,18) old_E%potential, E%potential, deltaE
 	write(*,*)
 
 	!accept or reject
@@ -16789,24 +16996,26 @@ else
 		nbpw_cgp_pair = old_nbpw_cgp_pair
 		nbpp_cgp_pair = old_nbpp_cgp_pair
 		nbqp_cgp_pair = old_nbqp_cgp_pair
-		deallocate(nbww)
-		deallocate(nbpw)
-		deallocate(nbpp)
-		deallocate(nbqp)
-		deallocate(nbpw_cgp)
-		deallocate(nbpp_cgp)
-		deallocate(nbqp_cgp)
 		calculation_assignment%ww%max = old_ww_max
 		calculation_assignment%pw%max = old_pw_max
 		calculation_assignment%pp%max = old_pp_max
 		calculation_assignment%qp%max = old_qp_max
-		allocate(nbww(calculation_assignment%ww%max))
-		allocate(nbpw(calculation_assignment%pw%max))
-		allocate(nbpp(calculation_assignment%pp%max))
-		allocate(nbqp(calculation_assignment%qp%max))
-		allocate(nbpw_cgp(size(old_nbpw_cgp, 1)))
-		allocate(nbpp_cgp(size(old_nbpp_cgp, 1)))
-		allocate(nbqp_cgp(size(old_nbqp_cgp, 1)))
+        if(calculation_assignment%ww%max.gt.SIZE(nbww,1)) then
+                if (allocated(nbww)) deallocate(nbww)
+                allocate(nbww(calculation_assignment%ww%max))
+        endif
+        if(calculation_assignment%pw%max.gt.SIZE(nbpw,1)) then
+                if (allocated(nbpw)) deallocate(nbpw)
+                allocate(nbpw(calculation_assignment%pw%max))
+        endif
+        if(calculation_assignment%pp%max.gt.SIZE(nbpp,1)) then
+                if (allocated(nbpp)) deallocate(nbpp)
+                allocate(nbpp(calculation_assignment%pp%max))
+        endif
+        if(calculation_assignment%qp%max.gt.SIZE(nbqp,1)) then
+                if (allocated(nbqp)) deallocate(nbqp)
+                allocate(nbqp(calculation_assignment%qp%max))
+        endif
 		nbww(1:old_ww_max) = old_nbww(1:old_ww_max)
 		nbpw(1:old_pw_max) = old_nbpw(1:old_pw_max)
 		nbpp(1:old_pp_max) = old_nbpp(1:old_pp_max)
@@ -16815,13 +17024,6 @@ else
 		nbpp_cgp(:) = old_nbpp_cgp(:)
 		nbqp_cgp(:) = old_nbqp_cgp(:)
 		lrf(:) = old_lrf(:)
-		deallocate(old_nbww)
-		deallocate(old_nbpw)
-		deallocate(old_nbpp)
-		deallocate(old_nbqp)
-		deallocate(old_nbpw_cgp)
-		deallocate(old_nbpp_cgp)
-		deallocate(old_nbqp_cgp)
 	end if
 end if
 
@@ -16855,7 +17057,7 @@ end subroutine MC_volume
 subroutine new_potential( old )
 
 type(ENERGIES), intent(in)		:: old	
-integer							:: istate,i, numrequest
+integer							:: istate,i, numrequest,ii,jj
 
 !zero all energies
 E%potential = zero
@@ -16881,12 +17083,12 @@ E%p%improper =  zero
 E%w%improper =  zero
 
 do istate = 1, nstates
-	EQ(istate)%qq%el = zero
-	EQ(istate)%qq%vdw = zero
-	EQ(istate)%qp%el = zero
-	EQ(istate)%qp%vdw = zero
-	EQ(istate)%qw%el = zero
-	EQ(istate)%qw%vdw = zero
+	EQ(istate)%qq(1:ene_header%arrays)%el = zero
+	EQ(istate)%qq(1:ene_header%arrays)%vdw = zero
+	EQ(istate)%qp(1:ene_header%arrays)%el = zero
+	EQ(istate)%qp(1:ene_header%arrays)%vdw = zero
+	EQ(istate)%qw(1:ene_header%arrays)%el = zero
+	EQ(istate)%qw(1:ene_header%arrays)%vdw = zero
 	EQ(istate)%restraint = zero
 end do
 
@@ -16962,12 +17164,7 @@ end if
 
 if (nodeid .eq. 0) then 
 #if (USE_MPI)
-if (use_excluded_groups) then
-        numrequest = 4
-else
-        numrequest = 3
-end if
-do i = 1, numrequest
+do i = 1, 3
     call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
 end do
 
@@ -16981,23 +17178,31 @@ end do
 	  E%ww%el   = E%ww%el  + E_recv(i)%ww%el
 	  E%ww%vdw  = E%ww%vdw + E_recv(i)%ww%vdw
 	  E%lrf     = E%lrf    + E_recv(i)%lrf
-	  EQ(1:nstates)%qp%el  = EQ(1:nstates)%qp%el  + EQ_recv(1:nstates,i)%qp%el
-	  EQ(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw + EQ_recv(1:nstates,i)%qp%vdw
-	  EQ(1:nstates)%qw%el  = EQ(1:nstates)%qw%el  + EQ_recv(1:nstates,i)%qw%el
-	  EQ(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw + EQ_recv(1:nstates,i)%qw%vdw
+		do ii=1,nstates
+		do jj=1,ene_header%arrays
+	  EQ(ii)%qp(jj)%el  = EQ(ii)%qp(jj)%el  + EQ_recv(ii,jj,i)%qp%el
+	  EQ(ii)%qp(jj)%vdw = EQ(ii)%qp(jj)%vdw + EQ_recv(ii,jj,i)%qp%vdw
+	  EQ(ii)%qw(jj)%el  = EQ(ii)%qw(jj)%el  + EQ_recv(ii,jj,i)%qw%el
+	  EQ(ii)%qw(jj)%vdw = EQ(ii)%qw(jj)%vdw + EQ_recv(ii,jj,i)%qw%vdw
+		end do
+		end do
 	end do
 #endif
 
 	!summation of energies
 	do istate = 1, nstates
 			! update EQ
-			EQ(istate)%qx%el  = EQ(istate)%qq%el +EQ(istate)%qp%el +EQ(istate)%qw%el
-			EQ(istate)%qx%vdw = EQ(istate)%qq%vdw+EQ(istate)%qp%vdw+EQ(istate)%qw%vdw
-			E%qx%el    = E%qx%el    + EQ(istate)%qx%el   *EQ(istate)%lambda
-			E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx%vdw  *EQ(istate)%lambda
+		do jj=1,ene_header%arrays
+			EQ(istate)%qx(jj)%el  = EQ(istate)%qq(jj)%el &
+			+ EQ(istate)%qp(jj)%el +EQ(istate)%qw(jj)%el
+			EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw &
+			+ EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
+		end do
+		E%qx%el    = E%qx%el    + EQ(istate)%qx(1)%el   *EQ(istate)%lambda
+		E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx(1)%vdw  *EQ(istate)%lambda
 
-			! update E%restraint%protein with an average of all states
-			E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda
+		! update E%restraint%protein with an average of all states
+		E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda
 	end do
 
 
@@ -17018,28 +17223,29 @@ end subroutine new_potential
 !***********************
 ! Use the global vars
 !  request_recv, E_send,EQ_send,E_recv,EQ_Recv,d_recv
-! and now also the EQ_gc variables from the group contributions
 ! Allocate  - status
 
 
 subroutine gather_nonbond()
 
 integer,parameter                       :: vars=3
-integer,dimension(4,numnodes-1)         :: tag
+integer,dimension(3,numnodes-1)         :: tag
 integer,dimension(vars)	                :: blockcnt,ftype 
 integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
 integer                                 :: mpitype_package,mpitype_send
-integer                                 :: i,j,istate
+integer                                 :: i,j,istate,ii
 
 do i=1,numnodes-1
 tag(1,i)=numnodes*100+i
 tag(2,i)=numnodes*200+i
 tag(3,i)=numnodes*300+i
-tag(4,i)=numnodes*400+i
 end do
 
 if (nodeid .eq. 0) then        !master
 
+!reclength is defined in mpiglob and set in prep_sim
+!used for the now not previously known length of the EQ array
+!for sending same length distributed to nodes
 
 ! Post receives for each of the d/E/EQ_recv structures
 ! E/EQ_Recv should really be handled with MPI_Type_create_struct
@@ -17052,12 +17258,8 @@ do i = 1,numnodes-1
   call MPI_IRecv(E_recv(i), 3*2+1, MPI_REAL8, i, tag(2,i), MPI_COMM_WORLD, &
        request_recv(i,2),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
-  call MPI_IRecv(EQ_recv(1,i), nstates*2*2, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
-       request_recv(i,3),ierr)
-  if (use_excluded_groups) then
-	call MPI_IRecv(EQ_gc_recv(1,1,i), nstates*2*2*ngroups_gc, MPI_REAL8, i, tag(4,i), MPI_COMM_WORLD, &
-        request_recv(i,4),ierr)
-  end if
+  call MPI_IRecv(EQ_recv(1,1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
+	request_recv(i,3),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
 
@@ -17069,24 +17271,21 @@ E_send%pw%vdw = E%pw%vdw
 E_send%ww%el  = E%ww%el
 E_send%ww%vdw = E%ww%vdw
 E_send%lrf    = E%lrf
-EQ_send(1:nstates)%qp%el  = EQ(1:nstates)%qp%el
-EQ_send(1:nstates)%qp%vdw = EQ(1:nstates)%qp%vdw
-EQ_send(1:nstates)%qw%el  = EQ(1:nstates)%qw%el
-EQ_send(1:nstates)%qw%vdw = EQ(1:nstates)%qw%vdw
-if (use_excluded_groups) then
-        EQ_gc_send(1:ngroups_gc,1:nstates)%qp%el  = EQ_gc(1:ngroups_gc,1:nstates)%qp%el
-        EQ_gc_send(1:ngroups_gc,1:nstates)%qp%vdw  = EQ_gc(1:ngroups_gc,1:nstates)%qp%vdw
-end if 
+do ii=1,nstates
+do i=1,ene_header%arrays
+EQ_send(ii,i)%qp%el  = EQ(ii)%qp(i)%el
+EQ_send(ii,i)%qp%vdw = EQ(ii)%qp(i)%vdw
+EQ_send(ii,i)%qw%el  = EQ(ii)%qw(i)%el
+EQ_send(ii,i)%qw%vdw = EQ(ii)%qw(i)%vdw
+end do
+end do
 
 ! See comments above on the IRecv part
 call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send d')
 call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
-call MPI_Send(EQ_send, nstates*2*2, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
-if (use_excluded_groups) then
-	call MPI_Send(EQ_gc_send(1,1),nstates*2*2*ngroups_gc, MPI_REAL8, 0, tag(4,nodeid), MPI_COMM_WORLD,ierr)
-end if
+call MPI_Send(EQ_send, reclength, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
 
 end if

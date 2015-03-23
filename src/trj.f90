@@ -35,7 +35,7 @@ implicit none
 		
 	!mask 	
 	integer, private							::	ncoords
-	real(4), private, allocatable	::	xmasked(:)
+	real(kind=prec), private, allocatable	::	xmasked(:)
 	type(MASK_TYPE), private			::	mask
 contains
 
@@ -194,15 +194,18 @@ end function trj_create
 logical function trj_write(x)
 !arguments
 	real(kind=prec) 					::	x(:)
+	real(4)							::	xloc(ncoords)
 	
 	!extract coordinates
 	call mask_get(mask, x, xmasked)
+	!now need to copy to array of smaller real kind to keep dcd format
+	xloc(1:ncoords)=xmasked(1:ncoords)
 	!write x record
-	write(lun, err=900) xmasked(1:ncoords:3)
+	write(lun, err=900) xloc(1:ncoords:3)
 	!write y record
-	write(lun, err=900) xmasked(2:ncoords:3)
+	write(lun, err=900) xloc(2:ncoords:3)
 	!write z record
-	write(lun, err=900) xmasked(3:ncoords:3)
+	write(lun, err=900) xloc(3:ncoords:3)
 
 	trj_write = .true.
 	return
@@ -246,14 +249,17 @@ end function trj_read
 !******************************************************
 logical function trj_read_masked(x)
 !arguments
-	real(4) 					::	x(:)
+	real(kind=prec) 					::	x(:)
+	real(4)							:: xloc(ncoords)
+	!need to store in smaller array first to keep dcd file format consistent
 	!read x record to temp variable xmasked
-	read(lun, err=900, end=900) x(1:ncoords:3)
+	read(lun, err=900, end=900) xloc(1:ncoords:3)
 	!read y record
-	read(lun, err=900, end=900) x(2:ncoords:3)
+	read(lun, err=900, end=900) xloc(2:ncoords:3)
 	!read z record
-	read(lun, err=900, end=900) x(3:ncoords:3)
-
+	read(lun, err=900, end=900) xloc(3:ncoords:3)
+	!now copy to the full array
+	x(1:ncoords)=xloc(1:ncoords)
 	trj_read_masked = .true.
 
 	current_frame = current_frame + 1

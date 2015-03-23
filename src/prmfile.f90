@@ -137,8 +137,8 @@ end function prm_get_integer_by_key
 logical function prm_get_real_by_key(key, value, default)
 !arguments
 	character(*)				::	key
-	real, intent(out)			::	value
-	real, intent(in), optional	:: default
+	real(kind=prec), intent(out)			::	value
+	real(kind=prec), intent(in), optional	:: default
 !locals
 	character(len=80)			::	inkey
 
@@ -172,8 +172,8 @@ end function prm_get_real_by_key
 logical function prm_get_real8_by_key(key, value, default)
 !arguments
 	character(*)				::	key
-	real(8), intent(out)			::	value
-	real(8), intent(in), optional	:: default
+	real(kind=prec), intent(out)			::	value
+	real(kind=prec), intent(in), optional	:: default
 !locals
 	character(len=80)			::	inkey
 
@@ -534,7 +534,7 @@ end function prm_get_string_int
 logical function prm_get_string_real(key, value)
 !arguments
 	character(*),intent(out)	::	key
-	real, intent(out)			::	value
+	real(kind=prec), intent(out)			::	value
 !locals
 	character(200)				::	str_value
 

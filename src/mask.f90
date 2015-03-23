@@ -48,6 +48,11 @@ subroutine mask_shutdown
 	call finalize_storage
 end subroutine mask_shutdown
 
+subroutine mask_deallocate(m)
+!arguments
+	type(MASK_TYPE)				::	m
+	if(associated(m%mask)) deallocate(m%mask)
+end subroutine mask_deallocate
 
 subroutine mask_initialize(m)
 !arguments
@@ -422,7 +427,7 @@ subroutine mask_get(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)			::	m
 	real(kind=prec)						::	x(:)
-	real(4)						::	xmasked(:)
+	real(kind=prec)						::	xmasked(:)
 	integer						::	i, i3, j
 
 	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then
@@ -448,7 +453,7 @@ subroutine mask_put(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)				::	m
 	real(kind=prec)     				::	x(:)
-	real(4)       					::	xmasked(:)
+	real(kind=prec)       					::	xmasked(:)
 	integer						::	i, i3, j
 
 	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then

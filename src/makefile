@@ -5,7 +5,7 @@
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
 #  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: Nov 12, 2014                                                 #
+#  latest update: Oct 17, 2014                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
@@ -27,7 +27,7 @@ ifeq ($(COMP),ifort)
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
 
-	MPIFC=		mpif90 
+	MPIFC=		mpif90
 	MPIFLAGS=	-f90=${FC} -Nmpi
 	OMPI_FC=	${FC}
 	MPI_FC=		${FC}
@@ -154,7 +154,6 @@ mpi:
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
 	qdyn5p move1 move3
-
 hybrid:
 	@make FFLAGS="${MPFLAG}" \
 	qdyn5h move1 move4
@@ -346,7 +345,6 @@ move3:
 
 move4:
 	mkdir -p ../bin ; mv qdyn5h ../bin/
-
 
 
 include buildnumber.mak

@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-qbinary=/home/x_pauba/glob/debug/noseho/bin/qdyn5
+qbinary=/data/simulations/Q_metal/q_github_paul/bin/qdyn5
 wd=`pwd`
 
 #set -e

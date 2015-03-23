@@ -442,8 +442,8 @@ end function find_contact
 subroutine get_atom_data
 	!---------------- Local variables -----------------!
 	integer						::	i, j
-	real						::	rad(natyps)
-	real						::	radius
+	real(kind=prec)						::	rad(natyps)
+	real(kind=prec)						::	radius
 	logical						::	stat
 	logical						::	novdw(natyps)
 	character(len=8)			::	tac_in
