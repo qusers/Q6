@@ -1081,30 +1081,30 @@ subroutine topo_save(name)
 
 ! --- INTEGER ATOM CODES
 	write(*, 10, advance='no') 'integer atom codes'
-	write(u, '(i8,a)') nat_pro, ' = No. of integer atom codes. iac''s: '
+	write(u, '(i9,a)') nat_pro, ' = No. of integer atom codes. iac''s: '
 	if(nat_pro > 0)	write(u, '(16(i4,1x))') iac(1:nat_pro)
 	write(*, 20) nat_pro
 
 ! --- BONDS
 	write(*, 10, advance='no') 'solute bonds'
-	write(u, '(2i8,a)') nbonds, nbonds_solute, &
+	write(u, '(2i9,a)') nbonds, nbonds_solute, &
 		 ' = No. of bonds, no. of solute bonds. i - j - icode: (5 per line)'
-	if(nbonds>0) write(u, '(5(i5,1x,i5,1x,i3,1x))') ( bnd(si), si = 1,nbonds )
+	if(nbonds>0) write(u, '(5(i7,1x,i7,1x,i3,1x))') ( bnd(si), si = 1,nbonds )
 	write(*, 20) nbonds_solute
 	write(*, 10, advance='no') 'solvent bonds'
 	write(*, 20) nbonds-nbonds_solute
 
 	write(*, 10, advance='no') 'bond parameters'
-	write(u, '(i8,a)') nbndcod, ' = No. of bond codes. Parameters: '
+	write(u, '(i9,a)') nbndcod, ' = No. of bond codes. Parameters: '
 	DO i = 1, nbndcod
-		write(u, '(i5,f9.3,1x,f10.4,1x,a2)') i, bondlib(i), SYBYL_bond_type(i)
+		write(u, '(i7,f9.3,1x,f10.4,1x,a2)') i, bondlib(i), SYBYL_bond_type(i)
 	enddo
 	write(*, 20) nbndcod
 ! --- ANGLES
 	write(*, 10, advance='no') 'solute angles'
-	write(u, '(2i8,a)') nangles, nangles_solute, &
+	write(u, '(2i9,a)') nangles, nangles_solute, &
 		' = No. of angles, no. of solute angles. i - j - k - icode: (3 per line)'
-	if(nangles>0) write(u, '(3(i5,1x,i5,1x,i5,1x,i3,1x))') ( ang(si), si = 1,nangles )
+	if(nangles>0) write(u, '(3(i7,1x,i7,1x,i7,1x,i3,1x))') ( ang(si), si = 1,nangles )
 	write(*, 20) nangles_solute
 	write(*, 10, advance='no') 'solvent angles'
 	write(*, 20) nangles-nangles_solute
@@ -1112,47 +1112,47 @@ subroutine topo_save(name)
 	write(*, 10, advance='no') 'angle parameters'
 	write(u, '(i8,a)') nangcod, ' = No. of angle codes. Parameters:'
 	DO i = 1, nangcod
-		write(u, '(i5,f9.3,1x,f9.3,1x,f9.3,1x,f11.5)') i, anglib(i)
+		write(u, '(i7,f9.3,1x,f9.3,1x,f9.3,1x,f11.5)') i, anglib(i)
 	enddo
 	write(*, 20) nangcod
 
 ! --- TORSIONS
 	write(*, 10, advance='no') 'torsions'
-	write(u, '(2i8,a)') ntors, ntors_solute, &
+	write(u, '(2i9,a)') ntors, ntors_solute, &
 		' = No. of torsions, solute torsions. i - j - k - l - icode: (2 per line)'
-	if(ntors>0) write(u, '(2(4(i5,1x),i3,1x))') (tor(si), si = 1,ntors)
+	if(ntors>0) write(u, '(2(4(i7,1x),i3,1x))') (tor(si), si = 1,ntors)
 
 
 
 	write(*, 20) ntors
 
 	write(*, 10, advance='no') 'torsion parameters'
-	write(u, '(i8,a)') ntorcod, ' = No. of torsion codes. Parameters:'
+	write(u, '(i9,a)') ntorcod, ' = No. of torsion codes. Parameters:'
 	DO i = 1, ntorcod
 		!%paths is a real but we write it as an integer for compatibility
-		write(u, '(i5,3(f9.3,1x),i5 )') i, &
+		write(u, '(i7,3(f9.3,1x),i5 )') i, &
 			torlib(i)%fk , torlib(i)%rmult, torlib(i)%deltor, int(torlib(i)%paths)
 	enddo
 	write(*, 20) ntorcod
 
 ! --- IMPROPERS
 	write(*, 10, advance='no') 'impropers'
-	write(u, '(2i8,a)') nimps, nimps_solute, &
+	write(u, '(2i9,a)') nimps, nimps_solute, &
 		' = No. of impropers, solute impr. i - j - k - l - icode: (2 per line)'
-	if(nimps>0) write(u, '(2(4(i5,1x),i3,1x))') imp(1:nimps)
+	if(nimps>0) write(u, '(2(4(i7,1x),i3,1x))') imp(1:nimps)
 	write(*, 20) nimps
 
 	write(*, 10, advance='no') 'improper parameters'
-	write(u, '(2i8,a)') nimpcod, imp_type, &
+	write(u, '(2i9,a)') nimpcod, imp_type, &
 		' = No. of improper codes, type (1=harmonic,2=periodic). Parameters:'
 	DO i = 1, nimpcod
-		write(u, '(i5,f10.3,1x,f10.3)') i, implib(i)
+		write(u, '(i7,f10.3,1x,f10.3)') i, implib(i)
 	enddo
 	write(*, 20) nimpcod
 
 ! --- CHARGES
 	write(*, 10, advance='no') 'charges'
-	write(u, '(i8,a)') nat_pro, ' = No. of atomic charges'
+	write(u, '(i9,a)') nat_pro, ' = No. of atomic charges'
 	if(nat_pro >0) write(u, '(10(f7.4,1x))') crg(1:nat_pro)
 	write(*, 20) nat_pro
 
@@ -1172,18 +1172,18 @@ subroutine topo_save(name)
 
 ! --- CHARGE GROUPS
 	write(*, 10, advance='no') 'charge groups'
-	write(u, '(3i8,a)') ncgp, ncgp_solute, iuse_switch_atom, &
+	write(u, '(3i9,a)') ncgp, ncgp_solute, iuse_switch_atom, &
 		' = No. of charge groups, no of solvent cgps, switch atoms flag. nat_cgp, iswitch / atom list: '
 	DO ig = 1, ncgp
-		write(u, '(i5,1x,i5)') cgp(ig)%last - cgp(ig)%first + 1, cgp(ig)%iswitch
-		write(u, '(13(i5,1x))') cgpatom(cgp(ig)%first : cgp(ig)%last)
+		write(u, '(i7,1x,i7)') cgp(ig)%last - cgp(ig)%first + 1, cgp(ig)%iswitch
+		write(u, '(13(i7,1x))') cgpatom(cgp(ig)%first : cgp(ig)%last)
 	enddo
 	write(*, 20) ncgp
 
 ! --- ATOM TYPES
 	write(*, 10, advance='no') 'atom type parameters'
-	write(u, '(i8,a)') max_atyps, ' = No. of atom types'
-	write(u, '(i8,a)') ivdw_rule, &
+	write(u, '(i9,a)') max_atyps, ' = No. of atom types'
+	write(u, '(i9,a)') ivdw_rule, &
 		' = vdW combination rule (1 = Geom. / 2 = Arit.)'
 	write(u, '(f8.5,f9.4,a)') el14_scale, coulomb_constant, &
 		' = Electrostatic 1-4 scaling factor and  Coulomb constant'
@@ -1220,7 +1220,7 @@ subroutine topo_save(name)
 	write(*, 20) max_atyps
 
 	write(*, 10, advance='no') 'polar LJ pairs'
-	write(u, '(i8,a)') nlj2, ' = No. of type-2 vdW interactions. pairs: '
+	write(u, '(i9,a)') nlj2, ' = No. of type-2 vdW interactions. pairs: '
 	DO i = 1, nlj2
 		write(u, '(i4,1x,i4)') lj2(i)
 	enddo
@@ -1229,7 +1229,7 @@ subroutine topo_save(name)
 ! --- 1-4 NEIGHBOUR LIST
 
 	write(*, 10, advance='no') 'neighbour list'
-	write(u, '(i8,a)') n14nbrs, ' = No. of 1-4 neighbours. nborlist (range=max_nbr_range): '
+	write(u, '(i9,a)') n14nbrs, ' = No. of 1-4 neighbours. nborlist (range=max_nbr_range): '
 
 	! work-around to preserve file format
 !	write(u, '(80i1)') list14(1:max_nbr_range, 1:nat_solute)
@@ -1245,16 +1245,16 @@ subroutine topo_save(name)
 
 	write(*, 20) n14nbrs
 	write(*, 10, advance='no') 'long-range neighbour list'
-	write(u, '(i8,a)') n14long, &
+	write(u, '(i9,a)') n14long, &
 		' = No. of long 1-4 nbrs (>max_nbr_range). pairlist: '
 	DO i = 1, n14long
-		write(u, '(i5,1x,i5)') list14long(1:2, i)
+		write(u, '(i7,1x,i7)') list14long(1:2, i)
 	enddo
 	write(*, 20) n14long
 
 ! --- EXCLUSION NEIGHBOUR LIST
 	write(*, 10, advance='no') 'neighbour exclusion list'
-	write(u, '(i8,a)') nexnbrs, &
+	write(u, '(i9,a)') nexnbrs, &
 		' = No. of exclusions. exclusion list (range=max_nbr_range): '
 
 	! work-around to preserve file format
@@ -1270,19 +1270,19 @@ subroutine topo_save(name)
 
 	write(*, 20) nexnbrs
 	write(*, 10, advance='no') 'long-range exclusions'
-	write(u, '(i8,a)') nexlong, &
+	write(u, '(i9,a)') nexlong, &
 		' = No. of long exclusions (>max_nbr_range). pairlist: '
-	if(nexlong > 0) write(u, '(i5,1x,i5)') listexlong(1:2, 1:nexlong)
+	if(nexlong > 0) write(u, '(i7,1x,i7)') listexlong(1:2, 1:nexlong)
 	write(*, 20) nexlong
 
 ! --- RESIDUE/MOLECULE BOOKKEEPING
 	write(*, 10, advance='no') 'residues'
 	if(nres_solute < nres) then
-		write(u, '(2i8,a)') nres, nres_solute, ' = No. of residues, No of solute residues. start atoms: '
+		write(u, '(2i9,a)') nres, nres_solute, ' = No. of residues, No of solute residues. start atoms: '
 	else
-		write(u, '(i8,a)') nres, ' = No. of residues. start atoms: '
+		write(u, '(i9,a)') nres, ' = No. of residues. start atoms: '
 	end if
-	if(nres > 0) write(u, '(13(i5,1x))') res(1:nres)%start
+	if(nres > 0) write(u, '(13(i7,1x))') res(1:nres)%start
 
 	write(u, '(a)') 'Sequence: '
 	if(nres > 0) write(u, '(16(a4,1x))') res(1:nres)%name
@@ -1291,23 +1291,23 @@ subroutine topo_save(name)
 	write(*, 10, advance='no') 'molecules'
 	write(u, '(i8,a)') nmol, &
 		' = No. of separate molecules. start atoms:'
-	if(nmol > 0) write(u, '(13(i5,1x))') istart_mol(1:nmol)
+	if(nmol > 0) write(u, '(13(i7,1x))') istart_mol(1:nmol)
 	write(*, 20) nmol
 
 	write(*, 10, advance='no') 'Atom type names'
-	write(u, '(i8,a)') max_atyps, &
+	write(u, '(i9,a)') max_atyps, &
 		' = No. of atom types:'
 	if(max_atyps > 0) write(u, '(8(a8,1x))') tac(1:max_atyps)
 	write(*, 20) max_atyps
 
 	write(*, 10, advance='no') 'SYBYL type information'
-	write(u, '(i8,a)') max_atyps, &
+	write(u, '(i9,a)') max_atyps, &
 		' = No. of SYBYL atom types:'
 	if(max_atyps > 0) write(u, '(13(a5,1x))') SYBYL_atom_type(1:max_atyps)
 	write(*, 20) max_atyps
 
 	!solvent type & atom types
-	write(u, '(i8,a)') solvent_type, &
+	write(u, '(i9,a)') solvent_type, &
 		' = solvent type (0=SPC,1=3-atom,2=general)'
 
 	!boundary
@@ -1325,7 +1325,7 @@ subroutine topo_save(name)
 		write(u, '(3f8.3,a)') xwcent(:), ' = Solvent centre'
 		!exluded atoms
 		write(*, 10, advance='no') 'excluded atom list'
-		write(u, '(2i8,a)') nexats, nexwat, &
+		write(u, '(2i9,a)') nexats, nexwat, &
 			' = No. of excluded atoms (incl. water), no. of excluded waters'
 		write(u, fmt='(80l1)') excl(1:nat_pro)
 		write(*, 20) nexats
