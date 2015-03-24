@@ -17,6 +17,8 @@
 \usepackage{bigstrut}
 \newcommand{\dirfig}{./pictures}
 \usepackage{hyperref}
+\usepackage{gensymb}
+\usepackage{titlesec}
 \pagestyle{fancy}
 %Overrides all other setting to show what we want.
 \textwidth = 430pt \textheight = 640pt \voffset = -50pt
@@ -930,6 +932,24 @@ the [\textbf{wall{\_}restraints}] section is not used in combination with
 periodic boundary conditions. One can choose between harmonic or Morse
 potential.
 
+As one last possibility of restraints in Q, the [\textbf{angle{\_}restraints}]
+ are a specific type of force, based on the harmonic angle forces present in 
+any force field. It can be useful, for instance, if you want to avoid an 
+aspartate bound to a metal center to not be bidentally coordinated. In order 
+to define an angle restraint, one has to define three atoms, as follows:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{|l l l l l X|}
+  \hline
+  \multicolumn{6}{|l|}{[angle{\_}restraints]} \\
+  133 & 132 & 3400 & 180.0 & 3.0 & 2 \\ \hline
+\end{tabularx}
+\end{center}
+
+In this case, a harmonic angle force is applied between the atoms 133, 132 and 3400,
+ in order to enforce a 180\degree, with 3.0 kcal$\cdot $mol$^{-1}\cdot ${degrees}$^{-2}$
+at the state 2.
+
 \subsubsection{\textbf{qdyn} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
@@ -961,6 +981,7 @@ information about the data in each section is found in the section
   \hline steps                    & 10000        & Number of steps \\
   \hline stepsize                 & 2.0          & Step size (fs) \\
   \hline temperature              & 300          & Temperature (K) \\
+  \hline thermostat               & BERENDSEN    & Thermostat used (see pg. X for more info) \\
   \hline bath{\_}coupling         & 10           & Temperature bath relaxation time (fs) \\
   \hline random{\_}seed           & 57643        & Seed for random number generator (only for initial vel.) \\
   \hline initial{\_}temperature   & 300          & Temperature (K) for Maxwell-distributed initial velocities\\
@@ -2954,6 +2975,84 @@ that, if solute is present in a simulation like this, each solute
 molecule must be assigned just one charge group. This is done by
 changing the library file.
 
+\subsubsection{Constant temperature algorithm}
+Q comes with the option of choosing the thermostat which the user
+judges appropriate. The three thermostats present are 
+Berendsen\cite{Berendsen:1984}, Nos\'e-Hoover chains\cite{Tuckerman:1992}
+ and Langevin\cite{Schneider:1978}. One can change the thermostat 
+by inserting the keyword thermostat in the section [\textbf{MD}] 
+in the input file, followed by "berendsen", "nose-hoover" or "langevin". 
+Every thermostat has its own setup parameters, which will be described 
+briefly below.
+
+\paragraph{Berendsen thermostat:}
+
+The idea of this thermostat is to rescale the velocities in order 
+to control the kinetic energies in the system. In this algorithm, 
+every particle is coupled to a heat bath, which will, in turn, 
+increase or decrease the velocities of them. We set the thermostat 
+temperature $T_{0}$, as well as the bath coupling time $\tau$, 
+which will give the interval of time where the rescaling of the 
+temperature (and consequently velocities) will take place. After every 
+bath coupling time interval, the temperature is measured and rescaled 
+according to:
+
+\begin {equation}
+ \frac{dT}{dt} = \frac{T_{0}-T}{\tau}
+\end{equation}
+ 
+The velocities are then rescaled in order to reproduce the new 
+temperature.
+
+\paragraph{Nos\'e-Hoover chain thermostat:}
+
+The Nos\'e-Hoover thermostat also employs the idea of a rescaling 
+factor. Essentially it inserts an extra particle that will interact 
+with the whole system in a specific way in a different set of 
+generalized coordinates from the original system. The idea is 
+to solve this system with this extra particle as if we are 
+performing a standard MD simulation, and the averages performed 
+for the particles in your system will correspond to the ones from 
+the canonical ensemble. The Hamiltonian of a N-particle system looks 
+like this:
+
+\begin {equation}
+ \mathcal{H}_{Nos\acute{e}}(\textbf{p},\textbf{r},p_{s},s) = \sum\limits_{i=1}^N 
+\frac{\textbf{p}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N) + \frac{p_{s}^2}{2Q} 
++ gk_{B}T\ln(s),
+\end{equation} 
+
+where $s$ and $p_{s}$ refer to the new generalized coordinate and momentum 
+for the thermostat particle, $Q$ is the mass of this particles, and  $g$ is 
+the total number of degrees of freedom of the system.
+
+Now, if we call $\textbf{p'} = \textbf{p}/s$, we will have
+
+\begin {equation}
+ \mathcal{H}(\textbf{p'},\textbf{r}) = \sum\limits_{i=1}^N
+\frac{\textbf{p'}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N),
+\end{equation}
+
+it is possible to show that the average of any observable is (see \cite{Frenkelbook} for more details):
+
+\begin {equation}
+ \langle A(\textbf{p}/s,\textbf{r}) \rangle_{NVE} = \langle A(\textbf{p'},\textbf{r}) \rangle_{NVT}
+\end{equation}
+
+It has been shown that a single particle Nos\'e-Hoover particle was not able 
+to sample properly the canonical ensemble in some cases. The solution to the 
+problem was to create additional particles that would interact with each other 
+in a chain-like way \cite{Tuckerman:1992}. The new equations of motion become:
+
+\begin{align}
+ \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}} \\
+ \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} -  \frac{p_{{s}_{1}}}{Q_{1}}
+ \textbf{p}_{i} \\
+ \frac{ds_{j}}{dt} &= \frac{p_{{s}_{j}}}{Q_{j}} \\
+ \frac{dp_{{s}_{1}}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}}
+  -gk_{B}T \right) - \frac{p_{{s}_{2}}}{Q_{2}}p_{{s}_{1}}
+\end{align}
+
 \subsubsection{Constant pressure algorithm}
 The constant pressure algorithm is a combination of molecular
 dynamics and Monte Carlo volume sampling. A change in volume is
@@ -4313,6 +4412,12 @@ Empirical scoring functions: I. The deveoplment of a fast empirical scoring func
 
 \bibitem{Muegge:1999}Ingo~Muegge and Yvonne~C.~Martin,
 A general and fast scoring function for protein--ligand interaction: A simplified approach, J. Med. Chem., 42, 701-894, 1999
+
+\bibitem{Tuckerman:1992}Martyna G.J., Klein M.L., and Tuckerman M.E., Nos\'e-Hoover chains: The canonical ensemble via continuous dynamics, J. Chem. Phys., 97, 2635-2645, 1992
+
+\bibitem{Schneider:1978}Schneider T., and Stoll E., Molecular-dynamics study of a three-dimensional one-component model for distortive phase transitions, Phys. Rev. B, 17, 1302-1322, 1978
+
+\bibitem{Frenkelbook} Frenkel D., and Smit B., Understanding Molecular Simulation - From Algorithms to Applications, Academic Press, 2002
 
 \end{thebibliography}
 
