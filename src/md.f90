@@ -4551,11 +4551,11 @@ end do
 
 end subroutine newvel_ber
 
-subroutine newvel_lan(step,lfriction,rands,rande)!dt_mod,dv_friction)
-real(kind=prec)					:: step,lfriction
-real(kind=prec)					:: rands(:),rande(:,:)!natom,3)
+subroutine newvel_lan(step,lfriction,rands,rande)
+real(kind=prec)					:: step,lfriction,randnum
+real(kind=prec)					:: rands(:),rande(:,:)
 !locals
-integer				:: i,j,i3,randnum
+integer				:: i,j,i3
 
 
 if (.not.langevin_gauss_rand) then
@@ -4577,10 +4577,6 @@ else
 
 do i=1,natom
 	i3=i*3-3
-!	dv(i3+1) = (d(i3+1)-randfa(i,1))*winv(i)*step
-!	dv(i3+2) = (d(i3+2)-randfa(i,2))*winv(i)*step
-!	dv(i3+3) = (d(i3+3)-randfa(i,3))*winv(i)*step
-
 	v(i3+1)  = (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
 	xx(i3+1) = x(i3+1)
 	x(i3+1)  = x(i3+1) + v(i3+1)*step
@@ -16400,7 +16396,7 @@ write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
 
 ! row by row: solute, solvent, solute-solvent, LRF, q-atom
 write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper
-6 format(A,T17, 6F10.2)
+6 format(A,T17, 6F12.2)
 
 if(nwat > 0) then
 write(*,6) 'solvent', E%ww%el, E%ww%vdw, E%w%bond, E%w%angle, E%w%torsion, E%w%improper

@@ -1,0 +1,29 @@
+[MD]
+steps                  25000
+stepsize                   2.0
+temperature              300.0
+bath_coupling            100
+integrator		invalid-integrator
+separate_scaling		on
+thermostat		invalid-thermostat
+shake_hydrogens           on
+lrf                       on
+
+invalid-boundary
+
+[cut-offs]
+invalid-qatom
+invalid-lrf
+
+[intervals]
+non_bond                  25
+output                    50
+
+[files]
+topology                  lig_w.top
+fep                       lig_w.fep
+restart                   dc1.re
+final                     dc2.re
+
+[sequence_restraints]
+1 46 0.5 0 1
