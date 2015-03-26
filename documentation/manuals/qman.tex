@@ -2975,84 +2975,6 @@ that, if solute is present in a simulation like this, each solute
 molecule must be assigned just one charge group. This is done by
 changing the library file.
 
-\subsubsection{Constant temperature algorithm}
-Q comes with the option of choosing the thermostat which the user
-judges appropriate. The three thermostats present are 
-Berendsen\cite{Berendsen:1984}, Nos\'e-Hoover chains\cite{Tuckerman:1992}
- and Langevin\cite{Schneider:1978}. One can change the thermostat 
-by inserting the keyword thermostat in the section [\textbf{MD}] 
-in the input file, followed by "berendsen", "nose-hoover" or "langevin". 
-Every thermostat has its own setup parameters, which will be described 
-briefly below.
-
-\paragraph{Berendsen thermostat:}
-
-The idea of this thermostat is to rescale the velocities in order 
-to control the kinetic energies in the system. In this algorithm, 
-every particle is coupled to a heat bath, which will, in turn, 
-increase or decrease the velocities of them. We set the thermostat 
-temperature $T_{0}$, as well as the bath coupling time $\tau$, 
-which will give the interval of time where the rescaling of the 
-temperature (and consequently velocities) will take place. After every 
-bath coupling time interval, the temperature is measured and rescaled 
-according to:
-
-\begin {equation}
- \frac{dT}{dt} = \frac{T_{0}-T}{\tau}
-\end{equation}
- 
-The velocities are then rescaled in order to reproduce the new 
-temperature.
-
-\paragraph{Nos\'e-Hoover chain thermostat:}
-
-The Nos\'e-Hoover thermostat also employs the idea of a rescaling 
-factor. Essentially it inserts an extra particle that will interact 
-with the whole system in a specific way in a different set of 
-generalized coordinates from the original system. The idea is 
-to solve this system with this extra particle as if we are 
-performing a standard MD simulation, and the averages performed 
-for the particles in your system will correspond to the ones from 
-the canonical ensemble. The Hamiltonian of a N-particle system looks 
-like this:
-
-\begin {equation}
- \mathcal{H}_{Nos\acute{e}}(\textbf{p},\textbf{r},p_{s},s) = \sum\limits_{i=1}^N 
-\frac{\textbf{p}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N) + \frac{p_{s}^2}{2Q} 
-+ gk_{B}T\ln(s),
-\end{equation} 
-
-where $s$ and $p_{s}$ refer to the new generalized coordinate and momentum 
-for the thermostat particle, $Q$ is the mass of this particles, and  $g$ is 
-the total number of degrees of freedom of the system.
-
-Now, if we call $\textbf{p'} = \textbf{p}/s$, we will have
-
-\begin {equation}
- \mathcal{H}(\textbf{p'},\textbf{r}) = \sum\limits_{i=1}^N
-\frac{\textbf{p'}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N),
-\end{equation}
-
-it is possible to show that the average of any observable is (see \cite{Frenkelbook} for more details):
-
-\begin {equation}
- \langle A(\textbf{p}/s,\textbf{r}) \rangle_{NVE} = \langle A(\textbf{p'},\textbf{r}) \rangle_{NVT}
-\end{equation}
-
-It has been shown that a single particle Nos\'e-Hoover particle was not able 
-to sample properly the canonical ensemble in some cases. The solution to the 
-problem was to create additional particles that would interact with each other 
-in a chain-like way \cite{Tuckerman:1992}. The new equations of motion become:
-
-\begin{align}
- \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}} \\
- \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} -  \frac{p_{{s}_{1}}}{Q_{1}}
- \textbf{p}_{i} \\
- \frac{ds_{j}}{dt} &= \frac{p_{{s}_{j}}}{Q_{j}} \\
- \frac{dp_{{s}_{1}}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}}
-  -gk_{B}T \right) - \frac{p_{{s}_{2}}}{Q_{2}}p_{{s}_{1}}
-\end{align}
-
 \subsubsection{Constant pressure algorithm}
 The constant pressure algorithm is a combination of molecular
 dynamics and Monte Carlo volume sampling. A change in volume is
@@ -3112,6 +3034,171 @@ and combinations thereof. \small
 \end{tabular}
 \end{center}
 \end{table} \normalsize
+
+\subsection{Molecular dynamics algorithms}
+The way the equation of motions are integrated can affect drastically the 
+physics of the system. There are several ways of integrating a differential 
+equation, being some methods more precise than others. Nevertheless, 
+high precision is not necessarily the most important feature of an algorithm 
+for molecular dynamics simulations. An equation of motion must be 
+time-reversible in order to conserve the phase space volume if one is looking 
+for physical conservation laws. Q provides two options of symplectic 
+integrators: the Leapfrog and the velocity Verlet algorithms.
+
+\subsubsection{Leapfrog algorithm}
+The idea of the Leapfrog algorithm is to use simple first-order expansions of 
+both position and velocity variables, \textbf{r}(t) and \textbf{v}(t), but 
+calculating them at different times.
+
+\begin{align}
+ \textbf{r}(t+\Delta t) &= \textbf{r}(t) + \textbf{v}(t+\Delta t/2) \Delta t \\
+ \textbf{v}(t+\Delta t/2) &= \textbf{v}(t-\Delta t/2) + \frac{\textbf{F}(t)}{m}\Delta t
+\end{align}
+
+The assynchronicity of the velocities with respect to the position is assigned 
+at the moment that the velocities are randomly generated, being set at a half step 
+back. Leapfrog algorithm is derived from another symplectic algorithm: the 
+Verlet algorithm. Thus, it is also symplectic. This integrator is the fastest, 
+although it has the drawback of calculating the positions and velocities at 
+different times. This creates errors at energy measurements, although for small 
+time steps these deviations are not significant.
+
+\subsubsection{Velocity Verlet algorithm}
+Unlike the Leapfrog algorithm, the velocity Verlet calculates the position and 
+velocities of particles at the same time.
+
+\begin{align}
+ \textbf{r}(t+\Delta t) &= \textbf{r}(t) + \textbf{v}(t)\Delta t + \frac{\textbf{F}(t)}{2m}
+\Delta t^2 \\
+ \textbf{v}(t+\Delta t) &= \textbf{v}(t) + \frac{\textbf{F}(t+\Delta t) + 
+\textbf{F}(t)}{2m}\Delta t
+\end{align}
+
+This is scheme is prone to less error, as it computes positions and velocities 
+at the same time interval. However, the computational cost becomes slightly higher.
+
+\subsubsection{Constant temperature algorithms}
+Q comes with the option of choosing the thermostat which the user
+judges appropriate. The three thermostats present are
+Berendsen\cite{Berendsen:1984}, Nos\'e-Hoover chains\cite{Tuckerman:1992}
+ and Langevin\cite{Schneider:1978}. One can change the thermostat
+by inserting the keyword thermostat in the section [\textbf{MD}]
+in the input file, followed by "berendsen", "nose-hoover" or "langevin".
+Every thermostat has its own setup parameters, which will be described
+briefly below.
+
+\paragraph{Berendsen thermostat:}
+
+The idea of this thermostat is to rescale the velocities in order
+to control the kinetic energies in the system. In this algorithm,
+every particle is coupled to a heat bath, which will, in turn,
+increase or decrease the velocities of them. We set the thermostat
+temperature $T_{0}$, as well as the bath coupling time $\tau$,
+which will give the interval of time where the rescaling of the
+temperature (and consequently velocities) will take place. After every
+bath coupling time interval, the temperature is measured and rescaled
+according to:
+
+\begin {equation}
+ \frac{dT}{dt} = \frac{T_{0}-T}{\tau}
+\end{equation}
+
+The velocities are then rescaled in order to reproduce the new
+temperature.
+
+\paragraph{Nos\'e-Hoover chain thermostat:}
+
+The Nos\'e-Hoover thermostat also employs the idea of a rescaling
+factor. It inserts an extra particle that will interact
+with the whole system in a specific way in a different set of
+generalized coordinates from the original system. The idea is
+to solve this system with this extra particle as if we are
+performing a standard MD simulation, and the averages performed
+for the particles in your system will correspond to the ones from
+the canonical ensemble. The Hamiltonian of a N-particle system looks
+like this:
+
+\begin {equation}
+ \mathcal{H}_{Nos\acute{e}}(\textbf{p},\textbf{r},p_{s},s) = \sum\limits_{i=1}^N
+\frac{\textbf{p}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N) + \frac{p_{s}^2}{2Q}
++ gk_{B}T\ln(s),
+\end{equation}
+
+where $s$ and $p_{s}$ refer to the new generalized coordinate and momentum
+for the thermostat particle, $Q$ is the mass of this particle, and $g$ is
+the total number of degrees of freedom of the system. The equations of
+motion will be:
+
+\begin{align}
+ \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}s^2} \\
+ \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} \\
+ \frac{ds}{dt} &= \frac{p_{s}}{Q} \\
+ s\frac{dp_{s}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}s^2}
+  -gk_{B}T \right)
+\end{align}
+
+Now, if we call $\textbf{p'} = \textbf{p}/s$, and define a new Hamiltonian as
+
+\begin {equation}
+ \mathcal{H}(\textbf{p'},\textbf{r}) = \sum\limits_{i=1}^N
+\frac{\textbf{p'}_{i}^2}{2m_{i}} + V(\textbf{r}^N),
+\end{equation}
+
+it is possible to show that the average of any observable is (see \cite{Frenkelbook} for more details):
+
+\begin{equation}
+ \langle A(\textbf{p}/s,\textbf{r}) \rangle_{NVE} = \langle A(\textbf{p'},\textbf{r}) \rangle_{NVT}
+\end{equation}
+
+Thus, by running standard MD simulations with this new particle interacting
+with the whole system will sample the same conformations of the system without
+this particle at the canonical ensemble. Nevertheless, it has been shown that a
+single particle Nos\'e-Hoover particle was not able to sample properly
+the canonical ensemble in some cases. The solution to the problem was
+to create additional particles that would interact with each other in a
+chain-like way \cite{Tuckerman:1992}. If we apply the Nos\'e-Hoover
+thermostat in a chain way $C$ times, the new equations of motion become:
+
+\begin{align}
+ \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}} \\
+ \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} -  \frac{p_{{s}_{1}}}{Q_{1}}
+ \textbf{p}_{i} \\
+ \frac{ds_{j}}{dt} &= \frac{p_{{s}_{j}}}{Q_{j}} \\
+ s_{1}\frac{dp_{{s}_{1}}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}}
+  -gk_{B}T \right) - \frac{p_{{s}_{2}}}{Q_{2}}p_{{s}_{1}} \\
+ s_{j}\frac{dp_{{s}_{j}}}{dt} &= \left(\frac{\textbf{p}_{s_{j-1}}^2}{m_{j-1}}
+  -k_{B}T \right) - \frac{p_{{s}_{j+1}}}{Q_{j+1}}p_{{s}_{j}} \\
+ s_{C}\frac{dp_{{s}_{C}}}{dt} &= \left(\frac{\textbf{p}_{s_{C-1}}^2}{m_{C-1}}
+  -k_{B}T \right)
+\end{align}
+
+In Q, one can control the mass of the thermostat particles. The larger the mass,
+the larger the coupling with the thermostat, and less temperature oscilation will
+occur. The standard value is set to XXX.
+
+\paragraph{Langevin thermostat:}
+
+While both thermostats above have a deterministic behavior, the Langevin
+ thermostat has a stochastic character. The interaction between the heat
+bath and the system is characterized by two forces: a drag force, which will
+act against the movement of the particles, in order to remove excess of
+kinectic energy; a random force, which will give random impulses to every
+particle. The equation of motion becomes
+
+\begin{equation}
+ \frac{d\textbf{p}_{i}}{dt} = \textbf{F}_{i} - \gamma\textbf{p}_{i} + \sqrt{\frac{2\gamma k_{B}T}{m_{i}}}\Gamma,
+\end{equation}
+
+where $\gamma$ is the friction coefficient and $\Gamma$ is a white noise
+random force with zero mean. The idea of using a Langevin equation as a
+mean of maintaining constant temperature comes from the fact that such
+equation is related to the Fokker-Planck equation. Due to the noise, the
+momentum becomes a stochastic variable, and, in this very case, the
+probabilities of finding a particle with a given value of momentum is
+described by the Fokker-Planck equation. The solution for this
+Fokker-Planck equation formed from variables generated by the equation
+(27) is exactly the Maxwell-Boltzmann distribution. Thus, the Langevin
+equation enables the canonical ensemble sampling.
 
 \subsection{File and format descriptions}
 \subsubsection{\textbf{qdyn} input file format}\label{subsubsec:qdyn_inp_file_form}
