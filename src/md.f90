@@ -3181,7 +3181,7 @@ else if( name_thermostat == 'langevin' ) then
 	thermostat = LANGEVIN
 	if(.not. prm_get_real8_by_key('langevin_friction', friction)) then
 		friction = 1/tau_T !***according to GROMACS manual, this is their default value. Need to check - A. Barrozo
-		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat
+!		gkT = 2*friction*Boltz*Temp0/dt !constant to be used to generate the random forces of the thermostat SET LATER	
 		write(*,*) 'Langevin thermostat friction constant set to default: 1/tau_T'
 	end if
         if(.not. prm_get_logical_by_key('langevin_random', langevin_gauss_rand )) then
@@ -4531,15 +4531,15 @@ do i=startatom,endatom
 	i3=i*3-3
 	v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
 	xx(i3+1) = x(i3+1)
-	x(i3+1) = x(i3+1) + v(i3+1)*step
+	x(i3+1) = x(i3+1) + v(i3+1)*dt
 
 	v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step ) * tempscale
 	xx(i3+2) = x(i3+2)
-	x(i3+2) = x(i3+2) + v(i3+2)*step
+	x(i3+2) = x(i3+2) + v(i3+2)*dt
 
 	v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step ) * tempscale
 	xx(i3+3) = x(i3+3)
-	x(i3+3) = x(i3+3) + v(i3+3)*step
+	x(i3+3) = x(i3+3) + v(i3+3)*dt
 
 	if (integrator == VELVERLET) then
 		v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step ) * tempscale
@@ -4579,15 +4579,15 @@ do i=1,natom
 	i3=i*3-3
 	v(i3+1)  = (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
 	xx(i3+1) = x(i3+1)
-	x(i3+1)  = x(i3+1) + v(i3+1)*step
+	x(i3+1)  = x(i3+1) + v(i3+1)*dt
 
 	v(i3+2)  = (v(i3+2)*lfriction) -(d(i3+2)-rande(i,2))*winv(i)*step
 	xx(i3+2) = x(i3+2)
-	x(i3+2)  = x(i3+2) + v(i3+2)*step
+	x(i3+2)  = x(i3+2) + v(i3+2)*dt
 
 	v(i3+3)  = (v(i3+3)*lfriction) -(d(i3+3)-rande(i,3))*winv(i)*step
 	xx(i3+3) = x(i3+3)
-	x(i3+3)  = x(i3+3) + v(i3+3)*step
+	x(i3+3)  = x(i3+3) + v(i3+3)*dt
 
 	if (integrator == VELVERLET) then
 		v(i3+1)= (v(i3+1)*lfriction) -(d(i3+1)-rande(i,1))*winv(i)*step
@@ -4609,15 +4609,15 @@ do i=1,natom
         i3=i*3-3
         v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )
         xx(i3+1) = x(i3+1)
-        x(i3+1) = x(i3+1) + v(i3+1)*step
+        x(i3+1) = x(i3+1) + v(i3+1)*dt
 
         v(i3+2)= ( v(i3+2)-d(i3+2)*winv(i)*step )
         xx(i3+2) = x(i3+2)
-        x(i3+2) = x(i3+2) + v(i3+2)*step
+        x(i3+2) = x(i3+2) + v(i3+2)*dt
 
         v(i3+3)= ( v(i3+3)-d(i3+3)*winv(i)*step )
         xx(i3+3) = x(i3+3)
-        x(i3+3) = x(i3+3) + v(i3+3)*step
+        x(i3+3) = x(i3+3) + v(i3+3)*dt
 
         if (integrator == VELVERLET) then
                 v(i3+1)= ( v(i3+1)-d(i3+1)*winv(i)*step )

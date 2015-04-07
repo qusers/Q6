@@ -10,6 +10,8 @@
 #Q-BND energy, Q-ANG energy, Q-TOR energy, Q-IMP energy
 #BND energy, ANG energy, TOR energy, IMP energy
 
+#Released under Beer - Ware licence
+#Author: paul.bauer@icm.uu.se
 
 QPATH="/data/simulations/Q_metal/q_github_paul/bin"
 MODULES="intel/14.0 openmpi/1.8.1"
@@ -19,6 +21,7 @@ PROJECT="SNIC2014-11-2"
 MAIL="paul.bauer@icm.uu.se"
 BENCHMARKS=20
 
+MPICOM="mpirun "
 if [ $# -ne 1 ] ; then
 echo "Number of arguments has to be one for this script to work"
 echo "Please supply what test should be run"
@@ -67,13 +70,13 @@ RUNCOMD="\$qbinary dc\${step}.inp > dc\${step}.log"
 QBIN=qdyn5
 fi
 if [ "$2" == "parallel" ] ; then
-RUNCOME="$MPICOM -np \$CORES \$qbinary eq\${step}.inp > eq\${step}.log"
-RUNCOMD="$MPICOM -np \$CORES \$qbinary dc\${step}.inp > dc\${step}.log"
+RUNCOME="$MPICOM -np $CORES \$qbinary eq\${step}.inp > eq\${step}.log"
+RUNCOMD="$MPICOM -np $CORES \$qbinary dc\${step}.inp > dc\${step}.log"
 QBIN=qdyn5p
 fi
 if [ "$2" == "hybrid" ] ; then
-RUNCOME="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary eq\${step}.inp > eq\${step}.log : -np \$(( \$CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
-RUNCOMD="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary dc\${step}.inp > dc\${step}.log : -np \$(( \$CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
+RUNCOME="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary eq\${step}.inp > eq\${step}.log : -np \$(( $CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
+RUNCOMD="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary dc\${step}.inp > dc\${step}.log : -np \$(( $CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
 QBIN=qdyn5h
 fi
 
@@ -284,22 +287,22 @@ STPOT[\$ave]=0
 done
 
 for ((run=1;run<=$BENCHMARKS;run++)) ; do
-TARRAYQEL=( \`grep \"Q-surr.*1 1.0000\" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\".*Q-surr. 1 1.0000\"//g | awk '{print \$1}'\` )
-TARRAYQLJ=( \`grep \"Q-surr.*1 1.0000\" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\".*Q-surr. 1 1.0000\"//g | awk '{print \$2}'\` )
-TARRAYEL1=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$1}'\`)
-TARRAYEL2=( \`grep \"^solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solvent\"//g | awk '{print \$1}'\`)
-TARRAYEL3=( \`grep \"^solute-solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute-solvent\"//g | awk '{print \$1}'\`)
-TARRAYLJ1=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$2}'\`)
-TARRAYLJ2=( \`grep \"^solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solvent\"//g | awk '{print \$2}'\`)
-TARRAYLJ3=( \`grep \"^solute-solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute-solvent\"//g | awk '{print \$2}'\`)
-TARRAYQBND=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"Q-atom\"//g | awk '{print \$3}'\`)
-TARRAYQANG=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"Q-atom\"//g | awk '{print \$4}'\`)
-TARRAYQTOR=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"Q-atom\"//g | awk '{print \$5}'\`)
-TARRAYQIMP=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"Q-atom\"//g | awk '{print \$6}'\`)
-TARRAYBND=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$3}'\`)
-TARRAYANG=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$4}'\`)
-TARRAYTOR=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$5}'\`)
-TARRAYIMP=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | sed s/\"solute\"//g | awk '{print \$6}'\`)
+TARRAYQEL=( \`grep \"Q-surr.*1 1.0000\" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$4}'\` )
+TARRAYQLJ=( \`grep \"Q-surr.*1 1.0000\" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$5}'\` )
+TARRAYEL1=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log  | awk '{print \$2}'\`)
+TARRAYEL2=( \`grep \"^solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$2}'\`)
+TARRAYEL3=( \`grep \"^solute-solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$2}'\`)
+TARRAYLJ1=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log  | awk '{print \$3}'\`)
+TARRAYLJ2=( \`grep \"^solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$3}'\`)
+TARRAYLJ3=( \`grep \"^solute-solvent \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$3}'\`)
+TARRAYQBND=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$4}'\`)
+TARRAYQANG=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$5}'\`)
+TARRAYQTOR=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$6}'\`)
+TARRAYQIMP=( \`grep \"^Q-atom \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$7}'\`)
+TARRAYBND=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$4}'\`)
+TARRAYANG=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$5}'\`)
+TARRAYTOR=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$6}'\`)
+TARRAYIMP=( \`grep \"^solute \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log | awk '{print \$7}'\`)
 TARRAYTOT=( \`grep \"^SUM \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log  | awk '{print \$2}'\`)
 TARRAYKIN=( \`grep \"^SUM \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log  | awk '{print \$4}'\`)
 TARRAYPOT=( \`grep \"^SUM \" \${run}_benchmark/eq*log \${run}_benchmark/dc*log  | awk '{print \$3}'\`)
@@ -318,7 +321,7 @@ EARRAYBND[\$run,\$ave]=\${TARRAYBND[\$ave]}
 EARRAYANG[\$run,\$ave]=\${TARRAYANG[\$ave]}
 EARRAYTOR[\$run,\$ave]=\${TARRAYTOR[\$ave]}
 EARRAYIMP[\$run,\$ave]=\${TARRAYIMP[\$ave]}
-EARRAYTOT[\$run,\$ave]=\${TARRAYTOR[\$ave]}
+EARRAYTOT[\$run,\$ave]=\${TARRAYTOT[\$ave]}
 EARRAYKIN[\$run,\$ave]=\${TARRAYKIN[\$ave]}
 EARRAYPOT[\$run,\$ave]=\${TARRAYPOT[\$ave]}
 done
@@ -381,7 +384,7 @@ STQLJ[\$ave]=\$( echo \"scale=5;sqrt( (\${STQLJ[\$ave]} / $BENCHMARKS) - ( \${AV
 STEL[\$ave]=\$( echo \"scale=5;sqrt( (\${STEL[\$ave]} / $BENCHMARKS) - ( \${AVEL[\$ave]} * \${AVEL[\$ave]} ))\" | bc -q)
 STLJ[\$ave]=\$( echo \"scale=5;sqrt( (\${STLJ[\$ave]} / $BENCHMARKS) - ( \${AVLJ[\$ave]} * \${AVLJ[\$ave]} ))\" | bc -q)
 STQBND[\$ave]=\$( echo \"scale=5;sqrt( (\${STQBND[\$ave]} / $BENCHMARKS) - ( \${AVQBND[\$ave]} * \${AVQBND[\$ave]} ))\" | bc -q)
-STGANG[\$ave]=\$( echo \"scale=5;sqrt( (\${STQANG[\$ave]} / $BENCHMARKS) - ( \${AVQANG[\$ave]} * \${AVQANG[\$ave]} ))\" | bc -q)
+STQANG[\$ave]=\$( echo \"scale=5;sqrt( (\${STQANG[\$ave]} / $BENCHMARKS) - ( \${AVQANG[\$ave]} * \${AVQANG[\$ave]} ))\" | bc -q)
 STQTOR[\$ave]=\$( echo \"scale=5;sqrt( (\${STQTOR[\$ave]} / $BENCHMARKS) - ( \${AVQTOR[\$ave]} * \${AVQTOR[\$ave]} ))\" | bc -q)
 STQIMP[\$ave]=\$( echo \"scale=5;sqrt( (\${STQIMP[\$ave]} / $BENCHMARKS) - ( \${AVQIMP[\$ave]} * \${AVQIMP[\$ave]} ))\" | bc -q)
 STBND[\$ave]=\$( echo \"scale=5;sqrt( (\${STBND[\$ave]} / $BENCHMARKS) - ( \${AVBND[\$ave]} * \${AVBND[\$ave]} ))\" | bc -q)
@@ -413,8 +416,8 @@ UPPERBND[\$ave]=\$( echo \"scale=3;\${AVBND[\$ave]} + \${STBND[\$ave]}\" | bc -q
 LOWERBND[\$ave]=\$( echo \"scale=3;\${AVBND[\$ave]} - \${STBND[\$ave]}\" | bc -q)
 UPPERANG[\$ave]=\$( echo \"scale=3;\${AVANG[\$ave]} + \${STANG[\$ave]}\" | bc -q)
 LOWERANG[\$ave]=\$( echo \"scale=3;\${AVANG[\$ave]} - \${STANG[\$ave]}\" | bc -q)
-UPPERTOR[\$ave]=\$( echo \"scale=3;\${AVTOR[\$ave]} + \${STTOT[\$ave]}\" | bc -q)
-LOWERTOR[\$ave]=\$( echo \"scale=3;\${AVTOR[\$ave]} - \${STTOT[\$ave]}\" | bc -q)
+UPPERTOR[\$ave]=\$( echo \"scale=3;\${AVTOR[\$ave]} + \${STTOR[\$ave]}\" | bc -q)
+LOWERTOR[\$ave]=\$( echo \"scale=3;\${AVTOR[\$ave]} - \${STTOR[\$ave]}\" | bc -q)
 UPPERIMP[\$ave]=\$( echo \"scale=3;\${AVIMP[\$ave]} + \${STIMP[\$ave]}\" | bc -q)
 LOWERIMP[\$ave]=\$( echo \"scale=3;\${AVIMP[\$ave]} - \${STIMP[\$ave]}\" | bc -q)
 UPPERTOT[\$ave]=\$( echo \"scale=3;\${AVTOT[\$ave]} + \${STTOT[\$ave]}\" | bc -q)
