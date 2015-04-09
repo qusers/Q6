@@ -4979,6 +4979,11 @@ if (ierr .ne. 0) call die('MD Bcast x')
 
 						end if
 
+                        ! test for NaN
+                        if (Temp.ne.Temp) then 
+                            call die('a detected NaN.')
+                        end if
+
                 end if
 
 
