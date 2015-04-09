@@ -37,8 +37,8 @@ program Qdyn5
   ! nothing
 #else
   integer(4), parameter			:: SIGINT  = 2 ! CTRL-C signal
-  integer(4), parameter			:: SIGKILL = 9 ! kill/CTRL-BREAK signal
   integer(4), parameter			:: SIGABRT = 6 ! kill/CTRL-BREAK signal
+  integer(4), parameter			:: SIGKILL = 9 ! kill/CTRL-BREAK signal
 #endif
   external sigint_handler
   external sigkill_handler
@@ -59,6 +59,20 @@ program Qdyn5
   sigret = qsignal(SIGINT, sigint_handler, -1_4)
   sigret = qsignal(SIGKILL, sigkill_handler, -1_4)
   sigret = qsignal(SIGABRT, sigabrt_handler, -1_4)
+#if defined(__INTEL_COMPILER) || defined(__PGI)
+      call signal(SIGINT, sigint_handler , -1)
+      call signal(SIGABRT,sigkill_handler, -1)
+      call signal(SIGKILL,sigabrt_handler, -1)
+#elif defined(__GFORTRAN__) || defined(__PATHSCALE__)
+      call signal(SIGINT, sigint_handler )
+      call signal(SIGABRT,sigkill_handler)
+      call signal(SIGKILL,sigabrt_handler)
+#else
+#error "This code is inteded for use with Intel, PGI, GNU and PATHSCALE compiler. Please add a signalhandler for your compiler."
+#endif
+
+
+
 
   ! initialise static data, display banner etc
   call startup
