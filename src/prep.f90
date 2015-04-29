@@ -50,7 +50,6 @@ MODULE PREP
 	!Random numbers for H generation
 	integer, target				::	random_seed_solute = 179857
 	integer, target				::	random_seed_solvent = 758971
-
 !variables
 !     Library information
 !-----------------------------------------------------------------------
@@ -2756,6 +2755,11 @@ subroutine readlib(file)
 		enddo
 		write(*, 4, advance='no') qtot
 
+! if this is a solvent molecule, set solv_atoms variable
+                if(lib(nlibres)%solvent) then
+                        solv_atom = lib(nlibres)%nat
+                end if
+
 ! ---	   Read bond list
 		lib(nlibres)%nbnd = prm_count('bonds')
 		allocate(bnd(lib(nlibres)%nbnd), stat=alloc_status)
@@ -3973,7 +3977,7 @@ subroutine readpdb()
 						stop 'Abnormal termination of Qprep'
 					end if
 				end if
-!Check if er have previously set a solvent molecule and are now setting
+!Check if we have previously set a solvent molecule and are now setting
 !again a solute molecule
 !If yes, abort topology generation to avoid mixing of solvent and solute descriptors
 				oldnum2 = oldnum
@@ -3986,35 +3990,7 @@ subroutine readpdb()
 				!have no tail or head connections, respectively.
 				!Do this unless this is the first residue
 				!Don't do it if previous line was gap (already done)
-!				if(nres > 1) then
-!					if(last_line_was_gap .or. &
-!						lib(res(nres-1)%irc)%tail == 0 .or. &
-!						lib(res(nres)%irc)%head == 0 ) then 
-!						nmol = nmol + 1
-!						istart_mol(nmol) = nat_pro + 1
-!						if(first_res_of_mol /= oldnum) then
-!							write(*,21) res(nres-1)%name, oldnum
-!						else
-!							write(*,*)
-!						end if
-!					end if
-!				end if
-!				last_line_was_gap = .false.
-!				!if new molecule write output
-!				if(nat_pro + 1 == istart_mol(nmol)) then
-!					write(*,20,advance='no') nmol, resnam_tmp, resnum_tmp
-!					first_res_of_mol = resnum_tmp
-!				end if
-!				nat_pro = nat_pro + lib(res(nres)%irc )%nat
-!				!set nat_solute = nat_pro unless residue is water
-!				if(index(solvent_names, trim(resnam_tmp)) == 0) then
-!					nat_solute = nat_pro
-!					nres_solute = nres
-!				end if
-!
-!				oldnum = resnum_tmp
 
-!			endif !new residue
 
 			at_found = .false.
 			do i = 1, lib(res(nres)%irc )%nat
@@ -4077,7 +4053,7 @@ subroutine readpdb()
 		enddo
 	end if
 
-	nwat = (nat_pro - nat_solute) / 3
+	nwat = (nat_pro - nat_solute) / solv_atom
 	write(*,110) nmol,nres, nres_solute, nat_pro, nat_solute
 110	format(/,'Successfully read PDB file with', i5,' molecules,',/,&
 		i5,' residues totally (',i5,' in solute).',/,&
@@ -4197,7 +4173,7 @@ subroutine readtop
 
 	coord_source = 'topology'
 	auto_name = filnam !for automatic naming of pdb and mol2 files
-	nwat = (nat_pro - nat_solute) / 3
+	nwat = (nat_pro - nat_solute) / solv_atom
 	!reset makeH - don't need to make any hydrogens
 	deallocate(makeH, stat=alloc_status)
 	allocate(makeH(nat_pro))
@@ -4566,42 +4542,56 @@ end function set_irc_solvent
 
 subroutine set_solvent_type
 	!set solvent type (SPC-like, TIP3P-like or general)
-
+	!also set the number of atoms per solvent molecule
+	!has to be done here to prevent the program from crashing 
+	!if it was not set before, better save than sorry
 	!locals
 	integer						::	irc_solvent
-	integer						::	i, iac_H1, iac_H2
-	logical						::	dummy
+	integer						::	i
+	integer,allocatable				::	iac_H(:)
+	logical						::	dummy, fail = .false.
 
 	solvent_type = SOLVENT_GENERAL
 
 	!any solvent at all?
 	if(nwat == 0) return
+	
 	!look up residue code of 1st solvent molecule
 	irc_solvent = res(nres_solute + 1)%irc
-	!is it a 3-atom molecule?
-	if(lib(irc_solvent)%nat /= 3) return
+	!get number of atoms in each solvent molecule
+        solv_atom = lib(irc_solvent)%nat
+
 	!check if all solvent molecules are of same type
 	do i=nres_solute + 2, nres
 		if(res(i)%irc /= irc_solvent) return
 	end do
 
-	!now we know all solvent molecules are the same type of 3-atomic molecules
-	solvent_type = SOLVENT_3ATOM
+	!now we know all solvent molecules are the same type of n-atomic molecules
+	solvent_type = SOLVENT_ALLATOM
 
 	!further checks for SPC water, for which special optimisations can be used
 	!check if atoms 2 and 3 are hydrogens
-	if(lib(irc_solvent)%atnam(2)(1:1) /= 'H' .or.  &
-		lib(irc_solvent)%atnam(3)(1:1) /= 'H') return
-	!check hydrogen atom types
-	dummy = index_get(lib(irc_solvent)%tac_lib(2), iac_H1)
-	!check that both hydrogens are same type
-	dummy = index_get(lib(irc_solvent)%tac_lib(3), iac_H2)
-	if(iac_H1 /= iac_H2) return
-	!check if zero LJ params on H
-	if(all(iaclib(iac_H1)%avdw(:) == 0.) .and. &
-		all(iaclib(iac_H1)%bvdw(:) == 0.)) then
-		solvent_type = SOLVENT_SPC
+iloop:	do i = 2,solv_atom
+	if(lib(irc_solvent)%atnam(i)(1:1) /= 'H') then
+	fail = .true.
 	end if
+	end do iloop
+	if (fail) return
+	allocate(iac_H(solv_atom-1))
+
+	do i = 2,solv_atom
+	dummy = index_get(lib(irc_solvent)%tac_lib(i), iac_H(i-1))
+	end do
+	do i = 2,solv_atom-1
+	if ((iac_H(i-1) /= iac_H(i)).or.(iaclib(iac_H(i))%avdw(1) .ne. 0.0_prec) .or. (iaclib(iac_H(i))%bvdw(1) .ne. 0.0_prec)) then
+		fail = .true.
+	end if
+	if (fail) then
+		deallocate(iac_H)
+		return
+	end if
+	end do
+		solvent_type = SOLVENT_SPC
 end subroutine set_solvent_type
 
 !-----------------------------------------------------------------------
@@ -5576,22 +5566,22 @@ subroutine solvate_restart
 10		format('>>>>> ERROR: No. of atoms in restart file not greater than in topology.')
 		close(u)
 		return
-	elseif(mod(natom-nat_pro,3) /= 0) then
-		write(*,20) natom
-20		format('>>>>> ERROR:',i6,' new atoms in restart file is not a multiple of 3.')
+	elseif(mod(natom-nat_pro,solv_atom) /= 0) then
+		write(*,20) natom,solv_atom
+20		format('>>>>> ERROR:',i6,' new atoms in restart file is not a multiple of',i6,'.')
 		close(u)
 		return
 	end if
 
 
-	waters_added = (natom-nat_pro)/3
-	call grow_arrays_for_solvent(waters_added, 3)
+	waters_added = (natom-nat_pro)/solv_atom
+	call grow_arrays_for_solvent(waters_added, solv_atom)
 	allocate(xtmp(nat3))
 	backspace(u)
 	read(u) nat3, xtmp(1:nat3)
 	close(u)
-	allocate(xw(3,3,waters_added), keep(waters_added))
-	xw(:,:,:) = reshape(xtmp(3*nat_pro+1:nat3),(/3,3,waters_added/))
+	allocate(xw(3,solv_atom,waters_added), keep(waters_added))
+	xw(:,:,:) = reshape(xtmp(3*nat_pro+1:nat3),(/3,solv_atom,waters_added/))
 	keep(:) = .true.
 
 	!allow very tight packing of waters to solute - this is a restart file!

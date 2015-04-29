@@ -222,12 +222,15 @@ end function trj_write
 logical function trj_read(x)
 !arguments
 	real(kind=prec) 					::	x(:)
-	!read x record to temp variable xmasked
-	read(lun, err=900, end=900) xmasked(1:ncoords:3)
-	!read y record
-	read(lun, err=900, end=900) xmasked(2:ncoords:3)
-	!read z record
-	read(lun, err=900, end=900) xmasked(3:ncoords:3)
+        real(4)                                                 :: xloc(ncoords)
+!       need to read first into xloc to get the right precision
+        read(lun, err=900, end=900) xloc(1:ncoords:3)
+        read(lun, err=900, end=900) xloc(2:ncoords:3)
+        read(lun, err=900, end=900) xloc(3:ncoords:3)
+        !now copy the coords to the second mask xmasked that has precision
+        !kind=prec
+        !copy records
+        xmasked(1:ncoords)=xloc(1:ncoords)
 
 
 	!assign masked coordinates to right atom in topology

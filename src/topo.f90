@@ -94,8 +94,16 @@ character(len=256)			::	prm_file
 	integer(TINY), allocatable	::	iac(:)			! integer atom codes
 	logical, allocatable				::	heavy(:)		! boolean flag, true if atom >= He
 	real(kind=prec), allocatable						::	crg(:)			! charges
+	real(kind=prec), allocatable						::	chg_solv(:)		! solvent charges
+	real(kind=prec), allocatable						::	aLJ_solv(:,:),bLJ_solv(:,:)	! solvent LJ types
+        integer :: solv_atom
+! number of atoms/solvent molecule
 	integer(AI), allocatable		::	cgpatom(:)		! charge groups
-	integer, parameter					::	SOLVENT_SPC=0, SOLVENT_3ATOM=1, SOLVENT_GENERAL=2
+	ENUM, bind(c)
+        	ENUMERATOR      :: SOLVENT_SPC, SOLVENT_ALLATOM, SOLVENT_GENERAL 
+	END ENUM
+
+!	integer, parameter					::	SOLVENT_SPC=0, SOLVENT_3ATOM=1, SOLVENT_GENERAL=2
 	integer											::	solvent_type
 	integer,allocatable					::	glb_cofactor(:)	! 0 = protein or ligand atom, 1,2,3...= cofactor 1, 2, 3...
 
@@ -578,16 +586,21 @@ logical function topo_read(u, require_version, extrabonds)
 	read (u, '(a)', err=1000) line
 	read (line,*,err=1000) nat_pro !first read what must be there
 
-	read (line,*,iostat=filestat) nat_pro, nat_solute !then try to read optional things too
+	read (line,*,iostat=filestat) nat_pro, nat_solute, solv_atom !then try to read optional things too
+	if (filestat .ne. 0) then
+! maybe just does not have solv atom, try without first
+          read (line,*,iostat=filestat) nat_pro, nat_solute
 	if (filestat .ne. 0) then
 	  nat_solute = nat_pro !default is nat_solute = nat_pro
+          end if
+          solv_atom  = 3        !default for solv atom to keep rest from crashing
 	end if
 
 	write (*,20) nat_solute, nat_pro-nat_solute
 20	format ('No. of solute atoms     = ',i10,/,&
 			'No. of solvent atoms    = ',i10)
 	max_atom = nat_pro
-	nwat = (max_atom - nat_solute) / 3
+	nwat = (max_atom - nat_solute) / solv_atom
 
 	call topo_allocate_atom
 
@@ -1071,11 +1084,13 @@ subroutine topo_save(name)
 	write(*, 20) nat_solute
 	write(*, 10, advance='no') 'solvent atoms'
 	write(*, 20) nat_pro-nat_solute
+        write(*, 10, advance='no') 'solvent mol atoms'
+        write(*, 20) solv_atom
 
 ! --- NAT_PRO / COORDINATES
 	write(*, 10, advance='no') 'co-ordinates'
-	write(u, '(2i8,a)') nat_pro, nat_solute, &
-		' = Total no. of atoms, no. of solute atoms. Coordinates: (2*3 per line)'
+	write(u, '(3i8,a)') nat_pro, nat_solute, solv_atom, &
+		' = Total no. of atoms, no. of solute atoms, atoms per solvent molecule. Coordinates: (2*3 per line)'
 	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop(si), si = 1,3*nat_pro )
 	write(*, 20) 3*nat_pro
 

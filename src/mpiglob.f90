@@ -16,13 +16,15 @@ use NRGY
 
 
     type NODE_ASSIGNMENT_TYPE
-            type(PAIR_ASSIGNMENT_TYPE) :: pp, pw, ww, qp, qw
+            type(PAIR_ASSIGNMENT_TYPE) :: pp, pw, ww, qp, qw, shake, &
+                                          natom, nat_solute, nat_solvent, &
+                                          nmol, ncgp
     end type NODE_ASSIGNMENT_TYPE
 
  !Gathering
   type MPI_NB_ENERGIES
      sequence
-     real(kind=wp8)       :: lrf
+     real(kind=prec)       :: lrf
      type(NB_ENERGIES)    :: pp,pw,ww
   end type MPI_NB_ENERGIES
 
@@ -62,6 +64,10 @@ use NRGY
  integer,allocatable  :: nbqp_per_cgp(:)
  integer,allocatable  :: nbqw_per_cgp(:)
 
+ ! stuff for mpi type create
+ integer                :: mpitype_batch_lrf,mpi_lrf_add,mpi_lrf_cgp_rep
+ integer                :: mpitype_batch_wshell, mpi_watpol_add
+ integer                :: mpi_coord_replace
 #ifdef _OPENMP
  !for omp use
  integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter

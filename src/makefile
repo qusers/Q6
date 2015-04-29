@@ -31,7 +31,7 @@ ifeq ($(COMP),ifort)
 	MPIFLAGS=	-f90=${FC} -Nmpi
 	OMPI_FC=	${FC}
 	MPI_FC=		${FC}
-	MPI_FCFLAGS=	${FFLAGS}
+	MPI_FCFLAGS=	${FFLAGS} ${FC_OPT}
 	MPI=		${MPI_FCFLAGS}
 	MPFLAG=		-openmp ${MPI}
 
@@ -54,7 +54,7 @@ else ifeq ($(COMP),osx)
 
 	MPIFC=          mpif90
 	OMPI_FC=        ${FC}
-	OMPI_FCFLAGS=   ${FFLAGS}
+	OMPI_FCFLAGS=   ${FFLAGS} ${FC_OPT}
 	MPI=		${OMPI_FCFLAGS}
 
 	DEBUG=          -debug  -g ${FFLAGS}
@@ -72,7 +72,7 @@ else ifeq ($(COMP),pgi)
 
 	MPIFC=		mpif90
 	MPIFLAGS=	-lmpi#-f90=${FC}
-	MPI=		${MPIFLAGS} ${FFLAGS}
+	MPI=		${MPIFLAGS} ${FFLAGS} ${FC_OPT}
 	MPI_FC=		${FC}
 	MPFLAG=		-mp ${MPI}
 
@@ -96,7 +96,7 @@ else ifeq ($(COMP),gcc)
 	OMPI_FC=	${FC}
 	OMPI_FCFLAGS=	-fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
-	MPI=		${OMPI_FCFLAGS}
+	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
 	MPFLAG=		-fopenmp ${MPI}
 
 	FFLAGS=		--static ${OMPI_FCFLAGS}
