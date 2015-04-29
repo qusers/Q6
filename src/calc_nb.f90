@@ -34,6 +34,7 @@ module CALC_NB
 	type(NB_LIST_TYPE), private, allocatable::  nb_listan(:)
 	type(NB_LIST_TYPE), private, allocatable::  nb_list_res(:)
 	type(NBQ_LIST_TYPE), private, allocatable:: nbq_list_res(:)
+        type(NBQ_LIST_TYPE), private, allocatable:: nbq_listan(:)
 	type AVERAGES
 		real(8)							:: lj, el
 	end type AVERAGES
@@ -43,7 +44,8 @@ module CALC_NB
 	integer								::  total_qp_frames = 0 
 
 	type NB_QP_TYPE
-	integer								:: p_first, p_last,q_first, q_last
+	integer								:: p_first, p_last
+        character(800)                                                  :: atomlist
 	end type NB_QP_TYPE
 	type(NB_QP_TYPE), private					:: qp_calc
 contains
@@ -51,7 +53,7 @@ contains
 !*******************************************************************
 
 subroutine nb_initialize
-	allocate(nb_listan(MAX_LISTS), total_frames(MAX_LISTS), aves(MAX_LISTS))
+	allocate(nb_listan(MAX_LISTS),nbq_listan(MAX_LISTS),total_frames(MAX_LISTS), aves(MAX_LISTS))
 	aves(:)%lj = 0
 	aves(:)%el = 0
 	total_frames(:) = 0
@@ -78,6 +80,9 @@ integer function nb_add(desc)
 	character(*)				::	desc
 	integer						::	ats1
 	integer						::	ats2
+        character(len=200)                      :: line
+        character*80                            :: lambda !name of fep_file if loaded
+        integer                                 :: str_start, str_end, totlen
 	if(Nlists == MAX_LISTS) then
 		write(*,10) MAX_LISTS/2
 		nb_add = 0
@@ -125,15 +130,82 @@ integer function nb_add(desc)
 	write(*, 16) masks(2)%included
 16	format('Second mask contains ',i6,' atoms')
 
+!changed Paul Bauer to allow FEP file loading
+	if(.not.use_fep) then
+	write(*,*) 'Enter the name of a FEP file if wanted, or terminate with a .'
+	call getlin(fep_file,'')
+	if ((fep_file.eq.'.').or.(fep_file.eq.'')) then
+		write(*,*) 'No FEP file loaded'
+		use_fep = .false.
+	else
+	        if(.not. prm_open(fep_file)) then
+                write(*,'(a,a)') '>>>>> ERROR: Could not open fep file ',trim(fep_file)
+                stop
+	        end if
+		use_fep = .true.
+		call get_fep
+	end if
+!changed Paul Bauer to allow FEP file loading
+	if (use_fep) then
+!added line for lambda reading, will check with FEP file number of states
+!to read the maximum number of states for this kind of FEP calculation
+!code from md.f90 file initialisation
+	write(*,*)'Give a value for the reaction coordinate (lambda values)'
+	call getlin(lambda,'')
+!        write(*,*) lambda	
+        str_start = 1
+        totlen = len_trim(lambda)
+        do while(str_start < totlen)
+                str_end = string_part(lambda, ' ', str_start)
+		states=states+1
+                lamda(states)=strtod(lambda(str_start:str_end))
+                str_start = str_end + 2
+        end do
+!	write(*,*)(lamda(str_start),str_start=1,states)
+	if (states.ne.nstates) then
+		write(*,*)'Number of lambda values not equal to states in FEP file'
+		write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
+		stop 666
+	end if
+	do states = 1, nstates
+		totlambda = totlambda + lamda(states)
+	end do
+	if(( 1-totlambda).gt.eps)  then
+		write(*,*) 'Lambda values do not add up to one, aborting'
+		write(*,*) 'Total value is ',totlambda
+		stop 666
+	end if
+
+	end if
+	end if
+
 
 	Nlists = Nlists + 1
+        if (.not.use_fep) then
 	allocate(nb_listan(Nlists)%atom1(ats1*ats2))
 	allocate(nb_listan(Nlists)%atom2(ats1*ats2))
 	allocate(nb_listan(Nlists)%AA(ats1*ats2))
 	allocate(nb_listan(Nlists)%BB(ats1*ats2))
 	allocate(nb_listan(Nlists)%qq(ats1*ats2))
+        nb_listan(Nlists)%atom1(:)=0
+        nb_listan(Nlists)%atom2(:)=0
+        nb_listan(Nlists)%AA(:)=0
+        nb_listan(Nlists)%BB(:)=0
+        nb_listan(Nlists)%qq(:)=0
+        else
+        allocate(nbq_listan(Nlists)%atom1(ats1*ats2))
+        allocate(nbq_listan(Nlists)%atom2(ats1*ats2))
+        allocate(nbq_listan(Nlists)%AA(max_states,ats1*ats2))
+        allocate(nbq_listan(Nlists)%BB(max_states,ats1*ats2))
+        allocate(nbq_listan(Nlists)%qq(max_states,ats1*ats2))
+        nbq_listan(Nlists)%atom1(:)=0
+        nbq_listan(Nlists)%atom2(:)=0
+        nbq_listan(Nlists)%AA(:,:)=0
+        nbq_listan(Nlists)%BB(:,:)=0
+        nbq_listan(Nlists)%qq(:,:)=0
+        end if
 
-	call nb_make_list(masks(1), masks(2),nb_listan(Nlists),nbq_list_res(Nlists))
+	call nb_make_list(masks(1), masks(2),nb_listan(Nlists),nbq_listan(Nlists))
 
 	nb_add = Nlists
 	write(desc, 20) nb_listan(Nlists)%number_of_NB
@@ -149,7 +221,7 @@ subroutine nb_calc(i)
 integer :: i
 real(8) :: NB_Vlj, NB_Vel
 
-	call nb_calc_lists(NB_Vlj, NB_Vel, nb_listan(i),nbq_list_res(i))
+	call nb_calc_lists(NB_Vlj, NB_Vel, nb_listan(i),nbq_listan(i))
  	write(*,99, advance='no') NB_Vlj
  	write(*,100, advance='no') NB_Vel
 99  format(f9.2)
@@ -797,6 +869,12 @@ integer function nb_qp_add(desc)
 		call mask_finalize(masks(2))
 		return
 	end if
+        qp_calc%atomlist=''
+        do ires = 1,nat_pro
+                if(masks(2)%MASK(ires)) then
+                        write(qp_calc%atomlist,'(a,i4,a)') trim(qp_calc%atomlist),ires,','
+                end if
+        end do
 
 	write(*, 13) masks(2)%included
 13	format('Q-atom mask contains ',i6,' atoms')
@@ -866,9 +944,9 @@ end subroutine nb_qp_calc
 subroutine nb_qp_finalize()
 integer :: ires 
 !Print header
-	write(*,701) qp_calc%q_first, qp_calc%q_last
+	write(*,701) trim(qp_calc%atomlist)
 	write(*,702) 'Residue','Average LJ','Average el'
-701	format('Average nonbonded interaction between residues', i4, ' to ',i4,' and other residues:')
+701	format('Average nonbonded interaction between qatoms ', a, ' and other residues:')
 702	format(a15,a15,a15)
 
 
