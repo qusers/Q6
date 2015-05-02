@@ -305,6 +305,26 @@ type NBQ_TYPE
         real(kind=prec)                 ::  el_scale !scale factor for electostatic interactions in qq-pairs
 end type NBQ_TYPE
 
+#ifdef USE_GRID
+! added support for grid partitioning of md system
+! each grid is the size of NB-Cutoff for the interaction
+! with the last grid having no atoms (PBC) or the sphere atoms (SPH)
+! grids are build like this
+! 1 n+1 2n+1 . n*m+1
+! 2 n+2 2n+2 . n*m+2
+! 3 n+3 2n+3 . n*m+3
+! . .   .    . .
+! n 2n  3n   . n*(m+1)
+! Paul Bauer 2015
+
+type NB_GRID_POS_TYPE
+!        integer(AI) 			:: groups         ! number of groups in the current grid
+!        integer(AI),allocatable		:: group(:)       ! array of crg group ids
+        real(kind=prec)			:: x,y,z           ! grid starting coordinates
+        real(kind=prec)			:: xend,yend,zend  ! grid end coordinates
+!        logical,allocatable		:: interact(:,:,:) ! interaction matrix
+end type NB_GRID_POS_TYPE
+#endif
 integer						::	nbpp_pair !current no solute-solute pairs
 type(NB_TYPE), allocatable, target::nbpp(:)
 
@@ -329,7 +349,32 @@ type(NBQP_TYPE), allocatable, target::old_nbqp(:)
 integer						::	nbqw_pair !current no of q-atom-water mol. pairs
 type(NBQP_TYPE), allocatable	::	nbqw(:)
 
+#ifdef USE_GRID
+! new structures for grid 
+! Paul Bauer 2015
+type(NB_GRID_POS_TYPE),allocatable, target::grid_pp(:)
+type(NB_GRID_POS_TYPE),allocatable, target::grid_pw(:)
+type(NB_GRID_POS_TYPE),allocatable, target::grid_ww(:)
 
+! new variables for number of grids
+integer					::pp_gridnum,pw_gridnum,ww_gridnum
+integer					::pp_ndim,pw_ndim,ww_ndim
+integer,allocatable			:: ww_igrid(:)
+integer,allocatable                     :: pw_igrid(:)
+integer,allocatable                     :: pp_igrid(:)
+integer,allocatable                     ::grid_pp_ngrp(:)
+integer,allocatable                     ::grid_pw_ngrp(:)
+integer,allocatable                     ::grid_ww_ngrp(:)
+integer,allocatable                     ::grid_pp_grp(:,:)
+integer,allocatable                     ::grid_pw_grp(:,:)
+integer,allocatable                     ::grid_ww_grp(:,:)
+
+logical,allocatable                     ::grid_pp_int(:,:,:,:)
+logical,allocatable                     ::grid_pw_int(:,:,:,:)
+logical,allocatable                     ::grid_ww_int(:,:,:,:)
+
+integer                                 :: gridstor_pp,gridstor_pw,gridstor_ww
+#endif
 !these three used only under periodic conditions
 integer						:: nbpp_cgp_pair !number of solute-solute chargegroups interacting
 type(CGP_PAIR_TYPE), allocatable:: nbpp_cgp(:)
@@ -520,6 +565,41 @@ end subroutine die
 !----------------------------------------------------------------------
 
 ! --- Memory management routines
+#ifdef USE_GRID
+subroutine allocate_grid_pp
+allocate(grid_pp(pp_gridnum),stat=alloc_status)
+call check_alloc('md atom grid pp')
+allocate(grid_pp_ngrp(pp_gridnum),stat=alloc_status)
+call check_alloc('md atom grid pp ngroups')
+allocate(grid_pp_grp(pp_gridnum,gridstor_pp),stat=alloc_status)
+call check_alloc('md atom grid pp groups')
+allocate(grid_pp_int(pp_gridnum,pp_ndim,pp_ndim,pp_ndim),stat=alloc_status)
+call check_alloc('md atom grid pp interaction matrix')
+end subroutine allocate_grid_pp
+
+
+subroutine allocate_grid_pw
+allocate(grid_pw(pw_gridnum),stat=alloc_status)
+call check_alloc('md atom grid pw')
+allocate(grid_pw_ngrp(pw_gridnum),stat=alloc_status)
+call check_alloc('md atom grid pw ngroups')
+allocate(grid_pw_grp(pw_gridnum,gridstor_pw),stat=alloc_status)
+call check_alloc('md atom grid pw groups')
+allocate(grid_pw_int(pw_gridnum,pw_ndim,pw_ndim,pw_ndim),stat=alloc_status)
+call check_alloc('md atom grid pw interaction matrix')
+end subroutine allocate_grid_pw
+
+subroutine allocate_grid_ww
+allocate(grid_ww(ww_gridnum),stat=alloc_status)
+call check_alloc('md atom grid ww')
+allocate(grid_ww_ngrp(ww_gridnum),stat=alloc_status)
+call check_alloc('md atom grid ww ngroups')
+allocate(grid_ww_grp(ww_gridnum,gridstor_ww),stat=alloc_status)
+call check_alloc('md atom grid ww groups')
+allocate(grid_ww_int(ww_gridnum,ww_ndim,ww_ndim,ww_ndim),stat=alloc_status)
+call check_alloc('md atom grid ww interaction matrix')
+end subroutine allocate_grid_ww
+#endif
 
 subroutine allocate_natom_arrays
 
@@ -1275,6 +1355,852 @@ bond = bond + mp_real_tmp
 
 end function bond
 !-----------------------------------------------------------------------
+#ifdef USE_GRID
+subroutine create_grid_pp
+! *** local variables
+integer						:: i,j,k,ndim,num
+integer						:: i3
+real(kind=prec)					:: xtmp,ytmp,ztmp
+real(kind=prec)					:: xmax,ymax,zmax
+real(kind=prec)					:: xmin,ymin,zmin
+!have 1.75 times the cutoff length to account for large charge groups in solute residues
+real(kind=prec)					:: gridRc
+integer						:: li,lj,lk,ui,uj,uk
+
+gridRc = 1.75_prec * Rcpp
+
+if(use_PBC) then
+! when using period boundary conditions, the grids are generated accoring to the box centre and the desired  system size
+! this depends on the volume, so we need to be careful with the coordinates to not miss any atom
+! so the coordinate information needs to be checked/reset in populate grids
+! Paul Bauer 2015
+
+! one problem could be the large movement of molecules if they are not put back in the box
+! this needs to be checked for, too
+! also, the coordinates of each grid need to be corrected after a box movement
+
+! number of one dimensional spacings cubed
+pp_gridnum=int(ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)**3)
+ndim=ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)
+pp_ndim=ndim
+if (ncgp_solute .gt. 500) then
+gridstor_pp = (ncgp_solute*8/pp_gridnum)+100
+else
+gridstor_pp = ncgp_solute
+endif
+call allocate_grid_pp
+
+! set starting coordinates for first grid
+xtmp=boxcentre(1)-boxlength(1)/2
+ytmp=boxcentre(2)-boxlength(2)/2
+ztmp=boxcentre(3)-boxlength(3)/2
+
+num=0
+do i=1,ndim
+ ytmp=boxcentre(2)-boxlength(2)/2
+ do j=1,ndim
+  ztmp=boxcentre(3)-boxlength(3)/2
+  do k=1,ndim
+   num=num+1
+
+   grid_pp_int(num,:,:,:)=.false.
+   grid_pp_int(num,i,j,k)=.true.
+
+! stuff to account for PBC wraparound for the interaction matrix
+   if(i+1.le.ndim) then
+    ui=i+1
+   else
+    ui=1
+   end if
+   if(i-1.ge.1) then
+    li=i-1
+   else
+    li=ndim
+   end if
+   if(j+1.le.ndim) then
+    uj=j+1
+   else
+    uj=1
+   end if
+   if(j-1.ge.1) then
+    lj=j-1
+   else
+    lj=ndim
+   end if
+   if(k+1.le.ndim) then
+    uk=k+1
+   else
+    uk=1
+   end if
+   if(k-1.ge.1) then
+    lk=k-1
+   else
+    lk=ndim
+   end if
+   
+! generating interaction matrix
+   grid_pp_int(num,ui,uj,uk)=.true.
+   grid_pp_int(num,ui,uj,lk)=.true.
+   grid_pp_int(num,ui,lj,uk)=.true.
+   grid_pp_int(num,ui,lj,lk)=.true.
+   grid_pp_int(num,li,uj,uk)=.true.
+   grid_pp_int(num,li,uj,lk)=.true.
+   grid_pp_int(num,li,lj,uk)=.true.
+   grid_pp_int(num,li,lj,lk)=.true.
+   grid_pp_int(num,ui,uj,k)=.true.
+   grid_pp_int(num,ui,lj,k)=.true.
+   grid_pp_int(num,li,uj,k)=.true.
+   grid_pp_int(num,li,lj,k)=.true.
+   grid_pp_int(num,ui,j,uk)=.true.
+   grid_pp_int(num,ui,j,lk)=.true.
+   grid_pp_int(num,li,j,uk)=.true.
+   grid_pp_int(num,li,j,lk)=.true.
+   grid_pp_int(num,i,uj,uk)=.true.
+   grid_pp_int(num,i,uj,lk)=.true.
+   grid_pp_int(num,i,lj,uk)=.true.
+   grid_pp_int(num,i,lj,lk)=.true.
+   grid_pp_int(num,ui,j,k)=.true.
+   grid_pp_int(num,li,j,k)=.true.
+   grid_pp_int(num,i,j,uk)=.true.
+   grid_pp_int(num,i,j,lk)=.true.
+   grid_pp_int(num,i,uj,k)=.true.
+   grid_pp_int(num,i,lj,k)=.true.
+
+   grid_pp(num)%x=xtmp
+   grid_pp(num)%y=ytmp
+   grid_pp(num)%z=ztmp
+
+   grid_pp(num)%xend=xtmp+gridRc
+   grid_pp(num)%yend=ytmp+gridRc
+   grid_pp(num)%zend=ztmp+gridRc
+
+   if (k .eq. ndim) then
+    if (grid_pp(num)%zend .lt. (boxcentre(3)+(boxlength(3)/2))) then
+     grid_pp(num)%zend=boxcentre(3)+(boxlength(3)/2)
+    end if
+   end if
+   ztmp=ztmp+gridRc
+  end do
+  if (j .eq. ndim) then
+   if(grid_pp(num)%yend .lt. (boxcentre(2)+(boxlength(2)/2))) then
+    grid_pp(num)%yend=boxcentre(2)+(boxlength(2)/2)
+   end if
+  end if
+  ytmp=ytmp+gridRc
+ end do
+ if (i .eq. ndim) then
+  if(grid_pp(num)%xend .lt. (boxcentre(1)+(boxlength(1)/2))) then
+   grid_pp(num)%xend=boxcentre(1)+(boxlength(1)/2)
+  end if
+ end if
+ xtmp=xtmp+gridRc
+end do
+
+else
+! we are using spherical boundaries, meaning that we now have some problems
+! we need to know the largest and smallest values for all coordiantes to generate the grid
+i = 1
+i3 = i*3-3
+xmax=x(i3+1)
+ymax=x(i3+2)
+zmax=x(i3+3)
+xmin=xmax
+ymin=ymax
+zmin=zmax
+! now iterate over all cooridnates to find min and max
+! atom one is already read in, don't need to read it again
+do i=2,natom
+ i3=i*3-3
+ if (xmin .gt. x(i3+1)) xmin=x(i3+1)
+ if (ymin .gt. x(i3+2)) ymin=x(i3+2)
+ if (zmin .gt. x(i3+3)) zmin=x(i3+3)
+ if (xmax .lt. x(i3+1)) xmax=x(i3+1)
+ if (ymax .lt. x(i3+2)) ymax=x(i3+2)
+ if (zmax .lt. x(i3+3)) zmax=x(i3+3)
+end do
+! now add some buffer to each of them -> half of Rcpp
+xmin=xmin-(gridRc/3)
+ymin=ymin-(gridRc/3)
+zmin=zmin-(gridRc/3)
+xmax=xmax+(gridRc/3)
+ymax=ymax+(gridRc/3)
+zmax=zmax+(gridRc/3)
+! the system of boxes will be cubic in any case, so now find the largest number of 
+! grid spaces one any side
+ndim=ceiling((xmax-xmin)/gridRc)
+if (ceiling((ymax-ymin)/gridRc) .gt. ndim ) then
+ ndim=ceiling((ymax-ymin)/gridRc)
+else if (ceiling((zmax-zmin)/gridRc) .gt. ndim ) then
+ ndim=(ceiling((zmax-zmin)/gridRc))
+end if
+pp_gridnum=ndim**3
+if (ncgp_solute .gt. 500) then
+gridstor_pp = (ncgp_solute*8/pp_gridnum)+100
+else
+gridstor_pp = ncgp_solute
+endif
+pp_ndim=ndim
+call allocate_grid_pp
+
+xtmp=xmin
+ytmp=ymin
+ztmp=zmin
+
+num=1
+do i=1,ndim
+ ytmp=ymin
+ do j=1,ndim
+  ztmp=zmin
+  do k=1,ndim
+! now fill the interaction matrix
+! no wraparound in this case, so be careful
+! when there would be wraparound, just point to my own cell again
+
+grid_pp_int(num,:,:,:)=.false.
+grid_pp_int(num,i,j,k)=.true.
+
+
+   if((i+1).le.ndim) then
+    ui=i+1
+   else
+    ui=i
+   end if
+   if((i-1).ge.1) then
+    li=i-1
+   else
+    li=i
+   end if
+   if((j+1).le.ndim) then
+    uj=j+1
+   else
+    uj=j
+   end if
+   if((j-1).ge.1) then
+    lj=j-1
+   else
+    lj=j
+   end if
+   if((k+1).le.ndim) then
+    uk=k+1
+   else
+    uk=k
+   end if
+   if((k-1).ge.1) then
+    lk=k-1
+   else
+    lk=k
+   end if
+
+   grid_pp_int(num,ui,uj,uk)=.true.
+   grid_pp_int(num,ui,uj,lk)=.true.
+   grid_pp_int(num,ui,lj,uk)=.true.
+   grid_pp_int(num,ui,lj,lk)=.true.
+   grid_pp_int(num,li,uj,uk)=.true.
+   grid_pp_int(num,li,uj,lk)=.true.
+   grid_pp_int(num,li,lj,uk)=.true.
+   grid_pp_int(num,li,lj,lk)=.true.
+   grid_pp_int(num,ui,uj,k)=.true.
+   grid_pp_int(num,ui,lj,k)=.true.
+   grid_pp_int(num,li,uj,k)=.true.
+   grid_pp_int(num,li,lj,k)=.true.
+   grid_pp_int(num,ui,j,uk)=.true.
+   grid_pp_int(num,ui,j,lk)=.true.
+   grid_pp_int(num,li,j,uk)=.true.
+   grid_pp_int(num,li,j,lk)=.true.
+   grid_pp_int(num,i,uj,uk)=.true.
+   grid_pp_int(num,i,uj,lk)=.true.
+   grid_pp_int(num,i,lj,uk)=.true.
+   grid_pp_int(num,i,lj,lk)=.true.
+   grid_pp_int(num,ui,j,k)=.true.
+   grid_pp_int(num,li,j,k)=.true.
+   grid_pp_int(num,i,j,uk)=.true.
+   grid_pp_int(num,i,j,lk)=.true.
+   grid_pp_int(num,i,uj,k)=.true.
+   grid_pp_int(num,i,lj,k)=.true.
+
+   grid_pp(num)%x=xtmp
+   grid_pp(num)%y=ytmp
+   grid_pp(num)%z=ztmp
+
+   grid_pp(num)%xend=xtmp+gridRc
+   grid_pp(num)%yend=ytmp+gridRc
+   grid_pp(num)%zend=ztmp+gridRc
+
+   num=num+1
+   ztmp=ztmp+gridRc
+  end do
+  ytmp=ytmp+gridRc
+ end do
+ xtmp=xtmp+gridRc
+end do
+
+end if
+
+end subroutine create_grid_pp 
+
+subroutine create_grid_pw
+! *** local variables
+integer                                         :: i,j,k,ndim,num
+integer                                         :: i3
+real(kind=prec)                                 :: xtmp,ytmp,ztmp
+real(kind=prec)                                 :: xmax,ymax,zmax
+real(kind=prec)                                 :: xmin,ymin,zmin
+! again make grid larger than cutoff to account for charge groups
+! can be smaller this time because we only have water as one of them
+real(kind=prec)					:: gridRc
+integer                                         :: li,lj,lk,ui,uj,uk
+
+gridRc = 1.5_prec * Rcpw
+
+if(use_PBC) then
+! when using period boundary conditions, the grids are generated accoring to the box centre and the desired  system size
+! this depends on the volume, so we need to be careful with the coordinates to not miss any atom
+! so the coordinate information needs to be checked/reset in populate grids
+! Paul Bauer 2015
+
+! one problem could be the large movement of molecules if they are not put back in the box
+! this needs to be checked for, too
+! also, the coordinates of each grid need to be corrected after a box movement
+
+! number of one dimensional spacings cubed
+pw_gridnum=int(ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)**3)
+ndim=ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)
+pw_ndim=ndim
+if (nwat .gt. 500) then
+gridstor_pw = (nwat*8/pw_gridnum)+100
+else
+gridstor_pw = nwat
+endif
+call allocate_grid_pw
+
+! set starting coordinates for first grid
+xtmp=boxcentre(1)-(boxlength(1)/2)
+ytmp=boxcentre(2)-(boxlength(2)/2)
+ztmp=boxcentre(3)-(boxlength(3)/2)
+
+
+num=0
+do i=1,ndim
+ ytmp=boxcentre(2)-(boxlength(2)/2)
+ do j=1,ndim
+  ztmp=boxcentre(3)-(boxlength(3)/2)
+  do k=1,ndim
+   num=num+1
+
+   grid_pw_int(num,:,:,:)=.false.
+   grid_pw_int(num,i,j,k)=.true.
+
+! stuff to account for PBC wraparound for the interaction matrix
+   if(i+1.le.ndim) then
+    ui=i+1
+   else
+    ui=1
+   end if
+   if(i-1.ge.1) then
+    li=i-1
+   else
+    li=ndim
+   end if
+   if(j+1.le.ndim) then
+    uj=j+1
+   else
+    uj=1
+   end if
+   if(j-1.ge.1) then
+    lj=j-1
+   else
+    lj=ndim
+   end if
+   if(k+1.le.ndim) then
+    uk=k+1
+   else
+    uk=1
+   end if
+   if(k-1.ge.1) then
+    lk=k-1
+   else
+    lk=ndim
+   end if
+
+! generating interaction matrix
+   grid_pw_int(num,ui,uj,uk)=.true.
+   grid_pw_int(num,ui,uj,lk)=.true.
+   grid_pw_int(num,ui,lj,uk)=.true.
+   grid_pw_int(num,ui,lj,lk)=.true.
+   grid_pw_int(num,li,uj,uk)=.true.
+   grid_pw_int(num,li,uj,lk)=.true.
+   grid_pw_int(num,li,lj,uk)=.true.
+   grid_pw_int(num,li,lj,lk)=.true.
+   grid_pw_int(num,ui,uj,k)=.true.
+   grid_pw_int(num,ui,lj,k)=.true.
+   grid_pw_int(num,li,uj,k)=.true.
+   grid_pw_int(num,li,lj,k)=.true.
+   grid_pw_int(num,ui,j,uk)=.true.
+   grid_pw_int(num,ui,j,lk)=.true.
+   grid_pw_int(num,li,j,uk)=.true.
+   grid_pw_int(num,li,j,lk)=.true.
+   grid_pw_int(num,i,uj,uk)=.true.
+   grid_pw_int(num,i,uj,lk)=.true.
+   grid_pw_int(num,i,lj,uk)=.true.
+   grid_pw_int(num,i,lj,lk)=.true.
+   grid_pw_int(num,ui,j,k)=.true.
+   grid_pw_int(num,li,j,k)=.true.
+   grid_pw_int(num,i,j,uk)=.true.
+   grid_pw_int(num,i,j,lk)=.true.
+   grid_pw_int(num,i,uj,k)=.true.
+   grid_pw_int(num,i,lj,k)=.true.
+
+
+   grid_pw(num)%x=xtmp
+   grid_pw(num)%y=ytmp
+   grid_pw(num)%z=ztmp
+
+   grid_pw(num)%xend=xtmp+gridRc
+   grid_pw(num)%yend=ytmp+gridRc
+   grid_pw(num)%zend=ztmp+gridRc
+
+   if (k .eq. ndim) then
+    if (grid_pw(num)%zend .lt. (boxcentre(3)+(boxlength(3)/2))) then
+     grid_pw(num)%zend=boxcentre(3)+(boxlength(3)/2)
+    end if
+   end if
+   ztmp=ztmp+gridRc
+  end do
+  if (j .eq. ndim) then
+   if(grid_pw(num)%yend .lt. (boxcentre(2)+(boxlength(2)/2))) then
+    grid_pw(num)%yend=boxcentre(2)+(boxlength(2)/2)
+   end if
+  end if
+  ytmp=ytmp+gridRc
+ end do
+ if (i .eq. ndim) then
+  if(grid_pw(num)%xend .lt. (boxcentre(1)+(boxlength(1)/2))) then
+   grid_pw(num)%xend=boxcentre(1)+(boxlength(1)/2)
+  end if
+ end if
+ xtmp=xtmp+gridRc
+end do
+
+else
+! we are using spherical boundaries, meaning that we now have some problems
+! we need to know the largest and smallest values for all coordiantes to generate the grid
+i = 1
+i3 = i*3-3
+xmax=x(i3+1)
+ymax=x(i3+2)
+zmax=x(i3+3)
+xmin=xmax
+ymin=ymax
+zmin=zmax
+! now iterate over all cooridnates to find min and max
+! atom one is already read in, don't need to read it again
+do i=2,natom
+ i3=i*3-3
+ if (xmin .gt. x(i3+1)) xmin=x(i3+1)
+ if (ymin .gt. x(i3+2)) ymin=x(i3+2)
+ if (zmin .gt. x(i3+3)) zmin=x(i3+3)
+ if (xmax .lt. x(i3+1)) xmax=x(i3+1)
+ if (ymax .lt. x(i3+2)) ymax=x(i3+2)
+ if (zmax .lt. x(i3+3)) zmax=x(i3+3)
+end do
+! now add some buffer to each of them -> half of Rcpp
+xmin=xmin-(gridRc/3)
+ymin=ymin-(gridRc/3)
+zmin=zmin-(gridRc/3)
+xmax=xmax+(gridRc/3)
+ymax=ymax+(gridRc/3)
+zmax=zmax+(gridRc/3)
+! the system of boxes will be cubic in any case, so now find the largest number of 
+! grid spaces one any side
+ndim=ceiling((xmax-xmin)/gridRc)
+if (ceiling((ymax-ymin)/gridRc) .gt. ndim ) then
+ ndim=ceiling((ymax-ymin)/gridRc)
+else if (ceiling((zmax-zmin)/gridRc) .gt. ndim ) then
+ ndim=(ceiling((zmax-zmin)/gridRc))
+end if
+pw_gridnum=ndim**3
+pw_ndim=ndim
+if (nwat .gt. 500) then
+gridstor_pw = (nwat*8/pw_gridnum)+100
+else
+gridstor_pw = nwat
+endif
+call allocate_grid_pw
+
+xtmp=xmin
+ytmp=ymin
+ztmp=zmin
+
+num=1
+do i=1,ndim
+ ytmp = ymin
+ do j=1,ndim
+  ztmp = zmin
+  do k=1,ndim
+! now fill the interaction matrix
+! no wraparound in this case, so be careful
+! when there would be wraparound, just point to my own cell again
+
+grid_pw_int(num,:,:,:)=.false.
+grid_pw_int(num,i,j,k)=.true.
+
+
+   if(i+1.le.ndim) then
+    ui=i+1
+   else
+    ui=i
+   end if
+   if(i-1.ge.1) then
+    li=i-1
+   else
+    li=i
+   end if
+   if(j+1.le.ndim) then
+    uj=j+1
+   else
+    uj=j
+   end if
+   if(j-1.ge.1) then
+    lj=j-1
+   else
+    lj=j
+   end if
+   if(k+1.le.ndim) then
+    uk=k+1
+   else
+    uk=k
+   end if
+   if(k-1.ge.1) then
+    lk=k-1
+   else
+    lk=k
+   end if
+
+   grid_pw_int(num,ui,uj,uk)=.true.
+   grid_pw_int(num,ui,uj,lk)=.true.
+   grid_pw_int(num,ui,lj,uk)=.true.
+   grid_pw_int(num,ui,lj,lk)=.true.
+   grid_pw_int(num,li,uj,uk)=.true.
+   grid_pw_int(num,li,uj,lk)=.true.
+   grid_pw_int(num,li,lj,uk)=.true.
+   grid_pw_int(num,li,lj,lk)=.true.
+   grid_pw_int(num,ui,uj,k)=.true.
+   grid_pw_int(num,ui,lj,k)=.true.
+   grid_pw_int(num,li,uj,k)=.true.
+   grid_pw_int(num,li,lj,k)=.true.
+   grid_pw_int(num,ui,j,uk)=.true.
+   grid_pw_int(num,ui,j,lk)=.true.
+   grid_pw_int(num,li,j,uk)=.true.
+   grid_pw_int(num,li,j,lk)=.true.
+   grid_pw_int(num,i,uj,uk)=.true.
+   grid_pw_int(num,i,uj,lk)=.true.
+   grid_pw_int(num,i,lj,uk)=.true.
+   grid_pw_int(num,i,lj,lk)=.true.
+   grid_pw_int(num,ui,j,k)=.true.
+   grid_pw_int(num,li,j,k)=.true.
+   grid_pw_int(num,i,j,uk)=.true.
+   grid_pw_int(num,i,j,lk)=.true.
+   grid_pw_int(num,i,uj,k)=.true.
+   grid_pw_int(num,i,lj,k)=.true.
+
+   grid_pw(num)%x=xtmp
+   grid_pw(num)%y=ytmp
+   grid_pw(num)%z=ztmp
+
+   grid_pw(num)%xend=xtmp+gridRc
+   grid_pw(num)%yend=ytmp+gridRc
+   grid_pw(num)%zend=ztmp+gridRc
+
+   num=num+1
+   ztmp=ztmp+gridRc
+  end do
+  ytmp=ytmp+gridRc
+ end do
+ xtmp=xtmp+gridRc
+end do
+
+end if
+end subroutine create_grid_pw
+
+subroutine create_grid_ww
+! *** local variables
+integer                                         :: i,j,k,ndim,num
+integer                                         :: i3
+real(kind=prec)                                 :: xtmp,ytmp,ztmp
+real(kind=prec)                                 :: xmax,ymax,zmax
+real(kind=prec)                                 :: xmin,ymin,zmin
+! again grids are slightly larger than cutoff, can be onle 1.25 because we only have water molecules
+real(kind=prec)					:: gridRc 
+integer                                         :: li,lj,lk,ui,uj,uk
+
+gridRc = 1.25_prec * Rcww
+
+if(use_PBC) then
+! when using period boundary conditions, the grids are generated accoring to the box centre and the desired  system size
+! this depends on the volume, so we need to be careful with the coordinates to not miss any atom
+! so the coordinate information needs to be checked/reset in populate grids
+! Paul Bauer 2015
+
+! one problem could be the large movement of molecules if they are not put back in the box
+! this needs to be checked for, too
+! also, the coordinates of each grid need to be corrected after a box movement
+
+! number of one dimensional spacings cubed
+ww_gridnum=int(ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)**3)
+ndim=ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)
+ww_ndim=ndim
+if (nwat .gt. 500) then
+gridstor_ww = (nwat*8/ww_gridnum)+100
+else
+gridstor_ww = nwat
+endif
+call allocate_grid_ww
+! set starting coordinates for first grid
+xtmp=boxcentre(1)-(boxlength(1)/2)
+ytmp=boxcentre(2)-(boxlength(2)/2)
+ztmp=boxcentre(3)-(boxlength(3)/2)
+
+
+num=0
+do i=1,ndim
+ ytmp=boxcentre(2)-(boxlength(2)/2)
+ do j=1,ndim
+  ztmp=boxcentre(3)-(boxlength(3)/2)
+  do k=1,ndim
+   num=num+1
+
+   grid_ww_int(num,:,:,:)=.false.
+   grid_ww_int(num,i,j,k)=.true.
+
+! stuff to account for PBC wraparound for the interaction matrix
+   if(i+1.le.ndim) then
+    ui=i+1
+   else
+    ui=1
+   end if
+   if(i-1.ge.1) then
+    li=i-1
+   else
+    li=ndim
+   end if
+   if(j+1.le.ndim) then
+    uj=j+1
+   else
+    uj=1
+   end if
+   if(j-1.ge.1) then
+    lj=j-1
+   else
+    lj=ndim
+   end if
+   if(k+1.le.ndim) then
+    uk=k+1
+   else
+    uk=1
+   end if
+   if(k-1.ge.1) then
+    lk=k-1
+   else
+    lk=ndim
+   end if
+
+! generating interaction matrix
+   grid_ww_int(num,ui,uj,uk)=.true.
+   grid_ww_int(num,ui,uj,lk)=.true.
+   grid_ww_int(num,ui,lj,uk)=.true.
+   grid_ww_int(num,ui,lj,lk)=.true.
+   grid_ww_int(num,li,uj,uk)=.true.
+   grid_ww_int(num,li,uj,lk)=.true.
+   grid_ww_int(num,li,lj,uk)=.true.
+   grid_ww_int(num,li,lj,lk)=.true.
+   grid_ww_int(num,ui,uj,k)=.true.
+   grid_ww_int(num,ui,lj,k)=.true.
+   grid_ww_int(num,li,uj,k)=.true.
+   grid_ww_int(num,li,lj,k)=.true.
+   grid_ww_int(num,ui,j,uk)=.true.
+   grid_ww_int(num,ui,j,lk)=.true.
+   grid_ww_int(num,li,j,uk)=.true.
+   grid_ww_int(num,li,j,lk)=.true.
+   grid_ww_int(num,i,uj,uk)=.true.
+   grid_ww_int(num,i,uj,lk)=.true.
+   grid_ww_int(num,i,lj,uk)=.true.
+   grid_ww_int(num,i,lj,lk)=.true.
+   grid_ww_int(num,ui,j,k)=.true.
+   grid_ww_int(num,li,j,k)=.true.
+   grid_ww_int(num,i,j,uk)=.true.
+   grid_ww_int(num,i,j,lk)=.true.
+   grid_ww_int(num,i,uj,k)=.true.
+   grid_ww_int(num,i,lj,k)=.true.
+
+   grid_ww(num)%x=xtmp
+   grid_ww(num)%y=ytmp
+   grid_ww(num)%z=ztmp
+   grid_ww(num)%xend=xtmp+gridRc
+   grid_ww(num)%yend=ytmp+gridRc
+   grid_ww(num)%zend=ztmp+gridRc
+
+   if (k .eq. ndim) then
+    if (grid_ww(num)%zend .lt. (boxcentre(3)+(boxlength(3)/2))) then
+     grid_ww(num)%zend=boxcentre(3)+(boxlength(3)/2)
+    end if
+   end if
+   ztmp=ztmp+gridRc
+  end do
+  if (j .eq. ndim) then
+   if(grid_ww(num)%yend .lt. (boxcentre(2)+(boxlength(2)/2))) then
+    grid_ww(num)%yend=boxcentre(2)+(boxlength(2)/2)
+   end if
+  end if
+  ytmp=ytmp+gridRc
+ end do
+ if (i .eq. ndim) then
+  if(grid_ww(num)%xend .lt. (boxcentre(1)+(boxlength(1)/2))) then
+   grid_ww(num)%xend=boxcentre(1)+(boxlength(1)/2)
+  end if
+ end if
+ xtmp=xtmp+gridRc
+end do
+
+else
+! we are using spherical boundaries, meaning that we now have some problems
+! we need to know the largest and smallest values for all coordiantes to generate the grid
+i = 1
+i3 = i*3-3
+xmax=x(i3+1)
+ymax=x(i3+2)
+zmax=x(i3+3)
+xmin=xmax
+ymin=ymax
+zmin=zmax
+! now iterate over all cooridnates to find min and max
+! atom one is already read in, don't need to read it again
+do i=2,natom
+ i3=i*3-3
+ if (xmin .gt. x(i3+1)) xmin=x(i3+1)
+ if (ymin .gt. x(i3+2)) ymin=x(i3+2)
+ if (zmin .gt. x(i3+3)) zmin=x(i3+3)
+ if (xmax .lt. x(i3+1)) xmax=x(i3+1)
+ if (ymax .lt. x(i3+2)) ymax=x(i3+2)
+ if (zmax .lt. x(i3+3)) zmax=x(i3+3)
+end do
+! now add some buffer to each of them -> half of Rcpp
+xmin=xmin-(gridRc/3)
+ymin=ymin-(gridRc/3)
+zmin=zmin-(gridRc/3)
+xmax=xmax+(gridRc/3)
+ymax=ymax+(gridRc/3)
+zmax=zmax+(gridRc/3)
+! the system of boxes will be cubic in any case, so now find the largest number of 
+! grid spaces one any side
+ndim=ceiling((xmax-xmin)/gridRc)
+if (ceiling((ymax-ymin)/gridRc) .gt. ndim ) then
+ ndim=ceiling((ymax-ymin)/gridRc)
+else if (ceiling((zmax-zmin)/gridRc) .gt. ndim ) then
+ ndim=(ceiling((zmax-zmin)/gridRc))
+end if
+ww_gridnum=ndim**3
+ww_ndim=ndim
+if (nwat .gt. 500) then
+gridstor_ww = (nwat*8/ww_gridnum)+100
+else
+gridstor_ww = nwat
+endif
+call allocate_grid_ww
+xtmp=xmin
+ytmp=ymin
+ztmp=zmin
+
+num=1
+do i=1,ndim
+ ytmp = ymin
+ do j=1,ndim
+  ztmp = zmin
+  do k=1,ndim
+! now fill the interaction matrix
+! no wraparound in this case, so be careful
+! when there would be wraparound, just point to my own cell again
+
+grid_ww_int(num,:,:,:)=.false.
+grid_ww_int(num,i,j,k)=.true.
+
+   if(i+1.le.ndim) then
+    ui=i+1
+   else
+    ui=i
+   end if
+   if(i-1.ge.1) then
+    li=i-1
+   else
+    li=i
+   end if
+   if(j+1.le.ndim) then
+    uj=j+1
+   else
+    uj=j
+   end if
+   if(j-1.ge.1) then
+    lj=j-1
+   else
+    lj=j
+   end if
+   if(k+1.le.ndim) then
+    uk=k+1
+   else
+    uk=k
+   end if
+   if(k-1.ge.1) then
+    lk=k-1
+   else
+    lk=k
+   end if
+
+   grid_ww_int(num,ui,uj,uk)=.true.
+   grid_ww_int(num,ui,uj,lk)=.true.
+   grid_ww_int(num,ui,lj,uk)=.true.
+   grid_ww_int(num,ui,lj,lk)=.true.
+   grid_ww_int(num,li,uj,uk)=.true.
+   grid_ww_int(num,li,uj,lk)=.true.
+   grid_ww_int(num,li,lj,uk)=.true.
+   grid_ww_int(num,li,lj,lk)=.true.
+   grid_ww_int(num,ui,uj,k)=.true.
+   grid_ww_int(num,ui,lj,k)=.true.
+   grid_ww_int(num,li,uj,k)=.true.
+   grid_ww_int(num,li,lj,k)=.true.
+   grid_ww_int(num,ui,j,uk)=.true.
+   grid_ww_int(num,ui,j,lk)=.true.
+   grid_ww_int(num,li,j,uk)=.true.
+   grid_ww_int(num,li,j,lk)=.true.
+   grid_ww_int(num,i,uj,uk)=.true.
+   grid_ww_int(num,i,uj,lk)=.true.
+   grid_ww_int(num,i,lj,uk)=.true.
+   grid_ww_int(num,i,lj,lk)=.true.
+   grid_ww_int(num,ui,j,k)=.true.
+   grid_ww_int(num,li,j,k)=.true.
+   grid_ww_int(num,i,j,uk)=.true.
+   grid_ww_int(num,i,j,lk)=.true.
+   grid_ww_int(num,i,uj,k)=.true.
+   grid_ww_int(num,i,lj,k)=.true.
+
+   grid_ww(num)%x=xtmp
+   grid_ww(num)%y=ytmp
+   grid_ww(num)%z=ztmp
+
+   grid_ww(num)%xend=xtmp+gridRc
+   grid_ww(num)%yend=ytmp+gridRc
+   grid_ww(num)%zend=ztmp+gridRc
+
+   num=num+1
+   ztmp=ztmp+gridRc
+  end do
+  ytmp=ytmp+gridRc
+ end do
+ xtmp=xtmp+gridRc
+end do
+
+end if
+end subroutine create_grid_ww
+#endif
+
 subroutine cgp_centers
 ! *** local variables
 integer						::	ig,i,i3
@@ -2103,6 +3029,39 @@ end subroutine get_fname
 
 !-----------------------------------------------------------------------
 
+#ifdef USE_GRID
+#ifdef USE_MPI
+integer function grid_add(grid1,grid2,length,MPI_Datatype)
+! arguments
+        integer,INTENT (IN)      :: grid1(length)
+        integer                  :: grid2(length)
+        integer                         :: length,MPI_Datatype
+! locals
+        integer                 :: j,k
+
+! we have to do something nasty to be able to combine the grid information form
+! all the nodes, so here it is
+! we search first for a zero element in the final grid, so we not overwrite any
+! info that is already there
+! as soons as we find the first zero element, we search the slave grid in the
+! same row until we find a zero element, and copy all the groups from before
+! into the master array
+! quick and very dirty way
+        j = 1
+        do while (grid2(j) .ne. 0 )
+                j = j + 1
+        end do
+        k = 1
+        do while (grid1(k) .ne. 0 )
+                grid2(j+k) = grid1(k)
+        end do
+
+        grid_add = -1
+
+end function grid_add
+#endif
+#endif
+
 real(kind=prec) function improper(istart, iend)
 !arguments
 integer						::	istart, iend
@@ -2610,6 +3569,38 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast rwat')
 
 
 
+#ifdef USE_GRID
+!first few grid variables
+call MPI_Bcast(gridstor_pp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast gridstor_pp')
+call MPI_Bcast(gridstor_pw, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast gridstor_pw')
+call MPI_Bcast(gridstor_ww, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast gridstor_ww')
+
+! water grid lookup
+if (nwat .gt. 0 ) then
+if (nodeid .ne. 0 ) then
+allocate(ww_igrid(nwat),stat=alloc_status)
+call check_alloc('ww_igrid slave nodes')
+allocate(pw_igrid(ncgp_solute),stat=alloc_status)
+call check_alloc('pw_igrid slave nodes')
+end if
+call MPI_Bcast(ww_igrid,nwat,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ww_igrid')
+call MPI_Bcast(pw_igrid,ncgp_solute,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pw_igrid')
+end if
+! protein grid lookup
+if (ncgp_solute .gt. 0) then
+if (nodeid .ne. 0 ) then
+allocate(pp_igrid(ncgp_solute),stat=alloc_status)
+call check_alloc('pp_igrid slave nodes')
+end if
+call MPI_Bcast(pp_igrid,ncgp_solute,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pp_igrid')
+end if ! ncgp_solute .gt. 0
+#endif
 
 !vars from QATOM
 call MPI_Bcast(nstates, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -2838,6 +3829,124 @@ call MPI_Bcast(list14long, 2*n14long, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr) !(A
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast list14long')
 call MPI_Bcast(listexlong, 2*nexlong, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast listexlong')
+
+#ifdef USE_GRID
+
+! data for the different grids
+call MPI_Bcast(pp_gridnum,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pp_gridnum')
+call MPI_Bcast(pp_ndim,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pp_ndim')
+call MPI_Bcast(pw_gridnum,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pw_gridnum')
+call MPI_Bcast(pw_ndim,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pw_ndim')
+call MPI_Bcast(ww_gridnum,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ww_gridnum')
+call MPI_Bcast(ww_ndim,1,MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ww_ndim')
+
+if (nodeid.ne.0) then
+!prepare grids on the different nodes using the data from master
+if (ncgp_solute .gt. 0) then
+allocate(grid_pp(pp_gridnum),stat=alloc_status)
+call check_alloc('MPI pp_grid')
+allocate(grid_pp_grp(pp_gridnum,gridstor_pp),stat=alloc_status)
+call check_alloc('MPI grid_pp_grp')
+allocate(grid_pp_ngrp(pp_gridnum),stat=alloc_status)
+call check_alloc('MPI grid_pp_ngrp')
+allocate(grid_pp_int(pp_gridnum,pp_ndim,pp_ndim,pp_ndim),stat=alloc_status)
+call check_alloc('MPI grid_pp_int')
+end if ! ncgp_solute .gt. 0
+if (nwat .gt. 0) then
+allocate(grid_pw(pw_gridnum),stat=alloc_status)
+call check_alloc('MPI pw_grid')
+allocate(grid_ww(ww_gridnum),stat=alloc_status)
+call check_alloc('MPI ww_grid')
+allocate(grid_pw_grp(pw_gridnum,gridstor_pw),stat=alloc_status)
+call check_alloc('MPI grid_pw_grp')
+allocate(grid_pw_ngrp(pw_gridnum),stat=alloc_status)
+call check_alloc('MPI grid_pw_ngrp')
+allocate(grid_pw_int(pw_gridnum,pw_ndim,pw_ndim,pw_ndim),stat=alloc_status)
+call check_alloc('MPI grid_pw_int')
+allocate(grid_ww_grp(ww_gridnum,gridstor_ww),stat=alloc_status)
+call check_alloc('MPI grid_ww_grp')
+allocate(grid_ww_ngrp(ww_gridnum),stat=alloc_status)
+call check_alloc('MPI grid_ww_ngrp')
+allocate(grid_ww_int(ww_gridnum,ww_ndim,ww_ndim,ww_ndim),stat=alloc_status)
+call check_alloc('MPI grid_ww_int')
+end if !nwat > 0
+end if ! nodeid .ne. 0
+
+!make first process wait until nodes have allocated grid arrays
+call MPI_BARRIER(MPI_COMM_WORLD, ierr)
+
+! also use make struct for grids
+! loop based assignment not working
+ftype(1) = MPI_REAL8            ! real(kind=prec)       x
+ftype(2) = MPI_REAL8            ! real(kind=prec)       y
+ftype(3) = MPI_REAL8            ! real(kind=prec)       z
+ftype(4) = MPI_REAL8            ! real(kind=prec)       xend
+ftype(5) = MPI_REAL8            ! real(kind=prec)       yend
+ftype(6) = MPI_REAL8            ! real(kind=prec)       zend
+blockcnt(1) = 1
+blockcnt(2) = 1
+blockcnt(3) = 1
+blockcnt(4) = 1
+blockcnt(5) = 1
+blockcnt(6) = 1
+fdisp(1) = 0     
+fdisp(2) = 1*8
+fdisp(3) = 2*8
+fdisp(4) = 3*8
+fdisp(5) = 4*8
+fdisp(6) = 5*8
+call MPI_Type_create_struct(6, blockcnt, fdisp, ftype, mpitype_batch, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_create_struct grid')
+call MPI_Type_commit(mpitype_batch, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_commit grid')
+if (ncgp_solute .gt. 0) then
+call MPI_Bcast(grid_pp, pp_gridnum, mpitype_batch, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_pp')
+end if
+if (nwat .gt. 0 ) then
+call MPI_Bcast(grid_pw, pw_gridnum, mpitype_batch, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_pw')
+call MPI_Bcast(grid_pw, pw_gridnum, mpitype_batch, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_ww')
+end if ! nwat > 0
+call MPI_Type_free(mpitype_batch, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_free grid')
+
+! now the rest of the individual arrays
+! only need to send interaction matrix, rest is not constant and updated in
+! populate grids
+if (ncgp_solute .gt. 0 ) then
+call MPI_Bcast(grid_pp_int,pp_gridnum*pp_ndim**3,MPI_LOGICAL,0, MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_pp_int')
+! make grid_pp_grp mpi data structure here
+call MPI_Type_contiguous(gridstor_pp, MPI_INTEGER, mpitype_batch_ppgrid, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_contiguous gridstor_pp')
+
+endif
+if (nwat .gt. 0) then
+call MPI_Bcast(grid_pw_int,pw_gridnum*pw_ndim**3,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_pw_int')
+call MPI_Bcast(grid_ww_int,ww_gridnum*ww_ndim**3,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Bcast grid_ww_int')
+
+call MPI_Type_contiguous(gridstor_pw, MPI_INTEGER, mpitype_batch_pwgrid, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_contiguous gridstor_pw')
+call MPI_Type_contiguous(gridstor_ww, MPI_INTEGER, mpitype_batch_wwgrid, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_contiguous gridstor_ww')
+
+endif
+
+call MPI_Op_create(grid_add,.false.,mpi_grid_add,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Op_create mpi_grid_add')
+
+
+#endif
 
 ! --- data from the QATOM module ---
 
@@ -4809,7 +5918,12 @@ subroutine make_pair_lists
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+! start with populating the grid
+! each node populates its assigned ncgp_solute
+! and nwat and then intercommunication does the rest
+#ifdef USE_GRID
+call populate_grids
+#endif
 if( use_PBC ) then
         if (.not. use_LRF)then
 		!cutoff
@@ -5680,6 +6794,7 @@ subroutine nbpplis2
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,inside,jgr
 real(kind=prec)						:: rcut2,r2
 
+integer						::iagrid, igrid, jgrid, kgrid, gridnum
 
 ! for spherical boundary 
 !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -5693,14 +6808,37 @@ start_loop_time = rtime()
 nbpp_pair = 0
 rcut2 = Rcpp*Rcpp
 
+! new stuff because we are now having a grid 
+! check first if the atoms are in one the adjecent grids
+! if not, cycle them
+! grid information taken from cgp structure, updated every nb steps
+! after getting the first group, we cycle through the grids to find those that interact
+! and only search further in them
+
+! interaction matrix is saved in grid%interact array :P
 
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
 
 ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
-
+#ifdef USE_GRID
+iagrid = pp_igrid(ig)
+!start at the first grid
+gridnum = 0
+igridloop:  do igrid = 1, pp_ndim
+jgridloop:   do jgrid = 1, pp_ndim
+kgridloop:    do kgrid = 1, pp_ndim
+		gridnum = gridnum + 1
+		if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+! else, we have interacting grids
+! now search for the charge groups in there
+! and cycle over all of them
+! save the real number in jgr
+jgloop:     do jg = 1, grid_pp_ngrp(gridnum)
+		jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop:     do jgr = 1, ncgp_solute
-
+#endif
   ! count each charge group pair once only
   if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
            ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) ) &
@@ -5798,6 +6936,11 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
                   end do jaloop
            end do ialoop
         end do jgloop
+#ifdef USE_GRID
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -5814,6 +6957,7 @@ subroutine nbpplis2_box
   real(kind=prec)						:: rcut2,r2
   real(kind=prec)						:: dx, dy, dz
 
+  integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -5828,8 +6972,23 @@ start_loop_time = rtime()
   rcut2 = Rcpp*Rcpp
 
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#ifdef USE_GRID
+        iagrid = pp_igrid(ig)
+        gridnum = 0
+igridloop: do igrid = 1, pp_ndim
+jgridloop:  do jgrid = 1, pp_ndim
+kgridloop:   do kgrid = 1, pp_ndim
+		gridnum = gridnum + 1
+		if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+! else, we have interacting grids
+! now search for the charge groups in there
+! and cycle over all of them
+! save the real number in jgr
+jgloop:     do jg = 1, grid_pp_ngrp(gridnum)
+                jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop:     do jgr = 1, ncgp_solute
-
+#endif
 	  ! count each charge group pair once only
 	  if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
 		   ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) ) &
@@ -5934,6 +7093,11 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
 			  end do jaloop
 		   end do ialoop
 		end do jgloop
+#ifdef USE_GRID
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
 	end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -5949,6 +7113,7 @@ subroutine nbpplis2_box_lrf
  
   real(kind=prec)						::RcLRF2
   integer						::inside_LRF, is3
+  integer						::iagrid, igrid, jgrid, kgrid, gridnum
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
   !	excluding any Q-atoms.
@@ -5963,8 +7128,30 @@ start_loop_time = rtime()
   RcLRF2 = RcLRF*RcLRF
 
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#ifdef USE_GRID
+         iagrid = pp_igrid(ig)
+	  gridnum = 0
+igridloop:  do igrid = 1, pp_ndim
+jgridloop:   do jgrid = 1, pp_ndim
+kgridloop:    do kgrid = 1, pp_ndim
+		gridnum = gridnum + 1
+		if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:		 do jg = 1, grid_pp_ngrp(gridnum)
+		  jgr = grid_pp_grp(gridnum,jg)
+		   if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
+                   ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) .or.&
+                   (ig.eq.jgr)) &
+                   cycle ggloop
+		    call lrf_update(ig,jgr)
+		    call lrf_update(jgr,ig)
+		   end do ggloop
+		 else 
+! we have real interacting grids , do the rest of the calculations
+jgloop:     do jg = 1, grid_pp_ngrp(gridnum)
+		jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop:     do jgr = 1, ncgp_solute
-
+#endif
 	  ! count each charge group pair once only
 	  if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
 		   ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) ) &
@@ -6080,6 +7267,12 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
       end if ! outside cutoff
 
 	end do jgloop
+#ifdef USE_GRID
+	end if ! interacting boxes
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -6094,6 +7287,7 @@ logical						::	inside
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						::	RcLRF2
 
+integer							::iagrid, igrid, jgrid, kgrid, gridnum
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
 #if defined (PROFILING)
@@ -6111,9 +7305,32 @@ igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
         ! skip if excluded group
         is = cgp(ig)%iswitch
         if ( excl(is) ) cycle igloop
-
+#ifdef USE_GRID
+        gridnum = 0
+	iagrid = pp_igrid(ig)
+igridloop:  do igrid = 1, pp_ndim
+jgridloop:   do jgrid = 1, pp_ndim
+kgridloop:    do kgrid = 1, pp_ndim
+		gridnum = gridnum + 1
+                if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:          do jg = 1, grid_pp_ngrp(gridnum)
+                  jgr = grid_pp_grp(gridnum,jg)
+		  ja = cgp(jgr)%iswitch
+                  if ( excl(ja) ) cycle ggloop
+                   if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
+                   ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) .or. &
+                   (ig.eq.jgr)) &
+                   cycle ggloop
+                    call lrf_update(ig,jgr)
+                    call lrf_update(jgr,ig)
+                   end do ggloop
+                 else
+! we have real interacting grids , do the rest of the calculations
+jgloop:     do jg = 1, grid_pp_ngrp(gridnum)
+                jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop:	do jgr = 1, ncgp_solute
-
+#endif
                 ! count each charge group pair once only
                 if( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
                         ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) ) &
@@ -6211,6 +7428,12 @@ jaloop:				do ja = cgp(jgr)%first, cgp(jgr)%last
 			call lrf_update(jgr,ig)
                 end if
         end do jgloop
+#ifdef USE_GRID
+	end if ! interacting boxes
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -6225,6 +7448,7 @@ subroutine nbpplist
 integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,jgr
 real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 
 ! For use with spherical boundary   
 !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -6252,8 +7476,22 @@ ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
 
 i3 = 3*ia-3
+#ifdef USE_GRID
+iagrid = pp_igrid(ig)
+gridnum = 0
 
+igridloop:	do igrid = 1, pp_ndim
+jgridloop:	 do jgrid = 1, pp_ndim
+kgridloop:	  do kgrid = 1, pp_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+
+
+jgloop: 		do jg = 1, grid_pp_ngrp(gridnum) 
+			 jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, ncgp_solute
+#endif
   ! for every charge group:
 
   ! count each charge group pair once only
@@ -6343,6 +7581,11 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
         end do jaloop
   end do ialoop
 end do jgloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -6358,6 +7601,7 @@ subroutine nbpplist_box
   real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
   real(kind=prec)						:: dx, dy, dz
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
   
   ! For use with periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -6382,8 +7626,20 @@ igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
 	! for every assigned charge group:
 	ig_sw = cgp(ig)%iswitch !switching atom in charge group ig
 	i3 = 3*ig_sw-3
+#ifdef USE_GRID
+        iagrid = pp_igrid(ig)
+	gridnum = 0
+igridloop: do igrid = 1, pp_ndim
+jgridloop:  do jgrid = 1, pp_ndim
+kgridloop:   do kgrid = 1, pp_ndim
+		gridnum = gridnum + 1
+		if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
 
+jgloop: do jg = 1, grid_pp_ngrp(gridnum)
+		jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, ncgp_solute
+#endif
 	  ! for every charge group:
 
 	  ! count each charge group pair once only
@@ -6484,6 +7740,11 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
 		end do jaloop
 	  end do ialoop
 	end do jgloop
+#ifdef USE_GRID
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING) 
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -6499,7 +7760,7 @@ integer						:: i,j,ig,jg,ia,ja,i3,j3,nl,is,is3,jgr
 real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 real(kind=prec)						::	RcLRF2
-
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -6525,11 +7786,31 @@ is = cgp(ig)%iswitch
 if ( excl(is) ) cycle igloop
 
 is3 = 3*is-3
-
+#ifdef USE_GRID
+iagrid = pp_igrid(ig)
+gridnum = 0
+igridloop:	do igrid = 1, pp_ndim
+jgridloop:	 do jgrid = 1, pp_ndim
+kgridloop:	  do kgrid = 1, pp_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			 do jg = 1, grid_pp_ngrp(gridnum)
+			  jgr = grid_pp_grp(gridnum,jg)
+                          ja = cgp(jgr)%iswitch
+                          if ( excl(ja) ) cycle ggloop
+			  if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
+			  ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) .or. &
+                          (ig.eq.jgr)) &
+			  cycle ggloop
+			  call lrf_update(ig,jgr)
+			  call lrf_update(jgr,ig)
+			 end do ggloop
+			else
+jgloop:			 do jg = 1, grid_pp_ngrp(gridnum)
+                          jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, ncgp_solute
-  ! for every charge group:
-
-
+#endif
   ! count each charge group pair once only
   if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
            ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) ) &
@@ -6624,6 +7905,12 @@ jaloop:	  do ja = cgp(jgr)%first, cgp(jgr)%last
   end if ! LRF cutoff
 
 end do jgloop
+#ifdef USE_GRID
+end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 
 #if defined (PROFILING)
@@ -6641,6 +7928,7 @@ subroutine nbpplist_box_lrf
   
   real(kind=prec)						::RcLRF2
 
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -6664,8 +7952,29 @@ igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
 	! for every assigned charge group:
 	ig_sw = cgp(ig)%iswitch !switching atom in charge group ig
 	i3 = 3*ig_sw-3
-
+#ifdef USE_GRID
+	iagrid = pp_igrid(ig)
+	gridnum = 0
+igridloop:	do igrid = 1, pp_ndim
+jgridloop:	 do jgrid = 1, pp_ndim
+kgridloop:	  do kgrid = 1, pp_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pp_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			 do jg = 1, grid_pp_ngrp(gridnum)
+			  jgr = grid_pp_grp(gridnum,jg)
+			  if ( ((ig .gt. jgr) .and. (mod(ig+jgr,2) .eq. 0)) .or. &
+	                   ((ig .lt. jgr) .and. (mod(ig+jgr,2) .eq. 1)) .or. &
+                           (ig.eq.jgr)) &
+        	           cycle ggloop
+			  call lrf_update(ig,jgr)
+			  call lrf_update(jgr,ig)
+			 end do ggloop
+			 else
+jgloop:			  do jg = 1, grid_pp_ngrp(gridnum)
+			   jgr = grid_pp_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, ncgp_solute
+#endif
 	  ! for every charge group:
 
 	  ! count each charge group pair once only
@@ -6776,6 +8085,12 @@ jaloop:   do ja = cgp(jgr)%first, cgp(jgr)%last
       end if ! outside cutoff
 
 	end do jgloop
+#ifdef USE_GRID
+	end if ! interaction
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING)
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
@@ -6877,8 +8192,9 @@ end subroutine nbpw_count
 
 subroutine nbpwlis2
 ! local variables
-integer						:: i,ig,jg,ia,ja,i3,j3, inside,jgr,LJ_code
+integer						:: i,ig,jg,ia,ja,i3,j3, inside,jgr
 real(kind=prec)						:: rcut2,r2
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -6897,7 +8213,18 @@ igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 !	   --- excluded group ? ---
 ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
+#ifdef USE_GRID
+iagrid = pp_igrid(ig)
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+jgloop:     		do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:                 do jgr = 1, nwat
+#endif
 			 ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 if ( excl(ja) ) cycle jgloop ! skip excluded waters
 j3 = 3*ja-3
@@ -6953,6 +8280,11 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
         end do jaloop
 end do ialoop
 end do jgloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -6968,7 +8300,7 @@ subroutine nbpwlis2_box
   integer						:: i,ig,jg,ia,ja,i3,j3,ig_atom, inside, jgr, LJ_code
   real(kind=prec)						:: rcut2,r2
   real(kind=prec)						:: dx, dy,dz
-  
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
@@ -6982,8 +8314,20 @@ start_loop_time = rtime()
   rcut2 = Rcpw*Rcpw
 
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#ifdef USE_GRID
+	  iagrid = pw_igrid(ig)
+	  gridnum = 0
+igridloop: do igrid = 1, pw_ndim
+jgridloop:  do jgrid = 1, pw_ndim
+kgridloop:   do kgrid = 1, pw_ndim
+		gridnum = gridnum + 1
+		if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
 
+jgloop:		do jg = 1, grid_pw_ngrp(gridnum)
+		 jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:     do jgr = 1, nwat
+#endif
         	ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 		j3 = 3*ja-3
 
@@ -7048,6 +8392,11 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
         end do jaloop
         end do ialoop
      end do jgloop
+#ifdef USE_GRID
+	end do kgridloop
+	end do jgridloop
+	end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -7063,6 +8412,8 @@ subroutine nbpwlis2_box_lrf
   !LRF
   real(kind=prec)						:: RcLRF2, field0, field1, field2
   integer						:: jg_cgp, j, inside_LRF, is3
+
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
   
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
@@ -7078,7 +8429,26 @@ start_loop_time = rtime()
   RcLRF2 = RcLRF*RcLRF
 
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#ifdef USE_GRID
+		iagrid = pw_igrid(ig)
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			 do jg = 1, grid_pw_ngrp(gridnum)
+			  jgr = grid_pw_grp(gridnum,jg)
+			  ja = nat_solute + solv_atom*jgr-(solv_atom-1)
+			  jg_cgp = iwhich_cgp(ja)
+			  call lrf_update(ig,jg_cgp)
+			  call lrf_update(jg_cgp,ig)
+			 end do ggloop
+			else
+jgloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:    do jgr = 1, nwat
+#endif
         		ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 			jg_cgp = iwhich_cgp(ja)
 				j3 = 3*ja-3
@@ -7155,6 +8525,12 @@ end do ialoop
       end if
 
 end do jgloop
+#ifdef USE_GRID
+	end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -7185,7 +8561,28 @@ igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 is = cgp(ig)%iswitch
 if ( excl(is) ) cycle igloop
 is3 = 3*is-3
+#ifdef USE_GRID
+iagrid = pw_igrid(ig)
+gridnum = 0
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+			 ja = nat_solute + solv_atom*jgr-(solv_atom-1)
+			 if(excl(ja)) cycle ggloop ! skip excluded waters
+			 jg_cgp = iwhich_cgp(ja)
+			 call lrf_update(ig,jg_cgp)
+			 call lrf_update(jg_cgp,ig)
+			end do ggloop
+			else
+jgloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:                 do jgr = 1, nwat
+#endif
 			ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 			if(excl(ja)) cycle jgloop
 			jg_cgp = iwhich_cgp(ja)
@@ -7251,6 +8648,12 @@ elseif(r2 .le. RcLRF2) then
 end if
 
 end do jgloop
+#ifdef USE_GRID
+end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -7287,7 +8690,19 @@ igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
 i3 = 3*ia-3
+#ifdef USE_GRID
+iagrid = pw_igrid(ig)
+gridnum = 0
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+jgloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:                 do jgr = 1, nwat
+#endif
   ! for every water molecule in grid:
 			ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 			if(excl(ja)) cycle jgloop ! skip excluded waters
@@ -7334,6 +8749,11 @@ jaloop:	do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
         end do jaloop
 end do ialoop
 end do jgloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -7350,7 +8770,7 @@ subroutine nbpwlist_box
   real(kind=prec)						:: rcut2,r2
   integer						:: LJ_code
   real(kind=prec)						:: dx, dy, dz
-
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
   ! For use with periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
@@ -7368,7 +8788,19 @@ igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 	! for every charge group:
     ig_sw = cgp(ig)%iswitch
     i3 = 3*ig_sw-3
+#ifdef USE_GRID
+        iagrid = pw_igrid(ig)
+        gridnum = 0
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+jgloop: 		do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, nwat
+#endif
 	  ! for every water molecule:
       			 jg_sw = nat_solute + solv_atom*jgr-(solv_atom-1)
 
@@ -7428,6 +8860,11 @@ jaloop:	do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
 		end do jaloop
       end do ialoop
     end do jgloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -7442,7 +8879,7 @@ integer						:: i,j,ig,jg,jg_cgp,ia,ja,i3,j3,is,is3,jgr
 real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 real(kind=prec)						::	RcLRF2
-
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -7463,7 +8900,28 @@ igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 is = cgp(ig)%iswitch
 if ( excl(is) ) cycle igloop
 is3 = 3*is-3
+#ifdef USE_GRID
+iagrid = pw_igrid(ig)
+gridnum = 0
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+			 ja = nat_solute + solv_atom*jgr-(solv_atom-1)
+			 if(excl(ja)) cycle ggloop ! skip excluded waters
+			 jg_cgp = iwhich_cgp(ja)
+			 call lrf_update(ig,jg_cgp)
+			 call lrf_update(jg_cgp,ig)
+			end do ggloop
+			else
+jgloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop:                  do jgr = 1,nwat
+#endif
 			 ja = nat_solute + solv_atom*jgr-(solv_atom-1)
 			 jg_cgp = iwhich_cgp(ja)
 			 if(excl(ja)) cycle jgloop
@@ -7513,6 +8971,12 @@ elseif(r2 .le. RcLRF2) then
 end if
 
 end do jgloop
+#ifdef USE_GRID
+end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do igloop
 
 #if defined (PROFILING)
@@ -7530,6 +8994,7 @@ subroutine nbpwlist_box_lrf
   ! LRF
   real(kind=prec)						:: RcLRF2
   integer						:: jg_cgp, j, is3
+  integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -7549,7 +9014,27 @@ igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 	! for every charge group:
     ig_sw = cgp(ig)%iswitch
     i3 = 3*ig_sw-3
+#ifdef USE_GRID
+        iagrid = pw_igrid(ig)
+        gridnum = 0
+igridloop:	do igrid = 1, pw_ndim
+jgridloop:	 do jgrid = 1, pw_ndim
+kgridloop:	  do kgrid = 1, pw_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_pw_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+			 jg_sw = nat_solute + (solv_atom*jgr-(solv_atom-1))
+			 jg_cgp = iwhich_cgp(jg_sw)
+			 call lrf_update(ig,jg_cgp)
+			 call lrf_update(jg_cgp,ig)
+			end do ggloop
+			else
+jgloop: 		do jg = 1, grid_pw_ngrp(gridnum)
+			 jgr = grid_pw_grp(gridnum,jg)
+#else
 jgloop: do jgr = 1, nwat
+#endif
 			 jg_sw = nat_solute + (solv_atom*jgr-(solv_atom-1))
 			 jg_cgp = iwhich_cgp(jg_sw)
 
@@ -7616,6 +9101,12 @@ jaloop:	  do ja = nat_solute + (solv_atom*jgr)-(solv_atom-1), nat_solute + solv_
 		call lrf_update(jg_cgp,ig)
       end if
     end do jgloop
+#ifdef USE_GRID
+end if !interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
   end do igloop
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
@@ -8611,7 +10102,7 @@ subroutine nbwwlist
 ! local variables
 integer						:: iw,jw,ia,ja,i3,j3,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
-
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 ! The number of atoms in each solvent molecule is stored in the global solv_atom
 ! uses the global variables:
@@ -8630,7 +10121,19 @@ iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
 	ia = nat_solute + solv_atom*iw-(solv_atom-1)
         if (excl(ia)) cycle iwloop
         i3 = 3*ia-3
+#ifdef USE_GRID
+        iagrid = ww_igrid(iw)
+	gridnum = 0
+igridloop:	do igrid = 1, ww_ndim
+jgridloop:	 do jgrid = 1, ww_ndim
+kgridloop:	  do kgrid = 1, ww_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_ww_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+jwloop:			do jw=1, grid_ww_ngrp(gridnum)
+			 jwr = grid_ww_grp(gridnum,jw)
+#else
 jwloop:		do jwr =1, nwat
+#endif
                   ja = nat_solute + solv_atom*jwr-(solv_atom-1)
                   if (excl(ja)) cycle jwloop ! skip excluded waters
                   j3 = 3*ja-3
@@ -8659,6 +10162,11 @@ kaloop:			 do ka = 1, solv_atom
 			end do laloop
                         end if
                 end do jwloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do iwloop
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
@@ -8672,7 +10180,7 @@ subroutine nbwwlist_box
 integer						:: iw,jw,ia,ja,i3,j3,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						:: dx, dy, dz
-
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 ! for periodic boundary conditions
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 ! uses the global variables:
@@ -8690,7 +10198,19 @@ rcut2 = Rcww*Rcww
 iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
         ia = nat_solute + solv_atom*iw-(solv_atom-1)
         i3 = 3*ia-3
+#ifdef USE_GRID
+        iagrid = ww_igrid(iw)
+	gridnum = 0
+igridloop:	do igrid = 1, ww_ndim
+jgridloop:	 do jgrid = 1, ww_ndim
+kgridloop:	  do kgrid = 1, ww_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_ww_int(iagrid,igrid,jgrid,kgrid))) cycle kgridloop
+jwloop:			do jw=1, grid_ww_ngrp(gridnum)
+			 jwr = grid_ww_grp(gridnum,jw)
+#else
 jwloop:		do jwr= 1, nwat
+#endif
                         ja = nat_solute + solv_atom*jwr-(solv_atom-1)
                         j3 = 3*ja-3
 
@@ -8722,6 +10242,11 @@ kaloop:                  do ka = 1, solv_atom
                         end do laloop
                         end if
                 end do jwloop
+#ifdef USE_GRID
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do iwloop
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
@@ -8737,7 +10262,7 @@ integer						:: i,j,ig,jg,iw,jw,ia,ja,i3,j3,is,is3,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						:: dr(3)
 real(kind=prec)						::	RcLRF2
-
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -8760,7 +10285,32 @@ is  = nat_solute + solv_atom*iw-(solv_atom-1)
 if( excl(is)) cycle iwloop
 is3 = 3*is-3
 ig = iwhich_cgp(is)
+#ifdef USE_GRID
+iagrid = ww_igrid(iw)
+gridnum = 0
+igridloop:	do igrid = 1, ww_ndim
+jgridloop:	 do jgrid = 1, ww_ndim
+kgridloop:	  do kgrid = 1, ww_ndim
+			gridnum = gridnum + 1
+			if (.not. (grid_ww_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:			 do jw = 1, grid_ww_ngrp(gridnum)
+			  jwr = grid_ww_grp(gridnum,jw)
+			  ja = nat_solute + solv_atom*jwr-(solv_atom-1)
+			  if(excl(ja)) cycle ggloop
+			  jg = iwhich_cgp(ja)
+                          if ( ((iw .gt. jwr) .and. (mod(iw+jwr,2) .eq. 0)) .or. &
+                                  ((iw .lt. jwr) .and. (mod(iw+jwr,2) .eq. 1)).or. &
+                                  (iw .eq. jwr) ) &
+                                  cycle ggloop
+			  call lrf_update(ig,jg)
+			  call lrf_update(jg,ig)
+			 end do ggloop
+			else
+jwloop:			 do jw = 1, grid_ww_ngrp(gridnum)
+			  jwr = grid_ww_grp(gridnum,jw)
+#else
 jwloop: do jwr = 1, nwat
+#endif
 			  ja = nat_solute + solv_atom*jwr-(solv_atom-1)
 			  if(excl(ja)) cycle jwloop
 			  jg = iwhich_cgp(ja)
@@ -8798,6 +10348,12 @@ kaloop:      do ka = 1, solv_atom
 
 
 end do jwloop
+#ifdef USE_GRID
+end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do iwloop
 
 #if defined (PROFILING)
@@ -8812,6 +10368,7 @@ integer						:: i,j,ig,jg,iw,jw,ia,ja,i3,j3,is,is3,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						::	RcLRF2
 real(kind=prec)						::  dx, dy, dz
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
@@ -8834,7 +10391,27 @@ iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
 is  = nat_solute + solv_atom*iw-(solv_atom-1)
 is3 = 3*is-3
 ig = iwhich_cgp(is)
+#ifdef USE_GRID
+iagrid = ww_igrid(iw)
+gridnum = 0
+igridloop:      do igrid = 1, ww_ndim
+jgridloop:       do jgrid = 1, ww_ndim
+kgridloop:        do kgrid = 1, ww_ndim
+                        gridnum = gridnum + 1
+                        if (.not. (grid_ww_int(iagrid,igrid,jgrid,kgrid))) then
+ggloop:                  do jw = 1, grid_ww_ngrp(gridnum)
+                          jwr = grid_ww_grp(gridnum,jw)
+                          ja = nat_solute + solv_atom*jwr-(solv_atom-1)
+                          jg = iwhich_cgp(ja)
+                          call lrf_update(ig,jg)
+                          call lrf_update(jg,ig)
+                         end do ggloop
+                        else
+jwloop:                  do jw = 1, grid_ww_ngrp(gridnum)
+                          jwr = grid_ww_grp(gridnum,jw)
+#else
 jwloop: do jwr = 1, nwat
+#endif
                           ja = nat_solute + solv_atom*jwr-(solv_atom-1)
 
   j3 = 3*ja-3
@@ -8880,6 +10457,12 @@ kaloop:      do ka = 1, solv_atom
 
 
 end do jwloop
+#ifdef USE_GRID
+end if ! interaction
+end do kgridloop
+end do jgridloop
+end do igridloop
+#endif
 end do iwloop
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
@@ -12535,6 +14118,215 @@ end if
 end subroutine p_restrain
 
 !-----------------------------------------------------------------------
+#ifdef USE_GRID
+subroutine populate_grids
+! this function searches the number of charge groups and number of water molecules
+! and places them into the new md grids
+! this is done every NB steps in make_pair_lists as the first thing
+! in the end master broadcasts the new grids to the slave nodes
+! needs some trickery so that we don't overflow any arrays
+
+integer					:: ichg,igrid
+integer					:: i,i3
+real(kind=prec)				:: boxmin(1:3),boxmax(1:3),xc(1:3)
+logical                                 :: set = .false.
+#ifdef USE_MPI
+integer, parameter                      :: vars = 40    !increment this var when adding data to broadcast in batch 1
+integer                                 :: blockcnt(vars), ftype(vars)
+integer(kind=MPI_ADDRESS_KIND)                          :: fdisp(vars)
+#endif
+
+!each node now does its share
+
+if (use_PBC) then
+boxmin(1:3) = boxcentre(1:3)-boxlength/2
+boxmax(1:3) = boxcentre(1:3)+boxlength/2
+end if
+
+! reset the group information for all grids to zero
+! and null all arrays
+grid_pp_ngrp(:)=0
+grid_pw_ngrp(:)=0
+grid_ww_ngrp(:)=0
+ww_igrid(:)=0
+pw_igrid(:)=0
+pp_igrid(:)=0
+grid_pp_grp(:,:)=0
+grid_pw_grp(:,:)=0
+grid_ww_grp(:,:)=0
+
+do ichg=calculation_assignment%pp%start,calculation_assignment%pp%end
+! we decide the grid by the position of the switch atom of each charge group
+i   = cgp(ichg)%iswitch
+i3  = i*3-3
+xc(1) = x(i3+1)
+xc(2) = x(i3+2)
+xc(3) = x(i3+3)
+! this is to account for the possibility of atoms to move out of the PBC box if they are not put back in
+! in this case we just shift the atom implicitly by the distance
+! this is just a bookkeeping issue
+do while (use_PBC.and.((xc(1).gt.(boxmax(1))).or.(xc(1).lt.(boxmin(1))).or.(xc(2).gt.(boxmax(2))).or.(xc(2).lt.(boxmin(2))).or.(xc(3).gt.(boxmax(3))).or.(xc(3).lt.(boxmin(3)))))
+if (xc(1).gt.boxmax(1)) then
+xc(1) = boxmin(1) + (xc(1)-boxmax(1))
+elseif (xc(1).lt.boxmin(1)) then
+xc(1) = boxmax(1) - (xc(1)-boxmin(1))
+end if
+if (xc(2).gt.boxmax(2)) then
+xc(2) = boxmin(2) + (xc(2)-boxmax(2))
+elseif (xc(2).lt.boxmin(2)) then
+xc(2) = boxmax(2) - (xc(2)-boxmin(2))
+end if
+if (xc(3).gt.boxmax(3)) then
+xc(3) = boxmin(3) + (xc(3)-boxmax(3))
+elseif (xc(3).lt.boxmin(3)) then
+xc(3) = boxmax(3) - (xc(3)-boxmin(3))
+end if
+end do
+
+set   = .false.
+igrid = 1
+! now loop first over the pp_grid and then over the pw_grid for ncgp_solute
+pploop: do while (( igrid .le. pp_gridnum).and.(.not.set))
+		if ((xc(1).ge.grid_pp(igrid)%x).and.(xc(1).lt.grid_pp(igrid)%xend)) then
+			if ((xc(2).ge.grid_pp(igrid)%y).and.(xc(2).lt.grid_pp(igrid)%yend)) then
+				if ((xc(3).ge.grid_pp(igrid)%z).and.(xc(3).lt.grid_pp(igrid)%zend)) then  
+! yeah, we found our grid, now place the atom in here and set all the bookkeeping stuff
+! then cycle the grid and continue with the next one
+! needs temp storage because of the OMP part!!!!!
+				pp_igrid(ichg) = igrid
+				grid_pp_ngrp(igrid) = grid_pp_ngrp(igrid) + 1
+				grid_pp_grp(igrid,grid_pp_ngrp(igrid)) = ichg
+                                set = .true.
+				cycle pploop
+! this should (!!!!) ensure we place all groups, but needs to be tested
+				end if
+			end if
+		end if
+                igrid = igrid + 1
+	end do pploop
+! now the pw_grid, same procedure
+set   = .false.
+igrid = 1
+pwloop1: do while (( igrid .le. pw_gridnum).and.(.not.set))
+		if ((xc(1).ge.grid_pw(igrid)%x).and.(xc(1).lt.grid_pw(igrid)%xend)) then
+			if ((xc(2).ge.grid_pw(igrid)%y).and.(xc(2).lt.grid_pw(igrid)%yend)) then
+				if ((xc(3).ge.grid_pw(igrid)%z).and.(xc(3).lt.grid_pw(igrid)%zend)) then
+				pw_igrid(ichg) = igrid
+                                set = .true.
+				cycle pwloop1
+				end if
+			end if
+		end if
+                igrid = igrid + 1
+	end do pwloop1
+end do ! ncgp_solute
+
+! now do the same for nwat
+do ichg=calculation_assignment%ww%start,calculation_assignment%ww%end
+! we decide the grid by the position of the first atom of each solvent molecule
+i   = nat_solute+(ichg*solv_atom)-(solv_atom-1)
+i3  = i*3-3
+xc(1) = x(i3+1)
+xc(2) = x(i3+2)
+xc(3) = x(i3+3)
+! this is to account for the possibility of atoms to move out of the PBC box if they are not put back in
+! in this case we just shift the atom implicitly by the distance
+! this is just a bookkeeping issue
+do while (use_PBC.and.((xc(1).gt.(boxmax(1))).or.(xc(1).lt.(boxmin(1))).or.(xc(2).gt.(boxmax(2))).or.(xc(2).lt.(boxmin(2))).or.(xc(3).gt.(boxmax(3))).or.(xc(3).lt.(boxmin(3)))))
+if (xc(1).gt.boxmax(1)) then
+xc(1) = boxmin(1) + (xc(1)-boxmax(1))
+elseif (xc(1).lt.boxmin(1)) then
+xc(1) = boxmax(1) - (xc(1)-boxmin(1))
+end if
+if (xc(2).gt.boxmax(2)) then
+xc(2) = boxmin(2) + (xc(2)-boxmax(2))
+elseif (xc(2).lt.boxmin(2)) then
+xc(2) = boxmax(2) - (xc(2)-boxmin(2))
+end if
+if (xc(3).gt.boxmax(3)) then
+xc(3) = boxmin(3) + (xc(3)-boxmax(3))
+elseif (xc(3).lt.boxmin(3)) then
+xc(3) = boxmax(3) - (xc(3)-boxmin(3))
+end if
+end do
+
+set   = .false.
+igrid = 1
+pwloop2: do while (( igrid .le. pw_gridnum).and.(.not.set)) 
+                if ((xc(1).ge.grid_pw(igrid)%x).and.(xc(1).lt.grid_pw(igrid)%xend)) then
+                        if ((xc(2).ge.grid_pw(igrid)%y).and.(xc(2).lt.grid_pw(igrid)%yend)) then
+                                if ((xc(3).ge.grid_pw(igrid)%z).and.(xc(3).lt.grid_pw(igrid)%zend)) then
+				grid_pw_ngrp(igrid) = grid_pw_ngrp(igrid) + 1
+				grid_pw_grp(igrid,grid_pw_ngrp(igrid)) = ichg
+                                set = .true.
+                                cycle pwloop2
+                                end if
+                        end if
+                end if
+                igrid = igrid + 1
+        end do pwloop2
+set   = .false.
+igrid = 1
+wwloop: do while (( igrid .le. ww_gridnum).and.(.not.set))
+		if ((xc(1).ge.grid_ww(igrid)%x).and.(xc(1).lt.grid_ww(igrid)%xend)) then
+			if ((xc(2).ge.grid_ww(igrid)%y).and.(xc(2).lt.grid_ww(igrid)%yend)) then
+				if ((xc(3).ge.grid_ww(igrid)%z).and.(xc(3).lt.grid_ww(igrid)%zend)) then
+				grid_ww_ngrp(igrid) = grid_ww_ngrp(igrid) + 1
+				grid_ww_grp(igrid,grid_ww_ngrp(igrid)) = ichg
+				ww_igrid(ichg) = igrid
+                                set = .true.
+				cycle wwloop
+				end if
+			end if
+		end if
+                igrid = igrid + 1
+	end do wwloop
+end do ! nwat
+
+
+! now collect and distribute all the info to all nodes
+#ifdef USE_MPI
+
+if (ncgp_solute .ne. 0 ) then
+
+call MPI_Allreduce(MPI_IN_PLACE,grid_pp_ngrp,pp_gridnum,MPI_INTEGER,MPI_SUM, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_pp_ngrp')
+call MPI_Allreduce(MPI_IN_PLACE,pp_igrid,ncgp_solute,MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce pp_igrid')
+
+do igrid = 1, pp_gridnum
+call MPI_Allreduce(MPI_IN_PLACE,grid_pp_grp(igrid,:),gridstor_pp,MPI_INTEGER,&
+                        mpi_grid_add, MPI_COMM_WORLD, ierr)
+end do
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_pp_grp')
+
+end if
+if (nwat .gt. 0 ) then
+call MPI_Allreduce(MPI_IN_PLACE,grid_pw_ngrp,pw_gridnum,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_pw_ngrp')
+call MPI_Allreduce(MPI_IN_PLACE,pw_igrid,ncgp_solute,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce pw_igrid')
+call MPI_Allreduce(MPI_IN_PLACE,grid_ww_ngrp,ww_gridnum,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_ww_ngrp')
+call MPI_Allreduce(MPI_IN_PLACE,ww_igrid,nwat,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce ww_igrid')
+
+do igrid = 1, pw_gridnum
+call MPI_Allreduce(MPI_IN_PLACE,grid_pw_grp(igrid,:),gridstor_pw,MPI_INTEGER,&
+                        mpi_grid_add, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_pw_grp')
+end do
+do igrid = 1, ww_gridnum
+call MPI_Allreduce(MPI_IN_PLACE,grid_ww_grp(igrid,:),gridstor_ww,MPI_INTEGER,&
+                        mpi_grid_add, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('populate grids MPI_Allreduce grid_ww_grp')
+end do
+end if
+#endif
+ 
+
+end subroutine populate_grids
+#endif
 
 subroutine pot_energy
 ! local variables
@@ -13174,7 +14966,7 @@ if( use_PBC ) then
 end if
 
 !initialization for the Nosé-Hoover chain thermostat
-!is done after shake has started, here shkae_constraints are still zero
+!is done after shake has started, here shake_constraints are still zero
 
 !scale charges by sqrt(coulomb_constant) 
 crg(:) = crg(:) * sqrt(coulomb_constant)
@@ -13290,6 +15082,24 @@ end if
 write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
 	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
 	ene_header%gcnum(1:ene_header%arrays)
+
+! the last thing to prepare are the MD grids
+! so we call them here
+! they will be filled later when the pair lists are created the first time
+#ifdef USE_GRID
+call create_grid_pp
+if (nwat .gt. 0) then
+call create_grid_pw
+call create_grid_ww
+end if
+
+! now allocate the array needed to store the grid lookup information for
+! the charge groups
+allocate(pp_igrid(ncgp_solute))
+allocate(pw_igrid(ncgp_solute))
+allocate(ww_igrid(nwat))
+#endif
+
 #if defined (USE_MPI)
 	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
 #endif
@@ -14902,7 +16712,7 @@ end subroutine write_xfin
 !-----------------------------------------------------------------------
 subroutine put_back_in_box
 
-real(kind=prec)				::	boxc(1:3)
+real(kind=prec)				::	boxc(1:3),old_boxc(1:3)
 integer				::	i, j, starten, slutet
 !the borders of the periodic box
 real(kind=prec)				::	x_max, x_min, y_max, y_min, z_max, z_min
@@ -14913,6 +16723,7 @@ integer				::  pbib_start, pbib_stop
 !the function can be run exclusivly on node 0
 !no gain from doing it on each node
 if (nodeid.eq.0) then
+old_boxc(:)=boxcentre(:)
 if( .not. rigid_box_centre ) then !if the box is allowed to float around, center on solute if present, otherwise center on solvent
         if( nat_solute > 0) then
                 slutet = nat_solute
@@ -15017,21 +16828,53 @@ call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+call MPI_Bcast(old_boxc, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+#endif
+
+#ifdef USE_GRID
+! we now need to update the coordinates of all grid boxes
+! to shift by the amount the new box has shifted
+grid_pp(:)%x = grid_pp(:)%x - (old_boxc(1)-boxcentre(1))
+grid_pp(:)%y = grid_pp(:)%y - (old_boxc(2)-boxcentre(2))
+grid_pp(:)%z = grid_pp(:)%z - (old_boxc(3)-boxcentre(3))
+
+grid_pp(:)%xend = grid_pp(:)%xend - (old_boxc(1)-boxcentre(1))
+grid_pp(:)%yend = grid_pp(:)%yend - (old_boxc(2)-boxcentre(2))
+grid_pp(:)%zend = grid_pp(:)%zend - (old_boxc(3)-boxcentre(3))
+
+grid_pw(:)%x = grid_pw(:)%x - (old_boxc(1)-boxcentre(1))
+grid_pw(:)%y = grid_pw(:)%y - (old_boxc(2)-boxcentre(2))
+grid_pw(:)%z = grid_pw(:)%z - (old_boxc(3)-boxcentre(3))
+
+grid_pw(:)%xend = grid_pw(:)%xend - (old_boxc(1)-boxcentre(1))
+grid_pw(:)%yend = grid_pw(:)%yend - (old_boxc(2)-boxcentre(2))
+grid_pw(:)%zend = grid_pw(:)%zend - (old_boxc(3)-boxcentre(3))
+
+grid_ww(:)%x = grid_ww(:)%x - (old_boxc(1)-boxcentre(1))
+grid_ww(:)%y = grid_ww(:)%y - (old_boxc(2)-boxcentre(2))
+grid_ww(:)%z = grid_ww(:)%z - (old_boxc(3)-boxcentre(3))
+
+grid_ww(:)%xend = grid_ww(:)%xend - (old_boxc(1)-boxcentre(1))
+grid_ww(:)%yend = grid_ww(:)%yend - (old_boxc(2)-boxcentre(2))
+grid_ww(:)%zend = grid_ww(:)%zend - (old_boxc(3)-boxcentre(3))
+
 #endif
 !LRF: if molecule moved update all cgp_centers from first charge group to the last one
 if (use_LRF) then
 
 !Broadcast mvd_mol(:) & x(:)
-#if defined(USE_MPI)
-call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_BCast mvd_mol')
-!broadcast start and stop molecule so that each node can do its job
-call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_start')
-call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_stop')
-#endif
+!#if defined(USE_MPI)
+!call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!if (ierr .ne. 0) call die('put_back_in_box MPI_BCast mvd_mol')
+!!broadcast start and stop molecule so that each node can do its job
+!call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_start')
+!call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+!if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_stop')
+!#endif
 
+if (nodeid .eq.0) then
 do k=pbib_start,pbib_stop
 		if (mvd_mol(k) == 1) then  
 						do ig=iwhich_cgp(istart_mol(k)),iwhich_cgp(istart_mol(k+1)-1)
@@ -15039,11 +16882,11 @@ do k=pbib_start,pbib_stop
 								do i  = cgp(ig)%first, cgp(ig)%last
 										lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
 								end do
-
 						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
 						end do
 		end if 
 end do
+end if ! nodeid .eq. 0
 #if defined(USE_MPI)
 !for now just bcast the whole thing
 call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)

@@ -267,6 +267,7 @@ mask.o:	mask.f90 topo.o
 maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
+#arm grid by including this flag: -DUSE_GRID
 md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 

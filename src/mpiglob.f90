@@ -66,8 +66,7 @@ use NRGY
 
  ! stuff for mpi type create
  integer                :: mpitype_batch_lrf,mpi_lrf_add,mpi_lrf_cgp_rep
- integer                :: mpitype_batch_wshell, mpi_watpol_add
- integer                :: mpi_coord_replace
+ integer                :: mpitype_batch_ppgrid,mpitype_batch_pwgrid,mpitype_batch_wwgrid,mpi_grid_add
 #ifdef _OPENMP
  !for omp use
  integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter
