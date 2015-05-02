@@ -21,8 +21,10 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=			ifort 
-	FC_OPT=     -O3 -ip -ipo -unroll -i-static -xHost
-	FFLAGS=     -fstack-protector -i-static -fp-model precise -fp-model except#-istatic flag is only linking compiler statici
+	FC_OPT=		-O3 -ip -ipo -unroll -xHost -inline-forceinline \
+				-unroll-aggressive -finline-limit=1000 \
+				-no-inline-max-size -no-prec-div
+	FFLAGS=		-fp-model precise -fp-model except 
 	FFLAGS_R8=	-r8
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp
@@ -65,13 +67,13 @@ else ifeq ($(COMP),osx)
 ################################################################################
 else ifeq ($(COMP),pgi)
 	FC=		pgf90
-	FC_OPT=		-fastsse -Mipa=fast,inline -O3 -Munroll -mcmodel=medium
+	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
 	FFLAGS=		
 	FFLAGS_R8=	-r8
 	FPP_FLG=	-Mpreprocess
 
 	MPIFC=		mpif90
-	MPIFLAGS=	-lmpi#-f90=${FC}
+	MPIFLAGS=	-lmpi
 	MPI=		${MPIFLAGS} ${FFLAGS} ${FC_OPT}
 	MPI_FC=		${FC}
 	MPFLAG=		-mp ${MPI}

@@ -4718,7 +4718,7 @@ end subroutine lrf_taylor
 
 
 !-----------------------------------------------------------------------
-
+!DEC$ ATTRIBUTES FORCEINLINE :: lrf_update
 subroutine lrf_update(group1,group2)
 ! --- input variables
 integer				:: group1,group2
@@ -15024,12 +15024,12 @@ if (use_LRF) then
 !Broadcast mvd_mol(:) & x(:)
 #if defined(USE_MPI)
 call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_Allreduce mvd_mol')
+if (ierr .ne. 0) call die('put_back_in_box MPI_BCast mvd_mol')
 !broadcast start and stop molecule so that each node can do its job
 call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_start')
+if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_start')
 call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast pbib_stop')
+if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_stop')
 #endif
 
 do k=pbib_start,pbib_stop
@@ -15045,8 +15045,11 @@ do k=pbib_start,pbib_stop
 		end if 
 end do
 #if defined(USE_MPI)
-call MPI_Allreduce(MPI_IN_PLACE,lrf,ncgp,mpitype_batch_lrf, mpi_lrf_cgp_rep, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_Allreduce lrf cgp')
+!for now just bcast the whole thing
+call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast lrf')
+! for later use of PBC update on each node
+!call lrf_gather
 #endif
 end if
 
