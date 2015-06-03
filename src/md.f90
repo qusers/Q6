@@ -2204,8 +2204,24 @@ end subroutine create_grid_ww
 subroutine cgp_centers
 ! *** local variables
 integer						::	ig,i,i3
+#ifdef _OPENMP
+integer :: quotient, remainder
 
+
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (ncgp)/threads_num
+remainder = MOD(ncgp, threads_num)
+mp_start = thread_id * quotient + MIN(thread_id, remainder) + 1
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+do ig = mp_start,mp_end
+#else
 do ig = 1, ncgp
+#endif
         lrf(ig)%cgp_cent(:) = zero
         lrf(ig)%phi0 = zero
 lrf(ig)%phi1(:) = zero
@@ -5865,11 +5881,13 @@ iloop:        do ia = cgp(group1)%first, cgp(group1)%last
           r2 = dr(1)*dr(1) + dr(2)*dr(2) + dr(3)*dr(3)
 
           field0=crg(i)/(r2*sqrt(r2))
+          field1=3.0_prec*field0/r2
+          field2=-field1/r2
+!$omp critical
           lrf(group2)%phi0=lrf(group2)%phi0+field0*r2
           lrf(group2)%phi1(1)=lrf(group2)%phi1(1)-field0*dr(1)
           lrf(group2)%phi1(2)=lrf(group2)%phi1(2)-field0*dr(2)
           lrf(group2)%phi1(3)=lrf(group2)%phi1(3)-field0*dr(3)
-          field1=3.0_prec*field0/r2
           lrf(group2)%phi2(1)=lrf(group2)%phi2(1)+field1*dr(1)*dr(1)-field0
           lrf(group2)%phi2(2)=lrf(group2)%phi2(2)+field1*dr(1)*dr(2)
           lrf(group2)%phi2(3)=lrf(group2)%phi2(3)+field1*dr(1)*dr(3)
@@ -5879,7 +5897,8 @@ iloop:        do ia = cgp(group1)%first, cgp(group1)%last
           lrf(group2)%phi2(7)=lrf(group2)%phi2(7)+field1*dr(3)*dr(1)
           lrf(group2)%phi2(8)=lrf(group2)%phi2(8)+field1*dr(3)*dr(2)
           lrf(group2)%phi2(9)=lrf(group2)%phi2(9)+field1*dr(3)*dr(3)-field0
-          field2=-field1/r2
+!$omp end critical
+!$omp critical
           lrf(group2)%phi3(1 )=lrf(group2)%phi3(1 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(1)-r2*3.0_prec*dr(1))
           lrf(group2)%phi3(2 )=lrf(group2)%phi3(2 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(2)-r2*dr(2))
           lrf(group2)%phi3(3 )=lrf(group2)%phi3(3 ) +field2*(5.0_prec*dr(1)*dr(1)*dr(3)-r2*dr(3))
@@ -5907,6 +5926,7 @@ iloop:        do ia = cgp(group1)%first, cgp(group1)%last
           lrf(group2)%phi3(25)=lrf(group2)%phi3(25) +field2*(5.0_prec*dr(3)*dr(3)*dr(1)-r2*dr(1))
           lrf(group2)%phi3(26)=lrf(group2)%phi3(26) +field2*(5.0_prec*dr(3)*dr(3)*dr(2)-r2*dr(2))
           lrf(group2)%phi3(27)=lrf(group2)%phi3(27) +field2*(5.0_prec*dr(3)*dr(3)*dr(3)-r2*3.0_prec*dr(3))
+!$omp end critical
         end do iloop
 
 end subroutine lrf_update
@@ -5921,6 +5941,13 @@ start_loop_time = rtime()
 ! start with populating the grid
 ! each node populates its assigned ncgp_solute
 ! and nwat and then intercommunication does the rest
+
+! we make this whole thing now omp parallel
+! start opening region here so we don't have to pay the penalty
+! to do this in every function
+
+!$omp parallel default(none) shared(use_PBC,use_LRF,iuse_switch_atom) 
+
 #ifdef USE_GRID
 call populate_grids
 #endif
@@ -5981,6 +6008,9 @@ else !spherical case
 
         call nbqwlist   
 end if
+
+!$omp end parallel
+
 ! we are gathering the LRF info here
 #ifdef USE_MPI
 if (use_LRF) call lrf_gather
@@ -6800,24 +6830,43 @@ integer						::iagrid, igrid, jgrid, kgrid, gridnum
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single 
 nbpp_pair = 0
+!$omp end single 
+!$omp barrier
 rcut2 = Rcpp*Rcpp
 
 ! new stuff because we are now having a grid 
 ! check first if the atoms are in one the adjecent grids
 ! if not, cycle them
-! grid information taken from cgp structure, updated every nb steps
+! grid information taken from new costum structure, updated every nb steps
 ! after getting the first group, we cycle through the grids to find those that interact
 ! and only search further in them
 
-! interaction matrix is saved in grid%interact array :P
+! interaction matrix is saved in grid_pp_int array 
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 
 ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
@@ -6909,18 +6958,26 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
       end if
 
                   ! if out of space then make more space
+!$omp critical
       if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
       nbpp_pair = nbpp_pair + 1
       nbpp(nbpp_pair)%i = i
       nbpp(nbpp_pair)%j = j 
       nbpp(nbpp_pair)%LJcod = ljcod(iac(i),iac(j))
+!$omp end critical
 
       if ( abs(j-i) .le. max_nbr_range ) then
          if ( i .lt. j ) then
-            if ( list14(j-i,i) ) nbpp(nbpp_pair)%LJcod = 3
+            if ( list14(j-i,i) ) then
+!$omp atomic write
+                nbpp(nbpp_pair)%LJcod = 3
+            end if
          else
-            if ( list14(i-j,j) ) nbpp(nbpp_pair)%LJcod = 3
+            if ( list14(i-j,j) ) then
+!$omp atomic write
+                nbpp(nbpp_pair)%LJcod = 3
+            end if
          end if
       else
          do nl = 1, n14long
@@ -6928,8 +6985,9 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
                  list14long(2,nl) .eq. j      ) .or. &
                  (list14long(1,nl) .eq. j .and. &
                  list14long(2,nl) .eq. i      ) ) then
+!$omp atomic write
                  nbpp(nbpp_pair)%LJcod = 3
-                                end if
+            end if
          end do
       end if
 
@@ -6958,6 +7016,9 @@ subroutine nbpplis2_box
   real(kind=prec)						:: dx, dy, dz
 
   integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -6966,12 +7027,27 @@ start_loop_time = rtime()
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
   !	excluding any Q-atoms.
-
+!$omp single
   nbpp_pair = 0
   nbpp_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpp*Rcpp
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 #ifdef USE_GRID
         iagrid = pp_igrid(ig)
         gridnum = 0
@@ -7016,13 +7092,13 @@ jgloop:     do jgr = 1, ncgp_solute
               if ( r2 .le. rcut2 ) then
 			    ! one atom pair is within cutoff: set inside
 			    inside = 1
-
+!$omp critical
 				if (nbpp_cgp_pair .eq. size(nbpp_cgp, 1) )  call reallocate_nbpp_cgp
 
 				nbpp_cgp_pair = nbpp_cgp_pair + 1
 				nbpp_cgp(nbpp_cgp_pair)%i = i
 				nbpp_cgp(nbpp_cgp_pair)%j = j
-
+!$omp end critical
 			  end if
 
 			  ja = ja + 1
@@ -7065,6 +7141,7 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
               end if
 
 			  ! if out of space then make more space
+!$omp critical
               if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
               nbpp_pair = nbpp_pair + 1
@@ -7072,12 +7149,18 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
               nbpp(nbpp_pair)%j = j 
               nbpp(nbpp_pair)%LJcod = ljcod(iac(i),iac(j))
 			  nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair
-
+!$omp end critical
               if ( abs(j-i) .le. max_nbr_range ) then
                  if ( i .lt. j ) then
-                    if ( list14(j-i,i) ) nbpp(nbpp_pair)%LJcod = 3
+                    if ( list14(j-i,i) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                    end if
                  else
-                    if ( list14(i-j,j) ) nbpp(nbpp_pair)%LJcod = 3
+                    if ( list14(i-j,j) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                    end if
                  end if
               else
                  do nl = 1, n14long
@@ -7085,8 +7168,9 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
                          list14long(2,nl) .eq. j      ) .or. &
                          (list14long(1,nl) .eq. j .and. &
                          list14long(2,nl) .eq. i      ) ) then
+!$omp atomic write
                          nbpp(nbpp_pair)%LJcod = 3
-					end if
+		    end if
                  end do
               end if
 
@@ -7117,17 +7201,35 @@ subroutine nbpplis2_box_lrf
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solute atom pairs 
   !	excluding any Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
   nbpp_pair = 0
   nbpp_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpp*Rcpp
   RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 #ifdef USE_GRID
          iagrid = pp_igrid(ig)
 	  gridnum = 0
@@ -7180,12 +7282,13 @@ jgloop:     do jgr = 1, ncgp_solute
               if ( r2 .le. rcut2 ) then
 			    ! one atom pair is within cutoff: set inside
 			    inside = 1
-
+!$omp critical
 				if (nbpp_cgp_pair .eq. size(nbpp_cgp, 1) )  call reallocate_nbpp_cgp
 
 				nbpp_cgp_pair = nbpp_cgp_pair + 1
 				nbpp_cgp(nbpp_cgp_pair)%i = i
 				nbpp_cgp(nbpp_cgp_pair)%j = j
+!$omp end critical
               elseif (r2 .le. RcLRF2) then
 			    inside_LRF = 1
               end if
@@ -7228,6 +7331,7 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
               end if
 
 			  ! if out of space then make more space
+!$omp critical
               if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
               nbpp_pair = nbpp_pair + 1
@@ -7235,12 +7339,18 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
               nbpp(nbpp_pair)%j = j 
               nbpp(nbpp_pair)%LJcod = ljcod(iac(i),iac(j))
 			  nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair
-
+!$omp end critical
               if ( abs(j-i) .le. max_nbr_range ) then
                  if ( i .lt. j ) then
-                    if ( list14(j-i,i) ) nbpp(nbpp_pair)%LJcod = 3
+                    if ( list14(j-i,i) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                    end if
                  else
-                    if ( list14(i-j,j) ) nbpp(nbpp_pair)%LJcod = 3
+                    if ( list14(i-j,j) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                    end if
                  end if
               else
                  do nl = 1, n14long
@@ -7248,8 +7358,9 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
                          list14long(2,nl) .eq. j      ) .or. &
                          (list14long(1,nl) .eq. j .and. &
                          list14long(2,nl) .eq. i      ) ) then
+!$omp atomic write
                          nbpp(nbpp_pair)%LJcod = 3
-					end if
+		    end if
                  end do
               end if
 
@@ -7257,13 +7368,11 @@ jaloop:       do ja = cgp(jgr)%first, cgp(jgr)%last
 		   end do ialoop
     	elseif((inside_LRF .eq. 1) .and. (inside .eq. 0)) then
         ! outside pp-cutoff but inside LRF cut-off use LRF
-		
 		!ig : jgr calculation
 		call lrf_update(ig,jgr)
 
 		!jgr : ig calculations
 		call lrf_update(jgr,ig)
-
       end if ! outside cutoff
 
 	end do jgloop
@@ -7290,17 +7399,35 @@ real(kind=prec)						::	RcLRF2
 integer							::iagrid, igrid, jgrid, kgrid, gridnum
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
 nbpp_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpp*Rcpp
 RcLRF2 = RcLRF*RcLRF
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 
         ! skip if excluded group
         is = cgp(ig)%iswitch
@@ -7394,26 +7521,35 @@ jaloop:				do ja = cgp(jgr)%first, cgp(jgr)%last
                                         end if
 
                                         ! if out of space then make more space
+!$omp critical
                                         if (nbpp_pair == calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j 
                                         nbpp(nbpp_pair)%LJcod = ljcod(iac(i),iac(j))
-
+!$omp end critical
                                         if ( abs(j-i) .le. max_nbr_range ) then
                                                 if ( i .lt. j ) then
-                                                        if ( list14(j-i,i) ) nbpp(nbpp_pair)%LJcod = 3
+                                                        if ( list14(j-i,i) ) then
+!$omp atomic write
+                                                                nbpp(nbpp_pair)%LJcod = 3
+                                                        end if
                                                 else
-                                                        if ( list14(i-j,j) ) nbpp(nbpp_pair)%LJcod = 3
+                                                        if ( list14(i-j,j) ) then
+!$omp atomic write
+                                                                nbpp(nbpp_pair)%LJcod = 3
+                                                        end if
                                                 end if
                                         else
                                                 do nl = 1, n14long
                                                         if ( (list14long(1,nl) .eq. i .and. &
                                                                 list14long(2,nl) .eq. j      ) .or. &
                                                                 (list14long(1,nl) .eq. j .and. &
-                                                                list14long(2,nl) .eq. i      ) ) &
+                                                                list14long(2,nl) .eq. i      ) ) then
+!$omp atomic write
                                                                 nbpp(nbpp_pair)%LJcod = 3
+                                                        end if
                                                 end do
                                         end if
 
@@ -7459,16 +7595,33 @@ integer                                                 ::iagrid, igrid, jgrid, 
 !  nexlong, listexlong, calculation_assignment%pp%max, alloc_status, list14, n14long, list14long
 
 ! reset #pairs
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
 nbpp_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpp*Rcpp
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 ! for every assigned charge group:
 
 ! skip if excluded group
@@ -7554,6 +7707,7 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
           end if
 
           ! if out of space then make more space
+!$omp critical
           if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
           ! all tests passed, add the pair
@@ -7561,21 +7715,30 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
           nbpp(nbpp_pair)%i = i
           nbpp(nbpp_pair)%j = j 
           nbpp(nbpp_pair)%LJcod = LJ_code
+!$omp end critical
 
           ! set LJcod of the pair to 3 if the atoms have bonded interactions
           if ( abs(j-i) .le. max_nbr_range ) then
                 if ( i .lt. j ) then
-                  if ( list14(j-i, i) ) nbpp(nbpp_pair)%LJcod = 3
+                  if ( list14(j-i, i) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                  end if
                 else
-                  if ( list14(i-j, j) ) nbpp(nbpp_pair)%LJcod = 3
+                  if ( list14(i-j, j) ) then
+!$omp atomic write
+                        nbpp(nbpp_pair)%LJcod = 3
+                  end if
                 end if
           else
 
 
         do nl = 1, n14long
                   if ((list14long(1, nl) .eq. i .and. list14long(2, nl) .eq. j) .or. &
-                        (list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) &
+                        (list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) then
+!$omp atomic write
                         nbpp(nbpp_pair)%LJcod = 3
+                  endif
                 end do
           end if
         end do jaloop
@@ -7612,17 +7775,35 @@ subroutine nbpplist_box
   !  nexlong, listexlong, calculation_assignment%pp%max, alloc_status, list14, n14long, list14long
 
   ! reset #pairs
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
   nbpp_pair = 0 !atom pairs
   nbpp_cgp_pair = 0 !chargegroup pairs
+!$omp end single
+!$omp barrier
   rcut2 = Rcpp*Rcpp
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 	! for every assigned charge group:
 	ig_sw = cgp(ig)%iswitch !switching atom in charge group ig
 	i3 = 3*ig_sw-3
@@ -7664,11 +7845,13 @@ jgloop: do jgr = 1, ncgp_solute
 	  !inside cutoff
 
 	  !check if more memory is needed
+!$omp critical
 	  if(nbpp_cgp_pair .eq. size(nbpp_cgp, 1)) call reallocate_nbpp_cgp
 	  !add the charge group pair
 	  nbpp_cgp_pair = nbpp_cgp_pair + 1
 	  nbpp_cgp(nbpp_cgp_pair)%i = ig_sw !the switching atoms of the charge groups in the pair
 	  nbpp_cgp(nbpp_cgp_pair)%j = jg_sw
+!$omp end critical
 
 ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 		! for every atom in the charge group ig (of the outermost loop):
@@ -7713,6 +7896,7 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
 		  end if
 
 		  ! if out of space then make more space
+!$omp critical
 		  if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
 		  ! all tests passed, add the pair
@@ -7721,20 +7905,28 @@ jaloop: do ja = cgp(jgr)%first, cgp(jgr)%last
 		  nbpp(nbpp_pair)%j = j 
 		  nbpp(nbpp_pair)%LJcod = LJ_code
 		  nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair !which pair of charge groups the atom pair belongs to
-		
+!$omp end critical		
 		  ! set LJcod of the pair to 3 if the atoms have bonded interactions
 		  if ( abs(j-i) .le. max_nbr_range ) then
 			if ( i .lt. j ) then
-			  if ( list14(j-i, i) ) nbpp(nbpp_pair)%LJcod = 3
+			  if ( list14(j-i, i) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                          end if
 			else
-			  if ( list14(i-j, j) ) nbpp(nbpp_pair)%LJcod = 3
+			  if ( list14(i-j, j) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                          end if
 			end if
 		  else
 
 		do nl = 1, n14long
 			  if ((list14long(1, nl) .eq. i .and. list14long(2, nl) .eq. j) .or. &
-				(list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) &
+				(list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) then
+!$omp atomic write
 				nbpp(nbpp_pair)%LJcod = 3
+                          end if
 			end do
 		  end if
 		end do jaloop
@@ -7761,6 +7953,9 @@ real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 real(kind=prec)						::	RcLRF2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -7774,11 +7969,27 @@ start_loop_time = rtime()
 !  nbpp_pair, Rcpp, RcLRF, cgp, excl, ncgp, x, cgpatom, iqatom, ljcod, crg, iaclib, max_nbr_range,
 !  listex, nexlong, listexlong, nbpp, alloc_status, list14, n14long, list14long, lrf
 
-
+!$omp single
 nbpp_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpp*Rcpp
 RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 ! for every assigned charge group:
 
 ! skip if excluded group
@@ -7870,6 +8081,7 @@ jaloop:	  do ja = cgp(jgr)%first, cgp(jgr)%last
                 end if
 
                 ! if out of space then make more space
+!$omp critical
                 if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
                 ! all tests passed, add the pair
@@ -7877,21 +8089,30 @@ jaloop:	  do ja = cgp(jgr)%first, cgp(jgr)%last
                 nbpp(nbpp_pair)%i = i
                 nbpp(nbpp_pair)%j = j 
                 nbpp(nbpp_pair)%LJcod = ljcod(iac(i),iac(j))
+!$omp end critical
 !TMP                nbpp_per_cgp(ig)=nbpp_per_cgp(ig)+1
 
                 if ( abs(j-i) .le. max_nbr_range ) then
                   if ( i .lt. j ) then
-                        if ( list14(j-i,i) ) nbpp(nbpp_pair)%LJcod = 3
+                        if ( list14(j-i,i) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                        end if
                   else
-                        if ( list14(i-j,j) ) nbpp(nbpp_pair)%LJcod = 3
+                        if ( list14(i-j,j) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                        end if
                   end if
                 else
                   do nl = 1, n14long
                         if ( (list14long(1,nl) .eq. i .and. &
                           list14long(2,nl) .eq. j      ) .or. &
                           (list14long(1,nl) .eq. j .and. &
-                          list14long(2,nl) .eq. i      ) ) &
+                          list14long(2,nl) .eq. i      ) ) then
+!$omp atomic write
                           nbpp(nbpp_pair)%LJcod = 3
+                        end if
                   end do
                 end if
           end do jaloop
@@ -7900,7 +8121,6 @@ jaloop:	  do ja = cgp(jgr)%first, cgp(jgr)%last
         ! outside pp-cutoff but inside LRF cut-off use LRF
 	call lrf_update(ig,jgr)
 	call lrf_update(jgr,ig)
-
 
   end if ! LRF cutoff
 
@@ -7912,7 +8132,6 @@ end do jgridloop
 end do igridloop
 #endif
 end do igloop
-
 #if defined (PROFILING)
 profile(3)%time = profile(3)%time + rtime() - start_loop_time
 #endif
@@ -7929,6 +8148,9 @@ subroutine nbpplist_box_lrf
   real(kind=prec)						::RcLRF2
 
   integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -7943,12 +8165,28 @@ start_loop_time = rtime()
   !  nexlong, listexlong, calculation_assignment%pp%max, alloc_status, list14, n14long, list14long
 
   ! reset #pairs
+!$omp single
   nbpp_pair = 0 !atom pairs
   nbpp_cgp_pair = 0 !chargegroup pairs
+!$omp end single
+!$omp barrier
   rcut2 = Rcpp*Rcpp
   RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pp%end - calculation_assignment%pp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pp%end - calculation_assignment%pp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+#endif
 	! for every assigned charge group:
 	ig_sw = cgp(ig)%iswitch !switching atom in charge group ig
 	i3 = 3*ig_sw-3
@@ -7999,11 +8237,13 @@ jgloop: do jgr = 1, ncgp_solute
         !innside cutoff
 
 	    !check if more memory is needed
+!$omp critical
 	    if(nbpp_cgp_pair .eq. size(nbpp_cgp, 1)) call reallocate_nbpp_cgp
 	    !add the charge group pair
 	    nbpp_cgp_pair = nbpp_cgp_pair + 1
 	    nbpp_cgp(nbpp_cgp_pair)%i = ig_sw !the switching atoms of the charge groups in the pair
 	    nbpp_cgp(nbpp_cgp_pair)%j = jg_sw
+!$omp end critical
 
 ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 	    ! for every atom in the charge group ig (of the outermost loop):
@@ -8048,6 +8288,7 @@ jaloop:   do ja = cgp(jgr)%first, cgp(jgr)%last
 		    end if
 
 		    ! if out of space then make more space
+!$omp critical
 		    if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
 
 		    ! all tests passed, add the pair
@@ -8056,20 +8297,27 @@ jaloop:   do ja = cgp(jgr)%first, cgp(jgr)%last
 		    nbpp(nbpp_pair)%j = j 
 		    nbpp(nbpp_pair)%LJcod = LJ_code
 		    nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair !which pair of charge groups the atom pair belongs to
-		
+!$omp end critical
 		    ! set LJcod of the pair to 3 if the atoms have bonded interactions
 		    if ( abs(j-i) .le. max_nbr_range ) then
 			  if ( i .lt. j ) then
-			    if ( list14(j-i, i) ) nbpp(nbpp_pair)%LJcod = 3
+			    if ( list14(j-i, i) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                            end if
 			  else
-			    if ( list14(i-j, j) ) nbpp(nbpp_pair)%LJcod = 3
+			    if ( list14(i-j, j) ) then
+!$omp atomic write
+                                nbpp(nbpp_pair)%LJcod = 3
+                            end if
 			  end if
 		    else
-
 		      do nl = 1, n14long
 		       if ((list14long(1, nl) .eq. i .and. list14long(2, nl) .eq. j) .or. &
-			      (list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) &
+			      (list14long(1, nl) .eq. j .and. list14long(2, nl) .eq. i)) then
+!$omp atomic write
 				  nbpp(nbpp_pair)%LJcod = 3
+                        end if
 			  end do
 		    end if
 	
@@ -8077,7 +8325,6 @@ jaloop:   do ja = cgp(jgr)%first, cgp(jgr)%last
 	    end do ialoop
 	  elseif(r2 .le. RcLRF2) then
         ! outside pp-cutoff but inside LRF cut-off use LRF
-		
 		!ig : jg calculation
 		call lrf_update(ig,jgr)
 		!jg : ig calculations
@@ -8195,6 +8442,9 @@ subroutine nbpwlis2
 integer						:: i,ig,jg,ia,ja,i3,j3, inside,jgr
 real(kind=prec)						:: rcut2,r2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -8203,13 +8453,27 @@ start_loop_time = rtime()
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
 
-
+!$omp single
 nbpw_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpw*Rcpw
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
-
+#endif
 !	   --- excluded group ? ---
 ia = cgp(ig)%iswitch
 if ( excl(ia) ) cycle igloop
@@ -8256,6 +8520,7 @@ ialoop:    do ia = cgp(ig)%first, cgp(ig)%last
    if ( iqatom(i)/=0 ) cycle ialoop
 
            ! if out of space then make more space
+!$omp critical
            if (nbpw_pair .gt. calculation_assignment%pw%max-solv_atom) call reallocate_nonbondlist_pw
 
 jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom*jgr
@@ -8278,6 +8543,7 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
           nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
           nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
         end do jaloop
+!$omp end critical
 end do ialoop
 end do jgloop
 #ifdef USE_GRID
@@ -8304,16 +8570,35 @@ subroutine nbpwlis2_box
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
   nbpw_pair = 0
   nbpw_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpw*Rcpw
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 #ifdef USE_GRID
 	  iagrid = pw_igrid(ig)
 	  gridnum = 0
@@ -8349,10 +8634,12 @@ jgloop:     do jgr = 1, nwat
           	 if ( r2 .le. rcut2 ) then
 		     ! inside cutoff, raise the flag
 			 inside = 1
+!$omp critical
 			 if (nbpw_cgp_pair .eq. size(nbpw_cgp, 1)) call reallocate_nbpw_cgp
 			 nbpw_cgp_pair = nbpw_cgp_pair + 1
 			 nbpw_cgp(nbpw_cgp_pair)%i = i
 			 nbpw_cgp(nbpw_cgp_pair)%j = ja
+!$omp end critical
 		   end if
 
 		  ig_atom = ig_atom + 1 !ia = ia + 1
@@ -8366,6 +8653,7 @@ ialoop:    do ia = cgp(ig)%first, cgp(ig)%last
            if ( iqatom(i)/=0 ) cycle ialoop
 
 		   ! if out of space then make more space
+!$omp critical
 		   if (nbpw_pair .gt. calculation_assignment%pw%max-solv_atom) call reallocate_nonbondlist_pw
 
 jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom*jgr
@@ -8390,6 +8678,7 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
           nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
 		   nbpw(nbpw_pair  )%cgp_pair = nbpw_cgp_pair
         end do jaloop
+!$omp end critical
         end do ialoop
      end do jgloop
 #ifdef USE_GRID
@@ -8418,17 +8707,36 @@ subroutine nbpwlis2_box_lrf
   ! for periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
   nbpw_pair = 0
   nbpw_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpw*Rcpw
   RcLRF2 = RcLRF*RcLRF
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 #ifdef USE_GRID
 		iagrid = pw_igrid(ig)
 igridloop:	do igrid = 1, pw_ndim
@@ -8472,10 +8780,12 @@ jgloop:    do jgr = 1, nwat
           			 if ( r2 .le. rcut2 ) then
 					   ! inside cutoff, raise the flag
 					   inside = 1
+!$omp critical
 					   if (nbpw_cgp_pair .eq. size(nbpw_cgp, 1)) call reallocate_nbpw_cgp
 					   nbpw_cgp_pair = nbpw_cgp_pair + 1
 					   nbpw_cgp(nbpw_cgp_pair)%i = i
 					   nbpw_cgp(nbpw_cgp_pair)%j = ja
+!$omp end critical
 					 elseif (r2 <= RcLRF2) then
     			     inside_LRF = 1
 			         end if
@@ -8491,7 +8801,8 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
            i = cgpatom(ia)
            if ( iqatom(i)/=0 ) cycle ialoop
 
-		   ! if out of space then make more space
+		  ! if out of space then make more space
+!$omp critical
         if (nbpw_pair .gt. calculation_assignment%pw%max - 3) call reallocate_nonbondlist_pw
 jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom*jgr
           ! for every atom of the water molecule:
@@ -8514,6 +8825,7 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
           nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
 	  nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
         end do jaloop
+!$omp end critical
 
 end do ialoop
       elseif((inside_LRF .eq. 1) .and. (inside .eq. 0)) then   
@@ -8544,18 +8856,37 @@ integer						:: i,j,ig,jg,jg_cgp,ia,ja,i3,j3,inside,is,is3,jgr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						::	RcLRF2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
-
+!$omp single
 nbpw_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpw*Rcpw
 RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop:  do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 
 !	   --- excluded group ? ---
 is = cgp(ig)%iswitch
@@ -8616,6 +8947,7 @@ ialoop:       do ia = cgp(ig)%first, cgp(ig)%last
       if ( iqatom(i)/=0 ) cycle ialoop
 
                   ! if out of space then make more space
+!$omp critical
                   if (nbpw_pair .gt. calculation_assignment%pw%max-solv_atom) call reallocate_nonbondlist_pw
 jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom*jgr
           ! for every atom of the water molecule:
@@ -8638,11 +8970,11 @@ jaloop: do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
           nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
           nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
         end do jaloop
+!$omp end critical
    end do ialoop
 
 elseif(r2 .le. RcLRF2) then   
                 ! outside pw-cutoff but inside LRF cut-off: use LRF
-
 	call lrf_update(ig,jg_cgp)
 	call lrf_update(jg_cgp,ig)
 end if
@@ -8674,16 +9006,35 @@ integer                                                 ::iagrid, igrid, jgrid, 
 
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
 ! reset nbpw_pair
+!$omp single
 nbpw_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpw*Rcpw
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 ! for every charge group:
 
 ! skip excluded groups
@@ -8724,6 +9075,7 @@ i = cgpatom(ia)
 !	skip q-atoms
         if ( iqatom(i)/=0 ) cycle ialoop
 
+!$omp critical
         ! if out of space then make more space
         if (nbpw_pair .gt. calculation_assignment%pw%max - solv_atom) call reallocate_nonbondlist_pw
 
@@ -8747,6 +9099,7 @@ jaloop:	do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
           nbpw(nbpw_pair)%j = ja 
           nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
         end do jaloop
+!$omp end critical
 end do ialoop
 end do jgloop
 #ifdef USE_GRID
@@ -8774,17 +9127,36 @@ subroutine nbpwlist_box
   ! For use with periodic boundary conditions
   !	This routine makes a list of non-bonded solute-solvent atom pairs
   !	excluding Q-atoms.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
 
   ! reset nbpw_pair
+!$omp single
   nbpw_pair = 0
   nbpw_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpw*Rcpw
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 	! for every charge group:
     ig_sw = cgp(ig)%iswitch
     i3 = 3*ig_sw-3
@@ -8818,12 +9190,13 @@ jgloop: do jgr = 1, nwat
 
 	  !inside cut-off
 	  !check if charge group pair list is big enough
+!$omp critical
 	  if(nbpw_cgp_pair .eq. size(nbpw_cgp, 1) ) call reallocate_nbpw_cgp
 
 	  nbpw_cgp_pair = nbpw_cgp_pair + 1
 	  nbpw_cgp(nbpw_cgp_pair)%i = ig_sw  !solute
 	  nbpw_cgp(nbpw_cgp_pair)%j = jg_sw  !water
-
+!$omp end critical
 ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 	    ! for every atom in the charge group:
 
@@ -8834,6 +9207,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 		if ( iqatom(i)/=0 ) cycle ialoop
 
 		! if out of space then make more space
+!$omp critical
 		if (nbpw_pair .gt. calculation_assignment%pw%max - solv_atom) call reallocate_nonbondlist_pw
                    
 jaloop:	do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom*jgr
@@ -8858,6 +9232,7 @@ jaloop:	do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_atom
 		  nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
 		  !write(*,'(a, i8, a, i7)') 'pw-pair ', nbpw_pair, ' belongs to charge group ' , nbpw(nbpw_pair)%cgp_pair
 		end do jaloop
+!$omp end critical
       end do ialoop
     end do jgloop
 #ifdef USE_GRID
@@ -8880,6 +9255,9 @@ real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 real(kind=prec)						::	RcLRF2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -8889,11 +9267,27 @@ start_loop_time = rtime()
 !	excluding Q-atoms.
 
 ! reset nbpw_pair
+!$omp single
 nbpw_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcpw*Rcpw
 RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 ! for every charge group:
 
 ! skip excluded groups
@@ -8940,7 +9334,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 
   ! skip q-atoms
   if ( iqatom(i)/=0 ) cycle ialoop
-
+!$omp critical
           ! if out of space then make more space
           if (nbpw_pair .gt. calculation_assignment%pw%max - solv_atom) call reallocate_nonbondlist_pw
 
@@ -8963,6 +9357,7 @@ jaloop:	  do ja = nat_solute + solv_atom*jgr-(solv_atom-1), nat_solute + solv_at
 	        nbpw(nbpw_pair)%LJcod = ljcod(iac(i),iac(ja))
 !TMP                nbpw_per_cgp(ig) = nbpw_per_cgp(ig) + 1
           end do jaloop
+!$omp end critical
 end do ialoop
 elseif(r2 .le. RcLRF2) then   
                 ! outside pw-cutoff but inside LRF cut-off: use LRF
@@ -8978,7 +9373,6 @@ end do jgridloop
 end do igridloop
 #endif
 end do igloop
-
 #if defined (PROFILING)
 profile(4)%time = profile(4)%time + rtime() - start_loop_time
 #endif
@@ -8995,6 +9389,9 @@ subroutine nbpwlist_box_lrf
   real(kind=prec)						:: RcLRF2
   integer						:: jg_cgp, j, is3
   integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -9005,12 +9402,28 @@ start_loop_time = rtime()
   !	excluding Q-atoms.
 
   ! reset nbpw_pair
+!$omp single
   nbpw_pair = 0
   nbpw_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcpw*Rcpw
   RcLRF2 = RcLRF*RcLRF
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%pw%end - calculation_assignment%pw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%pw%end - calculation_assignment%pw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%pw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
+#endif
 	! for every charge group:
     ig_sw = cgp(ig)%iswitch
     i3 = 3*ig_sw-3
@@ -9052,12 +9465,13 @@ jgloop: do jgr = 1, nwat
 
 	  !inside cut-off
 	  !check if charge group pair list is big enough
+!$omp critical
 	  if(nbpw_cgp_pair .eq. size(nbpw_cgp, 1) ) call reallocate_nbpw_cgp
 
 	  nbpw_cgp_pair = nbpw_cgp_pair + 1
 	  nbpw_cgp(nbpw_cgp_pair)%i = ig_sw  !solute
 	  nbpw_cgp(nbpw_cgp_pair)%j = jg_sw  !water
-
+!$omp end critical
 ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 	      ! for every atom in the charge group:
 
@@ -9068,6 +9482,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 		  if ( iqatom(i)/=0 ) cycle ialoop
 
 		  ! if out of space then make more space
+!$omp critical
 		  if (nbpw_pair .gt. calculation_assignment%pw%max - solv_atom) call reallocate_nonbondlist_pw
                    
 jaloop:	  do ja = nat_solute + (solv_atom*jgr)-(solv_atom-1), nat_solute + solv_atom*jgr
@@ -9092,6 +9507,7 @@ jaloop:	  do ja = nat_solute + (solv_atom*jgr)-(solv_atom-1), nat_solute + solv_
 		    nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
 		    !write(*,'(a, i8, a, i7)') 'pw-pair ', nbpw_pair, ' belongs to charge group ' , nbpw(nbpw_pair)%cgp_pair
 		  end do jaloop
+!$omp end critical
         end do ialoop
       elseif(r2 .le. RcLRF2) then   
                 ! outside pw-cutoff but inside LRF cut-off: use LRF
@@ -9483,7 +9899,9 @@ integer						:: ig,ia,i,j,iq,i3,nl,inside
 real(kind=prec)						:: rcut2,r2
 integer						:: xspec
 logical, save					:: list_done
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 
 !	This routine makes a list of non-bonded atom pairs involving
 !	*one* Q-atom and *one* non-Q-atom, where the latter is *not connected*
@@ -9510,8 +9928,10 @@ start_loop_time = rtime()
 ! if the q-q cutoff is set to < 0
 ! this is made default for the standart inputs, you can still set it to something else if you want to
 if(list_done .and. (((.not.use_PBC).and.(Rcq > rexcl_o)))) return
-
+!$omp single
 nbqp_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcq*Rcq
 
 
@@ -9520,7 +9940,20 @@ if(nqat == 0) return
 
 ! --- solute - Q-atoms
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qp%end - calculation_assignment%qp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qp%end - calculation_assignment%qp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
+#endif
 ! for every assigned charge group:
 
 ! skip if excluded group
@@ -9552,7 +9985,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 
   ! check if already on qq list
   if(any(qconn(:,i,:) <= 3)) cycle ialoop
-
+!$omp critical
         ! if out of space then make more space
         if (nbqp_pair .ge. calculation_assignment%qp%max-nqat) call reallocate_nonbondlist_qp
 qaloop: do iq = 1, nqat
@@ -9575,10 +10008,12 @@ qaloop: do iq = 1, nqat
         if(nbqp(nbqp_pair)%qLJcod == 2) nbqp(nbqp_pair)%qLJcod = 1
 
   end do qaloop
+!$omp end critical
 end do ialoop
 end do igloop
-
+!$omp single
 list_done = .true. !save this value
+!$omp end single
 #if defined (PROFILING)
 profile(5)%time = profile(5)%time + rtime() - start_loop_time
 #endif
@@ -9609,6 +10044,11 @@ subroutine nbqplis2_box
   ! uses the global variables:
   !  nbqs_pair, Rcq, cgp, excl, cgpatom, x, xpcent, nqat, iqseq, 
   !  qconn, calculation_assignment%qs%max, nbqs, ljcod, nwat, nat_solute
+
+! now with more parallel
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -9619,16 +10059,31 @@ start_loop_time = rtime()
 ! this is made default for the standart inputs, you can still set it to something else if you want to
 if(list_done .and. (((use_PBC).and.(Rcq.lt.zero)))) return
 
-
+!$omp single
   nbqp_pair = 0
   nbqp_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcq*Rcq
 	
   if(nqat .eq. 0) return
 
  ! --- solute - Q-atoms
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qp%end - calculation_assignment%qp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qp%end - calculation_assignment%qp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
+#endif
     ! for every assigned charge group:
 
 	! check cutoff
@@ -9653,10 +10108,11 @@ igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
 
 	  if ( r2 .le. rcut2 ) then
 		inside = 1
-
+!$omp critical
 		if(nbqp_cgp_pair .eq. size(nbqp_cgp, 1) ) call reallocate_nbqp_cgp
 		nbqp_cgp_pair = nbqp_cgp_pair + 1
 		nbqp_cgp(nbqp_cgp_pair)%i = i !leave %j empty, equals qswitch
+!$omp end critical
 	  end if
 
 	  ig_atom = ig_atom + 1 !ia = ia + 1
@@ -9669,6 +10125,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 	  ! check if already on qq list
 	  if(any(qconn(:,i,:) <= 3)) cycle ialoop
 
+!$omp critical
 		! if out of space then make more space
 		if (nbqp_pair .ge. calculation_assignment%qp%max-nqat) call reallocate_nonbondlist_qp
 qaloop: do iq = 1, nqat
@@ -9692,13 +10149,15 @@ qaloop: do iq = 1, nqat
 		if(nbqp(nbqp_pair)%qLJcod == 2) nbqp(nbqp_pair)%qLJcod = 1
 
 	  end do qaloop
+!$omp end critical
 	end do ialoop
   end do igloop
 #if defined (PROFILING)
 profile(5)%time = profile(5)%time + rtime() - start_loop_time
 #endif
-
+!$omp single
 list_done = .true. !save this value
+!$omp end single
 
 end subroutine nbqplis2_box
 !-----------------------------------------------------------------------
@@ -9709,7 +10168,9 @@ integer						:: ig,ia,i,j,iq,i3,nl
 real(kind=prec)						:: rcut2,r2
 integer						::	xspec
 logical, save				::	list_done = .false.
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
@@ -9732,15 +10193,30 @@ start_loop_time = rtime()
 !don't remake pair list if q-atoms interact with all solute atoms (rcq>rexcl_o)
 !and list already made
 if(list_done .and. (Rcq .gt. rexcl_o)) return
-
+!$omp single
 nbqp_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcq*Rcq
 
 if(nqat==0) return
 
 ! --- solute - Q-atoms
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qp%end - calculation_assignment%qp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qp%end - calculation_assignment%qp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
+#endif
 
 ! skip if excluded group
 ia = cgp(ig)%iswitch
@@ -9762,6 +10238,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
   if(any(qconn(:,i,:) <= 3)) cycle ialoop
 
         ! if out of space then make more space
+!$omp critical
         if (nbqp_pair .ge. calculation_assignment%qp%max-nqat) call reallocate_nonbondlist_qp
 qaloop: do iq = 1, nqat
 
@@ -9782,16 +10259,16 @@ qaloop: do iq = 1, nqat
         nbqp(nbqp_pair)%qLJcod = nbqp(nbqp_pair)%LJcod
         if(nbqp(nbqp_pair)%qLJcod == 2) nbqp(nbqp_pair)%qLJcod = 1
   end do qaloop
+!$omp end critical
 !TMP        nbqp_per_cgp(ig) = nbqp_per_cgp(ig) + nqat
 end do ialoop
 end do igloop
-
-list_done = .true. !save this value
-
 #if defined (PROFILING)
 profile(5)%time = profile(5)%time + rtime() - start_loop_time
 #endif
-
+!$omp single
+list_done = .true. !save this value
+!$omp end single
 end subroutine nbqplist
 
 !-----------------------------------------------------------------------
@@ -9805,6 +10282,9 @@ subroutine nbqplist_box
   real(kind=prec)						:: dx, dy, dz
   integer						:: ga, gb, inside
   logical,save						:: list_done = .false.
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -9828,15 +10308,31 @@ start_loop_time = rtime()
 ! this is made default for the standart inputs, you can still set it to something else if you want to
 if(list_done .and. (((use_PBC).and.(Rcq.lt.zero)))) return
 
-
+!$omp single
   nbqp_pair = 0
   nbqp_cgp_pair = 0
+!$omp end single
+!$omp barrier
   rcut2 = Rcq*Rcq
 
   if(nqat .eq. 0) return
 
   ! --- solute - Q-atoms
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qp%end - calculation_assignment%qp%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qp%end - calculation_assignment%qp%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qp%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+igloop: do ig = mp_start,mp_end
+#else
 igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
+#endif
         if (((use_PBC).and.(Rcq.lt.zero))) then
         inside = 1
         else
@@ -9858,9 +10354,11 @@ igloop: do ig = calculation_assignment%qp%start, calculation_assignment%qp%end
           if ( r2 .le. rcut2 ) then
                 inside = 1
 
+!$omp critical
 	if( nbqp_cgp_pair .eq. size(nbqp_cgp, 1) ) call reallocate_nbqp_cgp
 	nbqp_cgp_pair = nbqp_cgp_pair + 1
-                nbqp_cgp(nbqp_cgp_pair)%i = i !leave %j empty, equals qswitch
+        nbqp_cgp(nbqp_cgp_pair)%i = i !leave %j empty, equals qswitch
+!$omp end critical
           end if
 
           ig_atom = ig_atom + 1 !ia = ia + 1
@@ -9875,6 +10373,7 @@ ialoop: do ia = cgp(ig)%first, cgp(ig)%last
 	  if(any(qconn(:,i,:) <= 3)) cycle ialoop
 
           ! if out of space then make more space
+!$omp critical
           if (nbqp_pair .ge. calculation_assignment%qp%max-nqat) call reallocate_nonbondlist_qp
 qaloop: do iq = 1, nqat
 
@@ -9898,14 +10397,16 @@ qaloop: do iq = 1, nqat
 		if(nbqp(nbqp_pair)%qLJcod == 2) nbqp(nbqp_pair)%qLJcod = 1
 
 	  end do qaloop
+!$omp end critical
 	end do ialoop
    end do igloop
 
 #if defined (PROFILING)
 profile(5)%time = profile(5)%time + rtime() - start_loop_time
 #endif
-
+!$omp single
 list_done = .true.
+!$omp end single
 
 end subroutine nbqplist_box
 !------------------------------------------------------------------------------------
@@ -9924,6 +10425,9 @@ logical,save					:: list_done = .false.
 ! i.e. the q-atom - water non-bond lists which implicitly includes all
 ! q-atoms with all atoms of the listed water
 ! waters may not have bonded interactions with q-atoms !
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -9935,15 +10439,30 @@ start_loop_time = rtime()
 !(rcq > rexcl_o) and list already made (nbwq_pair >0)
 if( list_done .and.  (Rcq .gt. rexcl_o)) return
 
-
+!$omp single
 nbqw_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcq*Rcq
 
 
 if(nqat .eq. 0) return
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qw%end - calculation_assignment%qw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qw%end - calculation_assignment%qw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+iwloop: do ig = mp_start,mp_end
+#else
 iwloop: do ig = calculation_assignment%qw%start, calculation_assignment%qw%end
+#endif
 ia = nat_solute + solv_atom*ig-(solv_atom-1)
 if( excl(ia) ) cycle iwloop ! skip excluded waters
 
@@ -9957,6 +10476,7 @@ r2 = ( x(i3+1) - xpcent(1) )**2 &
 
 ! store if inside cutoff
 if ( r2 <= rcut2 ) then
+!$omp critical
 qaloop:         do iq = 1, nqat
                         nbqw_pair = nbqw_pair + solv_atom
 solvloop:         do is = 1, solv_atom
@@ -9965,13 +10485,16 @@ solvloop:         do is = 1, solv_atom
                         nbqw(nbqw_pair-(solv_atom-is))%LJcod = ljcod(iac(nat_solute+is),iac(iqseq(iq)))
                   end do solvloop
                 end do qaloop
+!$omp end critical
 end if
 end do iwloop
 #if defined (PROFILING)
 profile(6)%time = profile(6)%time + rtime() - start_loop_time
 #endif
 ! save this to prevent remaking of the list
+!$omp single
 list_done = .true.
+!$omp end single
 
 end subroutine nbqwlist
 
@@ -9991,19 +10514,39 @@ subroutine nbqwlist_box
   ! i.e. the q-atom - water non-bond lists which implicitly includes all
   ! q-atoms with all atoms of the listed water
   ! waters may not have bonded interactions with q-atoms !
+!now with more parallel
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
 if(list_done .and. (Rcq.lt.zero)) return
-
+!$omp single
 	nbqw_pair = 0
+!$omp end single
+!$omp barrier
 	rcut2 = Rcq*Rcq
 
 	if(nqat .eq. 0) return
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%qw%end - calculation_assignment%qw%start + 1)/threads_num
+remainder = MOD(calculation_assignment%qw%end - calculation_assignment%qw%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%qw%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+iwloop: do ig = mp_start,mp_end
+#else
 iwloop: do ig = calculation_assignment%qw%start, calculation_assignment%qw%end
+#endif
 	ia = nat_solute + solv_atom*ig-(solv_atom-1)
 	i3 = 3*ia-3
 
@@ -10018,6 +10561,7 @@ iwloop: do ig = calculation_assignment%qw%start, calculation_assignment%qw%end
 	end if
 	! store if inside cutoff
 	if ( ( r2 .le. rcut2 ).or. (Rcq.lt.zero)) then
+!$omp critical
 qaloop:		do iq = 1, nqat
 			nbqw_pair = nbqw_pair + solv_atom
 solvloop:	  do is = 1, solv_atom
@@ -10026,12 +10570,15 @@ solvloop:	  do is = 1, solv_atom
 		        nbqw(nbqw_pair-(solv_atom-is))%LJcod = ljcod(iac(nat_solute+is),iac(iqseq(iq)))
 		  end do solvloop
 		end do qaloop
+!$omp end critical
 	end if
   end do iwloop
 #if defined (PROFILING)
 profile(6)%time = profile(6)%time + rtime() - start_loop_time
 #endif
+!$omp single
 list_done = .true.
+!$omp end single
 end subroutine nbqwlist_box
 !-------------------------------------------------------------------------------------
 !******PWchanged 2001-10-01
@@ -10107,16 +10654,34 @@ integer                                                 ::iagrid, igrid, jgrid, 
 ! The number of atoms in each solvent molecule is stored in the global solv_atom
 ! uses the global variables:
 !  nbww_pair, Rcww, nat_solute, excl, nwat, x, nbww, calculation_assignment%ww%max
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
-
+!$omp single 
 nbww_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcww*Rcww
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+iwloop: do iw = mp_start,mp_end
+#else
 iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
 
 	ia = nat_solute + solv_atom*iw-(solv_atom-1)
         if (excl(ia)) cycle iwloop
@@ -10151,6 +10716,7 @@ jwloop:		do jwr =1, nwat
                                 ! inside cutoff: add the pair
 
 ! check if there is enough space
+!$omp critical
 			if (nbww_pair .ge. (calculation_assignment%ww%max - solv_atom**2)) call reallocate_nonbondlist_ww
 laloop:			do la = 1, solv_atom
 kaloop:			 do ka = 1, solv_atom
@@ -10160,6 +10726,7 @@ kaloop:			 do ka = 1, solv_atom
 				nbww(nbww_pair)%LJcod = ljcod(iac(nat_solute+la),iac(nat_solute+ka))
 			 end do kaloop
 			end do laloop
+!$omp end critical
                         end if
                 end do jwloop
 #ifdef USE_GRID
@@ -10171,7 +10738,6 @@ end do iwloop
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
 #endif
-
 end subroutine nbwwlist
 !------------PWadded 2001-10-18------------------------------------------
 subroutine nbwwlist_box
@@ -10185,17 +10751,37 @@ integer                                                 ::iagrid, igrid, jgrid, 
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 ! uses the global variables:
 !  nbww_pair, Rcww, nat_solute, excl, nwat, x, nbww, calculation_assignment%ww%max
+
+! now with more parallel
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
 #endif
 
 
-
+!$omp single
 nbww_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcww*Rcww
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+iwloop: do iw = mp_start,mp_end
+#else
 iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
         ia = nat_solute + solv_atom*iw-(solv_atom-1)
         i3 = 3*ia-3
 #ifdef USE_GRID
@@ -10231,6 +10817,7 @@ jwloop:		do jwr= 1, nwat
                         if ( r2 .le. rcut2 ) then
                                 ! inside cutoff: add the pair
 ! check if there is enough space
+!$omp critical
                         if (nbww_pair .ge. (calculation_assignment%ww%max - solv_atom**2)) call reallocate_nonbondlist_ww
 laloop:                 do la = 1, solv_atom
 kaloop:                  do ka = 1, solv_atom
@@ -10240,6 +10827,7 @@ kaloop:                  do ka = 1, solv_atom
                                 nbww(nbww_pair)%LJcod = ljcod(iac(nat_solute+la),iac(nat_solute+ka))
                          end do kaloop
                         end do laloop
+!$omp end critical
                         end if
                 end do jwloop
 #ifdef USE_GRID
@@ -10263,11 +10851,14 @@ real(kind=prec)						:: rcut2,r2
 real(kind=prec)						:: dr(3)
 real(kind=prec)						::	RcLRF2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+! now with more parallel -> OMP added
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
 #if defined (PROFILING)
 real(kind=prec)						:: start_loop_time
 start_loop_time = rtime()
 #endif
-
 !	This routine makes a list of non-bonded solvent-solvent atom pairs.
 
 ! uses the global variables:
@@ -10275,12 +10866,28 @@ start_loop_time = rtime()
 
 
 
-
+!$omp single
 nbww_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcww*Rcww
 RcLRF2 = RcLRF*RcLRF
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+iwloop: do iw = mp_start,mp_end
+#else
 iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
 is  = nat_solute + solv_atom*iw-(solv_atom-1)
 if( excl(is)) cycle iwloop
 is3 = 3*is-3
@@ -10328,6 +10935,8 @@ r2 = ( x(is3+1) -x(j3+1) )**2 &
 
   if ( r2 .le. rcut2 ) then
         ! inside cutoff: add the pair
+! this now has to be OMP critical so the memory is not getting corrupted
+!$omp critical 
 ! check if there is enough space
             if (nbww_pair .ge. (calculation_assignment%ww%max - solv_atom**2)) call reallocate_nonbondlist_ww
 laloop:     do la = 1, solv_atom
@@ -10338,7 +10947,7 @@ kaloop:      do ka = 1, solv_atom
                     nbww(nbww_pair)%LJcod = ljcod(iac(nat_solute+la),iac(nat_solute+ka))
              end do kaloop
             end do laloop
-
+!$omp end critical
 
   elseif (r2 .le. RcLRF2) then
         ! outside ww-cutoff but inside LRF cut-off: use LRF
@@ -10355,7 +10964,6 @@ end do jgridloop
 end do igridloop
 #endif
 end do iwloop
-
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
 #endif
@@ -10370,6 +10978,10 @@ real(kind=prec)						::	RcLRF2
 real(kind=prec)						::  dx, dy, dz
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+#endif
+
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
 start_loop_time = rtime()
@@ -10382,12 +10994,28 @@ start_loop_time = rtime()
 !  nbww_pair, Rcww, nwat, nat_solute, excl, x, nbww, ncgp, lrf, crg, calculation_assignment%ww%max
 
 
-
+!$omp single
 nbww_pair = 0
+!$omp end single
+!$omp barrier
 rcut2 = Rcww*Rcww
 RcLRF2 = RcLRF*RcLRF
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+iwloop: do iw = mp_start,mp_end
+#else
 iwloop: do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
 is  = nat_solute + solv_atom*iw-(solv_atom-1)
 is3 = 3*is-3
 ig = iwhich_cgp(is)
@@ -10436,6 +11064,7 @@ r2 = dx*dx + dy*dy + dz*dz
   if ( r2 .le. rcut2 ) then
         ! inside cutoff: add the pair
 ! check if there is enough space
+!$omp critical
             if (nbww_pair .ge. (calculation_assignment%ww%max - solv_atom**2)) call reallocate_nonbondlist_ww
 laloop:     do la = 1, solv_atom
 kaloop:      do ka = 1, solv_atom
@@ -10445,10 +11074,10 @@ kaloop:      do ka = 1, solv_atom
                     nbww(nbww_pair)%LJcod = ljcod(iac(nat_solute+la),iac(nat_solute+ka))
              end do kaloop
             end do laloop
+!$omp end critical
 
   elseif(r2 .le. RcLRF2) then
         ! outside ww-cutoff but inside LRF cut-off: use LRF
-        
 		!iw interaction     
 	call lrf_update(ig,jg)	
 		!jw interaction
@@ -10467,7 +11096,6 @@ end do iwloop
 #if defined (PROFILING)
 profile(2)%time = profile(2)%time + rtime() - start_loop_time
 #endif
-
 end subroutine nbwwlist_box_lrf
 !---------------------------------------------------------------------------
 subroutine nbmonitorlist
@@ -10677,118 +11305,89 @@ subroutine nonbon2_pp
 ! local variables
 integer						:: ip
 real(kind=prec)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
-real(kind=prec)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
 real(kind=prec)						:: Vela,V_aa,V_ba,dva
-real(kind=prec)						:: Velb,V_ab,V_bb,dvb
 type(NB_TYPE), pointer		:: pa
-type(NB_TYPE), pointer		:: pb
+
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
 
 ! global variables used:
 !  iaclib, x, crg, el14_scale, d, E
 
-do ip = 1, nbpp_pair - 1, 2
-! for every second pair:
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_pair)/threads_num
+remainder = MOD(nbpp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+Vel_omp = zero
+Vvdw_omp = zero
+do ip = mp_start,mp_end
+#else
+do ip = 1, nbpp_pair 
+#endif
+
+! do this for every pair and use the compiler to unroll the loop
 
 ! init pointers
 pa => nbpp(ip)
-pb => nbpp(ip+1)
 
 ! calculate aLJ and bLJ
 aLJa  = iaclib(iac(pa%i))%avdw(pa%LJcod)+iaclib(iac(pa%j))%avdw(pa%LJcod)
-aLJb  = iaclib(iac(pb%i))%avdw(pb%LJcod)+iaclib(iac(pb%j))%avdw(pb%LJcod)
 bLJa  = iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-bLJb  = iaclib(iac(pb%i))%bvdw(pb%LJcod)*iaclib(iac(pb%j))%bvdw(pb%LJcod)
 aLJa  = aLJa*aLJa
-aLJb  = aLJb*aLJb
 aLJa  = aLJa*aLJa*aLJa
-aLJb  = aLJb*aLJb*aLJb
 
 ! calculate dx, r and r2
 dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-dx1b  = x(pb%j*3-2) - x(pb%i*3-2)
 dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
 
 r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 ra = sqrt(r2a)
-rb = sqrt(r2b) 
 
 r6a   = r2a*r2a*r2a
-r6b   = r2b*r2b*r2b
 
 ! calculate Vel and dv
 Vela  = crg(pa%i)*crg(pa%j)*ra  
-Velb  = crg(pb%i)*crg(pb%j)*rb  
 if ( pa%LJcod .eq. 3 ) then
   Vela = Vela*el14_scale
 end if
-if ( pb%LJcod .eq. 3 ) then
-  Velb = Velb*el14_scale
-end if
 V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-V_ab  = bLJb*aLJb*aLJb*r6b*r6b 
 V_ba  = 2.0_prec*bLJa*aLJa*r6a
-V_bb  = 2.0_prec*bLJb*aLJb*r6b
 dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
-
 ! update d
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-d(pb%i*3-2) = d(pb%i*3-2) - dvb*dx1b
 d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-d(pb%i*3-1) = d(pb%i*3-1) - dvb*dx2b
 d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-d(pb%i*3-0) = d(pb%i*3-0) - dvb*dx3b
 d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-d(pb%j*3-2) = d(pb%j*3-2) + dvb*dx1b
 d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-d(pb%j*3-1) = d(pb%j*3-1) + dvb*dx2b
 d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-d(pb%j*3-0) = d(pb%j*3-0) + dvb*dx3b
 
 ! update energies
-E%pp%el  = E%pp%el + Vela + Velb
-E%pp%vdw = E%pp%vdw + V_aa - V_ba + V_ab - V_bb
+#ifdef _OPENMP
+Vel_omp  = Vel_omp + Vela
+Vvdw_omp = Vvdw_omp +  V_aa - V_ba
+#else
+E%pp%el  = E%pp%el + Vela 
+E%pp%vdw = E%pp%vdw + V_aa - V_ba
+#endif
 end do
 
-if (ip .eq. nbpp_pair) then
-! the last pair:
+#ifdef _OPENMP
+!$omp atomic update
+E%pp%el = E%pp%el + Vel_omp
+!$omp atomic update
+E%pp%vdw = E%pp%vdw + Vvdw_omp
+#endif
 
-pa => nbpp(ip)
-aLJa  = iaclib(iac(pa%i))%avdw(pa%LJcod)+iaclib(iac(pa%j))%avdw(pa%LJcod)
-bLJa  = iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-aLJa  = aLJa*aLJa
-aLJa  = aLJa*aLJa*aLJa
-
-dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-
-r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-ra = sqrt(r2a)
-
-r6a   = r2a*r2a*r2a
-
-Vela  = crg(pa%i)*crg(pa%j)*ra
-if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
-
-V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-V_ba  = 2.0_prec*bLJa*aLJa*r6a
-dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-
-d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-
-E%pp%el  = E%pp%el + Vela 
-E%pp%vdw = E%pp%vdw + V_aa - V_ba 
-end if
 
 end subroutine nonbon2_pp
 
@@ -10797,17 +11396,31 @@ subroutine nonbon2_pp_box
   ! local variables
   integer						:: ip, ga, gb, group
   real(kind=prec)						:: aLJa,bLJa,dx1a,dx2a,dx3a,r2a,ra,r6a
-  real(kind=prec)						:: aLJb,bLJb,dx1b,dx2b,dx3b,r2b,rb,r6b
   real(kind=prec)						:: Vela,V_aa,V_ba,dva
-  real(kind=prec)						:: Velb,V_ab,V_bb,dvb
   type(NB_TYPE), pointer		:: pa
-  type(NB_TYPE), pointer		:: pb
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
  ! global variables used:
   !  iaclib, x, crg, el14_scale, d, E
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_cgp_pair)/threads_num
+remainder = MOD(nbpp_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+        do group = mp_start,mp_end
+#else
 	do group = 1, nbpp_cgp_pair
+#endif
 		ga = nbpp_cgp(group)%i !atom index for the two switching atoms
 		gb = nbpp_cgp(group)%j
 
@@ -10821,124 +11434,84 @@ subroutine nonbon2_pp_box
 		nbpp_cgp(group)%z = boxlength(3)*nint( dx3a*inv_boxl(3) )
 
 	end do
-
-  do ip = 1, nbpp_pair - 1, 2
-    ! for every second pair:
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_pair)/threads_num
+remainder = MOD(nbpp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+Vel_omp = zero
+Vvdw_omp = zero
+  do ip = mp_start,mp_end
+#else
+  do ip = 1, nbpp_pair !- 1, 2
+#endif
+    ! for every pair, not every second pair
 
 	! init pointers
 	pa => nbpp(ip)
-	pb => nbpp(ip+1)
 	ga = pa%cgp_pair
-	gb = pb%cgp_pair
 
 	! calculate aLJ and bLJ
     aLJa  = iaclib(iac(pa%i))%avdw(pa%LJcod)+iaclib(iac(pa%j))%avdw(pa%LJcod)
-    aLJb  = iaclib(iac(pb%i))%avdw(pb%LJcod)+iaclib(iac(pb%j))%avdw(pb%LJcod)
     bLJa  = iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-    bLJb  = iaclib(iac(pb%i))%bvdw(pb%LJcod)*iaclib(iac(pb%j))%bvdw(pb%LJcod)
     aLJa  = aLJa*aLJa
-    aLJb  = aLJb*aLJb
     aLJa  = aLJa*aLJa*aLJa
-    aLJb  = aLJb*aLJb*aLJb
 
 	! calculate dx, r and r2
     dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-    dx1b  = x(pb%j*3-2) - x(pb%i*3-2)
     dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-    dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
     dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-    dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
 	dx1a = dx1a - nbpp_cgp(ga)%x         
-	dx1b = dx1b - nbpp_cgp(gb)%x 
 	dx2a = dx2a - nbpp_cgp(ga)%y    
-	dx2b = dx2b - nbpp_cgp(gb)%y                
 	dx3a = dx3a - nbpp_cgp(ga)%z  
-	dx3b = dx3b - nbpp_cgp(gb)%z   
 	
 
 
     r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-    r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 	ra = sqrt(r2a)
-	rb = sqrt(r2b) 
 
     r6a   = r2a*r2a*r2a
-    r6b   = r2b*r2b*r2b
 
 	! calculate Vel and dv
     Vela  = crg(pa%i)*crg(pa%j)*ra  
-    Velb  = crg(pb%i)*crg(pb%j)*rb  
     if ( pa%LJcod .eq. 3 ) then
 	  Vela = Vela*el14_scale
 	end if
-    if ( pb%LJcod .eq. 3 ) then
-	  Velb = Velb*el14_scale
-	end if
     V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-    V_ab  = bLJb*aLJb*aLJb*r6b*r6b 
     V_ba  = 2.0_prec*bLJa*aLJa*r6a
-    V_bb  = 2.0_prec*bLJb*aLJb*r6b
     dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-    dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 	! update d
     d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-    d(pb%i*3-2) = d(pb%i*3-2) - dvb*dx1b
     d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-    d(pb%i*3-1) = d(pb%i*3-1) - dvb*dx2b
     d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-    d(pb%i*3-0) = d(pb%i*3-0) - dvb*dx3b
     d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-    d(pb%j*3-2) = d(pb%j*3-2) + dvb*dx1b
     d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-    d(pb%j*3-1) = d(pb%j*3-1) + dvb*dx2b
     d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-    d(pb%j*3-0) = d(pb%j*3-0) + dvb*dx3b
 
 	! update energies
-    E%pp%el  = E%pp%el + Vela + Velb
-    E%pp%vdw = E%pp%vdw + V_aa - V_ba + V_ab - V_bb
+#ifdef _OPENMP
+    Vel_omp = Vel_omp + Vela
+    Vvdw_omp = Vvdw_omp + V_aa - V_ba
+#else
+    E%pp%el  = E%pp%el + Vela
+    E%pp%vdw = E%pp%vdw + V_aa - V_ba
+#endif
   end do
 
-  if (ip .eq. nbpp_pair) then
-    ! the last pair:
+#ifdef _OPENMP
+!$omp atomic update
+E%pp%el  = E%pp%el + Vel_omp
+!$omp atomic update
+E%pp%vdw = E%pp%vdw + Vvdw_omp
+#endif
 
-	pa => nbpp(ip)
-	ga = pa%cgp_pair
-
-    aLJa  = iaclib(iac(pa%i))%avdw(pa%LJcod)+iaclib(iac(pa%j))%avdw(pa%LJcod)
-    bLJa  = iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-    aLJa  = aLJa*aLJa
-    aLJa  = aLJa*aLJa*aLJa
-
-    dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-    dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-    dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-	dx1a = dx1a - nbpp_cgp(ga)%x  
-	dx2a = dx2a - nbpp_cgp(ga)%y  
-	dx3a = dx3a - nbpp_cgp(ga)%z  
-
-
-    r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-	ra = sqrt(r2a)
-    r6a   = r2a*r2a*r2a
-
-   Vela  = crg(pa%i)*crg(pa%j)*ra
-    if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
-    V_aa  = bLJa*aLJa*aLJa*r6a*r6a 
-    V_ba  = 2.0_prec*bLJa*aLJa*r6a
-    dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-
-    d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-    d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-    d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-    d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-    d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-    d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-
-    E%pp%el  = E%pp%el + Vela 
-    E%pp%vdw = E%pp%vdw + V_aa - V_ba 
-  end if
 
 end subroutine nonbon2_pp_box
 !----------------------------------------------------------------------
@@ -10948,11 +11521,29 @@ subroutine nonbon2_pw
 integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
 real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
 real(kind=prec)						:: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_pair)/threads_num
+remainder = MOD(nbpw_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+Vel_omp = zero
+Vvdw_omp = zero
+do ip = mp_start,mp_end
+#else
 ! global variables used:
 !  iac, crg, iaclib, x, d, E
 
 do ip = 1, nbpw_pair
+#endif
 ! for every assigned pair:
 i    = nbpw(ip)%i
 j    = nbpw(ip)%j
@@ -10994,10 +11585,20 @@ d(j3+2) = d(j3+2) + dv*dx2
 d(j3+3) = d(j3+3) + dv*dx3
 
 ! update energies
+#ifdef _OPENMP
+Vel_omp =Vel_omp + Vel
+Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
 E%pw%el  = E%pw%el + Vel       
 E%pw%vdw = E%pw%vdw + V_a - V_b
+#endif
 end do
-
+#ifdef _OPENMP
+!$omp atomic update
+E%pw%el = E%pw%el + Vel_omp
+!$omp atomic update
+E%pw%vdw = E%pw%vdw + Vvdw_omp
+#endif
 end subroutine nonbon2_pw
 
 !-----------------------------------------------------------------------
@@ -11008,13 +11609,29 @@ subroutine nonbon2_pw_box
   real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
   real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, ga, gb
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
   ! global variables used:
   !  iac, crg, iaclib, x, d, E
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_cgp_pair)/threads_num
+remainder = MOD(nbpw_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+        do group = mp_start,mp_end
+#else
    !compute the peridocal shift for every charge group pair
 	do group = 1, nbpw_cgp_pair
+#endif
 		ga = nbpw_cgp(group)%i !atom index for solute switching atom
 		gb = nbpw_cgp(group)%j  !atom index for the solvent switching atom
 
@@ -11028,9 +11645,23 @@ subroutine nonbon2_pw_box
 		nbpw_cgp(group)%z = boxlength(3)*nint( dx3*inv_boxl(3) )
 
 	end do
-
-
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_pair)/threads_num
+remainder = MOD(nbpw_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+Vel_omp = zero
+Vvdw_omp = zero
+  do ip = mp_start,mp_end
+#else
   do ip = 1, nbpw_pair
+#endif
 	! for every assigned pair:
 
 	i    = nbpw(ip)%i !solute atom 
@@ -11068,7 +11699,6 @@ subroutine nonbon2_pw_box
 	V_a  = bLJ*aLJ*aLJ*r12 
 	V_b  = 2.0_prec*bLJ*aLJ*r6
 	dv   = r2*( -Vel -12.0_prec*V_a +6.0_prec*V_b )
-
 	! update forces
 	d(i3+1) = d(i3+1) - dv*dx1
 	d(i3+2) = d(i3+2) - dv*dx2
@@ -11077,10 +11707,21 @@ subroutine nonbon2_pw_box
 	d(j3+2) = d(j3+2) + dv*dx2
 	d(j3+3) = d(j3+3) + dv*dx3
 
-	! update energies
-	E%pw%el  = E%pw%el + Vel       
-	E%pw%vdw = E%pw%vdw + V_a - V_b
-  end do
+! update energies
+#ifdef _OPENMP
+Vel_omp =Vel_omp + Vel
+Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+E%pw%el  = E%pw%el + Vel       
+E%pw%vdw = E%pw%vdw + V_a - V_b
+#endif
+end do
+#ifdef _OPENMP
+!$omp atomic update
+E%pw%el = E%pw%el + Vel_omp
+!$omp atomic update
+E%pw%vdw = E%pw%vdw + Vvdw_omp
+#endif
 
 end subroutine nonbon2_pw_box
 
@@ -11092,11 +11733,36 @@ integer						:: istate,jj
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(kind=prec)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(kind=prec)						:: Vel,V_a,V_b,dv,el_scale
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_ompq(:,:),Vvdw_ompq(:,:)
+real(kind=prec),allocatable :: Vel_omp(:,:),Vvdw_omp(:,:)
+#endif
+#ifdef _OPENMP
+allocate(Vel_omp(istate,ene_header%arrays),Vvdw_omp(istate,ene_header%arrays))
+allocate(Vel_ompq(istate,ene_header%arrays),Vvdw_ompq(istate,ene_header%arrays))
+Vel_omp  = zero
+Vvdw_omp = zero
+Vel_ompq  = zero
+Vvdw_ompq = zero
+#endif
 do istate = 1, nstates
 ! for every state:
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqq_pair(istate))/threads_num
+remainder = MOD(nbqq_pair(istate), threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbqq_pair(istate)
+#endif
   ! for every pair:
 
   iq   = nbqq(ip,istate)%iq
@@ -11180,46 +11846,81 @@ do ip = 1, nbqq_pair(istate)
         d(j3+1) = d(j3+1) + dv*dx1
         d(j3+2) = d(j3+2) + dv*dx2
         d(j3+3) = d(j3+3) + dv*dx3
-
   ! update energies
   if ( jq /= 0 ) then
+#ifdef _OPENMP
+		Vel_ompq(istate,1) = Vel_ompq(istate,1) + Vel
+		Vvdw_ompq(istate,1) = Vvdw_ompq(istate,1) + V_a - V_b
+#else
         EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
         EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+#endif
 		if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
-                        EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+		Vel_ompq(istate,jj) = Vel_ompq(istate,jj) + Vel
+		Vvdw_ompq(istate,jj) = Vvdw_ompq(istate,jj) + V_a - V_b
+#else
+        EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
+        EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_ompq(istate,jj) = Vvdw_ompq(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								Vel_ompq(istate,jj) = Vel_ompq(istate,jj) + Vel
+#else
                                 EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
 		end if
   else
+#ifdef _OPENMP
+		Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+		Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
         EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
         EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
 		if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
-                        EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+		Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+		Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
+        EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+        EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -11228,6 +11929,21 @@ do ip = 1, nbqq_pair(istate)
 end do ! ip
 
 end do ! istate
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel_ompq(istate,jj)
+!$omp atomic update
+EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + Vvdw_ompq(istate,jj)
+end do
+end do
+deallocate(Vel_omp,Vel_ompq,Vvdw_omp,Vvdw_ompq)
+#endif
 end subroutine nonbon2_qq
 
 !-----------------------------------------------------------------------
@@ -11237,11 +11953,36 @@ integer						:: istate,jj
 integer						:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(kind=prec)						:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(kind=prec)						:: Vel,V_a,V_b,dv,el_scale
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:),Vvdw_omp(:,:)
+real(kind=prec),allocatable :: Vel_ompq(:,:),Vvdw_ompq(:,:)
+#endif
+#ifdef _OPENMP
+allocate(Vel_omp(istate,ene_header%arrays),Vvdw_omp(istate,ene_header%arrays))
+allocate(Vel_ompq(istate,ene_header%arrays),Vvdw_ompq(istate,ene_header%arrays))
+Vel_omp  = zero
+Vvdw_omp = zero
+Vel_ompq  = zero
+Vvdw_ompq = zero
+#endif
 do istate = 1, nstates
 ! for every state:
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqq_pair(istate))/threads_num
+remainder = MOD(nbqq_pair(istate), threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbqq_pair(istate)
+#endif
   ! for every pair:
 
   iq   = nbqq(ip,istate)%iq
@@ -11327,43 +12068,79 @@ do ip = 1, nbqq_pair(istate)
 
   ! update energies
   if ( jq /= 0 ) then
+#ifdef _OPENMP
+		Vel_ompq(istate,1) = Vel_ompq(istate,1) + Vel
+		Vvdw_ompq(istate,1) = Vvdw_ompq(istate,1) + V_a - V_b
+#else
         EQ(istate)%qq(1)%el  = EQ(istate)%qq(1)%el + Vel
         EQ(istate)%qq(1)%vdw = EQ(istate)%qq(1)%vdw + V_a - V_b
+#endif
 		if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
-                        EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+						Vel_ompq(istate,jj) = Vel_ompq(istate,jj) + Vel
+						Vvdw_ompq(istate,jj) = Vvdw_ompq(istate,jj) + V_a - V_b
+#else
+       					EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
+        				EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_ompq(istate,jj) = Vvdw_ompq(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								Vel_ompq(istate,jj) = Vel_ompq(istate,jj) + Vel
+#else
                                 EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
 		end if
   else
+#ifdef _OPENMP
+		Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+		Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
         EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
         EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
 		if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
-                        EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+						Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+						Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
+        				EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+        				EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -11372,6 +12149,21 @@ do ip = 1, nbqq_pair(istate)
 end do ! ip
 
 end do ! istate
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qq(jj)%el  = EQ(istate)%qq(jj)%el + Vel_ompq(istate,jj)
+!$omp atomic update
+EQ(istate)%qq(jj)%vdw = EQ(istate)%qq(jj)%vdw + Vvdw_ompq(istate,jj)
+end do
+end do
+deallocate(Vel_omp,Vel_ompq,Vvdw_omp,Vvdw_ompq)
+#endif
 end subroutine nonbon2_qq_lib_charges
 
 !-----------------------------------------------------------------------
@@ -11382,11 +12174,30 @@ integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
 integer						:: istate,jj
 real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
 real(kind=prec)						:: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:),Vvdw_omp(:,:)
+#endif
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+allocate(Vel_omp(istate,ene_header%arrays),Vvdw_omp(istate,ene_header%arrays))
+Vel_omp  = zero
+Vvdw_omp = zero
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbqp_pair
+#endif
 ! for every assigned q-s pair:
 
 ! init state-invariant variables:
@@ -11457,22 +12268,40 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein or q-water energies
+#ifdef _OPENMP
+		Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+		Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
         EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
         EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
         if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
-                        EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+						Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+						Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
+        				EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+       				 	EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do 
@@ -11480,6 +12309,18 @@ do istate = 1, nstates
 end do ! istate
 
 end do
+
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate,jj)
+end do
+end do
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbon2_qp
 !-----------------------------------------------------------------------
 
@@ -11491,13 +12332,29 @@ subroutine nonbon2_qp_box
   real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r6_hc
   real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:),Vvdw_omp(:,:)
+#endif
   ! global variables used:
   !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_cgp_pair)/threads_num
+remainder = MOD(nbqp_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+        do gr = mp_start,mp_end
+#else
 	!compute the peridocal shift for every charge group pair
 	do gr = 1, nbqp_cgp_pair
+#endif
 		ia = nbqp_cgp(gr)%i !atom index for the atom
 		
 		!the distance between the two switching atoms
@@ -11510,8 +12367,24 @@ subroutine nonbon2_qp_box
 		nbqp_cgp(gr)%z = boxlength(3)*nint( dx3*inv_boxl(3) )
 
 	end do
-
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+allocate(Vel_omp(nstates,ene_header%arrays),Vvdw_omp(nstates,ene_header%arrays))
+Vel_omp  = zero
+Vvdw_omp = zero
+  do ip = mp_start,mp_end
+#else
   do ip = 1, nbqp_pair
+#endif
 	! for every assigned q-s pair:
 
    	! init state-invariant variables:
@@ -11580,22 +12453,40 @@ subroutine nonbon2_qp_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 	
 	  ! update q-protein or q-water energies
-		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
-		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#ifdef _OPENMP
+		Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+		Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
+        EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
+        EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
         if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
-                        EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
-                        EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+						Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+						Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
+        				EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+        				EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+								Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+								EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -11603,6 +12494,17 @@ subroutine nonbon2_qp_box
 	end do ! istate
 
   end do
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate,jj)
+end do
+end do
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbon2_qp_box
 
 !-----------------------------------------------------------------------
@@ -11613,13 +12515,35 @@ subroutine nonbon2_qw
 integer						:: jw,iq,i,j,iLJ, iaci,jj,i3,j3,iw,iacj
 integer						:: istate
 real(kind=prec)					:: aLJ, bLJ, dx1,dx2,dx3,r2,r,r6,r6_hc,dv,Vel,V_a,V_b,solvLJa,solvLJb
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:),Vvdw_omp(:)
+#endif
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
 
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) - solv_atom + 1
+allocate(Vel_omp(istate),Vvdw_omp(istate))
+Vel_omp  = zero
+Vvdw_omp = zero
 
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbqw_pair, solv_atom
+#endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
                 i = iqseq(iq)
@@ -11693,16 +12617,31 @@ do istate = 1, nstates
   d(j3+2) = d(j3+2) + dv*dx2
   d(j3+3) = d(j3+3) + dv*dx3
 
-						do jj = 1, ene_header%arrays
-   EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
-   EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b 
-						end do
+	do jj = 1, ene_header%arrays
+#ifdef _OPENMP
+		Vel_omp(istate) = Vel_omp(istate) + Vel
+		Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+   		EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+   		EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b 
+#endif
+	end do
 
 end do ! nstates
 end do !jw
 
 end do ! nbqw
-
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate)
+end do
+end do
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbon2_qw
 
 !-----------------------------------------------------------------------
@@ -11713,12 +12652,35 @@ integer                                         :: jw,iq,i,j,iLJ, iaci,jj,i3,j3,
 	integer						:: istate
 real(kind=prec)                                 :: aLJ, bLJ, dx1,dx2,dx3,r2,r,r6,r6_hc,dv,Vel,V_a,V_b,solvLJa,solvLJb
 real(kind=prec)					:: boxshiftx,boxshifty,boxshiftz
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:),Vvdw_omp(:)
+#endif
 	! global variables used:
 	!  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
   
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
 
-  do iw = 1, nbqw_pair
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) - solv_atom + 1
+
+allocate(Vel_omp(nstates),Vvdw_omp(nstates))
+Vel_omp=zero
+Vvdw_omp=zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
+  do iw = 1, nbqw_pair, solv_atom
+#endif
         ! for every assigned q-s pair:
 
 	! init state-invariant variables:
@@ -11804,14 +12766,30 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
    do jj = 1, ene_header%arrays
-   EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
-   EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+#ifdef _OPENMP
+		Vel_omp(istate) = Vel_omp(istate) + Vel
+		Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+#endif
    end do
 
 end do ! nstates
 end do ! jw
 
 end do ! nbqw
+#ifdef _OPENMP
+do istate=1, nstates
+do jj=1, ene_header%arrays
+!$omp atomic update
+EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel_omp(istate)
+!$omp atomic update
+EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + Vvdw_omp(istate)
+end do
+end do
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbon2_qw_box
 
 !----------------------------------------------------------------------------------------------------
@@ -11824,7 +12802,10 @@ real(kind=prec)						:: aLJ,bLJ,solvLJa1,solvLJb1,solvLJa2,solvLJb2,solvchg1,sol
 integer						:: ipstart
 real(kind=prec)						:: dx1,dx2,dx3,r2,r,r6,r12
 real(kind=prec)						:: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp,Vvdw_omp
+#endif
 ! global variables used:
 !  nat_solute, iac, crg, ljcod, iaclib, x, d, E
 
@@ -11832,7 +12813,26 @@ real(kind=prec)						:: Vel,V_a,V_b,dv
 ! we are now using the nbww_pair index and nbww true list
 ! this function before was garbage
 ichg = 1
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) - solv_atom + 1
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+Vel_omp=zero
+Vvdw_omp=zero
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
 	if (ichg .gt. solv_atom) ichg=1
 	i    = nbww(iw)%i
 	i3   = i*3-3
@@ -11873,13 +12873,23 @@ do iw = 1, nbww_pair, solv_atom
         d(j3+1) = d(j3+1) + dv*dx1
         d(j3+2) = d(j3+2) + dv*dx2
         d(j3+3) = d(j3+3) + dv*dx3
+#ifdef _OPENMP
+		Vel_omp = Vel_omp + Vel
+		Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
         E%ww%el  = E%ww%el + Vel       
         E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
 
 	end do ! ip
 	ichg = ichg + 1
 end do ! iw
-
+#ifdef _OPENMP
+!$omp atomic update
+		E%ww%el  = E%ww%el + Vel_omp
+!$omp atomic update
+		E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 
 end subroutine nonbon2_ww
 
@@ -11893,7 +12903,10 @@ subroutine nonbon2_ww_box
   real(kind=prec)						:: dx1,dx2,dx3,r2,r,r6,r12
   real(kind=prec)						:: Vel,V_a,V_b,dv
   real(kind=prec)						:: do1, do2, do3
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp,Vvdw_omp
+#endif
   ! global variables used:
   !  nat_solute, iac, crg, ljcod, iaclib, x, d, E
 
@@ -11901,7 +12914,26 @@ subroutine nonbon2_ww_box
 ! we are now using the nbww_pair index and nbww true list
 ! this function before was garbage
 ichg = 1
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) - solv_atom + 1
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+Vel_omp=zero
+Vvdw_omp=zero
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
         if (ichg .gt. solv_atom) ichg=1
         i    = nbww(iw)%i
         i3   = i*3-3
@@ -11961,12 +12993,23 @@ do iw = 1, nbww_pair, solv_atom
         d(j3+1) = d(j3+1) + dv*dx1
         d(j3+2) = d(j3+2) + dv*dx2
         d(j3+3) = d(j3+3) + dv*dx3
+#ifdef _OPENMP
+		Vel_omp = Vel_omp + Vel
+		Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
         E%ww%el  = E%ww%el + Vel       
         E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
 
-        end do ! ip
-        ichg = ichg + 1
+	end do ! ip
+	ichg = ichg + 1
 end do ! iw
+#ifdef _OPENMP
+!$omp atomic update
+		E%ww%el  = E%ww%el + Vel_omp
+!$omp atomic update
+		E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 
 
 end subroutine nonbon2_ww_box
@@ -11976,106 +13019,88 @@ end subroutine nonbon2_ww_box
 subroutine nonbond_pp
 ! local variables
 integer						:: ip
-type(NB_TYPE), pointer		:: pa, pb
+type(NB_TYPE), pointer		:: pa
 real(kind=prec)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
 real(kind=prec)						:: Vela,V_aa,V_ba,dva
-real(kind=prec)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
-real(kind=prec)						:: Velb,V_ab,V_bb,dvb
 
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) Vel_omp,Vvdw_omp
+#endif
 ! global variables used:
 
 !  x, crg, el14_scale, iaclib, d, E, 
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_pair)/threads_num
+remainder = MOD(nbpp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
-do ip = 1, nbpp_pair - 1, 2
-! for every second pair (two parallel runs to improve performance):
+Vel_omp = zero
+Vvdw_omp = zero
+
+do ip = mp_start,mp_end
+#else
+do ip = 1, nbpp_pair 
+#endif
+! we now do this for every pair and use real parallelization and loop unrolling
+! to get the real performance boosts
 
 
 ! set up pointers
 pa => nbpp(ip)
-pb => nbpp(ip+1)
 
 ! calculate the distance r
 dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-dx1b  = x(pb%j*3-2) - x(pb%i*3-2)
 dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
 dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
 r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
 ra    = sqrt ( r2a ) 
-rb    = sqrt ( r2b ) 
 r6a   = r2a*r2a*r2a
-r6b   = r2b*r2b*r2b
 
 ! calculate Vel and dv
 Vela  = crg(pa%i)*crg(pa%j)*ra
-Velb  = crg(pb%i)*crg(pb%j)*rb
 if ( pa%LJcod .eq. 3 ) then 
   Vela = Vela*el14_scale
 end if
-if ( pb%LJcod .eq. 3 ) then
- Velb = Velb*el14_scale
-end if
 V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod) &
         *iaclib(iac(pa%j))%avdw(pa%LJcod)
-V_ab = r6b*r6b*iaclib(iac(pb%i))%avdw(pb%LJcod) &
-        *iaclib(iac(pb%j))%avdw(pb%LJcod)
 V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod) &
         *iaclib(iac(pa%j))%bvdw(pa%LJcod)
-V_bb = r6b*iaclib(iac(pb%i))%bvdw(pb%LJcod) &
-        *iaclib(iac(pb%j))%bvdw(pb%LJcod)
 
 dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 ! update d
 d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-d(pb%i*3-2) = d(pb%i*3-2) - dvb*dx1b
 d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-d(pb%i*3-1) = d(pb%i*3-1) - dvb*dx2b
 d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-d(pb%i*3-0) = d(pb%i*3-0) - dvb*dx3b
 d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-d(pb%j*3-2) = d(pb%j*3-2) + dvb*dx1b
 d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-d(pb%j*3-1) = d(pb%j*3-1) + dvb*dx2b
 d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-d(pb%j*3-0) = d(pb%j*3-0) + dvb*dx3b
 
 ! update energies
-E%pp%el  = E%pp%el + Vela + Velb
-E%pp%vdw = E%pp%vdw + V_aa + V_ab - V_ba - V_bb
-end do
-
-if (ip .eq. nbpp_pair) then
-! odd #pairs, handle the last pair
-pa => nbpp(ip)
-
-dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-ra   = sqrt(r2a)
-r6a   = r2a*r2a*r2a
-
-Vela  = crg(pa%i)*crg(pa%j)*ra
-if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
-V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod)*iaclib(iac(pa%j))%avdw(pa%LJcod)
-V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-
-d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-
+#ifdef _OPENMP
+Vel_omp = Vel_omp + Vela
+Vvdw_omp = Vvdw_omp + V_aa - V_ba
+#else
 E%pp%el  = E%pp%el + Vela 
 E%pp%vdw = E%pp%vdw + V_aa - V_ba 
-end if
+#endif
+end do
+
+#ifdef _OPENMP
+!$omp atomic update
+E%pp%el  = E%pp%el + Vel_omp
+!$omp atomic update
+E%pp%vdw = E%pp%vdw + Vvdw_omp
+#endif
+
 
 end subroutine nonbond_pp
 
@@ -12084,17 +13109,34 @@ end subroutine nonbond_pp
 subroutine nonbond_pp_box
   ! local variables
   integer						:: ip, group, ga, gb
-  type(NB_TYPE), pointer		:: pa, pb
+  type(NB_TYPE), pointer		:: pa
   real(kind=prec)						:: dx1a,dx2a,dx3a,r2a,ra,r6a
   real(kind=prec)						:: Vela,V_aa,V_ba,dva
-  real(kind=prec)						:: dx1b,dx2b,dx3b,r2b,rb,r6b
-  real(kind=prec)						:: Velb,V_ab,V_bb,dvb
+
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) Vel_omp,Vvdw_omp
+#endif
 
   ! global variables used:
   !  x, crg, el14_scale, iaclib, d, E, 
 
   !compute the peridocal shift for every charge group pair
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_cgp_pair)/threads_num
+remainder = MOD(nbpp_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+        do group = mp_start,mp_end
+#else
 	do group = 1, nbpp_cgp_pair
+#endif
 		ga = nbpp_cgp(group)%i !atom index for the two switching atoms
 		gb = nbpp_cgp(group)%j
 
@@ -12108,110 +13150,80 @@ subroutine nonbond_pp_box
 		nbpp_cgp(group)%z = boxlength(3)*nint( dx3a*inv_boxl(3) )
 
 	end do
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpp_pair)/threads_num
+remainder = MOD(nbpp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
-   do ip = 1, nbpp_pair - 1, 2
-    ! for every second pair (two parallel runs to improve performance):
+Vel_omp = zero
+Vvdw_omp = zero
+   do ip = mp_start,mp_end
+#else
+   do ip = 1, nbpp_pair
+#endif
+! we now do this for every pair and use real parallelization and loop unrolling
+! to get the real performance boosts
 
 	! set up pointers
 	pa => nbpp(ip)
-	pb => nbpp(ip+1)
 	ga = pa%cgp_pair
-	gb = pb%cgp_pair
 
 	! calculate the distance r
     dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-    dx1b  = x(pb%j*3-2) - x(pb%i*3-2)
     dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-    dx2b  = x(pb%j*3-1) - x(pb%i*3-1)
     dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-    dx3b  = x(pb%j*3-0) - x(pb%i*3-0)
 	dx1a = dx1a - nbpp_cgp(ga)%x         
-	dx1b = dx1b - nbpp_cgp(gb)%x 
 	dx2a = dx2a - nbpp_cgp(ga)%y    
-	dx2b = dx2b - nbpp_cgp(gb)%y                
 	dx3a = dx3a - nbpp_cgp(ga)%z  
-	dx3b = dx3b - nbpp_cgp(gb)%z   
 	
     r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-    r2b   = one/(dx1b*dx1b + dx2b*dx2b + dx3b*dx3b)
     ra    = sqrt ( r2a ) 
-    rb    = sqrt ( r2b ) 
     r6a   = r2a*r2a*r2a
-    r6b   = r2b*r2b*r2b
 
 	! calculate Vel and dv
     Vela  = crg(pa%i)*crg(pa%j)*ra
-    Velb  = crg(pb%i)*crg(pb%j)*rb
     if ( pa%LJcod .eq. 3 ) then 
 	  Vela = Vela*el14_scale
 	end if
-	if ( pb%LJcod .eq. 3 ) then
-	  Velb = Velb*el14_scale
-	end if
 	V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod) &
 		*iaclib(iac(pa%j))%avdw(pa%LJcod)
-	V_ab = r6b*r6b*iaclib(iac(pb%i))%avdw(pb%LJcod) &
-		*iaclib(iac(pb%j))%avdw(pb%LJcod)
 	V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod) &
 		*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-	V_bb = r6b*iaclib(iac(pb%i))%bvdw(pb%LJcod) &
-		*iaclib(iac(pb%j))%bvdw(pb%LJcod)
     dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-    dvb   = r2b*( -Velb -12.0_prec*V_ab +6.0_prec*V_bb )
 
 	! update d
     d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-    d(pb%i*3-2) = d(pb%i*3-2) - dvb*dx1b
     d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-    d(pb%i*3-1) = d(pb%i*3-1) - dvb*dx2b
     d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-    d(pb%i*3-0) = d(pb%i*3-0) - dvb*dx3b
     d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-    d(pb%j*3-2) = d(pb%j*3-2) + dvb*dx1b
     d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-    d(pb%j*3-1) = d(pb%j*3-1) + dvb*dx2b
     d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-    d(pb%j*3-0) = d(pb%j*3-0) + dvb*dx3b
 
 	! update energies
-    E%pp%el  = E%pp%el + Vela + Velb
-    E%pp%vdw = E%pp%vdw + V_aa + V_ab - V_ba - V_bb
+#ifdef _OPENMP
+    Vel_omp = Vel_omp + Vela
+    Vvdw_omp = Vvdw_omp + V_aa - V_ba
+#else
+    E%pp%el  = E%pp%el + Vela
+    E%pp%vdw = E%pp%vdw + V_aa - V_ba
+#endif
   end do
 
-  if (ip .eq. nbpp_pair) then
-    ! odd #pairs, handle the last pair
-	pa => nbpp(ip)
-	ga = pa%cgp_pair
-
-	dx1a  = x(pa%j*3-2) - x(pa%i*3-2)
-	dx2a  = x(pa%j*3-1) - x(pa%i*3-1)
-	dx3a  = x(pa%j*3-0) - x(pa%i*3-0)
-	dx1a = dx1a - nbpp_cgp(ga)%x  
-	dx2a = dx2a - nbpp_cgp(ga)%y  
-	dx3a = dx3a - nbpp_cgp(ga)%z  
-	
-	r2a   = one/(dx1a*dx1a + dx2a*dx2a + dx3a*dx3a)
-	ra   = sqrt(r2a)
+#ifdef _OPENMP
+!$omp atomic update
+E%pp%el  = E%pp%el + Vel_omp
+!$omp atomic update
+E%pp%vdw = E%pp%vdw + Vvdw_omp
+#endif
 
 
-	r6a   = r2a*r2a*r2a
-
-	Vela  = crg(pa%i)*crg(pa%j)*ra
-	if ( pa%LJcod .eq. 3 ) Vela = Vela*el14_scale
-	V_aa = r6a*r6a*iaclib(iac(pa%i))%avdw(pa%LJcod)*iaclib(iac(pa%j))%avdw(pa%LJcod)
-	V_ba = r6a*iaclib(iac(pa%i))%bvdw(pa%LJcod)*iaclib(iac(pa%j))%bvdw(pa%LJcod)
-	dva   = r2a*( -Vela -12.0_prec*V_aa +6.0_prec*V_ba )
-
-	d(pa%i*3-2) = d(pa%i*3-2) - dva*dx1a
-	d(pa%i*3-1) = d(pa%i*3-1) - dva*dx2a
-	d(pa%i*3-0) = d(pa%i*3-0) - dva*dx3a
-	d(pa%j*3-2) = d(pa%j*3-2) + dva*dx1a
-	d(pa%j*3-1) = d(pa%j*3-1) + dva*dx2a
-	d(pa%j*3-0) = d(pa%j*3-0) + dva*dx3a
-
-	E%pp%el  = E%pp%el + Vela 
-	E%pp%vdw = E%pp%vdw + V_aa - V_ba 
-  end if
 
 end subroutine nonbond_pp_box
 
@@ -12222,11 +13234,31 @@ subroutine nonbond_pw
 integer						:: ip,i,j,i3,j3,iaci,iacj,iLJ
 real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
 real(kind=prec)						:: Vel,V_a,V_b,dv
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) Vel_omp,Vvdw_omp
+#endif
 
 ! global variables used:
 !  iac, crg, iaclib, x, d, E
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_pair)/threads_num
+remainder = MOD(nbpw_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+Vel_omp = zero
+Vvdw_omp = zero
+
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbpw_pair
+#endif
 ! for every assigned pair:
 
 i    = nbpw(ip)%i
@@ -12265,9 +13297,21 @@ d(j3+2) = d(j3+2) + dv*dx2
 d(j3+3) = d(j3+3) + dv*dx3
 
 ! update energies
-E%pw%el  = E%pw%el + Vel       
+#ifdef _OPENMP
+Vel_omp = Vel_omp + Vel
+Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+E%pw%el  = E%pw%el + Vel
 E%pw%vdw = E%pw%vdw + V_a - V_b
+#endif
 end do
+#ifdef _OPENMP
+!$omp atomic update
+E%pw%el  = E%pw%el + Vel_omp
+!$omp atomic update
+E%pw%vdw = E%pw%vdw + Vvdw_omp
+#endif
+
 end subroutine nonbond_pw
 
 !-----------------------------------------------------------------------
@@ -12278,12 +13322,29 @@ subroutine nonbond_pw_box
   real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12
   real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, ga, gb
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp,Vvdw_omp
+#endif
   ! global variables used:
   !  iac, crg, iaclib, x, d, E
 
   !compute the peridocal shift for every charge group pair
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_cgp_pair)/threads_num
+remainder = MOD(nbpw_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+        do group = mp_start,mp_end
+#else
 	do group = 1, nbpw_cgp_pair
+#endif
 		ga = nbpw_cgp(group)%i !atom index for the solute switching atoms
 		gb = nbpw_cgp(group)%j !atom index for the solvent switching atom 
 
@@ -12298,8 +13359,25 @@ subroutine nonbond_pw_box
 
 	end do
 
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbpw_pair)/threads_num
+remainder = MOD(nbpw_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+Vel_omp = zero
+Vvdw_omp = zero
+
+  do ip = mp_start,mp_end
+#else
   do ip = 1, nbpw_pair
+#endif
 	! for every assigned pair:
 
 	i    = nbpw(ip)%i  ! solute atom 
@@ -12342,9 +13420,20 @@ subroutine nonbond_pw_box
 	d(j3+3) = d(j3+3) + dv*dx3
 
 	! update energies
+#ifdef _OPENMP
+        Vel_omp = Vel_omp + Vel
+        Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
 	E%pw%el  = E%pw%el + Vel       
 	E%pw%vdw = E%pw%vdw + V_a - V_b
+#endif
   end do
+#ifdef _OPENMP
+!$omp atomic update
+E%pw%el  = E%pw%el + Vel_omp
+!$omp atomic update
+E%pw%vdw = E%pw%vdw + Vvdw_omp
+#endif
 end subroutine nonbond_pw_box
 
 !-----------------------------------------------------------------------
@@ -12356,6 +13445,9 @@ integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(kind=prec)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(kind=prec)					:: Vel,V_a,V_b,dv,el_scale
 
+
+! this is all only done for one single thread, no need to have this split up
+!$omp single
 do istate = 1, nstates
 ! for every state:
 
@@ -12490,6 +13582,7 @@ do ip = 1, nbqq_pair(istate)
   end if
 end do
 end do
+!$omp end single
 end subroutine nonbond_qq
 
 !-----------------------------------------------------------------------
@@ -12504,6 +13597,9 @@ integer					:: ip,iq,jq,i,j,k,i3,j3,iaci,iacj,iLJ
 real(kind=prec)					:: qi,qj,aLJ,bLJ,dx1,dx2,dx3,r2,r,r6,r12,r6_hc
 real(kind=prec)					:: Vel,V_a,V_b,dv,el_scale
 
+
+!also only done in one thread, no need to split it up
+!$omp single
 do istate = 1, nstates
 ! for every state:
 
@@ -12633,6 +13729,7 @@ do ip = 1, nbqq_pair(istate)
   end if
 end do
 end do
+!$omp end single
 end subroutine nonbond_qq_lib_charges
 
 
@@ -12648,12 +13745,32 @@ integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ
 integer						:: istate,jj
 real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
 real(kind=prec)						:: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:), Vvdw_omp(:,:)
+#endif
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, 
 ! qcrg, el14_scale, EQ, d, nat_solute
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+allocate(Vel_omp(nstates,ene_header%arrays),Vvdw_omp(nstates,ene_header%arrays))
+Vel_omp = zero
+Vvdw_omp = zero
+
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbqp_pair
+#endif
 ! for every assigned q-s pair:
 
 ! init state-invariant variables:
@@ -12698,22 +13815,40 @@ do istate = 1, nstates
   d(j3+3) = d(j3+3) + dv*dx3
 
   ! update q-protein energies
+#ifdef _OPENMP
+        Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+        Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
         EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
         EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
         if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
+#ifdef _OPENMP
+                        Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+                        Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                         EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
                         EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+                                Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+                                Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -12721,6 +13856,18 @@ do istate = 1, nstates
 end do ! istate
 
 end do
+
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate,jj)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qp
 
 !-----------------------------------------------------------------------
@@ -12736,13 +13883,32 @@ subroutine nonbond_qp_box
   real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
   real(kind=prec)						:: Vel,V_a,V_b,dv
   integer						:: group, gr, ia
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:), Vvdw_omp(:,:)
+#endif
+
   ! global variables used:
   !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, 
   ! qcrg, el14_scale, EQ, d, nat_solute
 
 
 	!compute the peridocal shift for every charge group pair
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_cgp_pair)/threads_num
+remainder = MOD(nbqp_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+        do gr = mp_start,mp_end
+#else
 	do gr = 1, nbqp_cgp_pair
+#endif
 		ia = nbqp_cgp(gr)%i !atom index for the switching atom
 		
 		!the distance between the two switching atoms
@@ -12755,9 +13921,26 @@ subroutine nonbond_qp_box
 		nbqp_cgp(gr)%z = boxlength(3)*nint( dx3*inv_boxl(3) )
 
 	end do
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+allocate(Vel_omp(nstates,ene_header%arrays),Vvdw_omp(nstates,ene_header%arrays))
+Vel_omp = zero
+Vvdw_omp = zero
 
+  do ip = mp_start,mp_end
+#else
   do ip = 1, nbqp_pair
+#endif
 	! for every assigned q-s pair:
 	! init state-invariant variables:
 	iq   = nbqp(ip)%i
@@ -12805,22 +13988,40 @@ subroutine nonbond_qp_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 
 	  ! update q-protein energies
+#ifdef _OPENMP
+                Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+                Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
 		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
 		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
         if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
+#ifdef _OPENMP
+                        Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+                        Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                         EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
                         EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+                                Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+                                Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -12828,6 +14029,17 @@ subroutine nonbond_qp_box
 	end do ! istate
 
   end do
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate,jj)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qp_box
 
 !----------------------------------------------------------------------
@@ -12841,12 +14053,32 @@ integer						:: ip,iq,i,j,i3,j3,iaci,iacj,iLJ,qLJ
 integer						:: istate,jj
 real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
 real(kind=prec)						:: Vel,V_a,V_b,dv,r6_sc
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:), Vvdw_omp(:,:)
+#endif
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+allocate(Vel_omp(nstates,ene_header%arrays),Vvdw_omp(nstates,ene_header%arrays))
+Vel_omp = zero
+Vvdw_omp = zero
+
+do ip = mp_start,mp_end
+#else
 do ip = 1, nbqp_pair
+#endif
 ! for every assigned q-s pair:
 
 ! init state-invariant variables:
@@ -12892,23 +14124,41 @@ do istate = 1, nstates
   d(j3+2) = d(j3+2) + dv*dx2
   d(j3+3) = d(j3+3) + dv*dx3
 
+#ifdef _OPENMP
+        Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+        Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+#else
   ! update q-protein energies
         EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
         EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
 		if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
+#ifdef _OPENMP
+                        Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+                        Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                         EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
                         EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+                                Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+                                Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do
@@ -12916,6 +14166,17 @@ do istate = 1, nstates
 end do ! istate
 
 end do
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate,jj)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qp_qvdw
 !-----------------------------------------------------------------------
 !******PWadded 2001-10-23
@@ -12929,14 +14190,31 @@ subroutine nonbond_qp_qvdw_box
   real(kind=prec)						:: aLJ,bLJ,dx1,dx2,dx3,r2,r,r6
   real(kind=prec)						:: Vel,V_a,V_b,dv,r6_sc
   integer						:: group, gr, ia
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:,:), Vvdw_omp(:,:)
+#endif
 
   ! global variables used:
   !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
 
 	!compute the peridocal shift for every charge group pair
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_cgp_pair)/threads_num
+remainder = MOD(nbqp_cgp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+        do gr = mp_start,mp_end
+#else
 	do gr = 1, nbqp_cgp_pair
+#endif
 		ia = nbqp_cgp(gr)%i !atom index for the atom
 		
 		!the distance between the two switching atoms
@@ -12949,9 +14227,26 @@ subroutine nonbond_qp_qvdw_box
 		nbqp_cgp(gr)%z = boxlength(3)*nint( dx3*inv_boxl(3) )
 
 	end do
+!$omp barrier
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqp_pair)/threads_num
+remainder = MOD(nbqp_pair, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
 
+allocate(Vel_omp(nstates,ene_header%arrays),Vvdw_omp(nstates,ene_header%arrays))
+Vel_omp = zero
+Vvdw_omp = zero
 
+  do ip = mp_start,mp_end
+#else
   do ip = 1, nbqp_pair
+#endif
 	! for every assigned q-s pair:
 
 	! init state-invariant variables:
@@ -13005,22 +14300,40 @@ subroutine nonbond_qp_qvdw_box
 	  d(j3+3) = d(j3+3) + dv*dx3
 
 	  ! update q-protein energies
+#ifdef _OPENMP
+                Vel_omp(istate,1) = Vel_omp(istate,1) + Vel
+                Vvdw_omp(istate,1) = Vvdw_omp(istate,1) + V_a - V_b
+#else
 		EQ(istate)%qp(1)%el  = EQ(istate)%qp(1)%el + Vel
 		EQ(istate)%qp(1)%vdw = EQ(istate)%qp(1)%vdw + V_a - V_b
+#endif
         if (use_excluded_groups) then
                 do jj = 2, ene_header%arrays
                 if (.not.((ST_gc(ene_header%gcnum(jj))%gcmask%mask(i)).or. &
                         ST_gc(ene_header%gcnum(jj))%gcmask%mask(j))) then
+#ifdef _OPENMP
+                        Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+                        Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                         EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
                         EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a - V_b
+#endif
                 else
                         select case (ST_gc(ene_header%gcnum(jj))%caltype)
                                 case (FULL)
                                 !do nothing!
                                 case (ELECTRO)
+#ifdef _OPENMP
+                                Vvdw_omp(istate,jj) = Vvdw_omp(istate,jj) + V_a - V_b
+#else
                                 EQ(istate)%qp(jj)%vdw = EQ(istate)%qp(jj)%vdw + V_a -V_b
+#endif
                                 case (VDW)
+#ifdef _OPENMP
+                                Vel_omp(istate,jj) = Vel_omp(istate,jj) + Vel
+#else
                                 EQ(istate)%qp(jj)%el  = EQ(istate)%qp(jj)%el + Vel
+#endif
                         end select
                 end if
                 end do 
@@ -13028,6 +14341,19 @@ subroutine nonbond_qp_qvdw_box
 	end do ! istate
 
   end do
+
+
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate,jj)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate,jj)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qp_qvdw_box
 
 !-----------------------------------------------------------------------
@@ -13044,7 +14370,10 @@ real(kind=prec)						::	dx1,dx2,dx3
 real(kind=prec)						::	r, r2, r6
 real(kind=prec)						::	Vel, dv
 real(kind=prec)						::  V_a, V_b, r6_sc, r6_hc
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:), Vvdw_omp(:)
+#endif
 ! has been extensivly rewritten to use n atom spc solvent
 ! and the new nbqw list
 ! old function made Paul very sad
@@ -13052,7 +14381,27 @@ real(kind=prec)						::  V_a, V_b, r6_sc, r6_hc
 ! global variables used:
 !  iqseq, iac, crg, x, nstates, qvdw_flag, iaclib, qiac, qavdw, qbvdw, qcrg, el14_scale, EQ, d, nat_solute
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqw_pair/solv_atom)/threads_num
+remainder = MOD(nbqw_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+
+allocate(Vel_omp(nstates),Vvdw_omp(nstates))
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbqw_pair, solv_atom
+#endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
                 i = iqseq(iq)
@@ -13099,10 +14448,15 @@ V_b   = bLJ*bLJ_solv(1,iLJ)/(r6_sc)
 Vel = chg_solv(1)*qcrg(iq,istate)*r
 dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
                         ! update q-water energies
-					do jj=1,ene_header%arrays
-EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+#ifdef _OPENMP
+                        Vel_omp(istate) = Vel_omp(istate) + Vel
+                        Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+			do jj=1,ene_header%arrays
+                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
         	        EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
-end do ! ene_header%arrays
+                        end do ! ene_header%arrays
+#endif
                 end do !istate
 ! update forces on q atom
 d(i3+1) = d(i3+1) - dv*dx1
@@ -13132,9 +14486,13 @@ r    = sqrt(r2)
 dv = 0
 do istate = 1, nstates
 Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
+#ifdef _OPENMP
+Vel_omp(istate) = Vel_omp(istate) + Vel
+#else
 do jj=1,ene_header%arrays
 EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
 end do ! ene_header
+#endif
 dv = dv - r2*Vel*EQ(istate)%lambda
 end do ! istate
 ! update forces on q atom
@@ -13148,6 +14506,17 @@ d(j3+3) = d(j3+3) + dv*dx3
 end do ! ip
 
 end do ! nbqw
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qw_spc
 
 !-----------------------------------------------------------------------
@@ -13164,13 +14533,35 @@ real(kind=prec)                                         ::      dx1,dx2,dx3
 real(kind=prec)                                         ::      r, r2, r6
 real(kind=prec)                                         ::      Vel, dv, boxshiftx,boxshifty,boxshiftz
 real(kind=prec)                                         ::  V_a, V_b, r6_sc, r6_hc
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:), Vvdw_omp(:)
+#endif
 
 ! has been extensivly rewritten to use n atom spc solvent
 ! and the new nbqw list
 
-	
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqw_pair/solv_atom)/threads_num
+remainder = MOD(nbqw_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+allocate(Vel_omp(nstates),Vvdw_omp(nstates))
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
+
 do iw = 1, nbqw_pair, solv_atom
+#endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
 			i = iqseq(iq)
@@ -13227,10 +14618,15 @@ V_b   = bLJ*bLJ_solv(1,iLJ)/(r6_sc)
 Vel = chg_solv(1)*qcrg(iq,istate)*r
 dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
         	    ! update q-water energies
-				do jj=1,ene_header%arrays
-EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
-	            EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
-end do ! ene_header%arrays
+#ifdef _OPENMP
+                        Vel_omp(istate) = Vel_omp(istate) + Vel
+                        Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+			do jj=1,ene_header%arrays
+                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+	                EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + V_a - V_b
+                        end do ! ene_header%arrays
+#endif
 			end do !istate			
 ! update forces on q atom
 d(i3+1) = d(i3+1) - dv*dx1
@@ -13260,9 +14656,13 @@ r    = sqrt(r2)
 dv = 0
 do istate = 1, nstates
 Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
+#ifdef _OPENMP
+Vel_omp(istate) = Vel_omp(istate) + Vel
+#else
 do jj=1,ene_header%arrays
 EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
 end do ! ene_header
+#endif
 dv = dv - r2*Vel*EQ(istate)%lambda
 end do ! istate
 ! update forces on q atom
@@ -13276,6 +14676,17 @@ d(j3+3) = d(j3+3) + dv*dx3
 end do ! ip
 
 end do ! nbqw
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qw_spc_box
 
 !-----------------------------------------------------------------------
@@ -13297,10 +14708,32 @@ real(kind=prec)                                         ::      dx1,dx2,dx3
 real(kind=prec)                                         ::      r, r2, r6
 real(kind=prec)                                         ::      Vel, dv
 real(kind=prec)                                         ::  V_a, V_b, r6_sc, r6_hc
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:), Vvdw_omp(:)
+#endif
 
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqw_pair/solv_atom)/threads_num
+remainder = MOD(nbqw_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
 
+allocate(Vel_omp(nstates),Vvdw_omp(nstates))
+Vel_omp = zero
+Vvdw_omp = zero
 
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbqw_pair, solv_atom
+#endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
                 i = iqseq(iq)
@@ -13349,13 +14782,17 @@ r6_sc = r6_hc + sc_lookup(iq,iLJ,istate)   !softcore  MPA
 V_a   = aLJ*aLJ_solv(ip+1,iLJ)/(r6_sc*r6_sc)
 V_b   = bLJ*bLJ_solv(ip+1,iLJ)/(r6_sc)
                         end if
-Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
-
-						do jj=1,ene_header%arrays
-EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
-EQ(istate)%qw(jj)%vdw  = EQ(istate)%qw(jj)%vdw + V_a - V_b
-end do ! ene_header
-dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
+                Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
+#ifdef _OPENMP
+                        Vel_omp(istate) = Vel_omp(istate) + Vel
+                        Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+			do jj=1,ene_header%arrays
+                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+                        EQ(istate)%qw(jj)%vdw  = EQ(istate)%qw(jj)%vdw + V_a - V_b
+                        end do ! ene_header
+#endif
+                dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
                 end do !istate			
 ! update forces on q atom
 d(i3+1) = d(i3+1) - dv*dx1
@@ -13368,7 +14805,17 @@ d(j3+3) = d(j3+3) + dv*dx3
 end do ! ip
 
 end do ! nbqw
-
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qw_3atom
 
 !-----------------------------------------------------------------------
@@ -13387,10 +14834,32 @@ real(kind=prec)                                         ::      dx1,dx2,dx3
 real(kind=prec)                                         ::      r, r2, r6
 real(kind=prec)                                         ::      Vel, dv,boxshiftx,boxshifty,boxshiftz
 real(kind=prec)                                         ::  V_a, V_b, r6_sc, r6_hc
-  
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec),allocatable :: Vel_omp(:), Vvdw_omp(:)
+#endif  
 		
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbqw_pair/solv_atom)/threads_num
+remainder = MOD(nbqw_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
 
+allocate(Vel_omp(nstates),Vvdw_omp(nstates))
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbqw_pair, solv_atom
+#endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
 			i = iqseq(iq)
@@ -13451,13 +14920,17 @@ r6_sc = r6_hc + sc_lookup(iq,iLJ,istate)   !softcore  MPA
 V_a   = aLJ*aLJ_solv(ip+1,iLJ)/(r6_sc*r6_sc)
 V_b   = bLJ*bLJ_solv(ip+1,iLJ)/(r6_sc)
 				end if
-Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
-
-				do jj = 1, ene_header%arrays
-EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
-EQ(istate)%qw(jj)%vdw  = EQ(istate)%qw(jj)%vdw + V_a - V_b
-end do ! ene_header
-dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
+                        Vel = chg_solv(ip+1)*qcrg(iq,istate)*r
+#ifdef _OPENMP
+                        Vel_omp(istate) = Vel_omp(istate) + Vel
+                        Vvdw_omp(istate) = Vvdw_omp(istate) + V_a - V_b
+#else
+			do jj = 1, ene_header%arrays
+                        EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel
+                        EQ(istate)%qw(jj)%vdw  = EQ(istate)%qw(jj)%vdw + V_a - V_b
+                        end do ! ene_header
+#endif
+                        dv   = dv  + r2*( -Vel -( (12.0_prec*V_a - 6.0_prec*V_b)*(r6_hc/r6_sc) ))*EQ(istate)%lambda
 			end do !istate			
 ! update forces on q atom
 d(i3+1) = d(i3+1) - dv*dx1
@@ -13470,6 +14943,17 @@ d(j3+3) = d(j3+3) + dv*dx3
 end do ! ip
 
 end do ! nbqw
+#ifdef _OPENMP
+do istate = 1, nstates
+do jj=1,ene_header%arrays
+!$omp atomic update
+EQ(istate)%qw(jj)%vdw = EQ(istate)%qw(jj)%vdw + Vvdw_omp(istate)
+!$omp atomic update
+EQ(istate)%qw(jj)%el  = EQ(istate)%qw(jj)%el + Vel_omp(istate)
+end do ! ene_header
+end do ! nstates
+deallocate(Vel_omp,Vvdw_omp)
+#endif
 end subroutine nonbond_qw_3atom_box
 
 !-----------------------------------------------------------------------
@@ -13487,7 +14971,10 @@ real(kind=prec)                                         :: aLJ,bLJ,solvLJa1,solv
 integer						:: ipstart
 real(kind=prec)                                         :: dx1,dx2,dx3,r2,r,r6
 real(kind=prec)						:: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
 
 ! the loop is now organised in the following way (as before for the arithmetic case)
 ! we always jump solv_atom positions, to calculate atomAn-atomB(1-solv_atom)
@@ -13495,7 +14982,26 @@ real(kind=prec)						:: Vel,V_a,V_b,dv
 ! vdW is only calculated if atomA1 - atomB1
 
 ichg = 1
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+Vel_omp = zero
+Vvdw_omp = zero
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
         if (ichg .gt. solv_atom) ichg=1
         i    = nbww(iw)%i
         i3   = i*3-3
@@ -13513,8 +15019,12 @@ do iw = 1, nbww_pair, solv_atom
         r2   = one/r2
         r    = sqrt ( r2 )
 	Vel  = solvchg1 * solvchg2 *r
-  E%ww%el = E%ww%el + Vel
-  dv   = r2*( -Vel)
+#ifdef _OPENMP
+        Vel_omp = Vel_omp + Vel
+#else
+        E%ww%el = E%ww%el + Vel
+#endif
+        dv   = r2*( -Vel)
 	if ((ichg .eq. 1).and.(ip .eq. 0)) then
         iLJ = ljcod(iac(i),iac(j))
         solvLJa1 = aLJ_solv(ichg,iLJ)
@@ -13524,7 +15034,11 @@ do iw = 1, nbww_pair, solv_atom
         r6  = one/r6
 	V_a = solvLJa1 * solvLJa2 * r6 * r6
 	V_b = solvLJb1 * solvLJb2 * r6
+#ifdef _OPENMP
+        Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
 	E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
 	dv = dv + r2*(-12.0_prec*V_a +6.0_prec*V_b )
 	end if
         d(i3+1) = d(i3+1) - dv*dx1
@@ -13533,11 +15047,15 @@ do iw = 1, nbww_pair, solv_atom
         d(j3+1) = d(j3+1) + dv*dx1
         d(j3+2) = d(j3+2) + dv*dx2
         d(j3+3) = d(j3+3) + dv*dx3
-
         end do ! ip
         ichg = ichg + 1
 end do ! iw
-
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 end subroutine nonbond_ww_spc
 
 !-----------------------------------------------------------------------
@@ -13556,7 +15074,10 @@ real(kind=prec)                                         :: aLJ,bLJ,solvLJa1,solv
   integer						:: ipstart
 real(kind=prec)                                         :: dx1,dx2,dx3,r2,r,r6
 real(kind=prec)                                         :: Vel,V_a,V_b,dv,boxshiftx,boxshifty,boxshiftz
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
 
 ! the loop is now organised in the following way (as before for the arithmetic case)
 ! we always jump solv_atom positions, to calculate atomAn-atomB(1-solv_atom)
@@ -13564,7 +15085,29 @@ real(kind=prec)                                         :: Vel,V_a,V_b,dv,boxshi
 ! vdW is only calculated if atomA1 - atomB1
 
 ichg = 1
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
         if (ichg .gt. solv_atom) ichg=1
         i    = nbww(iw)%i
         i3   = i*3-3
@@ -13590,8 +15133,12 @@ do iw = 1, nbww_pair, solv_atom
         r2   = one/r2
         r    = sqrt ( r2 )
         Vel  = solvchg1 * solvchg2 *r
-	  E%ww%el = E%ww%el + Vel
-	  dv   = r2*( -Vel)
+#ifdef _OPENMP
+        Vel_omp = Vel_omp + Vel
+#else
+	E%ww%el = E%ww%el + Vel
+#endif
+	dv   = r2*( -Vel)
         if ((ichg .eq. 1).and.(ip .eq. 0)) then
         iLJ = ljcod(iac(i),iac(j))
         solvLJa1 = aLJ_solv(ichg,iLJ)
@@ -13601,7 +15148,11 @@ do iw = 1, nbww_pair, solv_atom
         r6  = one/r6
         V_a = solvLJa1 * solvLJa2 * r6 * r6
         V_b = solvLJb1 * solvLJb2 * r6
+#ifdef _OPENMP
+        Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
         E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
         dv = dv + r2*(-12.0_prec*V_a +6.0_prec*V_b )
         end if
         d(i3+1) = d(i3+1) - dv*dx1
@@ -13614,7 +15165,12 @@ do iw = 1, nbww_pair, solv_atom
         end do ! ip
         ichg = ichg + 1
 end do ! iw
-
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 end subroutine nonbond_ww_spc_box
 
 !-----------------------------------------------------------------------
@@ -13631,13 +15187,38 @@ real(kind=prec)                                         :: aLJ,bLJ,solvLJa1,solv
 integer                                         :: ipstart
 real(kind=prec)                                         :: dx1,dx2,dx3,r2,r,r6
 real(kind=prec)                                         :: Vel,V_a,V_b,dv
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
 ! the loop is now organised in the following way (as before for the arithmetic case)
 ! we always jump solv_atom positions, to calculate atomAn-atomB(1-solv_atom)
 ! and iterate a separate counter to get the current position of the atomA(1-solv_atom) position
 
 ichg = 1
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
         if (ichg .gt. solv_atom) ichg=1
         i    = nbww(iw)%i
         i3   = i*3-3
@@ -13655,8 +15236,7 @@ do iw = 1, nbww_pair, solv_atom
         r2   = one/r2
         r    = sqrt ( r2 )
         Vel  = solvchg1 * solvchg2 *r
-	  E%ww%el = E%ww%el + Vel
-	  dv   = r2*( -Vel)
+	dv   = r2*( -Vel)
         iLJ = ljcod(iac(i),iac(j))
         solvLJa1 = aLJ_solv(ichg,iLJ)
         solvLJa2 = aLJ_solv(ip+1,iLJ)
@@ -13665,7 +15245,13 @@ do iw = 1, nbww_pair, solv_atom
         r6  = one/r6
         V_a = solvLJa1 * solvLJa2 * r6 * r6
         V_b = solvLJb1 * solvLJb2 * r6
+#ifdef _OPENMP
+        Vel_omp = Vel_omp + Vel
+        Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+        E%ww%el = E%ww%el + Vel
         E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
         dv = dv + r2*(-12.0_prec*V_a +6.0_prec*V_b )
         d(i3+1) = d(i3+1) - dv*dx1
         d(i3+2) = d(i3+2) - dv*dx2
@@ -13677,6 +15263,12 @@ do iw = 1, nbww_pair, solv_atom
         end do ! ip
         ichg = ichg + 1
 end do ! iw
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 
 end subroutine nonbond_3atomsolvent
 
@@ -13693,7 +15285,10 @@ real(kind=prec)                                         :: aLJ,bLJ,solvLJa1,solv
   integer						:: ipstart
 real(kind=prec)                                         :: dx1,dx2,dx3,r2,r,r6
 real(kind=prec)                                         :: Vel,V_a,V_b,dv,boxshiftx,boxshifty,boxshiftz
-
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
 
 ! the loop is now organised in the following way (as before for the arithmetic case)
 ! we always jump solv_atom positions, to calculate atomAn-atomB(1-solv_atom)
@@ -13701,7 +15296,29 @@ real(kind=prec)                                         :: Vel,V_a,V_b,dv,boxshi
 ! vdW is only calculated if atomA1 - atomB1
 
 ichg = 1
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (nbww_pair/solv_atom)/threads_num
+remainder = MOD(nbww_pair/solv_atom, threads_num)
+mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+mp_end = (mp_end*solv_atom) 
+
+ichg = ceiling(REAL(MOD(mp_start,solv_atom**2),kind=prec)/solv_atom)
+
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end,solv_atom
+#else
 do iw = 1, nbww_pair, solv_atom
+#endif
         if (ichg .gt. solv_atom) ichg=1
         i    = nbww(iw)%i
         i3   = i*3-3
@@ -13718,7 +15335,7 @@ do iw = 1, nbww_pair, solv_atom
         boxshiftx = boxlength(1)*nint( dx1*inv_boxl(1) )
         boxshifty = boxlength(2)*nint( dx2*inv_boxl(2) )
         boxshiftz = boxlength(3)*nint( dx3*inv_boxl(3) )
-  end if
+        end if
         dx1 = dx1 -boxshiftx
         dx2 = dx2 -boxshifty
         dx3 = dx3 -boxshiftz
@@ -13727,7 +15344,6 @@ do iw = 1, nbww_pair, solv_atom
         r2   = one/r2
         r    = sqrt ( r2 )
         Vel  = solvchg1 * solvchg2 *r
-	  E%ww%el = E%ww%el + Vel
         dv = r2*( -Vel)
         iLJ = ljcod(iac(i),iac(j))
         solvLJa1 = aLJ_solv(ichg,iLJ)
@@ -13737,7 +15353,13 @@ do iw = 1, nbww_pair, solv_atom
         r6  = one/r6
         V_a = solvLJa1 * solvLJa2 * r6 * r6
         V_b = solvLJb1 * solvLJb2 * r6
+#ifdef _OPENMP
+        Vel_omp = Vel_omp + Vel
+        Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+        E%ww%el = E%ww%el + Vel
         E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
         dv = dv + r2*(-12.0_prec*V_a +6.0_prec*V_b )
         d(i3+1) = d(i3+1) - dv*dx1
         d(i3+2) = d(i3+2) - dv*dx2
@@ -13749,7 +15371,12 @@ do iw = 1, nbww_pair, solv_atom
         end do ! ip
         ichg = ichg + 1
   end do ! iw
-
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
 end subroutine nonbond_3atomsolvent_box
 
 !-----------------------------------------------------------------------
@@ -14540,7 +16167,6 @@ end subroutine pot_energy
 
 subroutine pot_energy_bonds
 ! bond, angle, torsion and improper potential energy
-
 select case(ff_type)
 case(FF_GROMOS)
         E%p%bond = bond(1, nbonds_solute)
@@ -14578,7 +16204,8 @@ end subroutine pot_energy_bonds
 subroutine pot_energy_nonbonds
 
 !nonbonded interactions
-
+!$omp parallel default(none) shared(use_PBC,ivdw_rule,natom,nat_solute,solvent_type,use_LRF,qvdw_flag) &
+!$omp reduction(+:d)
 if( use_PBC ) then !periodic box
       
 		select case(ivdw_rule)
@@ -14611,9 +16238,11 @@ if( use_PBC ) then !periodic box
         end select
         
 		!LRF PBC
+!$omp single
 		if (use_LRF) then
                 call lrf_taylor
-        end if
+                end if
+!$omp end single
 
 else !simulation sphere
 
@@ -14647,12 +16276,14 @@ else !simulation sphere
         end select
 
         ! on demand: taylor expansion of the electric field from charge groups beyond rcutoff
+!$omp single
         if (use_LRF) then
                 call lrf_taylor
         end if
-
+!$omp end single
 end if
 
+!$omp end parallel
 end subroutine pot_energy_nonbonds
 
 !-----------------------------------------------------------------------
