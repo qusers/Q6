@@ -13,7 +13,7 @@ U.S.A.   National   Cancer   Institute  pdb   to   smiles   translator
 [http://cactus.nci.nih.gov/translate/](http://cactus.nci.nih.gov/translate/)
 with the  file found at  `prep/lig.pdb`. Once the smiles  signature of
 this small molecule  is obtained a further search can  be performed at
-[http://pubchem.ncbi.nlm.nih.gov](pubchem.ncbi.nlm.nih.gov) to find out that
+[http://pubchem.ncbi.nlm.nih.gov](http://pubchem.ncbi.nlm.nih.gov) to find out that
 the ID of this molecule is STK255751.
 
 To run this test the scripts `run_test_mpi.sh` and `run_test_nompi.sh` are
