@@ -8,12 +8,20 @@ in 5 steps and then a dynamics run split into 5 identical steps. A total of
 The system is a simple ligand in a water sphere and the
 force-field used is the OPLSAA force field from Jorgensen's lab.
 
+The  identity  of   the  ligand  can  be  obtained   by  querying  the
+U.S.A.   National   Cancer   Institute  pdb   to   smiles   translator
+[http://cactus.nci.nih.gov/translate/](http://cactus.nci.nih.gov/translate/)
+with the  file found at  `prep/lig.pdb`. Once the smiles  signature of
+this small molecule  is obtained a further search can  be performed at
+[pubchem.ncbi.nlm.nih.gov] (pubchem.ncbi.nlm.nih.gov) to find out that
+the ID of this molecule is STK255751.
+
 To run this test the scripts `run_test_mpi.sh` and `run_test_nompi.sh` are
 provided, as well as a script to submit the process to a cluster where the
 slurm resource manager is available (`test2slurm.sh`). The scripts need to be
-modified in the first lines in order to specify the location of the qdyn
+modified in the first lines in order to specify the location of the **qdyn**
 executable in you system and also the version of MPI you will use to run the
-simulation in parallel (qdynp) if such is the case.
+simulation in parallel (**qdynp**) if such is the case.
 
 
 Equilibration (Heating)
@@ -89,10 +97,10 @@ TODO
 --------------------------------------------------------------------------------
 
 The following to-do list highlights what needs to be done for expanding the benchmark into
-something userful.
+something useful.
 
 - [ ] Make a script that will send runs of 1, 2, 3, 4, 5ns runs to different cluster nodes
       at the same time.
-- [ ] Make number of processors gradient script.
+- [ ] Make script with number of processors as a gradient.
 - [x] Make a markdown document describing the test.
 - [ ] Make a general R script for plotting and making statistics with the benchmarks.

@@ -2,7 +2,7 @@
 **Created: Nov 21, 2014**    
 **Author: Beat Amrein**    
 
-    [with the long time goal to have a checklist with energy-offset and common solutions]
+    [with a long term goal to offer checklist with energy-offsets and common solutions]
 
 Work carefully trough this checklist to make sure that not you, but your system is the problem.
 

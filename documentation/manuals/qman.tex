@@ -177,10 +177,11 @@ systems that are used with the periodic boundary condition.
 \section{INSTALLATION AND SETUP}
 \subsection{System requirements} 
 Q 5.7 can  be compiled and run  in Windows 7, Mac OSX  and Linux.  The
-parallel version of  the main dynamics program  \textbf{qdyn} has been
-greatly improved  from that of  version 5.0  which was using  an older
-Message Passing  Interface (MPI) standard and  one-sided communication
-instead of the more portable point to point communication.
+parallel  \textbf{qdynp}   version  of   the  main   dynamics  program
+\textbf{qdyn} has been greatly improved from that of version 5.0 which
+was  using  an older  Message  Passing  Interface (MPI)  standard  and
+one-sided communication  instead of the  more portable point  to point
+communication.
 
 The memory requirements vary with the size of the simulated system but
 are, in general, modest.  A system of  18 Å radius with a cutoff of 10
@@ -193,7 +194,7 @@ A  modern Fortran  compiler is  required  to build  the main  programs
 \textbf{qcalc}).
 
 A  Fortran compiler  and  an  MPI library  is  required  to build  the
-parallel version of \textbf{qdyn}.
+parallel version of \textbf{qdynp}.
 
 \subsection{Installation}
 The following components, available from the Q web site
@@ -219,8 +220,6 @@ and download the files to this directory.
 \textbf{Linux} 
 
 \textbf{Mac OSX}
-
-
 
 
 
@@ -981,7 +980,7 @@ information about the data in each section is found in the section
   \hline steps                    & 10000        & Number of steps \\
   \hline stepsize                 & 2.0          & Step size (fs) \\
   \hline temperature              & 300          & Temperature (K) \\
-  \hline thermostat               & BERENDSEN    & Thermostat used (see pg. X for more info) \\
+  \hline thermostat               & berendsen    & Thermostat used (see pg. X for more info) \\
   \hline bath{\_}coupling         & 10           & Temperature bath relaxation time (fs) \\
   \hline random{\_}seed           & 57643        & Seed for random number generator (only for initial vel.) \\
   \hline initial{\_}temperature   & 300          & Temperature (K) for Maxwell-distributed initial velocities\\
@@ -2343,14 +2342,27 @@ file must conform to some rules to be accepted by \textbf{qprep} (if not
 specified use the PDB standard):
 
 \begin{itemize}
-\item \textbf{qprep} will only accept and read ATOM and HETATM records. All other record types have to be removed.
-\item Residue numbers must be numeric, $i.e.$ alphanumeric residue identifiers like 60B are not allowed. Use the renumber script to renumber residues. The numbering does not have to start at 1, but \textbf{qprep} will renumber residues starting at 1.
-\item Molecules must be separated with a gap marker line. This line should contain only the word GAP in capital letters, optionally preceded by blanks or tabs. There should not be a gap marker at the end of the file.
-\item Atom numbering is not significant and \textbf{qprep} will renumber atoms starting from 1. Note that the numbering will change due to the insertion of hydrogen atoms.
+\item  \textbf{qprep}  will  only  accept and  read  ATOM  and  HETATM
+records. All other record types have to be removed.
+\item  Residue numbers  must be  numeric, $i.e.$  alphanumeric residue
+identifiers  like 60B  are not  allowed.  Use  the renumber  script to
+renumber residues.   The numbering does  not have  to start at  1, but
+\textbf{qprep} will renumber residues starting at 1.
+\item Molecules  must be separated with  a gap marker line.  This line
+should  contain  only the  word  GAP  in capital  letters,  optionally
+preceded by blanks  or tabs. There should  not be a gap  marker at the
+end of the file.
+\item  Atom  numbering  is  not significant  and  \textbf{qprep}  will
+renumber atoms  starting from 1.  Note that the numbering  will change
+due to the insertion of hydrogen atoms.
 \item Only upper case letters may be used in PDB files.
-\item Residue names must match fragment library entry names. The maximal length of residue names is 3 alphanumeric characters (position 13 to 16). Most other characters like +, -, {\_} are also permitted.
-\item Atom names must match atom names within the relevant fragment library entry.
-\item Temperature factors and occupancy numbers are ignored by \textbf{qprep} and are optional.
+\item  Residue names  must  match fragment  library  entry names.  The
+maximal length of residue names is 3 alphanumeric characters (position
+13 to 16). Most other characters like +, -, {\_} are also permitted.
+\item Atom  names must match  atom names within the  relevant fragment
+library entry.
+\item  Temperature  factors  and  occupancy  numbers  are  ignored  by
+\textbf{qprep} and are optional.
 \end{itemize}
 
 \subsubsection{Atom masks}\label{subsubsec:atom_masks}
@@ -2622,79 +2634,77 @@ r_{ij}^{-6} }
 \end{split}
 \end{equation}
 
-The \textbf{[atom{\_}types]} section defines a name, and lists
-Lennard-Jones parameters and mass for each atom type. There are
-three sets of LJ parameters: set 1 for normal non-bonded
-interactions, set 2 for pairs of polar atom types (listed in a the
-section LJ{\_}type2{\_}pairs) and type 3 for pairs of atoms in
-1--4 position. The B parameter is the same for sets 2 and 3. Atom
-type names are alphanumeric. The length of the name is limited to
-8 characters.
+The  \textbf{[atom{\_}types]}  section  defines   a  name,  and  lists
+Lennard-Jones parameters and mass for  each atom type. There are three
+sets of LJ parameters: set 1 for normal non-bonded interactions, set 2
+for   pairs  of   polar  atom   types   (listed  in   a  the   section
+LJ{\_}type2{\_}pairs)  and  type   3  for  pairs  of   atoms  in  1--4
+position. The  B parameter  is the same  for sets 2  and 3.  Atom type
+names  are alphanumeric.  The  length  of the  name  is  limited to  8
+characters.
 
-The section \textbf{[atom{\_}aliases]} is used facilitate the
-transition from numeric atom type names used in earlier versions.
-In this section alias names may be assigned to atom types defined
-in the atom{\_}types section, $e.g.$ to be able to use the old
-numeric name as an alias for the new descriptive atom type name in
-library files.
+The   section  \textbf{[atom{\_}aliases]}   is  used   facilitate  the
+transition from numeric atom type  names used in earlier versions.  In
+this section alias names may be  assigned to atom types defined in the
+atom{\_}types section, $e.g.$  to be able to use the  old numeric name
+as an alias for the new descriptive atom type name in library files.
 
-The \textbf{[LJ{\_}type2{\_}pairs]} section lists pairs of polar
-atom types that should interact with LJ parameters from set 2.
+The \textbf{[LJ{\_}type2{\_}pairs]} section lists  pairs of polar atom
+types that should interact with LJ parameters from set 2.
 
-The \textbf{[bonds]} section lists force constant and equilibrium
-distance for bonds between two atoms. It contains one line for
-each (applicable) unique pair of atom types. The pair 1--2 is
-equivalent with the pair 2--1, so only one of these should be
-included. The pairs may appear in any order, but for reasons of
-readability it is convenient to sort the lines by both atom types
-and always have the lower atom type number first on each line.
+The  \textbf{[bonds]} section  lists  force  constant and  equilibrium
+distance for  bonds between two atoms.  It contains one line  for each
+(applicable) unique  pair of atom  types. The pair 1--2  is equivalent
+with the pair 2--1, so only one of these should be included. The pairs
+may  appear  in any  order,  but  for  reasons  of readability  it  is
+convenient to  sort the lines by  both atom types and  always have the
+lower atom type number first on each line.
 
-The \textbf{[angles]} section lists force constant and equilibrium
-angle for 3-atom angles. contains one line for each (applicable)
-unique triplet of atom types. The pair 1--2--3 is equivalent with
-the pair 3--2--1, so only one of these should be included. The
-pairs may appear in any order, but for reasons of readability it
-is convenient to sort the lines by the middle atom type first,
-then on the left and finally by the right atom type. It is also
-preferred to have the left atom type less than or equal to the
-right one ($i.e.$ 1--2--3 rather than 3--2--1).
+The  \textbf{[angles]} section  lists force  constant and  equilibrium
+angle  for 3-atom  angles.  contains one  line  for each  (applicable)
+unique triplet of atom types. The  pair 1--2--3 is equivalent with the
+pair 3--2--1, so  only one of these should be  included. The pairs may
+appear in any  order, but for reasons of readability  it is convenient
+to sort the lines by the middle  atom type first, then on the left and
+finally by the right atom type. It  is also preferred to have the left
+atom type less  than or equal to the right  one ($i.e.$ 1--2--3 rather
+than 3--2--1).
 
-The \textbf{[torsions]} section lists parameters for torsion
-angles. Torsions can be defined by 4 atom types but in many cases
-only the two middle atoms are significant. The latter case is
-indicated by "0" (zero) or "?" in column one and four. A torsion
-defined with four atom types overrides two-atom definitions. The
-force constant in the cosine-shaped function for the torsion
-potential is equal to half the barrier height. The periodicity is
-the number of maxima passed in a full 360\r{ } rotation. The phase
-shift divided by the periodicity is the angle where the first
-maximum should be. The number of paths is the number of ways that
-a two-atom torsion can be defined, $i.e.$ the product of the
-number of atoms bonded to the two middle atoms. It is used to
-distribute the force over all the atoms involved. The preferred
-order of the lines is analogous with the bonds section: sort by
-the two middle atom types. Multiple torsion potential terms may be
-defined for the same set of atom types, to enable more complex
-torsion potentials. All terms are then added together.
+The   \textbf{[torsions]}  section   lists   parameters  for   torsion
+angles. Torsions can be defined by 4 atom types but in many cases only
+the two middle atoms are significant.  The latter case is indicated by
+"0" (zero) or "?" in column one  and four. A torsion defined with four
+atom types overrides  two-atom definitions. The force  constant in the
+cosine-shaped function for the torsion  potential is equal to half the
+barrier height.  The periodicity is the  number of maxima passed  in a
+full 360\r{ } rotation. The phase  shift divided by the periodicity is
+the angle  where the first maximum  should be. The number  of paths is
+the number of ways that a  two-atom torsion can be defined, $i.e.$ the
+product of the number  of atoms bonded to the two  middle atoms. It is
+used  to  distribute  the  force  over all  the  atoms  involved.  The
+preferred order of the lines is analogous with the bonds section: sort
+by the two middle atom types.  Multiple torsion potential terms may be
+defined for the same set of atom types, to enable more complex torsion
+potentials. All terms are then added together.
 
-The \textbf{[impropers]} section lists force constant and
-equilibrium angle for improper torsion angles, which are modelled
-by a harmonic potential. The impropers may be defined by two atom
-types, but in many cases the second type is not used and set to
-"0" or "?" as in the torsions section.
+The \textbf{[impropers]} section lists  force constant and equilibrium
+angle for  improper torsion angles,  which are modelled by  a harmonic
+potential. The impropers may be defined by two atom types, but in many
+cases the  second type is  not used and  set to "0"  or "?" as  in the
+torsions section.
 
-The \textbf{[options]} section contains three keywords.
-Vdw{\_}rule selects the rule for combining LJ parameters from two
-atom types and takes the values "geometric" or "arithmetic".
-Scale{\_}14 is the scaling factor for electrostatic interactions
-between atoms in 1--4 positions. Switch{\_}atoms selects the
-cut-off logic for non-bonded interaction: On~=~use designated
-switch (central) atoms of charge groups. Off~=~include the charge
-groups if any pair of atoms is within the cut-off distance.
+The \textbf{[options]}  section contains three  keywords.  Vdw{\_}rule
+selects the rule  for combining LJ parameters from two  atom types and
+takes  the values  "geometric"  or "arithmetic".   Scale{\_}14 is  the
+scaling factor  for electrostatic  interactions between atoms  in 1--4
+positions. Switch{\_}atoms  selects the  cut-off logic  for non-bonded
+interaction:  On~=~use designated  switch  (central)  atoms of  charge
+groups. Off~=~include the charge groups if any pair of atoms is within
+the cut-off distance.
 
-Table \ref{tab:prm_f_f} lists the data and units for each column
-in the different sections, and an example is included as a file
-example on page \pageref{fig:prm_ex}.
+Table \ref{tab:prm_f_f}  lists the data  and units for each  column in
+the different sections,  and an example is included as  a file example
+on page \pageref{fig:prm_ex}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3230,8 +3240,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
 \hline shake\_solvent & Enable (on) or disable (off) shake constraining of bonds and angles of water. & Optional, default on. We recommend the use of shake for water.\\
-\hline shake\_solute &  Shake constraining of bonds  to hydrogen atoms
-in solute bonds on or off. & Optional, default off.\\
+\hline shake\_solute & Shake constraining of bonds to hydrogen atoms in solute bonds on or off. & Optional, default off.\\
 \hline shake\_hydrogens & Shake constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default off. \\
 \hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
 \hline
@@ -3352,80 +3361,77 @@ in solute bonds on or off. & Optional, default off.\\
 \subsubsection{FEP file format}
 \label{subsubsec:fepfileformat}
 
-The FEP file which designates some atoms from the topology as
-Q-atoms and redefines the topology for these atoms in a number of
-states between which transformations can be made, is a text file.
-It is divided into sections which can appear in any order and
-which start with a section title. Within each section the data
-appears either as lines with values or as pairs of keyword and
-value.
+The FEP file  (given a .fep extension) designates some  atoms from the
+topology as  Q-atoms and redefines the  topology for these atoms  in a
+number of states between which  transformations can be made. This file
+is a plain text file. It is  divided into sections which can appear in
+any order  and which start with  a section title. Within  each section
+the data appears either as lines with values or as keyword-value pairs.
 
-Section titles are enclosed in square brackets and must be the
-first (non-white space) item on a line. They are not
-case-sensitive. Keyword-value pairs appear in that order, anywhere
-on a line but together on the same line. Keyword-value lines can
-appear in any order (within a section). White space is not
-significant in value-list lines.
+Section titles are  enclosed in square brackets and must  be the first
+(non-white    space)    item    on    a    line.    They    are    not
+case-sensitive. Keyword-value pairs appear  in that order, anywhere on
+a line but  together on the same line. Keyword-value  lines can appear
+in any  order (within a  section). White  space is not  significant in
+value-list lines.
 
-Comments start with "!", "\#" or "*" and may appear after values
-or as separate lines.
+Comments start with "!", "\#" or "*" and may appear after values or as
+separate lines.
 
-Only the section atoms where Q-atoms are designated, is required,
-all others are optional. They may appear in any order, but the
-preferred order is that of table \ref{tab:fepfileformat}. The
-section [\textbf{FEP}] contains the keyword states followed by the
-number of FEP states defined in the FEP file. An offset value to
-add to all topology atom numbers in order to avoid renumbering all
-atoms between $e.g.$ free ligand and bound ligand simulations can
-also be defined in the [\textbf{FEP}] section. New atom types for
-Q-atoms are defined in the [\textbf{atom\_types}] section. The
-assignment of Q-atom types to Q-atoms is done, for each state, in
-the [\textbf{change\_atoms}] section. Pairs of atoms between which
-bonds are made or broken should use the exponential repulsion
-non-bonded potential instead of the standard Lennard-Jones by
-listing them under the [\textbf{soft\_pairs}] heading. In some
-cases it is desirable to completely turn off certain non-bonded
-interactions. This can be done on a per-state basis in the section
-[\textbf{excluded\_pairs}].
+A  .fep file  only needs  as  a requirement  for the  \textbf{[atoms]}
+section (where  Q-atoms are  declared) to be  present, all  other 
+sections are optional. They may appear in any order, but the preferred
+order is that seen in table \ref{tab:fepfileformat}.  The section
+[\textbf{FEP}] contains the  keyword states followed by  the number of
+FEP states  defined in  the FEP file.  An offset value  to add  to all
+topology atom numbers in order  to avoid renumbering all atoms between
+$e.g.$ free ligand and bound ligand simulations can also be defined in
+the [\textbf{FEP}] section. New atom  types for Q-atoms are defined in
+the [\textbf{atom\_types}] section. The  assignment of Q-atom types to
+Q-atoms  is  done, for  each  state,  in the  [\textbf{change\_atoms}]
+section. Pairs of atoms between which  bonds are made or broken should
+use  the exponential  repulsion  non-bonded potential  instead of  the
+standard     Lennard-Jones    by     listing     them    under     the
+[\textbf{soft\_pairs}]  heading.  In some  cases  it  is desirable  to
+completely turn off certain non-bonded  interactions. This can be done
+on a per-state basis in the section [\textbf{excluded\_pairs}].
 
-New bond, angle, torsion and improper types can also be defined
-and used for any atoms in the topology, not only between Q-atoms.
-Atoms are therefore referred to by their number in the topology
-rather than by a Q-atom number. Definitions in the topology are
-overridden by definitions in the FEP file. To disable an
-interaction in one state, a zero should be used in place of the
-type number for that state.
+New bond,  angle, torsion and improper  types can also be  defined and
+used for any  atoms in the topology, not only  between Q-atoms.  Atoms
+are therefore referred to by their  number in the topology rather than
+by  a Q-atom  number. Definitions  in the  topology are  overridden by
+definitions in the FEP file. To disable an interaction in one state, a
+zero should be used in place of the type number for that state.
 
-Angles, torsions and impropers which depend on the existence of a
-bond being formed or broken should be "coupled" to that bond by
-scaling the angle energy by the ratio of the actual value of the
-Morse bond energy to the dissociation energy. These couplings are
-defined in the sections [\textbf{angle\_couplings}],
-[\textbf{torsion\_couplings}] and [\textbf{improper\_couplings}].
+Angles, torsions and impropers which depend on the existence of a bond
+being formed or broken should be "coupled" to that bond by scaling the
+angle energy by the ratio of the actual value of the Morse bond energy
+to  the  dissociation  energy.  These couplings  are  defined  in  the
+sections   [\textbf{angle\_couplings}],  [\textbf{torsion\_couplings}]
+and [\textbf{improper\_couplings}].
 
-Extra shake constraints can be imposed between any pair of atoms
-in the topology using the heading [\textbf{shake\_constraints}].
-The effective constraint distance will be the sum of the distances
-for each state weighted by their respective $\lambda$'s.
+Extra shake  constraints can be imposed  between any pair of  atoms in
+the  topology using  the  heading [\textbf{shake\_constraints}].   The
+effective constraint  distance will  be the sum  of the  distances for
+each state weighted by their respective $\lambda$'s.
 
-Quantum-mechanical mixing of states used in EVB calculations by
-introducing off-diagonal Hamiltonian matrix element functions is
+Quantum-mechanical  mixing  of  states  used in  EVB  calculations  by
+introducing  off-diagonal  Hamiltonian  matrix  element  functions  is
 defined in the section [\textbf{off\_diagonals}].
 
-If vanishing or appearing atoms are part of your FEP strategy, it
-may be desirable to use a \textit{softcore} potential for the
-Q-atoms in question.\cite{Zacharias:1994} Softcore potentials have
-been implemented in \textbf{qdyn} according to equation \ref{eq:softcore}.
-Depending on the value of
-\textbf{softcore\-\_use\-\_max\-\_potential} given in the
-[\textbf{FEP}] section, the $\alpha$-values are either read
-directly from the [\textbf{softcore}] section or calculated by
-\textbf{qdyn} in a pairwise manner based upon the desired potentials at
-$r=0$ given in the [\textbf{softcore}] section. Softcore
-potentials are only available for Q-atoms, i.e. Q-Q, Q-water and
-Q-solute interactions are treated with softcore. In the case of a
-Q-Q interaction where both Q-atoms have softcore potentials, the
-$\alpha$ which is used is that which gives rise to the lowest potential at
+If vanishing or appearing atoms are  part of your FEP strategy, it may
+be desirable to  use a \textit{softcore} potential for  the Q-atoms in
+question.\cite{Zacharias:1994}    Softcore   potentials    have   been
+implemented in \textbf{qdyn}  according to equation \ref{eq:softcore}.
+Depending on the value of \textbf{softcore\-\_use\-\_max\-\_potential}
+given in  the [\textbf{FEP}]  section, the $\alpha$-values  are either
+read directly  from the  [\textbf{softcore}] section or  calculated by
+\textbf{qdyn} in a  pairwise manner based upon  the desired potentials
+at $r=0$ given in the [\textbf{softcore}] section. Softcore potentials
+are  only  available  for  Q-atoms, i.e.  Q-Q,  Q-water  and  Q-solute
+interactions  are  treated  with  softcore.  In  the  case  of  a  Q-Q
+interaction where both Q-atoms  have softcore potentials, the $\alpha$
+which is  used is  that which  gives rise to  the lowest  potential at
 $r=0$.
 
 \begin {equation}
@@ -3436,14 +3442,14 @@ $r=0$.
  V_{vdW}(r_{ij}) = \epsilon\cdot(\frac{{R_{ij}^{*}}^{12}}{(r_{ij}^6 + \alpha)^2} - 2\cdot\frac{{R_{ij}^{*}}^{6}}{r_{ij}^6 + \alpha})
 \end{equation}
 
-If periodic boundary conditions are used an additional section
-[\textbf{PBC}] is needed. In this section one switching atom for
-all Q-atoms is defined. This switching atom is used when
-generating the Q-surrounding nonbonded pair lists.
+If  periodic  boundary  conditions  are  used  an  additional  section
+[\textbf{PBC}] is needed.  In this section one switching  atom for all
+Q-atoms is  defined. This switching  atom is used when  generating the
+Q-surrounding nonbonded pair lists.
 
-Table \ref{tab:fepfileformat} lists the data and units for each
-column in the different sections, and an example is included as
-file example on page \pageref{tab:FEP_file_f_p_t_r}.
+Table \ref{tab:fepfileformat} lists the data and units for each column
+in the different sections, and an  example is included as file example
+on page \pageref{tab:FEP_file_f_p_t_r}.
 
 \small
 \begin{longtable}{|p{53pt}|p{181pt}|p{160pt}|}
@@ -3665,8 +3671,7 @@ and the simulation is initialised.
 \hline \begin{tabular}{p{101.5pt} p{101.5pt}} Number of MD steps = 1 & Stepsize (fs) = 0.200 \end{tabular}&\\
 \hline \begin{tabular}{p{101.5pt}p{101.5pt}}Target temperature  =  1.00 & T-relax time  =  1.00 \end{tabular} & Temperature bath temperature and time constant for coupling.\\
 \hline Initial velocities will be generated from Maxwell distribution:\newline Maxwell temperature= 1.00  Random number seed= 4320 & Initial velocities are random values from Maxwell's velocity dirstibution at 1 K.\\
-\hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake
-constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
+\hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
 \hline Nonbonded method   = LRF Taylor expansion outside cut-off & Local reaction field approximation applied beyond cut-off.\\
 \hline Cut-off radii for non-bonded interactions:\newline \begin{tabular}{ll}Solute-solute:&10.00\\Solvent-solvent:&10.00\\Solute-solvent:&10.00\\Q-atom-non-Q-atom:&99.00\\LRF:&99.00 \end{tabular} & \\
 \hline \begin{tabular}{lll}Shell restraint force constant    &     =  & 50.00 \end{tabular} & Heavy solute atoms in the shell region defined in the topology will be restrained to their initial positions by harmonic potentials with force constant 50 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
