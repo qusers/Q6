@@ -679,8 +679,8 @@ logical function qatom_load_fep(fep_file)
 
   !allocate memory for qatom arrays
 	allocate(qiac(nqat,nstates))
-	allocate(iqexpnb(nqat))
-	allocate(jqexpnb(nqat))
+!	allocate(iqexpnb(nqat))
+!	allocate(jqexpnb(nqat))
 	allocate(testarray(nstates))
 	!qcrg may be allocated in MD to copy topology charges
 	if(.not. allocated(qcrg)) allocate(qcrg(nqat,nstates))
@@ -825,6 +825,8 @@ logical function qatom_load_fep(fep_file)
 	if(nqexpnb > 0) then
 		write (*,144) nqexpnb
 		write(*,145)
+		allocate(iqexpnb(nqexpnb))
+		allocate(jqexpnb(nqexpnb))
 		do i=1,nqexpnb
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) j, k

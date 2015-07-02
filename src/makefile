@@ -97,7 +97,7 @@ else ifeq ($(COMP),gcc)
 	MPIFC=		mpif90
 	OMPI_FC=	${FC}
 	OMPI_FCFLAGS=	-fstack-protector -DG95=1 \
-                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wall
+                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy 
 	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
 	MPFLAG=		-fopenmp ${MPI}
 
