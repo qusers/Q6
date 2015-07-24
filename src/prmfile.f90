@@ -106,19 +106,14 @@ logical function prm_get_integer_by_key(key, value, default)
 
 !locals
 	character(len=80)			::	inkey
+	character(200)				::	str_value
 
-	do while (prm_get_string_int(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_integer_by_key = .true.
-			return	
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
-	do while (prm_get_string_int(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_integer_by_key = .true.
-			return	
+	do while (get_strings(inkey, str_value))
+	    read(str_value, fmt=*, iostat=stat) value !read integer from value
+		if (inkey .eq. key .and. stat == 0)  then
+		    prm_get_integer_by_key = .true.
+		    return	
 		end if
 	end do	
 
@@ -140,19 +135,14 @@ logical function prm_get_real_by_key(key, value, default)
 	real, intent(in), optional	:: default
 !locals
 	character(len=80)			::	inkey
+	character(200)				::	str_value
 
-	do while (prm_get_string_real(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_real_by_key = .true.
-			return	
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
-	do while (prm_get_string_real(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_real_by_key = .true.
-			return	
+	do while (get_strings(inkey, str_value))
+	    read(str_value, fmt=*, iostat=stat) value !read integer from value
+		if (inkey .eq. key .and. stat == 0)  then
+		    prm_get_real_by_key = .true.
+		    return	
 		end if
 	end do	
 
@@ -175,19 +165,14 @@ logical function prm_get_real8_by_key(key, value, default)
 	real(8), intent(in), optional	:: default
 !locals
 	character(len=80)			::	inkey
+	character(200)				::	str_value
 
-	do while (prm_get_string_real8(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_real8_by_key = .true.
-			return	
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
-	do while (prm_get_string_real8(inkey, value))
-		if(inkey .eq. key) then
-			prm_get_real8_by_key = .true.
-			return	
+	do while (get_strings(inkey, str_value))
+	    read(str_value, fmt=*, iostat=stat) value !read integer from value
+		if (inkey .eq. key .and. stat == 0)  then
+		    prm_get_real8_by_key = .true.
+		    return	
 		end if
 	end do	
 
@@ -214,15 +199,6 @@ logical function prm_get_string_by_key(key, value, default)
 	mykey = trim(key)
 	call upcase(mykey)
 
-	do while (prm_get_string_string(inkey, invalue))
-		call upcase(inkey)
-		if(trim(inkey) .eq. mykey) then
-			prm_get_string_by_key = .true.
-			value = invalue
-			return	
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
 	do while (prm_get_string_string(inkey, invalue))
 		call upcase(inkey)
@@ -254,14 +230,6 @@ logical function prm_get_line_by_key(key, value, default)
 	character(len=80)			::	inkey
 	character(len=200)			::	invalue
 
-	do while (prm_get_string_line(inkey, invalue))
-		if(inkey .eq. key) then
-			prm_get_line_by_key = .true.
-			value = invalue
-			return	
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
 	do while (prm_get_string_line(inkey, invalue))
 		if(inkey .eq. key) then
@@ -293,12 +261,6 @@ logical function prm_get_logical_by_key(key, value, default)
 	character(len=80)			::	inkey
 	character(len=80)			::	invalue
 	
-	do while (prm_get_string_string(inkey, invalue))
-		if(inkey .eq. key) then
-			goto 100
-		end if
-	end do	
-	!go to beginning of section and try again
 	call rewind_section
 	do while (prm_get_string_string(inkey, invalue))
 		if(inkey .eq. key) then
