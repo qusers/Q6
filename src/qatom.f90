@@ -770,7 +770,7 @@ logical function qatom_load_fep(fep_file)
 		call index_create(nqat)
 		allocate(qmass(nqat),qavdw(nqat,nljtyp), qbvdw(nqat,nljtyp))
 		do i=1,nqat
-			qtac(i) = tac(iqseq(i))
+			qtac(i) = tac(iac(iqseq(i)))
 			qmass(i)= iaclib(iac(iqseq(i)))%mass
 !			do k=1,nljtyp
 				qavdw(i,1:nljtyp)=iaclib(iac(iqseq(i)))%avdw(1:nljtyp)
@@ -871,7 +871,7 @@ logical function qatom_load_fep(fep_file)
             qq_el_scale(i)%iqat=j
             qq_el_scale(i)%jqat=k
             qq_el_scale(i)%el_scale(1:nstates)=el_scale(1:nstates) !assigning scale factor to qq_el_scale variable "masoud Oct_2013"
-			write (*,156) qq_el_scale(i)%iqat,qq_el_scale(i)%jqat,qq_el_scale(i)%el_scale
+			write (*,156) qq_el_scale(i)%iqat,qq_el_scale(i)%jqat,qq_el_scale(i)%el_scale(1:nstates)
 		end do
 	end if
 154	format (/,'No. of el. scaling factors between q-q-atoms = ',i5)
