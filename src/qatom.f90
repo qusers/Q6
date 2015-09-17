@@ -81,12 +81,8 @@ implicit none
 	type(ANGLIB_TYPE), allocatable::	qanglib(:)
 
 	integer												::	nqtor
-!make sure we have everything as types and not this stupid single declarations
+!make sure we have everything as types
 !Paul October 2014
-!	integer(AI), allocatable			::	iqtor(:),jqtor(:),kqtor(:),lqtor(:)
-!	integer(TINY), allocatable		::	qtorcod(:,:)
-!	real(kind=prec), allocatable					::	qfktor(:),qrmult(:),qdeltor(:)
-
 	type QTORSION_TYPE
 		integer(AI)			:: i,j,k,l
 		integer(TINY)			:: cod(max_states)
@@ -105,9 +101,6 @@ implicit none
 	type(QIMPLIB_TYPE),allocatable		:: qimplib(:)
 
 	integer						::	nqimp
-!	integer(AI), allocatable	::	iqimp(:),jqimp(:),kqimp(:),lqimp(:)
-!	integer(TINY), allocatable	::	qimpcod(:,:)
-!	real(kind=prec), allocatable		::	qfkimp(:),qimp0(:)
 
 	integer						::	nang_coupl,ntor_coupl,nimp_coupl
 	integer(AI)					::	iang_coupl(3,max_qat)
@@ -321,7 +314,7 @@ logical function qatom_load_atoms(fep_file)
 		qatom_load_atoms = .false.
 !We stop supporting old FEP files to make the code easier to maintain
 !Executive decision, Paul Bauer 07102014
-!		qatom_load_atoms = qatom_old_load_atoms(fep_file)
+
 		return
 	end if
 
@@ -640,7 +633,6 @@ logical function qatom_load_fep(fep_file)
 	if(.not. use_new_fep_format) then
 !We stop supporting deprecated file formats
 !Executive decision, Paul Bauer 07102014
-!		qatom_load_fep = qatom_old_load_fep()
 		write(*,*) '>>>> ERROR: Old file format not supported'
 		qatom_load_fep = .false.
 		return
@@ -679,8 +671,6 @@ logical function qatom_load_fep(fep_file)
 
   !allocate memory for qatom arrays
 	allocate(qiac(nqat,nstates))
-!	allocate(iqexpnb(nqat))
-!	allocate(jqexpnb(nqat))
 	allocate(testarray(nstates))
 	!qcrg may be allocated in MD to copy topology charges
 	if(.not. allocated(qcrg)) allocate(qcrg(nqat,nstates))
@@ -772,10 +762,8 @@ logical function qatom_load_fep(fep_file)
 		do i=1,nqat
 			qtac(i) = tac(iac(iqseq(i)))
 			qmass(i)= iaclib(iac(iqseq(i)))%mass
-!			do k=1,nljtyp
 				qavdw(i,1:nljtyp)=iaclib(iac(iqseq(i)))%avdw(1:nljtyp)
 				qbvdw(i,1:nljtyp)=iaclib(iac(iqseq(i)))%bvdw(1:nljtyp)
-!			end do
 		end do
 	end if
 
@@ -1248,7 +1236,6 @@ logical function qatom_load_fep(fep_file)
 	nqtcod = prm_max_enum(section, type_count)
 	allocate(qtorlib(nqtcod),stat=alloc_status_qat)
 	call check_alloc_general(alloc_status_qat,'Allocating qtorsion library array')
-!	allocate(qfktor(nqcod), qrmult(nqcod), qdeltor(nqcod))
 	if ( nqtcod .gt. 0 ) then
 		allocate(type_read(nqtcod))
 		type_read(:) = .false.
@@ -1269,7 +1256,6 @@ logical function qatom_load_fep(fep_file)
 		write (*,360) nqtor
 		write(*,361) ('state',i,i=1,nstates)
 360		format (/,'No. of changing torsions = ',i5)
-
 		allocate(qtor(nqtor),stat=alloc_status_qat)
 		call check_alloc_general(alloc_status_qat,'Allocating qtorsion array')
 
@@ -1444,18 +1430,14 @@ logical function qatom_load_fep(fep_file)
 	type_read(:) = .false.
 		allocate(qimplib(nqicod),stat=alloc_status_qat)
 		call check_alloc_general(alloc_status_qat,'Q improper library array')
-!		allocate(qfkimp(nqcod), qimp0(nqcod))
 		write (*,450)
 450	format(/,'Q-improper types:',/,'type #       force-k     imp0')
 		do i=1,nqicod
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) j, qimplib(j)%fk,qimplib(j)%imp0
-!			read(line,*, err=1000) j, qfkimp(j),qimp0(j)
 			type_read(j) = .true.
 			write(*,225) j,qimplib(j)%fk,qimplib(j)%imp0
-!			write(*,225) j,qfkimp(j),qimp0(j)
 			qimplib(j)%imp0 = deg2rad*qimplib(j)%imp0
-!			qimp0(j) = deg2rad*qimp0(j)
 		end do
 		write (*,*)
 	end if
@@ -1468,26 +1450,15 @@ logical function qatom_load_fep(fep_file)
 		write(*,461) ('state',i,i=1,nstates)
 		allocate(qimp(nqimp),stat=alloc_status_qat)
 		call check_alloc_general(alloc_status_qat,'Q improper array')
-!		allocate(iqimp(nqimp), &
-!			jqimp(nqimp), &
-!			kqimp(nqimp), &
-!			lqimp(nqimp), &
-!			qimpcod(nqimp,nstates))
 
 		do i=1,nqimp
 			if(.not. prm_get_line(line)) goto 1000
 			read(line,*, err=1000) qimp(i)%i,qimp(i)%j,qimp(i)%k,qimp(i)%l,qimp(i)%cod(1:nstates)
-!			read(line,*, err=1000) iqimp(i),jqimp(i),kqimp(i),lqimp(i),qimpcod(i,:)
 			qimp(i)%i = qimp(i)%i + offset
 			qimp(i)%j = qimp(i)%j + offset
 			qimp(i)%k = qimp(i)%k + offset
 			qimp(i)%l = qimp(i)%l + offset
-!			iqimp(i) = iqimp(i) + offset
-!			jqimp(i) = jqimp(i) + offset
-!			kqimp(i) = kqimp(i) + offset
-!			lqimp(i) = lqimp(i) + offset
 			write (*,462) qimp(i)%i,qimp(i)%j,qimp(i)%k,qimp(i)%l,qimp(i)%cod(1:nstates)
-!			write (*,462) iqimp(i),jqimp(i),kqimp(i),lqimp(i), qimpcod(i,1:nstates)
 			!check types
 			do j=1,nstates
                                 if(qimp(i)%cod(j) > 0) then
@@ -1502,19 +1473,6 @@ logical function qatom_load_fep(fep_file)
 					end if
 				end if
 			end do !j
-!			do j=1,nstates
-!				if(qimpcod(i,j) >0) then
-!					if (allocated(type_read)) then
-!					if(.not. type_read(qimpcod(i,j))) then
-!						write(*,112) 'Q-impsion', qimpcod(i,j)
-!						qatom_load_fep = .false.
-!					end if
-!					else
-!					    write(*,112) 'Q-impsion', qimpcod(i,j)
-!					    qatom_load_fep = .false.
-!					end if
-!				end if
-!			end do !j
 		end do !i
 	end if
 461	format('atom_i atom_j atom_k atom_l    improper type in',4(1x,a5,i2))

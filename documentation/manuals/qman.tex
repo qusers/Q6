@@ -36,25 +36,24 @@
 %\setlength{\oddsidemargin}{0.75in} % odd page left margin
 %\setlength{\evensidemargin}{0.75in} % even page left margin
 
-%-------  Fredriks del start -------%
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
-\resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/Q-logo_2.pdf}}
+\resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/qlogo.png}}
 \end{center}
 \end{figure}
 
 \begin{center}
-\Huge{M}\huge{ANUAL}\\
-\huge{FOR}\\
-\huge{THE} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
-\huge{PACKAGE} \Huge{Q}\\
+%\Huge{M}\huge{ANUAL}\\
+%\huge{FOR}\\
+\huge{\textbf{our}} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
+\huge{PACKAGE}\\% \Huge{Q}\\
 
 \vspace{0.7cm}
-\large{version 5.06\\
-January 1, 2004}\\
-\footnotesize{March 26, 2014}\\
-\large{Q web site: http://xray.bmc.uu.se/aqwww/Q}
+\large{Version 5.7\\
+February 6, 2015}\\
+%\footnotesize{February 6, 2015}\\
+\large{\url{http://xray.bmc.uu.se/~aqwww/q}}
 \end{center}
 
 \newpage
@@ -63,58 +62,77 @@ January 1, 2004}\\
 
 \newpage
 
-\section{INTRODUCTION} Molecular dynamics (MD) simulation can be
-used to sample the thermally accessible region of conformational
-space of a microscopic model of a molecular system. From the
-ensemble of sampled structures and their associated potential
-energies (given by the force field or molecular mechanics
-potential energy function) it is, in principle, possible to
-calculate free energies. Quantities such as binding free energies,
-solvation free energies and activation free energies are
-particularly interesting to calculate because they are the direct
-result of thermodynamic or kinetic experiments. It is thus
-possible both to quantitatively verify calculated results against
-experimental data and to make predictions which can be tested
+\section{PREFACE}
+Q started its development sometime in the nineteen nineties originally
+by  Johan \AA  qvist,  and since  then a  list  of collaborators  have
+contributed to  the code, among  them: John Marelius,  Karin Kolmodin,
+Isabella Feierberg, Martin Alml\"of, Martin Ander, Jens Carlson, Peter
+Hanspers, Anders Kaplan, Kajsa  Ljunjberg, Martin Nervall, Johan Sund,
+Paul Bauer, Alexandre Barrozo, Masoud  Karemi, Irek Szeler, and \AA ke
+Sandgren.   The code  is in  active development  and new  features are
+being  implemented  mainly  following   the  fortran  2003  standard.
+Additionally the  MPI implementation has  been updated to  enhance the
+speed   of  running   parallel  jobs   and  provide   a  more   robust
+parallelization across  different cluster architectures.   The program
+code is  hosted online  thanks to a  generous github  academic account
+granted to the program developers at Uppsala University.  Instructions
+on  how to  obtain the  code  can be  found online  at the  Q-website:
+\url{http://xray.bmc.uu.se/~aqwww/q/}.
+
+%History of logo and the many possible identities of what Q stands for.
+
+\section{INTRODUCTION} 
+Molecular  dynamics  (MD)  simulations  can  be  used  to  sample  the
+thermally   accessible  regions   of  conformational   space  using a
+microscopic model of the molecular system.  From the ensemble of sampled
+structures and their associated potential energies (given by the force
+field  or molecular  mechanics potential  energy function)  it is,  in
+principle, possible  to calculate  free energies.  Quantities  such as
+binding  free energies,  solvation free  energies and  activation free
+energies are  particularly interesting  to compute because  they are
+the direct result of thermodynamic  or kinetic experiments. It is thus
+possible  both to  quantitatively  verify  calculated results  against
+experimental  data,  and  to  make  predictions  which  can  be  tested
 experimentally.
 
-Q~\cite{Marelius:1999} is a set of tools for such calculations,
-tailored for some specific kinds of free energy calculations,
-namely, (I) free energy perturbation (FEP) simulations
-\cite{Kollman:1993,Beveridge:1989}, (II) empirical valence bond
-(EVB) calculations \cite{Warshel:1988,Aaqvist:1993} of reaction
-free energies and (III) linear interaction energy (LIE)
-calculations\cite{Aaqvist:1994,Jones-Hertzog:1997,Hansson:1998} of
+Q~\cite{Marelius:1999} is a set of tools tailored specifically to the
+calculation of free energies using diverse approaches, namely
+(I)      free      energy     perturbation      (FEP)      simulations
+\cite{Kollman:1993,Beveridge:1989}, (II) empirical  valence bond (EVB)
+calculations   \cite{Warshel:1988,Aaqvist:1993}   of   reaction   free
+energies    and     (III)    linear    interaction     energy    (LIE)
+calculations\cite{Aaqvist:1994,Jones-Hertzog:1997,Hansson:1998}     of
 receptor-ligand binding affinities.
 
 The main features which distinguish Q from other MD packages are:
 \begin{itemize}
-\item \textbf{The spherical boundary.} Q is intended for free energy calculations
-in biomolecular systems solvated in a spherical droplet of
-explicit water molecules. Using a spherical boundary
-\cite{Warshel:1978,Berkowitz:1982,Brunger:1984} makes it possible
-to limit the size of the simulated system, $i.e.$ to focus the
-simulation on a smaller region such as a binding site, and also
-makes accurate treatment of long-range electrostatics rather
-inexpensive.
-\item \textbf{The flexibility in choice of force field.} The force fields
-are defined in parameter files, separate from the program and the
-choice of force field is thus simply a matter of which parameter
+\item \textbf{The spherical  boundary.} Q is intended  for free energy
+calculations in  biomolecular systems solvated in  a spherical droplet
+of   explicit   water   molecules.    Using   a   spherical   boundary
+\cite{Warshel:1978,Berkowitz:1982,Brunger:1984}  makes it  possible to
+limit the size of the simulated system, $i.e.$ to focus the simulation
+on a  smaller region such as  a binding site, and  also makes accurate
+treatment of long-range electrostatics rather inexpensive.
+\item \textbf{The  flexibility in  choice of  force field.}  The force
+fields are defined  in parameter files, separate from  the program and
+the choice of  force field is thus simply a  matter of which parameter
 file to use.
-\item \textbf{The ease of use and learning.} The simulation control input and
-force field definition files are organised in a flexible way and
-easy to understand and modify. The programs give extensive
+\item \textbf{The  ease of use  and learning.} The  simulation control
+input and force field definition files are organized in a flexible way
+and  easy  to  understand  and modify.  The  programs  give  extensive
 diagnostics when problems are encountered.
-\item \textbf{It runs on any computer and simulates any number of particles.}
-By using dynamic memory allocation Q can simulate biomolecules of
-moderate size on a personal computer, or very large molecular
-systems on a super-computer, without any modifications of the
-program.
+\item  \textbf{It runs  on any  computer and  simulates any  number of
+particles.}   By  using  dynamic  memory  allocation  Q  can  simulate
+biomolecules of  moderate size on  a personal computer, or  very large
+molecular systems  on a  super-computer, without any  modifications of
+the program.
 \end{itemize}
 
-Two new features that have been added in version 5.0:
+The main  features which have been  added to the Q  code since version
+5.0 are:
 
 \begin{itemize}
-\item \textbf{Periodic boundary condition.} The periodic boundary
+\item \textbf{Periodic boundary conditions.} The periodic boundary
 allows an additional way to perform calculations.
 
 \item \textbf{Parallel version.} By using more than one computer a
@@ -133,27 +151,27 @@ systems that are used with the periodic boundary condition.
 %use of cut-offs.
 
 \section{USER GUIDE}
-The structure of Q resembles that of many other MD simulation
-programs. The main program is Qdyn which carries out the actual
-trajectory calculations. Besides normal input control data, it
-needs the type of data usually referred to as the molecular
-topology. This is a file containing information about how atoms
-are bonded to each other etc. together with all the parameters of
-the force field (FF) to be used. This topology file is created
-with the preparation program Qprep which is an interactive program
-that uses pdb (Protein Data Bank) coordinate files together with
-FF specific files to generate the topology. Qprep can also be used
-for various other data transformation purposes as described below.
-Input data for FEP, EVB or receptor-ligand complex simulations is
-given in a separate file, referred to below as the fep file. The
-fep file lists atoms to be transformed, called Q-atoms and force
-field parameters for the different states in perturbation
-simulations. For analysis of the computations the main tool is
-Qfep which is a program that carries out FEP and EVB calculations
-of free energies utilising energy data produced by Qdyn. A number
-of utility programs (trajectory and energy averaging, radial
-distribution functions, ...) are also provided. The general
-outline of Q is shown in figure \ref{fig:overview}.
+The  structure  of  Q  resembles  that of  many  other  MD  simulation
+programs.  The main  program is  \textbf{qdyn} which  carries out  the
+actual trajectory calculations. Besides  normal input control data, it
+needs  the   type  of  data   usually  referred  to  as   a  molecular
+topology. This  is a file  containing information about how  atoms are
+bonded to  each other  etc. together  with all  the parameters  of the
+force field  (FF) to be used.  This topology file is  created with the
+preparation  program \textbf{qprep}  which is  an interactive  program
+that uses  pdb (Protein Data  Bank) coordinate files together  with FF
+specific files  to generate the  topology. \textbf{qprep} can  also be
+used  for  various other  data  transformation  purposes as  described
+below.  Input data for FEP, EVB or receptor-ligand complex simulations
+is given in  a separate file, referred  to below as the  fep file. The
+fep file lists atoms to be transformed, called Q-atoms and force field
+parameters for  the different states in  perturbation simulations. For
+analysis of the computations the main tool is \textbf{qfep} which is a
+program that  carries out  FEP and EVB  calculations of  free energies
+using energy data  produced by \textbf{qdyn}. A  number of utility
+programs  (trajectory   and  energy  averaging,   radial  distribution
+functions, ...) are  also provided. The general outline of  Q is shown
+in figure \ref{fig:overview}.
 
 \begin{figure}[h]
 \begin{center}
@@ -166,13 +184,13 @@ name extensions. The black boxes are programs.}
 \end{figure}
 
 In the following sections we will go through the normal sequence
-of steps for preparing a topology file with Qprep and then
+of steps for preparing a topology file with \textbf{qprep} and then
 describe in detail the input data required for running MD
-simulations with Qdyn.
+simulations with \textbf{qdyn}.
 
 \subsection{Preparing a molecular topology} The topology file
-prepared with the program Qprep contains all the information about
-the molecular system needed for a simulation with Qdyn. To make a
+prepared with the program \textbf{qprep} contains all the information about
+the molecular system needed for a simulation with \textbf{qdyn}. To make a
 topology you need
 
 \begin{itemize}
@@ -184,14 +202,14 @@ library entries.
 \end{itemize}
 
 \subsubsection{Preparing coordinates} The PDB file format
-\cite{pdb} used for co-ordinate input to Qprep is a fixed format,
+\cite{pdb} used for co-ordinate input to \textbf{qprep} is a fixed format,
 $i.e.$, the number of spaces between columns of data is significant
 and tab characters are not permitted. Case is significant -
 lower-case letters should not be used. Only ATOM and HETATM
-records are read by Qprep, all other records are ignored.
+records are read by \textbf{qprep}, all other records are ignored.
 
 Hydrogen atoms are not required - their coordinates will be
-generated by Qprep in such a way that the bond and angles to the
+generated by \textbf{qprep} in such a way that the bond and angles to the
 hydrogen atom are at an energy minimum. To further control the
 placement of hydrogens, a special torsion potential defined in the
 fragment library entry may be included. See
@@ -200,7 +218,7 @@ hydrogen atom coordinates are given in the PDB file, they will not
 be altered.
 
 When a structure containing more than one molecule is loaded into
-Qprep, the program will identify the boundaries between molecules
+\textbf{qprep}, the program will identify the boundaries between molecules
 either by the type of fragment or using `gap' marker lines.
 Fragments which are monomers in a polymer chain, like amino acids,
 have designated `head' and `tail' atoms in their library entries,
@@ -213,46 +231,46 @@ the first molecule. The gap marker consists of the word GAP in
 capital letters on a separate line.
 
 The numbering of atoms in the PDB is not significant. Note that
-Qprep will renumber all atoms in a single sequence starting at
+\textbf{qprep} will renumber all atoms in a single sequence starting at
 one. This is necessary in order to incorporate hydrogen atoms in
 the sequence. The result is thus that \textit{atom numbers in the
-PDB file read by Qprep and PDB files generated by Qprep will be
+PDB file read by \textbf{qprep} and PDB files generated by \textbf{qprep} will be
 different}. Residue numbers are used merely to distinguish one
 residue from the next and the residues will also be renumbered by
-Qprep. Residue numbers must be numeric, alphanumeric identifiers
+\textbf{qprep}. Residue numbers must be numeric, alphanumeric identifiers
 such as 60A sometimes encountered in the protein data bank are not
 permitted.
 
-Protein structures determined by X-ray crystallography are
-normally refined with a large number of water molecules. Some of
-these well-ordered water molecules may be important for the
-structure and function of the protein and should be included in
-the simulation. However, most of the crystallographic waters
-surrounding the protein can be removed. In fact, the presence of a
-large number of water molecules around the protein surface will
-disturb the solvation algorithm leading to inhomogenous water
-density. Qprep assumes that solvent molecules appear after solute
-molecules in the PDB file and keeps track the last solute atom.
-Solvent molecules are identified by their residue names. The list
-of solvent residue names is a user-setable preference in Qprep
-(see Setting preference on page \pageref{setting_pref}) with the
-default value WAT, HOH, H2O, SPC, TIP3. Solvent molecules added by
-the solvation algorithm will appear at the end of the atom
-sequence. Solvent molecules outside the simulation sphere (more
-than water radius + 2~{\AA} from solvent centre) will be excluded
-like solute atoms outside the solute sphere.
+Protein structures  determined by  X-ray crystallography  are normally
+refined  with  a  large  number  of water  molecules.  Some  of  these
+well-ordered water  molecules may be  important for the  structure and
+function   of   the   protein   and  should   be   included   in   the
+simulation. However,  most of the crystallographic  waters surrounding
+the protein can be removed. In fact, the presence of a large number of
+water molecules around the protein  surface will disturb the solvation
+algorithm  leading  to   inhomogenous  water  density.  \textbf{qprep}
+assumes that  solvent molecules appear  after solute molecules  in the
+PDB file and  keeps track of the last solute  atom.  Solvent molecules
+are identified  by their  residue names. The  list of  solvent residue
+names  is a  user-setable  preference in  \textbf{qprep} (see  Setting
+preference on page \pageref{setting_pref}) with the default value WAT,
+HOH,  H2O,  SPC,  TIP3.  Solvent  molecules  added  by  the  solvation
+algorithm  will  appear at  the  end  of  the atom  sequence.  Solvent
+molecules  outside the  simulation sphere  (more than  water radius  +
+2~{\AA}  from  solvent centre)  will  be  excluded like  solute  atoms
+outside the solute sphere.
 
-\subsubsection{Selecting a force field} Q is designed to run with
-a wide selection of force fields. Fragment libraries and force
-field parameters for AMBER95, AMBER/OPLS, OPLS-AA, CHARMM v.22,
-GROMOS87 and GROMOS96 are supplied in with the program. The
-corresponding library and FF parameter files are listed in table
-\ref{tab:FF} on page \pageref{tab:FF}. In addition to all the
-interaction parameters, a Q force field parameter file also
-include overall properties of the force field, such as the van der
-Waals parameter combination rule. Selecting a force field is thus
-equivalent to loading the appropriate fragment library and
-parameter file into Qprep.
+\subsubsection{Selecting a force field}
+Q is designed  to run with a wide selection  of force fields. Fragment
+libraries and force field parameters for AMBER95, AMBER/OPLS, OPLS-AA,
+CHARMM  v.22,  GROMOS87   and  GROMOS96  are  supplied   with  the
+program. The corresponding  library and FF parameter  files are listed
+in table \ref{tab:FF} on page \pageref{tab:FF}. In addition to all the
+interaction parameters,  a Q force  field parameter file  also include
+overall  properties of  the force  field, such  as the  van der  Waals
+parameter combination rule. Selecting a force field is thus equivalent
+to loading  the appropriate fragment  library and parameter  file into
+\textbf{qprep}.
 
 \subsubsection{Adding force field library entries}
 Your simulations will probably include molecular fragments other
@@ -261,7 +279,7 @@ included in the standard library files and you therefore need to
 write a library entry for each 'new' residue, ligand, co-factor or
 other molecule. We suggest you keep your library entries in a
 separate file rather than adding to the standard library file.
-Load first the standard library and then your own into Qprep. If
+Load first the standard library and then your own into \textbf{qprep}. If
 you need to modify an entry in the standard library, add the
 modified entry (keeping the same name) to your own library file -
 it will replace the old entry when loaded.
@@ -271,9 +289,9 @@ old one, this ensures the correct syntax. For details, see the
 section Fragment library file format on page
 \pageref{subsubsec:fragment_lib_f_f}.
 
-\subsubsection{Running Qprep}
-Qprep is a command-oriented program designed to be run
-interactively. The first thing you need to learn about Qprep is
+\subsubsection{Running \textbf{qprep}}
+\textbf{qprep} is a command-oriented program designed to be run
+interactively. The first thing you need to learn about \textbf{qprep} is
 that there is a help command which gives a list of available
 commands. The program's input parser will prompt for the
 parameters required for each command but will also accept complex
@@ -282,14 +300,14 @@ the command \textbf{readlib} and await the prompt 'Name of
 molecular library' or you may type \textbf{readlib
 my{\_}ligands.lib} on one line.
 
-A good deal of effort has been spent to make Qprep handle errors
+A good deal of effort has been spent to make \textbf{qprep} handle errors
 gracefully. When a problem is encountered in a fragment library,
 parameter file or PDB file, you will be notified but the
 processing of the file will proceed, thus exposing also errors
 later in the file. After correcting the problem you simply read
 the file again without the need to restart the program.
 
-The different steps to generate a topology with Qprep are
+The different steps to generate a topology with \textbf{qprep} are
 described below, in the sequence they are normally executed. More
 detailed information is available in the section Topology
 preparation reference on page \pageref{subsec:top_prep_ref}.
@@ -327,7 +345,7 @@ box. When a boundary has been chosen the centre and radius in the
 spherical case, and boxlengths in the periodical case are
 specified. It is important that the boundary condition defined in
 the topology file is consistent with the boundary condition used
-when running dynamics with Qdyn.
+when running dynamics with \textbf{qdyn}.
 
 \textbf{Adding solvent}\\*[0.25cm] Use the \textbf{solvate}
 command to add solvent molecules to the loaded structure. Using
@@ -348,11 +366,11 @@ used to solvate a system of any size.
 simulation of the same molecular system.
 \end{itemize}
 
-When using one of the two first methods, Qprep first fills a
+When using one of the two first methods, \textbf{qprep} first fills a
 sphere completely with solvent and then deletes molecules where
 heavy atoms are closer than a threshold distance to any heavy atom
 in the loaded structure. The threshold distance is controlled by
-the Qprep preference value \textbf{solvent{\_}pack}.
+the \textbf{qprep} preference value \textbf{solvent{\_}pack}.
 Crystallographic solvent molecules (in the PDB file loaded by
 readpdb) more than 2~{\AA} outside the solvent sphere will be
 excluded from the simulation to avoid excessive radial restraining
@@ -370,8 +388,8 @@ atom representation.
 
 Note: Make sure that crystallographic water molecules and waters
 added by the solvate command have \textit{the same residue name}!
-Otherwise Qprep will mark the topology as mixed-solvent, which is
-not implemented in Qdyn at present.
+Otherwise \textbf{qprep} will mark the topology as mixed-solvent, which is
+not implemented in \textbf{qdyn} at present.
 
 \textbf{Adding cross-link bonds}\\*[0.25cm] Cross-link bonds such
 as disulphide bridges in proteins are not generated automatically
@@ -405,7 +423,7 @@ the radius used in the solvation step.
 
 \textbf{Verifying the topology}\\*[0.25cm] The successful
 generation of a topology in the step above is no guarantee that it
-is correct. Fortunately Qprep offers a number of commands to check
+is correct. Fortunately \textbf{qprep} offers a number of commands to check
 the topology:
 
 \begin{itemize}
@@ -445,10 +463,10 @@ topology modifications for perturbation simulations. Use the
 atoms of the topology.
 
 \textbf{Setting preferences}\label{setting_pref}\\*[0.25cm] A
-number of parameters that affect the operation of Qprep, $e.g.$
+number of parameters that affect the operation of \textbf{qprep}, $e.g.$
 during solvation, but which are not normally changed are not
 required as input to the commands. These parameters may be changed
-by experience users by the preference mechanism in Qprep.
+by experience users by the preference mechanism in \textbf{qprep}.
 
 The \textbf{prefs} command is used to list the values of
 user-setable parameters and the \textbf{set} command to change a
@@ -457,19 +475,19 @@ value.
 The preference parameters and their default values are listed in
 the table on page \pageref{subsubsec:Qprep_preferences}.
 
-\subsection{Running dynamics with Qdyn}
-Once a molecular topology file has been generated with Qprep, you
-can carry out MD, FEP and EVB simulations with Qdyn. The
+\subsection{Running dynamics with \textbf{qdyn}}
+Once a molecular topology file has been generated with \textbf{qprep}, you
+can carry out MD, FEP and EVB simulations with \textbf{qdyn}. The
 simulation can have either spherical or periodic boundary
 condition, and can be executed either sequentially or in parallel.
 
-In this section we will describe the basic functions of Qdyn and
+In this section we will describe the basic functions of \textbf{qdyn} and
 go through the different options that are available for control of
 the dynamics runs. There are two main input files that are used to
 set up the dynamics specifications:
 
 \begin{enumerate}
-\item The Qdyn input file that controls things like time-step, temperature,
+\item The \textbf{qdyn} input file that controls things like time-step, temperature,
 cut-offs, restraints etc. \item The FEP file which is an auxiliary
 file whose function is to redefine the topology information for
 certain atoms. This enables the explicit control over selected
@@ -490,13 +508,13 @@ simulations, this phase is composed of a series of simulations
 using intermediate potentials defined by different sets of weight
 coefficients for the FEP states.
 
-A separate Qdyn input file is used for each sub-simulation. It is
+A separate \textbf{qdyn} input file is used for each sub-simulation. It is
 therefore practical to prepare a command file (shell script or
 batch file) which executes all the sub-simulations sequentially.
-The name of the input file is passed to Qdyn as the first (and
+The name of the input file is passed to \textbf{qdyn} as the first (and
 only) argument on the command line. (It is not possible to use
 redirection of the standard input stream by the $<$ operator.) A
-simple example of such a file where Qdyn is invoked once for each
+simple example of such a file where \textbf{qdyn} is invoked once for each
 input file and the output redirected to a log file follows:
 
 \begin{table}[htbp]
@@ -504,18 +522,18 @@ input file and the output redirected to a log file follows:
 \caption{Multi-stage simulation command file}
 \begin{tabularx}{\textwidth}{|l l l X|}
   \hline
-  Qdyn4 & relax.inp & $>$ & relax.log \\
-  Qdyn4 & eq1.inp   & $>$ & eq1.log \\
-  Qdyn4 & eq2.inp   & $>$ & eq2.log \\
-  Qdyn4 & eq3.inp   & $>$ & eq3.log \\
-  Qdyn4 & data1.inp & $>$ & data1.log \\
-  Qdyn4 & data2.inp & $>$ & data2.log \\ \hline
+  \textbf{qdyn} & relax.inp & $>$ & relax.log \\
+  \textbf{qdyn} & eq1.inp   & $>$ & eq1.log \\
+  \textbf{qdyn} & eq2.inp   & $>$ & eq2.log \\
+  \textbf{qdyn} & eq3.inp   & $>$ & eq3.log \\
+  \textbf{qdyn} & data1.inp & $>$ & data1.log \\
+  \textbf{qdyn} & data2.inp & $>$ & data2.log \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
 
-\subsubsection{Output generated by Qdyn} The different data files
-generated by Qdyn are (shown in the overview in
+\subsubsection{Output generated by \textbf{qdyn}} The different data files
+generated by \textbf{qdyn} are (shown in the overview in
 \figurename~\ref{fig:overview}):
 
 \begin{itemize}
@@ -524,8 +542,8 @@ energy summaries and temperature is written to the standard output
 device and normally redirected to a log file.
 \item Final coordinates and velocities are written to a `restart' file to be
 used to start the next sub-simulation and, after conversion to a
-structure file (see Analysing structures from the simulation on
-page \pageref{subsubsec:Analysing_struc_f_t_sim}, for viewing the
+structure file (see Analyzing structures from the simulation on
+page \pageref{subsubsec:Analyzing_struc_f_t_sim}, for viewing the
 final structure. This file is also updated during the simulation
 and if the forces and velocities become too large and the
 simulation is terminated prematurely. The file thus also serves a
@@ -538,15 +556,15 @@ file at regular intervals (determined in the input file).
 
 The restart and energy files are Fortran binary files. The
 trajectory file follows the DCD format also used in other MD
-programs (Charmm, X-plor) and can be read by many visualisation
+programs (Charmm, X-plor) and can be read by many visualization
 and trajectory animation programs.
 
-\subsubsection{Preparing Qdyn input files}\label{subsubsec:prep_qdyn_inp_f}
+\subsubsection{Preparing \textbf{qdyn} input files}\label{subsubsec:prep_qdyn_inp_f}
 In this overview the various aspects of defining the simulation
-set-up are introduced. For more complete information, see Qdyn
-input file format on page \pageref{subsubsec:Qdyn_inp_file_form}.
+set-up are introduced. For more complete information, see \textbf{qdyn}
+input file format on page \pageref{subsubsec:qdyn_inp_file_form}.
 
-The Qdyn input file contains the specification of the dynamics
+The \textbf{qdyn} input file contains the specification of the dynamics
 simulation. It is a text file divided into sections, starting with
 a section heading and containing information on the different
 aspects of the simulation. The sections are of two kinds:
@@ -836,17 +854,17 @@ the [\textbf{wall{\_}restraints}] section is not used in combination with
 periodic boundary conditions. One can choose between harmonic or Morse
 potential.
 
-\subsubsection{Qdyn input file examples}
+\subsubsection{\textbf{qdyn} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
 parameters. The second is a bit more elaborate and exemplifies the
 use of many extra options such as special restraints. Detailed
 information about the data in each section is found in the section
-Qdyn input file format on page
-\pageref{subsubsec:Qdyn_inp_file_form}.
+\textbf{qdyn} input file format on page
+\pageref{subsubsec:qdyn_inp_file_form}.
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
-\caption{Minimal Qdyn input file}\\
+\caption{Minimal \textbf{qdyn} input file}\\
   \hline \textbf{Data} &              & \textbf{Description} \\
   \endhead
   \hline [MD]          &              & Basic data for the simulation  \\
@@ -860,7 +878,7 @@ Qdyn input file format on page
 \end{longtable}
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
-\caption{Advanced Qdyn input file} \\
+\caption{Advanced \textbf{qdyn} input file} \\
   \hline \textbf{Data}            &              & \textbf{Description} \\
   \endhead
   \hline [MD]                     &              & Basic data for the simulation \\
@@ -929,19 +947,19 @@ of each elementary reaction step. In such a model of a reaction
 bonds, angles, torsions, partial charges, vdW parameters etc. may
 change for many atoms.
 
-The idea behind this definition of different states is that Qdyn,
+The idea behind this definition of different states is that \textbf{qdyn},
 for each configuration of the system's particles, will keep track
 of the energies of each state and write these to the energy file.
 The mapping potential or sampling potential used to generate the
 forces controlling the dynamics is a mixture of the FEP/EVB
 states, determined by the mapping parameter or weight coefficient
-$\lambda $ given to each (pure) state in the Qdyn input file. The
+$\lambda $ given to each (pure) state in the \textbf{qdyn} input file. The
 free energy differences between FEP/EVB states can then easily be
-calculated by Qfep using the standard FEP formula or the potential
+calculated by \textbf{qfep} using the standard FEP formula or the potential
 of mean force (umbrella sampling) approach to obtain the EVB
 ground state reaction free energy profiles.
 
-The FEP file has the same overall structure as the Qdyn input file
+The FEP file has the same overall structure as the \textbf{qdyn} input file
 (see page \pageref{subsubsec:prep_qdyn_inp_f}) with various kinds
 of data grouped into sections, the majority of which are optional.
 We will describe FEP files for a couple of prototype cases,
@@ -1275,7 +1293,7 @@ group of a co-factor.
 Five groups of atoms are defined, and the interactions between
 groups 1{\-}3, 2{\-}4 and 2{\-}5 should be calculated. The
 energies are evaluated separately for different FEP states and
-presented in the energy summaries in the Qdyn output. In this
+presented in the energy summaries in the \textbf{qdyn} output. In this
 example only a single state is defined so the $\lambda $-weighted
 averages are identical to the energies in state 1.
 
@@ -1293,11 +1311,9 @@ all states weighted by $\lambda $, weighted sum of electrostatic
 energies, weighted sum of Lennard-Jones energies, electrostatic
 energy in state 1, Lennard-Jones energy of state 1.
 
-There is a similar feature in Qcalc (see page
+There is a similar feature in \textbf{qcalc} (see page
 \pageref{subsubsec:qcalc}) where one can analyze non-bonded
 interactions from saved trajectory files.
-
-%Start Nervall
 
 \subsection{Parallel version of Q} Even though computers become
 faster every year the work that a single computer can do is
@@ -1311,7 +1327,7 @@ drive. The nodes communicate through a fast network switch
 providing an environment suitable for running parallel program. Q
 has been parallelised to fit these type of machines.
 
-The part of Q that can be run in parallel is Qdyn which contain
+The part of Q that can be run in parallel is \textbf{qdyn} which contain
 the time demanding conformational sampling. The parallel version
 is suitable to run on 2 - 20 nodes depending on the size of the
 problem and the speed of the network.
@@ -1362,7 +1378,7 @@ computers is best done by assigning one job per node.
 \begin{figure}[hbt]
 \begin{center}
 \includegraphics*[scale=0.6]{\dirfig/speedup.pdf}
-\caption{Speedup of the parallel version of Qdyn.}
+\caption{Speedup of the parallel version of \textbf{qdyn}.}
 \label{fig:speedup}
 \end{center}
 \end{figure}
@@ -1370,7 +1386,7 @@ computers is best done by assigning one job per node.
 \begin{figure}[hbt]
 \begin{center}
 \includegraphics*[scale=0.6]{\dirfig/efficiency.pdf}
-\caption{Efficiency of the nodes when running Qdyn in parallel.
+\caption{Efficiency of the nodes when running \textbf{qdyn} in parallel.
 The efficiency decreases as the number of nodes increase due to
 more communication and longer summation of the forces.}
 \label{fig:efficiency}
@@ -1388,7 +1404,7 @@ MPI-flag activated. If you compile the program yourself define the
 variable USE\_MPI to the preprocessor. To check that you have the
 right version execute the program and confirm that the suffix
 "\_parallel" is added to the version info in the log file. Look at
-the top of the file where it should read "Qdyn version
+the top of the file where it should read "\textbf{qdyn} version
 X.XX\_parallel initialising....". The parallel version can be
 executed on a single node but still requires MPI installed.
 
@@ -1404,10 +1420,10 @@ commit jobs to a specified number of dedicated nodes.
 
 \subsection{Analysis of results}
 
-\subsubsection{Analysing structures from the simulation}
-\label{subsubsec:Analysing_struc_f_t_sim} Qprep is also used after
+\subsubsection{Analyzing structures from the simulation}
+\label{subsubsec:Analyzing_struc_f_t_sim} \textbf{qprep} is also used after
 the simulation to convert the binary trajectory and restart
-coordinate files generated by Qdyn to PDB or mol2 files suitable
+coordinate files generated by \textbf{qdyn} to PDB or mol2 files suitable
 for viewing in a molecular graphics program.
 
 \textbf{Making PDB or mol2 files from restart or trajectory
@@ -1447,10 +1463,10 @@ HETATM in their info section.
 programs for visualising and analysing MD trajectories, $e.g.$
 Visual Molecular Dynamics, VMD \cite{VMD, VMD_homepage} and
 gOpenMol \cite{gOM, gOM_homepage} which can read the DCD format
-trajectories generated by Qdyn. To create a PDB file with the same
+trajectories generated by \textbf{qdyn}. To create a PDB file with the same
 set of atoms as in the trajectory, as required by the
-visualisation programs,
-execute the steps below in Qprep:\\
+visualization programs,
+execute the steps below in \textbf{qprep}:\\
 
 \begin{itemize}
 \item[1.] Load the topology file using the \textbf{readtop} command. The
@@ -1468,12 +1484,12 @@ markers.
 \end{itemize}
 
 
-\subsubsection{Free energy calculation using Qfep} Performing free
+\subsubsection{Free energy calculation using \textbf{qfep}} Performing free
 energy perturbation (FEP) calculations with Q involves running a
 set of consecutive input files which have the mapping parameter
 vector $\lambda$ ranging in a desired way (usually [1, 0] to [0,
-1] for two states). Qfep is a program which reads the energy files
-generated by Qdyn and calculates the total change in free energy
+1] for two states). \textbf{qfep} is a program which reads the energy files
+generated by \textbf{qdyn} and calculates the total change in free energy
 for the complete perturbation from state A ($\varepsilon_1$) to
 state B ($\varepsilon_2$). The difference in free energy between
 the two states is calculated by Zwanzig's formula:
@@ -1490,7 +1506,7 @@ the difference in V$_{eff}$ between two adjacent perturbation
 steps.
 
 \begin{table}
-\caption{Qfep input file for FEP/EVB evaluation}
+\caption{\textbf{qfep} input file for FEP/EVB evaluation}
 \begin{tabularx}{\textwidth}{|l|l|X|}
 \hline \textbf{Line}& \textbf{Data}& \textbf{Description} \\
 \hline 1  & 11            & Number of energy files \\
@@ -1519,7 +1535,7 @@ $\varepsilon_{1}$ to $\varepsilon_{2}$ is also given (sum(dGf) and
 sum(dGr)), as well as the average accumulated change calculated
 from the forward and reverse way $\langle$dG$\rangle$.
 
-Qfep also calculates free energy functions, or potentials of mean
+\textbf{qfep} also calculates free energy functions, or potentials of mean
 force, by the perturbation formula:
 
 \begin {equation}
@@ -1569,7 +1585,7 @@ quantum mechanical coupling of the states. This coupling is zero
 for normal FEP calculations. H$_{ij} \ne $ 0 results in mixing of
 states i and j, which is desired when calculating reaction free
 energy profiles for reactions represented by the empirical valence
-bond (EVB) model. In Qfep the off-diagonal element is a function
+bond (EVB) model. In \textbf{qfep} the off-diagonal element is a function
 of the form:
 
 \begin {equation}
@@ -1595,17 +1611,17 @@ the degree of mixing of the states at the transition state $i.e.$
 the $\Delta$G$^{\ddag }$ level.
 
 The energies describing the FEP functions and the reaction free
-energy profile are summarised in the last table generated by Qfep.
+energy profile are summarised in the last table generated by \textbf{qfep}.
 Note that each bin has contributions from several different values
 of $\lambda$. Likewise, each value of $\lambda$ contributes to the
 sampling of several different bins.
 
-It is possible to handle more than two valence bond states in Qdyn
-and Qfep, however sampling and calibration may be a difficult task
+It is possible to handle more than two valence bond states in \textbf{qdyn}
+and \textbf{qfep}, however sampling and calibration may be a difficult task
 for more than two states.
 
 \begin{figure}[h]
-\caption{Example Qfep output file}
+\caption{Example \textbf{qfep} output file}
 \centering
 \includegraphics*[scale=1]{\dirfig/Qfep_out.pdf}
 \label{fig:Qfep-out}
@@ -1619,9 +1635,9 @@ interval X$_{m}$. The resulting values for the potential of mean
 force have to be averaged to obtain the final values of $\Delta $G
 associated with each interval X$_{m}$. Avefep calculates the
 average values (weighted by sample size) of $\Delta$G
-corresponding to each interval from Qfep output data.
+corresponding to each interval from \textbf{qfep} output data.
 
-Input is an output-file created by Qfep.
+Input is an output-file created by \textbf{qfep}.
 
 Output is a table with the average $\Delta$G corresponding to the
 reaction co-ordinate X.
@@ -1666,25 +1682,33 @@ than one trajectory file may be used in the averaging. Enter the
 files one at a time and end with a blank line. Enter the name of
 the output file that will contain the coordinates of the average
 structure. The output file is binary but can be converted to a
-pdb-file by using the program Qprep. Root mean
+pdb-file by using the program \textbf{qprep}. Root mean
 square coordinate deviation is given in {\AA}.
 
-% ~~~~~~~~~~~~~~~~~ Peter begin ~~~~~~~~~~~~~~~~~~~~~~
+\subsection{Scoring}\label{subsection:scoring} 
+Three     scoring    functions     are    implemented     in    QCalc:
+X-Score\cite{Wang:2002},       ChemScore\cite{Eldridge:1997}       and
+PMF-Score\cite{Muegge:1999}.  X-Score  and  ChemScore  are  empiricial
+whilst PMF-Score is knowledge based.
 
-\subsection{Scoring}\label{subsection:scoring}
-Three scoring functions are implemented in QCalc: X-Score\cite{Wang:2002}, ChemScore\cite{Eldridge:1997} and PMF-Score\cite{Muegge:1999}. X-Score and ChemScore are empiricial whilst PMF-Score is knowledge based.
+All  scoring functions  require  the  topology to  be  loaded and  the
+correct mask be specified. The initial topology (with coordinates from
+the .top-file) can be scored to verify atom typing.
 
-All scoring functions require the topology to be loaded and the correct mask be specified. The initial topology (with coordinates from the .top-file) can be scored to verify atom typing.
-
-Both trajectory and restart files can be scored. The following options are avaliable in QCalc when specifying trajectory or restart files:
+Both trajectory and restart files can be scored. The following options
+are avaliable in QCalc when specifying trajectory or restart files:
 \begin{itemize}
-  \item{adding \emph{,frames=every n} means calculations will only be performed on every $n$:th
-frame.}
-  \item{adding \emph{,frames=n-m} means calculations will only be performed on frames $n$ to $m$.}
-  \item{specifying \emph{mean} instead of a file name calculates the mean of all frames processed since start or since the last time ''mean" was specified.}
+  \item{adding \emph{,frames=every n} means  calculations will only be
+performed on every $n$:th frame.}
+  \item{adding  \emph{,frames=n-m}  means  calculations will  only  be
+performed on frames $n$ to $m$.}
+  \item{specifying \emph{mean}  instead of a file  name calculates the
+mean  of all  frames  processed since  start or  since  the last  time
+''mean" was specified.}
 \end{itemize}
 
-The input requested is similar for all three functions. To avoid confusion, examples of typical inputs will be given.
+The  input requested  is similar  for  all three  functions. To  avoid
+confusion, examples of typical inputs will be given.
 
 \subsubsection{X-Score}
 
@@ -1697,7 +1721,7 @@ The input requested is similar for all three functions. To avoid confusion, exam
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      Qcalc$>$                        & xscore    \\
+      \textbf{qcalc}$>$                        & xscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
@@ -1708,7 +1732,7 @@ The input requested is similar for all three functions. To avoid confusion, exam
       Cofactor (. or EOL terminates):  & .                          \\
       FF translation key:              & qoplsaa                               \\
       Scoring parameters:              & xscore\_default.input                \\
-      Qcalc$>$                         & go                                   \\
+      \textbf{qcalc}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5                                \\
                                    &  mean                                \\
       \hline
@@ -1773,14 +1797,14 @@ The input requested is similar for all three functions. To avoid confusion, exam
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      Qcalc$>$                        & chemscore    \\
+      \textbf{qcalc}$>$                        & chemscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
       Score initial topology? (yes/no) & yes                                  \\
       Q-atom (FEP) file:               & c:/peter/data/P450/adm/lig.fep  \\
       Parameter file:                  & c:/peter/data/ff/chemscore\_oplsaa.prm \\
-      Qcalc$>$                         & go                                   \\
+      \textbf{qcalc}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5                                \\
                                    &  mean                                \\
       \hline
@@ -1807,7 +1831,7 @@ The input requested is similar for all three functions. To avoid confusion, exam
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      Qcalc$>$                        & chemscore    \\
+      \textbf{qcalc}$>$                        & chemscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
@@ -1815,7 +1839,7 @@ The input requested is similar for all three functions. To avoid confusion, exam
       Q-atom (FEP) file:               & c:/peter/data/P450/adm/lig.fep  \\
       Force field translation key:  & qoplsaa \\
       Scoring parameters:           & pmfscore\_default.input \\
-      Qcalc$>$                         & go                                   \\
+      \textbf{qcalc}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5 \\
                                    &  mean                                \\
       \hline
@@ -1838,9 +1862,6 @@ The input requested is similar for all three functions. To avoid confusion, exam
 
   It is safe to consider PMF-Score results as rankings where a more negative score means better binding. For details about converting PMF-Score to free energy of binding, see \cite{Muegge:1999}.
 
-
-% ~~~~~~~~~~~~~~~~~ Peter end   ~~~~~~~~~~~~~~~~~~~~~~
-
 \subsection{Useful tips}
 \begin{itemize}
 \item To run FEP simulations of a ligand in water and bound to a
@@ -1849,16 +1870,16 @@ keyword in the [\textbf{FEP}] section of the FEP file to instead
 of renumbering all the atoms!
 \item Make a separate library file for your new molecules
 and leave the amino acid library unchanged. Load both library
-files in Qprep!
+files in \textbf{qprep}!
 \item It is possible to add parameters to the parameter
-file without restarting Qprep. Just type maketop and the updated
+file without restarting \textbf{qprep}. Just type maketop and the updated
 file will be used!
 \item For FEP simulations involving dummy
-atoms, the daring user might consider ignoring some Qprep warnings
+atoms, the daring user might consider ignoring some \textbf{qprep} warnings
 about missing parameters all of those interactions are to be
 redefined in a FEP file. It is possible, but in general not
 advisable, to write a topology file with missing parameters and to
-use it in Qdyn.
+use it in \textbf{qdyn}.
 \item Use build rules in your fragment library entries to control the
 positioning of hydrogens.
 \item Improve scoring accuracy by averaging over e.g. every 10:th frame
@@ -1868,206 +1889,207 @@ of a short equilibration trajectory file!
 
 \section{TUTORIALS}
 \subsection{Binding affinity from LIE simulations}
-The example here is the binding of stearate to a muscular
-fatty-acid binding protein. We have used the Q version of the
-GROMOS87 forcefield for the simulations.
+The example here  is the binding of stearate to  a muscular fatty-acid
+binding protein. We have used the Q version of the GROMOS87 forcefield
+for the simulations.
 
 \subsubsection{Editing the PDB file}
-The structure of the M-FABP complex with stearate, PDB-idcode 1HMT
-was downloaded. The PDB-file needs some editing before use, first
-you have to remove some of the crystal waters, if any. In the
-1HMT-file, 17 waters were saved, having an important role in the
-binding with the ligand or in other interactions. To decide which
-waters to save, pick an atom in the ligand to be the centre of
-your system and choose how large simulation sphere you are going
-to use. Here, a sphere of 18.0 {\AA} radius has been used. Then
-keep the waters inside the sphere that seem to bee involved in any
-interactions and that lie inside the protein. We have deleted the
-waters by hand in a molecular viewer program and then saving only
-the lines holding the coordinates. The part left from the original
-pdb-file is the coordinates of the protein, ligand and some
-waters. But it takes some more editing. All lines that are blank
-or say TER also have to be removed. There has to be a line saying
-GAP between the different molecules. All the cysteines that are
-connected through sulphur bridges should be renamed CSS.
+The structure of the M-FABP complex with stearate, PDB-idcode 1HMT was
+downloaded. The PDB-file needs some editing before use, first you have
+to remove  some of the  crystal waters, if  any. In the  1HMT-file, 17
+waters were  saved, having an important  role in the binding  with the
+ligand or in other interactions. To  decide which waters to save, pick
+an atom in the  ligand to be the centre of your  system and choose how
+large simulation sphere  you are going to use. Here,  a sphere of 18.0
+{\AA} radius  has been used.  Then keep  the waters inside  the sphere
+that seem to bee involved in  any interactions and that lie inside the
+protein. We  have deleted  the waters  by hand  in a  molecular viewer
+program and  then saving only  the lines holding the  coordinates. The
+part  left  from the  original  pdb-file  is  the coordinates  of  the
+protein, ligand and  some waters. But it takes some  more editing. All
+lines that are blank or say TER  also have to be removed. There has to
+be  a  line  saying  GAP  between the  different  molecules.  All  the
+cysteines that are connected through sulphur bridges should be renamed
+CSS.
 
-Note also that hydrogen atoms need not to be present in the PDB
-file, they will be added by the Qprep program.
+Note also that hydrogen atoms need not  to be present in the PDB file,
+they will be added by the \textbf{qprep} program.
 
-\subsubsection{Modelling ionic groups of the protein}
-Be aware that the default model of the charged amino acid residues
-(ASP, GLU, ARG, LYS) in the Q-GROMOS87 fragment library have the
-protonation state of the ionic form, but the net charge replaced
-by a dipole similar to that of neutral form. The corresponding
-charged side chains are described by library entries AS-, GL-, AR+
-and LY+, respectively. Below, we refer to the process of renaming
-\emph{e.g.} an ASP residue to AS- as "turning on" the charge of
-that side chain.
+\subsubsection{Modeling ionic groups of the protein}
+Be aware  that the default  model of  the charged amino  acid residues
+(ASP,  GLU, ARG,  LYS) in  the  Q-GROMOS87 fragment  library have  the
+protonation state of the ionic form,  but the net charge replaced by a
+dipole similar to that of neutral form. The corresponding charged side
+chains  are  described by  library  entries  AS-,  GL-, AR+  and  LY+,
+respectively. Below, we  refer to the process  of renaming \emph{e.g.}
+an ASP residue to AS- as "turning on" the charge of that side chain.
 
-Now it is time to decide which of the charged amino acids that
-should be "turned on". You can use the same rules here as in
-choosing which waters to keep. Amino acids near the ligand,
-creating an salt bridge or interacting in any other way in the
-function of the protein and which lie inside the 18.0 {\AA} sphere
-should be charged. Residues closer than about 3-5 {\AA} from the
-boundary should be neutral unless they form an ion pair with a
-more central group. In a case like this, when the ligand has an
-ionic group, is it important to make the protein net neutral. In
-this example, amino acids 17, 72, 76, 77, 78, 106 and 126 were
-charged. This is most easily done in the program proq (see page
-\pageref{subsubsec:proq}). After loading your pdb-file
-(\textit{load} filename.pdb), one good thing to do is make a
-subset centre (\textit{centre} name coordinates), of the centre
-atom you chose before. From this subset, you can measure distances
-to different residues (\textit{dist} subset subset), like the ones
-you want to charge, and the water molecules. You turn on the amino
-acid charges by the command on followed by the residue number
-(\textit{on} nr). Remember to save the new pdb-file before exiting
-proq (\textit{save} filename.pdb). There are many other useful
-functions in the proq program, type \textit{help }and you will get
-a list of them.
+Now it is time to decide which  of the charged amino acids that should
+be "turned on". You  can use the same rules here  as in choosing which
+waters to keep.  Amino acids near the ligand, creating  a salt bridge
+or interacting  in any other  way in the  function of the  protein and
+which lie  inside the  18.0 {\AA} sphere  should be  charged. Residues
+closer than about 3-5 {\AA} from the boundary should be neutral unless
+they form an ion pair with a  more central group. In a case like this,
+when  the ligand  has an  ionic  group, is  it important  to make  the
+protein net neutral. In this example,  amino acids 17, 72, 76, 77, 78,
+106 and 126 were charged. 
+%This   is  most   easily  done   in   the  program   proq  (see   page
+%\pageref{subsubsec:proq}).  
+%After loading your pdb-file
+%(\textit{load} filename.pdb),  one good thing  to do is make  a subset
+%centre  (\textit{centre} name  coordinates),  of the  centre atom  you
+%chose before. From this subset, you can measure distances to different
+%residues  (\textit{dist} subset  subset), like  the ones  you want  to
+%charge, and the water molecules. You turn on the amino acid charges by
+%the   command  on   followed  by   the  residue   number  (\textit{on}
+%nr).  Remember   to  save  the   new  pdb-file  before   exiting  proq
+%(\textit{save} filename.pdb). There are many other useful functions in
+%the proq program, type \textit{help }and you will get a list of them.
 
 \subsubsection{Writing the library file}
-The next step is to write a library file for the ligand. This is
-easiest done by editing an old library file. You can also get a
-lot of help from looking at the amino acid library file
-(\textit{e.g.} Qgrm87.lib). In the lib file, all the atoms of the
-ligand, the bonds and the charge groups are listed. For each atom,
-you need to specify name, type and charge. Make sure the charges
-in the complex file add up to the charge of the ligand file. All
-the different types of atoms are listed in the parameter file
-(Qgrm87j.prm). For the charges, one can sometimes compare with an
-amino acid from the amino acid library file. For stearate, the lib
-file is stearate.lib. Also make sure you name the atoms the same
-way as in the pdb file. Since the ligand will not be connected to
-any other fragment, the head and tail connections can be omitted.
+The next  step is  to write  a library  file for  the ligand.  This is
+easiest done by editing an old library file. You can also get a lot of
+help  from  looking at  the  amino  acid library  file  (\textit{e.g.}
+Qgrm87.lib). In the  lib file, all the atoms of  the ligand, the bonds
+and the charge  groups are listed. For each atom,  you need to specify
+name, type and  charge. Make sure the charges in  the complex file add
+up to the charge of the ligand  file. All the different types of atoms
+are listed in  the parameter file (Qgrm87j.prm). For  the charges, one
+can sometimes compare  with an amino acid from the  amino acid library
+file. For stearate,  the lib file is stearate.lib. Also  make sure you
+name the atoms the same way as  in the pdb file. Since the ligand will
+not be connected to any other  fragment, the head and tail connections
+can be omitted.
 
-You also need a pdb file for the ligand, copy the relevant lines
-from the PDB file of the complex to a separate file.
+You also need a pdb file for  the ligand, copy the relevant lines from
+the PDB file of the complex to a separate file.
 
-\subsubsection{Qprep}
-Now it is time to make the topology files. They contain all the
-information about the system and are used in the Qdyn simulation.
-This is done in Qprep, where the sulphur bridges also are created.
-You have to make two topology files, one for the ligand in protein
-simulation and one for the ligand without the protein simulation.
-In Qprep, you start by reading the library files and the pdb files
-(\textit{readlib }filename.lib, \textit{readpdb }filename.pdb). In
-the ligand-protein topology, both the amino acid library and the
-ligand library files has to be read, and the sulphur bridges
-created. This is done by the command addbond. (\textit{addbond
-}atomnumber atomnumber). For the atom numbers of the sulphurs, you
-can list the atoms in the cysteins (\textit{listres
-}residuenumber). Note that you cannot use the numbers from the PDB
-file since atoms will be renumbered as hydrogens are added. After
-this you select boundary and solvate the system. Then it is time
-to create the topology, \textit{maketop}. If there are any
-parameters missing, Qprep will tell you here. To create new
-parameters, edit the parameter file in a way that you can see the
-changes made. You can always write comments in the file after a
-"!". After saving the modified parameter file, all you need to do
-is \textit{maketop }again. To write the topology file, use the
-command \textit{writetop.}
+\subsubsection{\textbf{qprep}}
+Now  it is  time to  make  the topology  files. They  contain all  the
+information  about  the  system  and are  used  in  the  \textbf{qdyn}
+simulation.  This is done in \textbf{qprep}, where the sulphur bridges
+also are  created.  You have to  make two topology files,  one for the
+ligand  in protein  simulation  and  one for  the  ligand without  the
+protein  simulation.   In \textbf{qprep},  you  start  by reading  the
+library  files  and  the  pdb  files  (\textit{readlib  }filename.lib,
+\textit{readpdb }filename.pdb).  In the ligand-protein  topology, both
+the amino  acid library and the  ligand library files has  to be read,
+and  the  sulphur  bridges  created.  This  is  done  by  the  command
+addbond.  (\textit{addbond  }atomnumber   atomnumber).  For  the  atom
+numbers  of the  sulphurs,  you can  list the  atoms  in the  cysteins
+(\textit{listres }residuenumber). Note that you cannot use the numbers
+from the  PDB file  since atoms  will be  renumbered as  hydrogens are
+added. After this you select boundary  and solvate the system. Then it
+is time  to create  the topology, \textit{maketop}.  If there  are any
+parameters missing, \textbf{qprep}  will tell you here.  To create new
+parameters, edit  the parameter  file in  a way that  you can  see the
+changes  made. You  can  always write  comments in  the  file after  a
+"!". After saving  the modified parameter file, all you  need to do is
+\textit{maketop }again.  To write the  topology file, use  the command
+\textit{writetop.}
 
-There are many other useful applications to Qprep, among other
-things you can list the high energy bonds, angles, torsions and
-impropers by the commands \textit{checkbond }energylevel,
-\textit{checkangs }energylevel and so on. If you get a too high
-bond, angle or torsion energy, perhaps you have connected the
-sulphur bridges wrongly or forgotten a GAP between two molecules.
-If an improper has a very high energy, it might have the wrong
-sign (e.q. 180 instead of -180 degrees), use the command changeimp
-to redefine them automatically (\textit{changeimp} 2 energylevel).
-After using changeimp, you need to write the topology again. You
-may also want to make a new PDB file, use \textit{writepdb, }with
-atoms renumbered and hydrogens added. By typing \textit{help},
-Qprep lists all the commands with a small explanation.
+There  are many  other  useful applications  to \textbf{qprep},  among
+other things you can list the  high energy bonds, angles, torsions and
+impropers    by   the    commands   \textit{checkbond    }energylevel,
+\textit{checkangs }energylevel and so on. If  you get a too high bond,
+angle  or  torsion energy,  perhaps  you  have connected  the  sulphur
+bridges  wrongly or  forgotten a  GAP  between two  molecules.  If  an
+improper  has  a very  high  energy,  it  might  have the  wrong  sign
+(e.q.  180 instead  of -180  degrees),  use the  command changeimp  to
+redefine them automatically (\textit{changeimp} 2 energylevel).  After
+using changeimp,  you need to write  the topology again. You  may also
+want  to  make a  new  PDB  file,  use \textit{writepdb,  }with  atoms
+renumbered   and    hydrogens   added.   By    typing   \textit{help},
+\textbf{qprep} lists all the commands with a small explanation.
 
 \subsubsection{FEP files}
-In this example the only thing specified in the FEP files are the
-Q-atoms, that is, the ligand. In the simulation without the
-protein, this is simply all the atoms, but in the protein-ligand
-simulation, you have to find the atom numbers of the ligand in the
-new pdb file. There are a lot of other things that can be
-specified in the FEP file, but none of those functions are used in
-this example.
+In this  example the  only thing  specified in the  FEP files  are the
+Q-atoms, that is,  the ligand. In the simulation  without the protein,
+this is  simply all the  atoms, but in the  protein-ligand simulation,
+you  have to  find the  atom  numbers of  the  ligand in  the new  pdb
+file. There are a lot of other things that can be specified in the FEP
+file, but none of those functions are used in this example.
 
 \subsubsection{Creating input files}
-The input file controls the simulation in Qdyn. It contains
-information on how many steps, how long steps, what temperature,
-which topology to use and a lot of other things. In this example,
-the data collection phase was split into five identical,
-consecutive steps to make it easier to restart after an
-interruption. This gives five input files to each of the two
-simulations and another 6 for the equilibration of the
-ligand-protein complex. An input file is easiest created by
-editing an old input file. The things that need to be specified to
-a specific simulation are the centre of the simulation sphere and
-water sphere, the topology- and FEP files, and restraints. The
-coordinates of the water- and simulation sphere should be the
-same, coming from the atom in the ligand that you picked earlier.
+The input file  controls the simulation in  \textbf{qdyn}. It contains
+information on how many steps, how long steps, what temperature, which
+topology to use and  a lot of other things. In  this example, the data
+collection phase was  split into five identical,  consecutive steps to
+make it easier to restart after an interruption. This gives five input
+files  to  each  of  the  two   simulations  and  another  6  for  the
+equilibration of the ligand-protein complex.  An input file is easiest
+created  by editing  an old  input file.  The things  that need  to be
+specified to  a specific simulation  are the centre of  the simulation
+sphere  and   water  sphere,   the  topology-   and  FEP   files,  and
+restraints. The coordinates of the water- and simulation sphere should
+be  the same,  coming from  the  atom in  the ligand  that you  picked
+earlier.
 
-In this example, the equilibration warms up the system, starting
-with 0 degrees gradually raising the temperature to 300 degrees.
-All the heavy atoms, including those of the ligand, are restrained
-during this equilibration. When the system is equilibrated, 5x50
-000 simulation steps of 1 fs are taken for both of the
-simulations. All the files except the initial one are restarted
-from the coordinates and velocities of the previous step. When a
-new temperature is given, you also need to give a random seed.
-When the temperature is the same as in the previous file, set the
-random seed to zero.
+In this example, the equilibration  warms up the system, starting with
+0 degrees gradually  raising the temperature to 300  degrees.  All the
+heavy atoms, including those of the ligand, are restrained during this
+equilibration. When  the system  is equilibrated, 5x50  000 simulation
+steps of  1 fs are  taken for both of  the simulations. All  the files
+except  the  initial  one  are  restarted  from  the  coordinates  and
+velocities of the previous step. When  a new temperature is given, you
+also need to give a random seed.   When the temperature is the same as
+in the previous file, set the random seed to zero.
 
-The coordinates of the water sphere must be specified in the first
-input file. In this example, a co-ordinate file with randomly
-oriented water molecules on a grid, was used.
+The coordinates  of the water  sphere must  be specified in  the first
+input file. In this example, a co-ordinate file with randomly oriented
+water molecules on a grid, was used.
 
-\subsubsection{Using Qdyn}
-To start the simulation, write: Qdyn filename.inp $>$
-filename.log, to use a specific input file and write the output to
-a log file. When many input files are used it is much easier to
-write all the commands to a command file and then run that.
+\subsubsection{Using \textbf{qdyn}}
+To  start  the  simulation,   write:  \textbf{qdyn}  filename.inp  $>$
+filename.log, to use  a specific input file and write  the output to a
+log file. When  many input files are  used it is much  easier to write
+all the commands to a command file and then run that.
 
 \subsubsection{Evaluating the simulation}
-By using the script lsextr (\textit{lsextr} md0*.log $>$
-filename.txt), the van der Waals and electrostatic energies are
-respectively extracted from the log files. It is a good idea to
-plot these energies, \textit{e.g.} by using gnuplot, to see if
-there are any large changes in the energies throughout the
-simulation, see figure \ref{fig:tutorial_energies}.
+By   using   the   script   lsextr   (\textit{lsextr}   md0*.log   $>$
+filename.txt),  the  van  der  Waals and  electrostatic  energies  are
+respectively extracted from  the log files. It is a  good idea to plot
+these energies,  \textit{e.g.} by using  gnuplot, to see if  there are
+any  large changes  in  the energies  throughout  the simulation,  see
+figure \ref{fig:tutorial_energies}.
 
 \begin{figure}[h]
 \centerline{\includegraphics*[width=5.92in,height=3.45in]{\dirfig/tutorial_energies.pdf}}
 \caption{Energies} \label{fig:tutorial_energies}
 \end{figure}
 
-Viewing the structures after the different parts of the simulation
-is a very important part of the evaluation of the simulations. To
-make pdb files of the restart files use Qprep. Read the topology
-file, then read the restart file (\textit{readx }md0{\#}.re) and
-write the new pdb file.
+Viewing the structures after the  different parts of the simulation is
+a very  important part of the  evaluation of the simulations.  To make
+pdb files of  the restart files use \textbf{qprep}.  Read the topology
+file, then read the restart file (\textit{readx }md0{\#}.re) and write
+the new pdb file.
 
-To get averages of the different energies, a program called tstart
-(\textit{tstart~}{\-}q~filename.txt~{\#}~{\#}~{\#}), was used.
-Tstart calculates the overall average and also an average where
-you can split the energies in two, each giving the same average,
-skipping the first values. The numbers in the command are
-different choices you can make where the first is either 1 or 2,
-van der Waal or electrostatic energies. With the second you can
-choose where to start, zero meaning the beginning, the third how
-many rows to read, zero meaning all.
+To get  averages of  the different energies,  a program  called tstart
+(\textit{tstart~}{\-}q~filename.txt~{\#}~{\#}~{\#}), was used.  Tstart
+calculates the overall average and also an average where you can split
+the energies in two, each giving  the same average, skipping the first
+values. The numbers in the command  are different choices you can make
+where  the first  is either  1  or 2,  van der  Waal or  electrostatic
+energies. With the second you can  choose where to start, zero meaning
+the beginning, the third how many rows to read, zero meaning all.
 
-The next thing to do is to calculate the electrostatic free energy
-contribution from the ligand's interaction with ionic groups of
-the protein that were neglected (not "turned on") during the
-simulation. We approximate this free energy using Coulomb's law
-with $\varepsilon$ = 80. Run proq, load the pdb file and read the
-ligand library used in Qprep. The command onoff (\textit{onoff}
-{\#}-{\#}{\#}) switches the charges, charging the uncharged and
-neutralising the charged. Then calculate the electrostatic energy,
-$\Delta $G$_{onoff}$, (\textit{repel} ligand \textit{charged}).
-This energy should be small, less than 1 kcal/mol. If not, some
-amino acids that should be turned on probably were not.
+The next  thing to do  is to  calculate the electrostatic  free energy
+contribution from  the ligand's interaction  with ionic groups  of the
+protein   that   were  neglected   (not   "turned   on")  during   the
+simulation.
+
+% NOTE  NOTE NOTE - proq  has been abandoned.  A new method has  to be
+% proposed here.
+
+%We approximate  this free energy using  Coulomb's law with
+%$\varepsilon$ =  80. Run proq, load  the pdb file and  read the ligand
+%library  used in  \textbf{qprep}.  The  command onoff  (\textit{onoff}
+%{\#}-{\#}{\#})  switches  the  charges,  charging  the  uncharged  and
+%neutralizing  the charged.  Then calculate  the electrostatic  energy,
+%$\Delta $G$_{onoff}$, (\textit{repel}  ligand \textit{charged}).  This
+%energy should be small, less than 1 kcal/mol. If not, some amino acids
+%that should be turned on probably were not.
 
 Then you can calculate the binding free energy, using the LIE
 formula:
@@ -2096,12 +2118,12 @@ OH-groups).\cite{Hansson:1998}
 
 \section{REFERENCE GUIDE}
 \subsection{Program modules}
-Q is build from Fortran90 modules, which are combined in different
-sets in the Q programs, as shown in figure \ref{fig:modules}. This
-makes it easier to maintain the software. It also makes it rather
-straight-forward for users with experience in programming to
-create their own special-purpose programs by re-using $e.g.$ the
-trajectory and topology modules.
+Q is  build from  Fortran90 modules, which  are combined  in different
+sets in  the Q  programs, as shown  in figure  \ref{fig:modules}. This
+makes it  easier to  maintain the  software. It  also makes  it rather
+straight-forward for  users with  experience in programming  to create
+their own  special-purpose programs by re-using  $e.g.$ the trajectory
+and topology modules.
 
 \begin{figure}[h]
 \centerline{\includegraphics*[scale=0.9]{\dirfig/modules.pdf}}
@@ -2111,12 +2133,11 @@ trajectory and topology modules.
 The figure does not show the dependence of some modules on others.
 
 \subsection{Force field reference information}
-Q is not associated with any particular force field. The force
-fields are defined in parameter files, separate from the program
-and the choice of force field is thus simply a matter of which
-parameter file to use. Any force field could be used with the
-program, as long as it shares the common functional form of eq.
-\ref{eq:V_pot}.
+Q is not associated with any  particular force field. The force fields
+are  defined in  parameter files,  separate from  the program  and the
+choice of force field is thus  simply a matter of which parameter file
+to use. Any force field could be  used with the program, as long as it
+shares the common functional form of eq.  \ref{eq:V_pot}.
 
 \begin{multline}
 \label{eq:V_pot}
@@ -2170,22 +2191,21 @@ for rotation. An alternative form of the improper dihedral
 potential using trigonometric functions just as for normal
 dihedrals is also implemented.
 
-The molecular fragments, $e.g.$ amino acid residues, defined in the
-force fields are divided into charge groups which are groups of
-atoms whose partial charges add up to an integer. Cut-off of
-non-bonded interactions is then done based on these groups, $i.e.$
-either all pairwise interactions between the two groups are
-evaluated, or none. The average size of the charge groups varies
-between force fields, from a few atoms to entire residues. Some
-force fields designate a "switching centre" in each charge group
-and performs cut-off only based on the distance between the
-switching centres, while others include all interactions between
-two groups if any pair of atoms is within the cut-off radius.
+The molecular  fragments, $e.g.$ amino  acid residues, defined  in the
+force fields are divided into charge  groups which are groups of atoms
+whose  partial charges  add up  to an  integer. Cut-off  of non-bonded
+interactions is  then done  based on these  groups, $i.e.$  either all
+pairwise  interactions  between  the  two  groups  are  evaluated,  or
+none.  The average  size of  the  charge groups  varies between  force
+fields,  from  a few  atoms  to  entire  residues. Some  force  fields
+designate  a "switching  centre"  in each  charge  group and  performs
+cut-off  only based  on the  distance between  the switching  centres,
+while others include  all interactions between two groups  if any pair
+of atoms is within the cut-off radius.
 
-Some properties of the force fields available for Q are given in
-table \ref{tab:FF}. Please note that these are our translations of
-the force field and we cannot guarantee 100\% identity with the
-original.
+Some properties of the force fields available for Q are given in table
+\ref{tab:FF}. Please note that these are our translations of the force
+field and we cannot guarantee 100\% identity with the original.
 
 \begin{table}[htbp]
 \small \caption{Force fields available in Q.} \label{tab:FF}
@@ -2257,30 +2277,30 @@ files are given in Table \ref{tab:ff_files}.
 
 
 \subsection{Topology preparation reference}\label{subsec:top_prep_ref}
-\subsubsection{Coordinate files for input into Qprep}
-Atomic coordinates are entered into Qprep as PDB files. The PBD
-file must conform to some rules to be accepted by Qprep (if not
+\subsubsection{Coordinate files for input into \textbf{qprep}}
+Atomic coordinates are entered into \textbf{qprep} as PDB files. The PBD
+file must conform to some rules to be accepted by \textbf{qprep} (if not
 specified use the PDB standard):
 
 \begin{itemize}
-\item Qprep will only accept and read ATOM and HETATM records. All other record types have to be removed.
-\item Residue numbers must be numeric, $i.e.$ alphanumeric residue identifiers like 60B are not allowed. Use the renumber script to renumber residues. The numbering does not have to start at 1, but Qprep will renumber residues starting at 1.
+\item \textbf{qprep} will only accept and read ATOM and HETATM records. All other record types have to be removed.
+\item Residue numbers must be numeric, $i.e.$ alphanumeric residue identifiers like 60B are not allowed. Use the renumber script to renumber residues. The numbering does not have to start at 1, but \textbf{qprep} will renumber residues starting at 1.
 \item Molecules must be separated with a gap marker line. This line should contain only the word GAP in capital letters, optionally preceded by blanks or tabs. There should not be a gap marker at the end of the file.
-\item Atom numbering is not significant and Qprep will renumber atoms starting from 1. Note that the numbering will change due to the insertion of hydrogen atoms.
+\item Atom numbering is not significant and \textbf{qprep} will renumber atoms starting from 1. Note that the numbering will change due to the insertion of hydrogen atoms.
 \item Only upper case letters may be used in PDB files.
 \item Residue names must match fragment library entry names. The maximal length of residue names is 3 alphanumeric characters (position 13 to 16). Most other characters like +, -, {\_} are also permitted.
 \item Atom names must match atom names within the relevant fragment library entry.
-\item Temperature factors and occupancy numbers are ignored by Qprep and are optional.
+\item Temperature factors and occupancy numbers are ignored by \textbf{qprep} and are optional.
 \end{itemize}
 
 \subsubsection{Atom masks}\label{subsubsec:atom_masks}
 An atom mask defines a subset of atoms and is used:
 \begin{itemize}
-\item in Qprep to select which atoms are included when writing
+\item in \textbf{qprep} to select which atoms are included when writing
 structure files (PDB and mol2)
-\item in Qdyn to select which atoms
+\item in \textbf{qdyn} to select which atoms
 to include in the trajectory and
-\item in Qcalc to select atoms
+\item in \textbf{qcalc} to select atoms
 for superposition and coordinate deviation calculations.
 \end{itemize}
 The atom mask is constructed by selecting atoms within a sequence
@@ -2304,7 +2324,7 @@ lines may be used to construct the mask in an additive manner {\-}
 the atom sets specified by each line are combined with a logical
 or. If no mask is given, all atoms are selected by default.
 
-\subsubsection{Qprep commands}
+\subsubsection{\textbf{qprep} commands}
 
 \begin{longtable}{|p{58pt}|p{27pt}|p{110pt}|p{170pt}|}
 \hline
@@ -2374,7 +2394,7 @@ separated by less than 2.1 Å, the program will ask whether to add a bond or not.
 \hline
 \end{longtable}
 
-\subsubsection{Qprep preferences}
+\subsubsection{\textbf{qprep} preferences}
 \label{subsubsec:Qprep_preferences} Use together with set, $e.g.$:
 set solvent\_pack 2.6.
 
@@ -2400,7 +2420,7 @@ random number sequence used to generate solvent hydrogen atom coordinates & 7589
 \label{subsubsec:fragment_lib_f_f} \index{library file}The
 fragment library file is a text file containing definitions of all
 the molecular building blocks, $i.e.$ amino acid residues, ligands
-etc., and is used by Qprep to generate a molecular topology from a
+etc., and is used by \textbf{qprep} to generate a molecular topology from a
 PDB file. The format of the library file follows the same standard
 as the parameter file. Each fragment/residue entry starts with an
 entry name enclosed in curly braces, $e.g.$ {\{}ALA{\}}, maximum 3
@@ -2410,7 +2430,7 @@ within the entry.
 The optional [\textbf{info}] section contains the keyword
 SYBYLtype which identifies the SYBYL substructure type (residue or
 group) for the entry and is used only for writing mol2 files with
-Qprep. The [\textbf{atoms}] section defines the sequential number,
+\textbf{qprep}. The [\textbf{atoms}] section defines the sequential number,
 name, type and charge of the atoms in the entry. The atom name
 must match the name used in PDB files to be read, but the order of
 atoms is not important. In the following sections atoms are
@@ -2721,7 +2741,7 @@ for pairs of atom types or for single atom types col. description \\
 \end{figure}
 
 \subsubsection{Solvent file format}
-\label{subsubsec:solvent_file_format} Qprep can solvate a
+\label{subsubsec:solvent_file_format} \textbf{qprep} can solvate a
 molecular systems by filling empty space in the simulation sphere
 or box by water molecules taken from a water file. This file is a
 special PDB-like file containing a box or a sphere of water
@@ -2769,7 +2789,7 @@ evaluated as for atoms inside the sphere. Solute atoms in the
 outermost shell of the simulation sphere are also restrained to
 their initial coordinates with a harmonic potential to avoid
 distortion of bonds across the sphere boundary. The radius
-of this shell and the force constant is given in the Qdyn input
+of this shell and the force constant is given in the \textbf{qdyn} input
 file (section [\textbf{sphere}], keywords shell\_radius and
 shell\_force). The restrained shell radius is by default equal to the outer,
 \emph{i.e.} no atoms will be restrained unless the restrained shell radius is redefined. The force constant has
@@ -2956,8 +2976,8 @@ and combinations thereof. \small
 \end{table} \normalsize
 
 \subsection{File and format descriptions}
-\subsubsection{Qdyn input file format}\label{subsubsec:Qdyn_inp_file_form}
-The name of the input file is passed to Qdyn as the first argument
+\subsubsection{\textbf{qdyn} input file format}\label{subsubsec:qdyn_inp_file_form}
+The name of the input file is passed to \textbf{qdyn} as the first argument
 on the command line. The file is divided into sections, each
 starting with a section heading enclosed in square brackets.
 Within a section are lines with a keyword and a value, or just
@@ -2968,10 +2988,10 @@ within sections is not important (but the order of table
 \ref{tab:qdyninputfileformat} is preferred). Many keywords have
 default values and can be omitted, to make it easier to set up a
 simple simulation. The use of default values will be shown in the
-output from Qdyn. Sections with no required entries are optional.
+output from \textbf{qdyn}. Sections with no required entries are optional.
 \small
 \begin{longtable}{|p{78pt}|p{158pt}|p{158pt}|}
-\caption{Qdyn input file format}
+\caption{\textbf{qdyn} input file format}
 \label{tab:qdyninputfileformat}
 \endhead
 
@@ -3169,12 +3189,12 @@ defined in the section [\textbf{off\_diagonals}].
 If vanishing or appearing atoms are part of your FEP strategy, it
 may be desirable to use a \textit{softcore} potential for the
 Q-atoms in question.\cite{Zacharias:1994} Softcore potentials have
-been implemented in Qdyn according to equation \ref{eq:softcore}.
+been implemented in \textbf{qdyn} according to equation \ref{eq:softcore}.
 Depending on the value of
 \textbf{softcore\-\_use\-\_max\-\_potential} given in the
 [\textbf{FEP}] section, the $\alpha$-values are either read
 directly from the [\textbf{softcore}] section or calculated by
-Qdyn in a pairwise manner based upon the desired potentials at
+\textbf{qdyn} in a pairwise manner based upon the desired potentials at
 $r=0$ given in the [\textbf{softcore}] section. Softcore
 potentials are only available for Q-atoms, i.e. Q-Q, Q-water and
 Q-solute interactions are treated with softcore. In the case of a
@@ -3227,7 +3247,7 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline offset\_residue & Residue/fragment number. & Optional. Set offset to the topology number of the first atom in the given residue minus one.\\
 \hline offset\_name & Residue/fragment name. & Optional. Set offset to the topology number of the first atom in the first residue with the given name minus one.\\
 \hline qq\_use\-\_library\-\_charges & This is a special feature for studying $e.g.$ electrostatic linear response. Set to 'on' to use the library charges from the topology for intra-Q-atom interactions, i. e. change only Q-atom-surrounding electrostatic interactions. &Optional, default off.\\
-\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. Qdyn will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
+\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. \textbf{qdyn} will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3377,7 +3397,7 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
-\multicolumn{3}{p{394pt}}{[\textbf{shake\_constraints}]: Define extra shake constraints. The effective constraint distance will be the sum of the distances given for each state, weighted by their $\lambda$ values. Note: constraints defined here do not override constraints imposed by setting the shake flag to \emph{on} in the Qdyn input file. To remove a constraint the bond must be redefined as a Q-bond. The order in which atoms are given is not important.}\\
+\multicolumn{3}{p{394pt}}{[\textbf{shake\_constraints}]: Define extra shake constraints. The effective constraint distance will be the sum of the distances given for each state, weighted by their $\lambda$ values. Note: constraints defined here do not override constraints imposed by setting the shake flag to \emph{on} in the \textbf{qdyn} input file. To remove a constraint the bond must be redefined as a Q-bond. The order in which atoms are given is not important.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Topology atom number of first atom.}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Topology atom number of second atom.}\\
 \hline 3... & \multicolumn{2}{p{341pt}|}{Constraint distance (Å) in state 1, state 2, ...}\\
@@ -3395,12 +3415,12 @@ file example on page \pageref{tab:FEP_file_f_p_t_r}.
 \end{longtable}
 \normalsize
 
-\subsection{Log files}
+\subsection{Output files}
 \label{subsec:logfiles}
-\subsubsection{Qdyn log file}
+\subsubsection{\textbf{qdyn} log file}
 \label{subsubsec:qdynlogfiles}
 
-The information from the Qdyn simulation is gathered in a log
+The output from the \textbf{qdyn} simulation is gathered in a log
 file. This log file is divided into two parts, one showing the
 initialisation of the simulations and the other showing different
 energies form all the steps of the simulation. The units used in
@@ -3524,7 +3544,7 @@ and the simulation is initialised.
 \tiny
 \vspace{-1\baselineskip}
 \begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of Qdyn will list pair list sizes also for other nodes than node 0.}\\
+\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of \textbf{qdyn} will list pair list sizes also for other nodes than node 0.}\\
 \hline No. of Rcq indep. nb pairs involving q-atoms = 55 in state : 1\newline No. of Rcq indep. nb pairs involving q-atoms = 52 in state : 2 & The size of the Q-atom-Q-atom non-bonded pair list in each state. This list also includes interactions between Q atoms and non-Q atoms which are bonded, angled or torsioned to a Q atom.\\
 \hline \begin{tabular}{rrr}Initial temperatures are : Ttot = & 1.08 Tfree = & 1.14\end{tabular} & The initial temperature is calculated. Ttot takes all the degrees of freedom of the system into account, whereas Tfree excludes restrained degrees of freedom, $e.g.$ excluded atoms and shake constraints.\\
 \hline \end{longtable}
@@ -3591,51 +3611,51 @@ energy summaries.
 \begin{longtable}{|p{295pt}|p{111pt}|}
 \hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 &0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 &0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 &0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 &0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 &0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 &0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 &0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 &0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint&&&&\\Q-SUM & 1 &0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 &0.5000 & -430.34 & 22.63&&&&\end{tabular} & \\
 \hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & \\
-\hline QDyn version 4.15 terminated normally. & This simulation complete without errors.\\
+\hline qdyn version 4.15 terminated normally. & This simulation complete without errors.\\
 \hline
 \end{longtable}
 
 \normalsize
 
-\subsubsection{Qfep log file}
+\subsubsection{\textbf{qfep} log file}
 [To be added]
-\subsection{Differences from earlier versions}
+%\subsection{Differences from earlier versions}
 
-FIX THIS SECTION! Remove, update or put it on the web!
+%FIX THIS SECTION! Remove, update or put it on the web!
 
-This section is only of interest for users of Q version 3 and
-presents the important differences between versions 3 and 4. The
-trajectory analysis program Qcalc is added to the package, making
-it easy to calculate RMS coordinate deviations (with or without
-least squares fitting of structures), distances, angles and
-individual bonded force field terms.
-\subsubsection{Differences in Qprep}
+%This section is only of interest for users of Q version 3 and
+%presents the important differences between versions 3 and 4. The
+%trajectory analysis program \textbf{qcalc} is added to the package, making
+%it easy to calculate RMS coordinate deviations (with or without
+%least squares fitting of structures), distances, angles and
+%individual bonded force field terms.
+%\subsubsection{Differences in \textbf{qprep}}
 
-\begin{itemize}
-\item Solvation is done in Qprep, not in Qdyn. The topology thus contains all the atoms of the simulated system.
-\item Solvent can be generated using a grid, from a solvent coordinate file or from a restart file.
-\item The simulation sphere is specified when generating the topology and exclusion of atoms takes place in Qprep and is included in the topology.
-\item Hydrogen atom coordinates are generated by steepest descent energy minimisation of the angle potentials involving the hydrogens, rather than by determining the hybridisation by heuristic rules.
-\item The placement of hydrogen atoms may be further controlled by build rules where a torsion angle can be specified.
-\item Shake constraints on water angles now require that a H-H bond is present in the library entry. Set the force constant for this bond type to zero.
-\item Several previously hard-coded parameters are now user-setable preferences. Use the prefs command to list them and the set command to change.
-\item Force field parameters are loaded as a separate step using the readff command, not as part of the maketop command.
-\item The addbond command has new syntax and accepts input either as atom numbers or as residue\_number:atom\_name and will warn if the bond distance is large.
-\item The xlink command should be called before generating the topology, like the addbond command.
-\item Gap markers are not required between fragments without head or tail atom designation, $e.g.$ not between solvent molecules.
-\item Overloading of library entries: Loading a library entry with the same name as a previously loaded entry removes the old definition.
-\item When loading a topology, all libraries used to make it will be loaded automatically.
-\end{itemize}
+%\begin{itemize}
+%\item Solvation is done in \textbf{qprep}, not in \textbf{qdyn}. The topology thus contains all the atoms of the simulated system.
+%\item Solvent can be generated using a grid, from a solvent coordinate file or from a restart file.
+%\item The simulation sphere is specified when generating the topology and exclusion of atoms takes place in \textbf{qprep} and is included in the topology.
+%\item Hydrogen atom coordinates are generated by steepest descent energy minimisation of the angle potentials involving the hydrogens, rather than by determining the hybridisation by heuristic rules.
+%\item The placement of hydrogen atoms may be further controlled by build rules where a torsion angle can be specified.
+%\item Shake constraints on water angles now require that a H-H bond is present in the library entry. Set the force constant for this bond type to zero.
+%\item Several previously hard-coded parameters are now user-setable preferences. Use the prefs command to list them and the set command to change.
+%\item Force field parameters are loaded as a separate step using the readff command, not as part of the maketop command.
+%\item The addbond command has new syntax and accepts input either as atom numbers or as residue\_number:atom\_name and will warn if the bond distance is large.
+%\item The xlink command should be called before generating the topology, like the addbond command.
+%\item Gap markers are not required between fragments without head or tail atom designation, $e.g.$ not between solvent molecules.
+%\item Overloading of library entries: Loading a library entry with the same name as a previously loaded entry removes the old definition.
+%\item When loading a topology, all libraries used to make it will be loaded automatically.
+%\end{itemize}
 
-\subsubsection{Differences in Qdyn}
-\begin{itemize}
-\item Solvation and definition of the simulation sphere has been moved to Qprep.
-\item The keywords centre, radius, pack, model and water are obsolete and ignored.
-\item The number of atoms in the topology is always equal to the number of atoms in the simulation, $i.e.$ atoms can not be added by reading a restart file.
-\item The CHARM DCD format is used for trajectory files. This file format can be read by visualisation programs like VMD [18] for trajectory animation.
-\item Shake can be enabled specifically for bonds to hydrogen atoms.
-\item Any tri-atomic molecule may be used as solvent, not only SPC or TIP3P water models.
-\end{itemize}
+%\subsubsection{Differences in \textbf{qdyn}}
+%\begin{itemize}
+%\item Solvation and definition of the simulation sphere has been moved to \textbf{qprep}.
+%\item The keywords centre, radius, pack, model and water are obsolete and ignored.
+%\item The number of atoms in the topology is always equal to the number of atoms in the simulation, $i.e.$ atoms can not be added by reading a restart file.
+%\item The CHARM DCD format is used for trajectory files. This file format can be read by visualization programs like VMD [18] for trajectory animation.
+%\item Shake can be enabled specifically for bonds to hydrogen atoms.
+%\item Any tri-atomic molecule may be used as solvent, not only SPC or TIP3P water models.
+%\end{itemize}
 
 %Almlöf end
 %--------------sinisa-----------%
@@ -3649,7 +3669,7 @@ described here.
 %%%%%%%%%%%%  jeca start %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{Qcalc}\label{subsubsec:qcalc}
+\subsubsection{\textbf{qcalc}}\label{subsubsec:qcalc}
 
 % ~~~~~~~~~~~~~~~~~~ Peter begin ~~~~~~~~~~~~~~~~~~
 
@@ -3671,178 +3691,178 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 %%%%%%%%%%%%  jeca slut %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{proq - PDB file analysis and manipulation}\label{subsubsec:proq}
-Proq is an interactive, shell-like program for examining and
-modifying pdb files prior to making topology or for analysis of
-structures from simulations. It is a non-graphical,
-command-oriented program written in PERL, intended to be a fast
-and powerful complement to molecular graphics programs. Proq can
-handle subsets of atoms, make distance matrices, calculate
-midpoints, change protonation states of residues, display charges,
-and calculate electrostatic interaction energies.
+%\subsubsection{proq - PDB file analysis and manipulation}\label{subsubsec:proq}
+%Proq is an interactive, shell-like program for examining and
+%modifying pdb files prior to making topology or for analysis of
+%structures from simulations. It is a non-graphical,
+%command-oriented program written in PERL, intended to be a fast
+%and powerful complement to molecular graphics programs. Proq can
+%handle subsets of atoms, make distance matrices, calculate
+%midpoints, change protonation states of residues, display charges,
+%and calculate electrostatic interaction energies.
 
-The contents of a PDB file will be loaded as fragments separated
-by comments, GAP marks etc. In the simplest case there will be
-only one fragment. The comments will be retained upon saving. Proq
-can not add or remove atoms. Change of protonation state is a
-matter of changing the residue name, $e.g.$ from ASP to AS-.
+%The contents of a PDB file will be loaded as fragments separated
+%by comments, GAP marks etc. In the simplest case there will be
+%only one fragment. The comments will be retained upon saving. Proq
+%can not add or remove atoms. Change of protonation state is a
+%matter of changing the residue name, $e.g.$ from ASP to AS-.
 
-A sample proq session is shown below, where user input is shown in
-bold face:
+%A sample proq session is shown below, where user input is shown in
+%bold face:
 
-\begin{longtable}{|p{390pt}|}
-\hline Hello! This is proq. Enter ? for help.\\
-\\
- proq$>$proq$>$read    : Reading input from h:$\backslash$proq/ defaults.proq.\\
- subset  charged         AR+:CZ,LY+:NZ,HIP:CE1,AS-:CG,GL-:CD\\
- subset uncharged       ARG:CZ,LYS:NZ,HIS:CE1,ASP:CG,GLU:CD\\
- subset chargeable AR[G+]:CZ,LY[S+]:NZ,HI[SP]:CE1,AS[P-]:CG,GL[U-]:CD\\
- \\
- charge  AR+:CZ          +1\\
- charge  LY+:NZ          +1\\
- charge  HIP:CE1         +1\\
- charge  AS-:CG          -1\\
- charge  GL-:CD          -1\\
- \\
- chargeform      AR+             ARG\\
- chargeform      LY+             LYS\\
- chargeform      AS-             ASP\\
- chargeform      GL-             GLU\\
- \\
- main    : EOF reading h:$\backslash$proq/defaults.proq.\\
- main    : Now reading from g:/config.proq again.\\
- proq$>$\\
- main    : EOF reading g:/config.proq.\\
- main    : Now reading from STDIN again.\\
- proq$>$\textbf{load test}\\
- load    : test.pdb consisting of 3011 atoms in 546 residues in 361 fragments.\\
- proq$>$\textbf{listsequence 3}\\
- listseq : sequence of fragments 3 of test.pdb\\
- frg res  type\\
-  3  189   MTX\\
- proq$>$ \textbf{disttab charged MTX:N.*}\\
- B1:N1  B2:NA2 B3:N3  B4:NA4 B5:N5  B6:N8  B7:N10 B8:N\\
- MTX189 MTX189 MTX189 MTX189 MTX189 MTX189 MTX189 MTX189\\
- A 1:CG  AS-  21:  11.40  13.72  12.98  12.54   9.86   9.10   7.08 11.62 \\
- A 2:CZ  AR+  28:  11.86  13.38  14.02  14.90  12.62  10.61  10.70  8.44 \\
- A 3:CD  GL-  30:   3.62   3.48   5.42   7.56   7.21   5.06   9.21  9.63 \\
- A 4:CZ  AR+  32:  14.15  14.26  15.86 17.55 16.46  14.40  16.29  11.96 \\
- A 5:NZ  LY+  55:  16.46  18.30 16.50 14.83  13.56  14.79  12.43  18.48 \\
- A 6:NZ  LY+  68:  15.77 16.56 16.49  16.66  15.45  15.23  14.15 8.18\\
- A 7:CZ  AR+  70: 11.09 11.36  10.78  10.63  10.50  11.22  10.82  6.15\\
- A 8:CD  GL- 172: 11.85  12.24  14.05  15.92  14.60  11.93  14.64 13.24\\
- proq$>$\textbf{midpoint MTX,charged}\\
- Computing midpoint for   52 atoms.\\
- Point:   19.105  24.735   2.599 Max distance:   25.059\\
- proq$>$\textbf{centre C1 19.105  24.735   2.599 }\\
- proq$>$\textbf{disttab charged CTR}\\
- B1:C1 \\
- CTR  0\\
- A 1:CG  AS-  21:  23.42\\
- A 2:CZ  AR+  28:  21.93\\
- A 3:CD  GL- 30: 18.89\\
- A 4:CZ  AR+  32:  21.94\\
- A 5:NZ  LY+  55:  25.06\\
- A 6:NZ LY+ 68:  14.09\\
- A 7:CZ  AR+  70:   8.05\\
- A 8:CD  GL- 172:  25.02\\
- proq$>$\textbf{off 21}\\
- chargeoff : Turned off charge on residue AS- 21.\\
- proq$>$\textbf{midpoint MTX,charged} \\
- Computing midpoint for   51 atoms.\\
- Point:   20.556  21.556   0.018 Max distance:   22.745\\
- proq$>$\textbf{save test2}\\
- proq$>$\textbf{quit}\\
-\hline
-\end{longtable}
+%\begin{longtable}{|p{390pt}|}
+%\hline Hello! This is proq. Enter ? for help.\\
+%\\
+% proq$>$proq$>$read    : Reading input from h:$\backslash$proq/ defaults.proq.\\
+% subset  charged         AR+:CZ,LY+:NZ,HIP:CE1,AS-:CG,GL-:CD\\
+% subset uncharged       ARG:CZ,LYS:NZ,HIS:CE1,ASP:CG,GLU:CD\\
+% subset chargeable AR[G+]:CZ,LY[S+]:NZ,HI[SP]:CE1,AS[P-]:CG,GL[U-]:CD\\
+% \\
+% charge  AR+:CZ          +1\\
+% charge  LY+:NZ          +1\\
+% charge  HIP:CE1         +1\\
+% charge  AS-:CG          -1\\
+% charge  GL-:CD          -1\\
+% \\
+% chargeform      AR+             ARG\\
+% chargeform      LY+             LYS\\
+% chargeform      AS-             ASP\\
+% chargeform      GL-             GLU\\
+% \\
+% main    : EOF reading h:$\backslash$proq/defaults.proq.\\
+% main    : Now reading from g:/config.proq again.\\
+% proq$>$\\
+% main    : EOF reading g:/config.proq.\\
+% main    : Now reading from STDIN again.\\
+% proq$>$\textbf{load test}\\
+% load    : test.pdb consisting of 3011 atoms in 546 residues in 361 fragments.\\
+% proq$>$\textbf{listsequence 3}\\
+% listseq : sequence of fragments 3 of test.pdb\\
+% frg res  type\\
+%  3  189   MTX\\
+% proq$>$ \textbf{disttab charged MTX:N.*}\\
+% B1:N1  B2:NA2 B3:N3  B4:NA4 B5:N5  B6:N8  B7:N10 B8:N\\
+% MTX189 MTX189 MTX189 MTX189 MTX189 MTX189 MTX189 MTX189\\
+% A 1:CG  AS-  21:  11.40  13.72  12.98  12.54   9.86   9.10   7.08 11.62 \\
+% A 2:CZ  AR+  28:  11.86  13.38  14.02  14.90  12.62  10.61  10.70  8.44 \\
+% A 3:CD  GL-  30:   3.62   3.48   5.42   7.56   7.21   5.06   9.21  9.63 \\
+% A 4:CZ  AR+  32:  14.15  14.26  15.86 17.55 16.46  14.40  16.29  11.96 \\
+% A 5:NZ  LY+  55:  16.46  18.30 16.50 14.83  13.56  14.79  12.43  18.48 \\
+% A 6:NZ  LY+  68:  15.77 16.56 16.49  16.66  15.45  15.23  14.15 8.18\\
+% A 7:CZ  AR+  70: 11.09 11.36  10.78  10.63  10.50  11.22  10.82  6.15\\
+% A 8:CD  GL- 172: 11.85  12.24  14.05  15.92  14.60  11.93  14.64 13.24\\
+% proq$>$\textbf{midpoint MTX,charged}\\
+% Computing midpoint for   52 atoms.\\
+% Point:   19.105  24.735   2.599 Max distance:   25.059\\
+% proq$>$\textbf{centre C1 19.105  24.735   2.599 }\\
+% proq$>$\textbf{disttab charged CTR}\\
+% B1:C1 \\
+% CTR  0\\
+% A 1:CG  AS-  21:  23.42\\
+% A 2:CZ  AR+  28:  21.93\\
+% A 3:CD  GL- 30: 18.89\\
+% A 4:CZ  AR+  32:  21.94\\
+% A 5:NZ  LY+  55:  25.06\\
+% A 6:NZ LY+ 68:  14.09\\
+% A 7:CZ  AR+  70:   8.05\\
+% A 8:CD  GL- 172:  25.02\\
+% proq$>$\textbf{off 21}\\
+% chargeoff : Turned off charge on residue AS- 21.\\
+% proq$>$\textbf{midpoint MTX,charged} \\
+% Computing midpoint for   51 atoms.\\
+% Point:   20.556  21.556   0.018 Max distance:   22.745\\
+% proq$>$\textbf{save test2}\\
+% proq$>$\textbf{quit}\\
+%\hline
+%\end{longtable}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Ändrar numreringen på tabellerna%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\setcounter{table}{13}
+%\setcounter{table}{13}
 
 
-\begin{longtable}{|p{60pt}|p{60pt}|p{250pt}|}
-\caption{proq command reference} \label{tab:proq_c_r}\\
-\hline
-\sc{\textbf{Command, alias}} & \sc{\textbf{Arguments (optional)}}
-& \sc{\textbf{Description}}
-\endhead
-\hline
-  chargeonoff, onoff, onf & [r1[-r2]] & Flip the charged state of residues with numbers r1 through
-                                        r2. $E.g.$ all GLU will be renamed to GL- and vice versa.\\ \hline
-  centre, ctr   & [centre{\_}name [x y z]]       & Add a reference point (like an atom) at (x,y,z).
-                                                   An atom named center{\_}name is created in a
-                                                   pseudo-residue called CTR and numbered 0. Use show
-                                                   CTR to list all defined centers. Centers are not
-                                                   written with save. \\ \hline
-  charge, ch    & [atom{\_}descr. [charge]]      & Define the electrostatic charge for all atoms that
-                                                   match atom{\_}descr. atom{\_}descr is one of
-                                                   residue{\_}name:atom{\_}name or
-                                                   residue{\_}number:atom{\_}name. When charges are
-                                                   evaluated, a residue{\_}number:atom{\_}name
-                                                   definition overrides a residue{\_}name:atom{\_}name
-                                                   definition. Regular expressions are not allowed.\\ \hline
-  chargeform, cf & [on{\_}name [off{\_}name]]    & Define the residue names for the charged and neutral
-                                                   form of an amino acid. These pairs are used for
-                                                   switching charges on and off with chargeon and
-                                                   chargeoff. Ex. chargeform LY+ LYS. Charges must be
-                                                   assigned to atoms ($e.g.$ LYS:NZ and LY+:NZ) for
-                                                   calculations with charges to work!\\ \hline
-  chargeon, on  & [r1[-r2]] [f3....]             & Switch names of the specified (by number) residues
-                                                   to their charged form. Only residues with a charged
-                                                   form defined are affected.\\ \hline
-  chdir, cd     & [newdir]                       & Changes working directory.\\ \hline
-  clear         &                                & Clear the loaded PDB file from memory. \\ \hline
-  disttab, dist & [subset1 [subset2]] & Calculate distances between atoms in subsets 1 and 2 and
-                                        display in a table. The number of atoms in subset2 should
-                                        be $<$10 for neat screen output. \\ \hline
-  env           & [option{\_}name]               & Display option settings. Default: all options. \\ \hline
-  help, h, ?    & [command]                      & Display help for a command. Default is all commands.\\ \hline
-  listchargeform &                               & List all pairs of charged and neutral residue names.\\ \hline
-  listfragment, lf & [f1[-f2]]                   & List residue numbers in specified fragments.
-                                                   Default: all fragments.\\ \hline
-  listpdb, lp   &                                & Same as save but writes to stdout.\\ \hline
-  listsequence, listseq, ls & [f1[-f2]] [f3....] & List residue names in specified fragments. Default:
-                                                   all fragments.\\ \hline
-  listsubset    &                                & List all subset definitions.\\ \hline
-  load, lo      & [pdb{\_}file]                  & Load a pdb file into memory. The extension .pdb may be omitted.\\ \hline
-  loadrestart, lore &  [restart{\_}file]         & Loads new coordinates for a previously loaded pdb
-                                                   file from a Qdyn restart file. PDB file must have
-                                                   same number of atoms and same numbering as restart
-                                                   file, so use only pdb files with hydrogens created
-                                                   by Qprep.\\ \hline
-  midpoint, mid & [subset]                       & Calculate the midpoint (centre of the smallest
-                                                   possible that encompasses all atoms in the subset).
-                                                   Limited to 50 atoms.\\ \hline
-  option, o     & [option{\_}name] [value]       & Set options. \\ \hline
-  print, p      & [key]                          & Display the value for a key. Default is all keys. \\ \hline
-  quit          &                                & Quit proq (without saving anything).\\ \hline
-  read, r       & [script{\_}file]               & Read commands from file. Will look for script{\_}file
-                                                   and script{\_}file.proq in all directories listed in
-                                                   option scriptpath. \\ \hline
-  readlib, rl   & [library{\_}file]              & Read partial charges from Q library file.\\ \hline
-  repel         & [subset1 [subset2]] & Calculate electrostatic potential between atoms in subsets
-                                        1 and 2 (Coulomb potential with e=80)\\ \hline
-  save, sa      & [file{\_}name]                 & Write pdb file from memory. The extension .pdb will
-                                                   be filled in by the program if omitted.\\ \hline
-  set, s        & [key [value]]                  & Set a key to a value. \\ \hline
-  status, st    &                                & Display the number of fragments, residues and atoms loaded. \\ \hline
-  subset, sub   & [name [atomset [,atomset...]]] & Store a definition of a subset of atoms for later
-                                                   use. Atomsets are one of residue name, $e.g.$ LYS
-                                                   residue name:atom name, $e.g.$ LYS:NZ residue number,
-                                                   $e.g.$ 13, residue number-residue number, $e.g.$ 13-73,
-                                                   residue number:atom name, $e.g.$ 74:CA, residue
-                                                   number-residue:atom name, $e.g.$ 13-73:CA, name of
-                                                   existing  subset, e,g. my{\_}set name of existing
-                                                   subset:atom name Ex. my{\_}set:N. Residue and atom
-                                                   names may be given as (PERL) regular expressions.
-                                                   For example AR[G+]:N.* gives all nitrogen atoms in
-                                                   ARG and AR+ residues. Note on regexps: Plus signs
-                                                   (+) are escaped by the program.\\ \hline
-  system, !     & [command]                      & Execute operating system command, $e.g.$ system ls*pdb. \\ \hline
-\end{longtable}
+%\begin{longtable}{|p{60pt}|p{60pt}|p{250pt}|}
+%\caption{proq command reference} \label{tab:proq_c_r}\\
+%\hline
+%\sc{\textbf{Command, alias}} & \sc{\textbf{Arguments (optional)}}
+%& \sc{\textbf{Description}}
+%\endhead
+%\hline
+%  chargeonoff, onoff, onf & [r1[-r2]] & Flip the charged state of residues with numbers r1 through
+%                                        r2. $E.g.$ all GLU will be renamed to GL- and vice versa.\\ \hline
+%  centre, ctr   & [centre{\_}name [x y z]]       & Add a reference point (like an atom) at (x,y,z).
+%                                                   An atom named center{\_}name is created in a
+%                                                   pseudo-residue called CTR and numbered 0. Use show
+%                                                   CTR to list all defined centers. Centers are not
+%                                                   written with save. \\ \hline
+%  charge, ch    & [atom{\_}descr. [charge]]      & Define the electrostatic charge for all atoms that
+%                                                   match atom{\_}descr. atom{\_}descr is one of
+%                                                   residue{\_}name:atom{\_}name or
+%                                                   residue{\_}number:atom{\_}name. When charges are
+%                                                   evaluated, a residue{\_}number:atom{\_}name
+%                                                   definition overrides a residue{\_}name:atom{\_}name
+%                                                   definition. Regular expressions are not allowed.\\ \hline
+%  chargeform, cf & [on{\_}name [off{\_}name]]    & Define the residue names for the charged and neutral
+%                                                   form of an amino acid. These pairs are used for
+%                                                   switching charges on and off with chargeon and
+%                                                   chargeoff. Ex. chargeform LY+ LYS. Charges must be
+%                                                   assigned to atoms ($e.g.$ LYS:NZ and LY+:NZ) for
+%                                                   calculations with charges to work!\\ \hline
+%  chargeon, on  & [r1[-r2]] [f3....]             & Switch names of the specified (by number) residues
+%                                                   to their charged form. Only residues with a charged
+%                                                   form defined are affected.\\ \hline
+%  chdir, cd     & [newdir]                       & Changes working directory.\\ \hline
+%  clear         &                                & Clear the loaded PDB file from memory. \\ \hline
+%  disttab, dist & [subset1 [subset2]] & Calculate distances between atoms in subsets 1 and 2 and
+%                                        display in a table. The number of atoms in subset2 should
+%                                        be $<$10 for neat screen output. \\ \hline
+%  env           & [option{\_}name]               & Display option settings. Default: all options. \\ \hline
+%  help, h, ?    & [command]                      & Display help for a command. Default is all commands.\\ \hline
+%  listchargeform &                               & List all pairs of charged and neutral residue names.\\ \hline
+%  listfragment, lf & [f1[-f2]]                   & List residue numbers in specified fragments.
+%                                                   Default: all fragments.\\ \hline
+%  listpdb, lp   &                                & Same as save but writes to stdout.\\ \hline
+%  listsequence, listseq, ls & [f1[-f2]] [f3....] & List residue names in specified fragments. Default:
+%                                                   all fragments.\\ \hline
+%  listsubset    &                                & List all subset definitions.\\ \hline
+%  load, lo      & [pdb{\_}file]                  & Load a pdb file into memory. The extension .pdb may be omitted.\\ \hline
+%  loadrestart, lore &  [restart{\_}file]         & Loads new coordinates for a previously loaded pdb
+%                                                   file from a \textbf{qdyn} restart file. PDB file must have
+%                                                   same number of atoms and same numbering as restart
+%                                                   file, so use only pdb files with hydrogens created
+%                                                   by \textbf{qprep}.\\ \hline
+%  midpoint, mid & [subset]                       & Calculate the midpoint (centre of the smallest
+%                                                   possible that encompasses all atoms in the subset).
+%                                                   Limited to 50 atoms.\\ \hline
+%  option, o     & [option{\_}name] [value]       & Set options. \\ \hline
+%  print, p      & [key]                          & Display the value for a key. Default is all keys. \\ \hline
+%  quit          &                                & Quit proq (without saving anything).\\ \hline
+%  read, r       & [script{\_}file]               & Read commands from file. Will look for script{\_}file
+%                                                   and script{\_}file.proq in all directories listed in
+%                                                   option scriptpath. \\ \hline
+%  readlib, rl   & [library{\_}file]              & Read partial charges from Q library file.\\ \hline
+%  repel         & [subset1 [subset2]] & Calculate electrostatic potential between atoms in subsets
+%                                        1 and 2 (Coulomb potential with e=80)\\ \hline
+%  save, sa      & [file{\_}name]                 & Write pdb file from memory. The extension .pdb will
+%                                                   be filled in by the program if omitted.\\ \hline
+%  set, s        & [key [value]]                  & Set a key to a value. \\ \hline
+%  status, st    &                                & Display the number of fragments, residues and atoms loaded. \\ \hline
+%  subset, sub   & [name [atomset [,atomset...]]] & Store a definition of a subset of atoms for later
+%                                                   use. Atomsets are one of residue name, $e.g.$ LYS
+%                                                   residue name:atom name, $e.g.$ LYS:NZ residue number,
+%                                                   $e.g.$ 13, residue number-residue number, $e.g.$ 13-73,
+%                                                   residue number:atom name, $e.g.$ 74:CA, residue
+%                                                   number-residue:atom name, $e.g.$ 13-73:CA, name of
+%                                                   existing  subset, e,g. my{\_}set name of existing
+%                                                   subset:atom name Ex. my{\_}set:N. Residue and atom
+%                                                   names may be given as (PERL) regular expressions.
+%                                                   For example AR[G+]:N.* gives all nitrogen atoms in
+%                                                   ARG and AR+ residues. Note on regexps: Plus signs
+%                                                   (+) are escaped by the program.\\ \hline
+%  system, !     & [command]                      & Execute operating system command, $e.g.$ system ls*pdb. \\ \hline
+%\end{longtable}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3851,314 +3871,317 @@ bold face:
 \newpage
 
 
-\begin{table}[h]
-\caption{Further options for proq:}
-\begin{center}
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- quiet:                    &  suppress messages (if not blank or zero).\\
- overwrite{\_}warn:        &  ask before overwriting file when saving (if not blank or zero).\\
- scriptpath:               &  semicolon-separated list of paths, in order of priority, to search for scripts.\\
- editor:                   &  name (and path if necessary) to editor called by edit command.\\
- edit{\_}in{\_}background: &  if set, launches editor in background and returns immediately (UNIX only!).\\
- repel:                    &  name (and path if necessary) of the repel program.\\
- disttab:                  &  name (and path if necessary) of the disttab  program.\\
- midpoint:                 &  name (and path if necessary) of the midpoint program.\\
-\hline
-\end{tabularx}
-\end{center}
-\end{table}
+%\begin{table}[h]
+%\caption{Further options for proq:}
+%\begin{center}
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% quiet:                    &  suppress messages (if not blank or zero).\\
+% overwrite{\_}warn:        &  ask before overwriting file when saving (if not blank or zero).\\
+% scriptpath:               &  semicolon-separated list of paths, in order of priority, to search for scripts.\\
+% editor:                   &  name (and path if necessary) to editor called by edit command.\\
+% edit{\_}in{\_}background: &  if set, launches editor in background and returns immediately (UNIX only!).\\
+% repel:                    &  name (and path if necessary) of the repel program.\\
+% disttab:                  &  name (and path if necessary) of the disttab  program.\\
+% midpoint:                 &  name (and path if necessary) of the midpoint program.\\
+%\hline
+%\end{tabularx}
+%\end{center}
+%\end{table}
 
-\begin{table}[h]
-\caption{mdsh - input preparation shell}
-\begin{center}
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function   &   Interactive, shell-like program for creating
-                sequences of Qdyn input files and a command file for running them.
-                Mdsh can import existing input files, modify settings using keywords,
-                generate sequences of input files with varying lambda values for
-                perturbation simulations. It can also be used to easily set up a
-                simulation by asking a series of questions. Mdsh script files are
-                useful for managing standardized simulation protocols.\\ \hline
- Input      &   interactive commands.\\\hline
- Output     &   interactive output,Qdyn input files, command file ($e.g.$ C shell script).\\ \hline
- Usage      &   \verb"mdsh"\\\hline
- notes      &   Enter \verb"help" to show a list of commands.\\ \hline
-\end{tabularx}
-\end{center}
-\end{table}
 
-Each element of the Qdyn input file is associated with a keyword
-in mdsh. The set command changes the values. The keywords in mdsh
-are identical to those in the Qdyn input file, except in the cases
-listed in the following table:
+%\subsubsection{\textbf{mdsh}}
 
-\begin{table}[h]
-\begin{center}
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- \textbf{Qdyn input file}[files] & \textbf{mdsh}\\ \hline
- topology   &   topologyfile\\ \hline
- restart    &   restartfile\\ \hline
- final      &   finalfile\\ \hline
- trajectory &   trajectoryfile\\ \hline
- energy     &   energyfile\\ \hline
- fep        &   fepfile\\ \hline
- restraint  &   restraintfile\\ \hline
-\end{tabularx}
-\end{center}
-\end{table}
+%\begin{table}[h]
+%\caption{mdsh - input preparation shell}
+%\begin{center}
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function   &   Interactive, shell-like program for creating
+%                sequences of \textbf{qdyn} input files and a command file for running them.
+%                Mdsh can import existing input files, modify settings using keywords,
+%                generate sequences of input files with varying lambda values for
+%                perturbation simulations. It can also be used to easily set up a
+%                simulation by asking a series of questions. Mdsh script files are
+%                useful for managing standardized simulation protocols.\\ \hline
+% Input      &   interactive commands.\\\hline
+% Output     &   interactive output,\textbf{qdyn} input files, command file ($e.g.$ C shell script).\\ \hline
+% Usage      &   \verb"mdsh"\\\hline
+% notes      &   Enter \verb"help" to show a list of commands.\\ \hline
+%\end{tabularx}
+%\end{center}
+%\end{table}
 
-Data items may be more than one, like $e.g.$ posrestraints. To enter
-a multi-line value, use backslash ($\backslash$) at the end of a
-line to continue with more lines.
+%Each element of the \textbf{qdyn} input file is associated with a keyword
+%in mdsh. The set command changes the values. The keywords in mdsh
+%are identical to those in the \textbf{qdyn} input file, except in the cases
+%listed in the following table:
 
-A mdsh session to set up a simple simulation is shown below. User
-input is shown in bold face.
+%\begin{table}[h]
+%\begin{center}
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% \textbf{\textbf{qdyn} input file}[files] & \textbf{mdsh}\\ \hline
+% topology   &   topologyfile\\ \hline
+% restart    &   restartfile\\ \hline
+% final      &   finalfile\\ \hline
+% trajectory &   trajectoryfile\\ \hline
+% energy     &   energyfile\\ \hline
+% fep        &   fepfile\\ \hline
+% restraint  &   restraintfile\\ \hline
+%\end{tabularx}
+%\end{center}
+%\end{table}
 
-\begin{longtable}{|p{145pt} p{260pt}|}
-\hline
- mdsh$>$\textbf{set basename test}   & \\
- set                                 &  : Set key basename to test.\\
- mdsh$>$\textbf{set subname \_1\_}   &  \\
- set                                 &  : Set key subname to \_1\_.\\
- mdsh$>$\textbf{ask}                 &  \\
- ask                                 &  : Enter values for parameters or press enter to cancel.\\
- ask                                 &  : set step \textbf{10000}\\
- ask                                 &  : set temp \textbf{100}\\
- ask                                 &  : set nb{\_}update \textbf{50}\\
- ask                                 &  : set rcpp \textbf{10}\\
- ask                                 &  : set rcww \textbf{10}\\
- ask                                 &  : set rcpw \textbf{10}\\
- ask                                 &  : set rcq \textbf{99}\\
- ask                                 &  : set shake{\_}solvent \textbf{on}\\
- ask                                 &  : set topologyfile \textbf{complex.top}\\
- ask                                 &  : set trajectoryflag \textbf{25}\\
- ask                                 &  : set energyflag \textbf{0}\\
- ask                                 &  : set outputflag \textbf{10}\\
- ask                                 &  : set fepfile \textbf{complex.fep}\\
- ask                                 &  : set lambdas \textbf{1}\\
- mdsh$>$\textbf{make}                & \\
- mdsh$>$set temp \textbf{100}        & \\
- set                                 &  : Set key temp to 100. \\
- mdsh$>$\textbf{make}                & \\
- mdsh$>$set temp \textbf{300}        & \\
- set                                 &  : Set key temp to 300.\\
-mdsh$>$\textbf{make}                 & \\
-mdsh$>$\textbf{make}                 & \\
-mdsh$>$\textbf{make}                 & \\
-mdsh$>$\textbf{quit}                 & \\
-\hline
-\end{longtable}
+%Data items may be more than one, like $e.g.$ posrestraints. To enter
+%a multi-line value, use backslash ($\backslash$) at the end of a
+%line to continue with more lines.
 
-\textbf{mdsh commands}
-\begin{longtable}{|p{90pt}|p{75pt}|p{230pt}|}
-\hline \sc{\textbf{Command, alias}} & \sc{\textbf{Arguments
-(optional)}} & \sc{\textbf{Description}} \\ \hline
-\endhead
-\hline
- ask          &                  &  Prompts for each missing required parameter (from check command).\\
- Chdir, cd    & [newdir]         &  Change working directory.\\
- Check, c     &                  &  Check that all necessary keys for make are set, report missing keys.\\
- Edit         & [file]           &  Launch and editor to edit a file.\\
- Env          & [option{\_}name] &  Display specified option(s). Default: all.\\
- fake, f      & [stepname]       &  Same as make but writes to standard output rather than to files.\\
- help, h, ?   & [command]        &  Display help for a command. Default: all commands.\\
- make, m      & [stepname]       &  Make a single input file and append commands to a comfile.\\
- makelist, ml & [$\lambda$ -list{\_}file]    &  Make a series of input files (and command file entries) based on $\lambda$
-                                    values in $\lambda$-list{\_}file. The default $\lambda$-list{\_}file is [subname].ll
-                                    Current directory and all directories listed in option script{\_}path are
-                                    searched for$\lambda$-list files.\\
- option, o    & [option{\_}name [value]] &  Set options.\\
- print, p     & [key]            &  Display the value for a key. Default: all keys.\\
- quit, q      &                  &  Quit mdsh (without saving anything!).\\
- read, r      & [file]           &  Read commands from file.\\
- reverselambdas, rl & [infile [outfile]] &  Reverse contents of a lambda-list file (and strip empty lines).\\
- set, s       & [key [value]]    &  Set a key to a value.\\
- system, !    & [command]        &  Execute operating system command.ex.: ! ls*top\\
- unset, u     & [key]            &  Delete a key value.\\
- writelambdas, wl   & [file]     &  Create file with series of lambda values. Input is:\\
-                    &            &  $\lambda$1-start [$\lambda$2-start] [...]\\
-                    &            &  $\lambda$1-step  [$\lambda$2-step] [...]\\
-                    &            &  $\lambda$1-end [$\lambda$2-end] [...]\\
- inp2tab            &            &  Create a table from multiple input files.\\
- tab2inp            &            &  Create multiple input files from a table. The heading of the first column is (the name
-                                    of the) inputfile. All other headings must be keys in any order. This subroutine
-                                    automatically adds the suffix .inp to the filenames in the first column.\\
-\hline
-\end{longtable}
+%A mdsh session to set up a simple simulation is shown below. User
+%input is shown in bold face.
 
-\textbf{Further options for mdsh}\\
-\begin{longtable}{|p{100pt}|p{300pt}|}
-\hline
- quiet:                    & Suppress messages (if not blank or zero).\\
- scriptpath:               & Semicolon-separated list of paths, in order of priority, to search for scripts in.\\
- editor:                   & Name (\& path if necessary) to editor called by edit command.\\
- edit{\_}in{\_}background: & If set, launches editor in background and returns immediately (UNIX only).\\
- md{\_}program:            & Which program to call in the command file. For each value of option md{\_}program
-                             there should be a corresponding option entry containing the path to the program,
-                             $e.g.$ if option md{\_}program is qdyn then option qdyn must be set to the path to
-                             the executable.\\
- inputformat:              & The name of the PERL format (in mdsh{\_}formats.pl) to use for writing input files.\\
- comformat:                & The name of the format to use for writing com files.\\
- importformat:             & The name of the subroutine (in mdsh{\_}import.pl) that imports input files. \\
- comfilepermission:        & The (octal) file permission to set for com files (UNIX only).\\
-                           & Note: you may use expressions of the form  \$options\{optionname\} for option values
-                             to access values of other options, or to modify the existing value. In fact, any
-                             valid PERL expression given in the option value will be evaluated.\\
- Files:                    & The file config.mdsh in the same directory as the program is read at startup.
-                             Typically it will set the scriptpath option to the directory mdsh in the users home
-                             directory. The last command in config.mdsh is typically 'read defaults'. A personal
-                             script with default settings called defaults.mdsh and located in [home dir]/mdsh/
-                             will thus automatically be read at
-                             startup.\\ \hline
-\end{longtable}
+%\begin{longtable}{|p{145pt} p{260pt}|}
+%\hline
+% mdsh$>$\textbf{set basename test}   & \\
+% set                                 &  : Set key basename to test.\\
+% mdsh$>$\textbf{set subname \_1\_}   &  \\
+% set                                 &  : Set key subname to \_1\_.\\
+% mdsh$>$\textbf{ask}                 &  \\
+% ask                                 &  : Enter values for parameters or press enter to cancel.\\
+% ask                                 &  : set step \textbf{10000}\\
+% ask                                 &  : set temp \textbf{100}\\
+% ask                                 &  : set nb{\_}update \textbf{50}\\
+% ask                                 &  : set rcpp \textbf{10}\\
+% ask                                 &  : set rcww \textbf{10}\\
+% ask                                 &  : set rcpw \textbf{10}\\
+% ask                                 &  : set rcq \textbf{99}\\
+% ask                                 &  : set shake{\_}solvent \textbf{on}\\
+% ask                                 &  : set topologyfile \textbf{complex.top}\\
+% ask                                 &  : set trajectoryflag \textbf{25}\\
+% ask                                 &  : set energyflag \textbf{0}\\
+% ask                                 &  : set outputflag \textbf{10}\\
+% ask                                 &  : set fepfile \textbf{complex.fep}\\
+% ask                                 &  : set lambdas \textbf{1}\\
+% mdsh$>$\textbf{make}                & \\
+% mdsh$>$set temp \textbf{100}        & \\
+% set                                 &  : Set key temp to 100. \\
+% mdsh$>$\textbf{make}                & \\
+% mdsh$>$set temp \textbf{300}        & \\
+% set                                 &  : Set key temp to 300.\\
+%mdsh$>$\textbf{make}                 & \\
+%mdsh$>$\textbf{make}                 & \\
+%mdsh$>$\textbf{make}                 & \\
+%mdsh$>$\textbf{quit}                 & \\
+%\hline
+%\end{longtable}
+
+%\textbf{mdsh commands}
+%\begin{longtable}{|p{90pt}|p{75pt}|p{230pt}|}
+%\hline \sc{\textbf{Command, alias}} & \sc{\textbf{Arguments
+%(optional)}} & \sc{\textbf{Description}} \\ \hline
+%\endhead
+%\hline
+% ask          &                  &  Prompts for each missing required parameter (from check command).\\
+% Chdir, cd    & [newdir]         &  Change working directory.\\
+% Check, c     &                  &  Check that all necessary keys for make are set, report missing keys.\\
+% Edit         & [file]           &  Launch and editor to edit a file.\\
+% Env          & [option{\_}name] &  Display specified option(s). Default: all.\\
+% fake, f      & [stepname]       &  Same as make but writes to standard output rather than to files.\\
+% help, h, ?   & [command]        &  Display help for a command. Default: all commands.\\
+% make, m      & [stepname]       &  Make a single input file and append commands to a comfile.\\
+% makelist, ml & [$\lambda$ -list{\_}file]    &  Make a series of input files (and command file entries) based on $\lambda$
+%                                    values in $\lambda$-list{\_}file. The default $\lambda$-list{\_}file is [subname].ll
+%                                    Current directory and all directories listed in option script{\_}path are
+%                                    searched for$\lambda$-list files.\\
+% option, o    & [option{\_}name [value]] &  Set options.\\
+% print, p     & [key]            &  Display the value for a key. Default: all keys.\\
+% quit, q      &                  &  Quit mdsh (without saving anything!).\\
+% read, r      & [file]           &  Read commands from file.\\
+% reverselambdas, rl & [infile [outfile]] &  Reverse contents of a lambda-list file (and strip empty lines).\\
+% set, s       & [key [value]]    &  Set a key to a value.\\
+% system, !    & [command]        &  Execute operating system command.ex.: ! ls*top\\
+% unset, u     & [key]            &  Delete a key value.\\
+% writelambdas, wl   & [file]     &  Create file with series of lambda values. Input is:\\
+%                    &            &  $\lambda$1-start [$\lambda$2-start] [...]\\
+%                    &            &  $\lambda$1-step  [$\lambda$2-step] [...]\\
+%                    &            &  $\lambda$1-end [$\lambda$2-end] [...]\\
+% inp2tab            &            &  Create a table from multiple input files.\\
+% tab2inp            &            &  Create multiple input files from a table. The heading of the first column is (the name
+%                                    of the) inputfile. All other headings must be keys in any order. This subroutine
+%                                    automatically adds the suffix .inp to the filenames in the first column.\\
+%\hline
+%\end{longtable}
+
+%\textbf{Further options for mdsh}\\
+%\begin{longtable}{|p{100pt}|p{300pt}|}
+%\hline
+% quiet:                    & Suppress messages (if not blank or zero).\\
+% scriptpath:               & Semicolon-separated list of paths, in order of priority, to search for scripts in.\\
+% editor:                   & Name (\& path if necessary) to editor called by edit command.\\
+% edit{\_}in{\_}background: & If set, launches editor in background and returns immediately (UNIX only).\\
+% md{\_}program:            & Which program to call in the command file. For each value of option md{\_}program
+%                             there should be a corresponding option entry containing the path to the program,
+%                             $e.g.$ if option md{\_}program is qdyn then option qdyn must be set to the path to
+%                             the executable.\\
+% inputformat:              & The name of the PERL format (in mdsh{\_}formats.pl) to use for writing input files.\\
+% comformat:                & The name of the format to use for writing com files.\\
+% importformat:             & The name of the subroutine (in mdsh{\_}import.pl) that imports input files. \\
+% comfilepermission:        & The (octal) file permission to set for com files (UNIX only).\\
+%                           & Note: you may use expressions of the form  \$options\{optionname\} for option values
+%                             to access values of other options, or to modify the existing value. In fact, any
+%                             valid PERL expression given in the option value will be evaluated.\\
+% Files:                    & The file config.mdsh in the same directory as the program is read at startup.
+%                             Typically it will set the scriptpath option to the directory mdsh in the users home
+%                             directory. The last command in config.mdsh is typically 'read defaults'. A personal
+%                             script with default settings called defaults.mdsh and located in [home dir]/mdsh/
+%                             will thus automatically be read at
+%                             startup.\\ \hline
+%\end{longtable}
 
 \subsubsection{Analysis programs}
 
-\textbf{Qave}\\
+%\textbf{qave}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function:  &  Calculate average energies and RMS deviations from \textbf{qdyn} log files.\\\hline
+% input:     &  \textbf{qdyn} log files.\\\hline
+% output:    &  Energy summary tables like the ones in the log file with average energies and RMS deviations
+%               on stdout. \\\hline
+% usage:     &  \verb"qave [-skip n_skip]logfiles"\\
+%            &  \verb"logfiles: Names of one or more \textbf{qdyn} log files-s,-skip"\\
+%            &  \verb"Ingore the first n_skip energy summaries"\\
+%\hline
+%\end{tabularx}
+
+
+%\textbf{qavetr}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function:  &    Calculate average coordinates and RMS deviations from trajectories.\\\hline
+% input:     &    \textbf{qdyn} trajectory files. The program will prompt for file names. \\\hline
+% output:    &    Co-ordinate file (same format as restart file) with average coordinates and RMS deviations (instead of
+%                 velocities in restart file).\\\hline
+% usage:     &    \verb"Qavetr"\\
+%            &    Enter names of trajectory files, one per line. End with bland line. Then enter the name of the
+%                 co-ordinate file to be created.\\
+%\hline
+%\end{tabularx}
+
+%\textbf{lsextr}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &  Extract ligand-surrounding interaction energies from \textbf{qdyn} log files.\\\hline
+% input:    &  \textbf{qdyn} log files.\\\hline
+% output:   &  Q-atom-surrounding interaction energies to stdout:\\
+%           &  V{\_}LJ   V{\_}el.\\\hline
+% usage:    &  \verb"lsextr logfiles"\\
+%           &  \verb"logfiles:    Names of one or more \textbf{qdyn} log files"\\
+%\hline
+%\end{tabularx}
+
+%\textbf{ineff}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function:  &   Compute statistical inefficiency of a time series of correlated data while dividing the series into
+%                blocks of increasing size. Use the output to plot the inefficiency vs the block size, extrapolate to
+%                infinity and use to approximate the error of the mean.\\\hline
+% input:     &   text file, optionally multiple columns.\\\hline
+% output:    &   summary to stderr and table of inefficiency values to stdout:n{\_}blocks points{\_}per{\_}block
+%                1/points{\_}per{\_}block variance ineffsummary to stderr.\\\hline
+% usage:     &   \verb"ineff [-q] [filename] [column] [skip] [read]"\\
+%            &   \verb"filename:   text file with columns of (white"\\
+%            &   \verb"space-separated) numeric data"\\
+%            &   \verb"column:   column to work on (1 for first)"\\
+%            &   \verb"skip:    number of lines to skip at beginning of file"\\
+%            &   \verb"read: number of lines (data points) to read"\\
+%            &   \verb"-q:    suppress table output on stdout"\\
+%            &   \verb"All arguments are optional. The program will prompt for"\\
+%            &   \verb"missing arguments."\\
+%\hline
+%\end{tabularx}
+
+%\textbf{tstart}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &   Find a starting point in a time series after which the average value is stable.\\\hline
+% input:    &   text file, optionally multiple columns.\\\hline
+% output:   &   \\\hline
+% usage:    &   \verb"tstart [-q] [filename] [column] [skip] [read]"\\
+%           &   \verb"filename:  text file with columns of (white "\\
+%           &   \verb"space-separated) numeric data"\\
+%           &   \verb"column:   column to work on (1 for first)"\\
+%           &   \verb"skip:    number of lines to skip at beginning of file"\\
+%           &   \verb"read: number of lines (data points) to read"\\
+%           &   \verb"-q:    suppress table output on stdout"\\
+%           &   \verb"All arguments are optional. The program will prompt for"\\
+%           &   \verb"missing arguments".\\
+%\hline
+%\end{tabularx}
+
+%\subsubsection{Other utility programs}
+
+%\textbf{mkfep}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &   Create a basic FEP file with a list of Q-atoms.\\\hline
+% input:    &   Topology numbers of first and last atom to be designated as q-atoms (on command line).\\\hline
+% output:   &   FEP file.\\\hline
+% usage:    &   \verb"mkfep first last > simple.fep"\\
+%\hline
+%\end{tabularx}
+
+
+%\textbf{bone}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &   Compress log files, can be used as a filter to compress \textbf{qdyn} output on the fly. Bone separates numbers
+%               (flesh) from lines of text and stores the numbers in a binary file and the text templates (bones) in a
+%               template library file. Compression ratio is typically 1:5.\\\hline
+% input:    &   \textbf{qdyn} log files (or any text file with repeated similar lines).\\\hline
+% output:   &   Binary data file, template library file.\\\hline
+% usage:    &   \verb"\textbf{qdyn} test.inp | bone > test.log.bin"\\
+%           &   or\\
+%           &   \verb"bone uncompressed.log"\\\hline
+% notes:    &   Use bone -h to get information on options. Never remove the library file (bonelib.dat) or you won't
+%               be able to decompress!\\
+% \hline
+%\end{tabularx}
+
+%\textbf{enob}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &   The reverse of bone: decompress log files. Enob can also extract selected lines,
+%               $e.g.$ Q-atom energies, from compressed files.\\\hline
+% input:    &   Files compressed with bone, template library file.\\\hline
+% output:   &   Text file (to stdout).\\\hline
+% usage:    &   \verb"enobtest.log.bin | more"\\
+%           &   or\\
+%           &   \verb"enob -u compressed.bin"\\\hline
+% notes:    &   Use enob -h to get information on options.\\
+%\hline
+%\end{tabularx}
+
+%\textbf{re2pdb}\\
+%\begin{tabularx}{\textwidth}{|l|X|}
+%\hline
+% function: &   Easily convert restart files to PDB files.\\\hline
+% input:    &   topology file name, restart file name(s) on command line.\\\hline
+% output:   &   PDB files.\\\hline
+% usage:    &   \verb"re2pdb molecule.top *re"\\\hline
+% notes     &   Use re2pdb -h to get information on options.\\
+%\hline
+%\end{tabularx}
+
+\textbf{qdum}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function:  &  Calculate average energies and RMS deviations from Qdyn log files.\\\hline
- input:     &  Qdyn log files.\\\hline
- output:    &  Energy summary tables like the ones in the log file with average energies and RMS deviations
-               on stdout. \\\hline
- usage:     &  \verb"Qave [-skip n_skip]logfiles"\\
-            &  \verb"logfiles: Names of one or more Qdyn log files-s,-skip"\\
-            &  \verb"Ingore the first n_skip energy summaries"\\
-\hline
-\end{tabularx}
-
-
-\textbf{Qavetr}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function:  &    Calculate average coordinates and RMS deviations from trajectories.\\\hline
- input:     &    Qdyn trajectory files. The program will prompt for file names. \\\hline
- output:    &    Co-ordinate file (same format as restart file) with average coordinates and RMS deviations (instead of
-                 velocities in restart file).\\\hline
- usage:     &    \verb"Qavetr"\\
-            &    Enter names of trajectory files, one per line. End with bland line. Then enter the name of the
-                 co-ordinate file to be created.\\
-\hline
-\end{tabularx}
-
-\textbf{lsextr}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &  Extract ligand-surrounding interaction energies from Qdyn log files.\\\hline
- input:    &  Qdyn log files.\\\hline
- output:   &  Q-atom-surrounding interaction energies to stdout:\\
-           &  V{\_}LJ   V{\_}el.\\\hline
- usage:    &  \verb"lsextr logfiles"\\
-           &  \verb"logfiles:    Names of one or more Qdyn log files"\\
-\hline
-\end{tabularx}
-
-\textbf{ineff}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function:  &   Compute statistical inefficiency of a time series of correlated data while dividing the series into
-                blocks of increasing size. Use the output to plot the inefficiency vs the block size, extrapolate to
-                infinity and use to approximate the error of the mean.\\\hline
- input:     &   text file, optionally multiple columns.\\\hline
- output:    &   summary to stderr and table of inefficiency values to stdout:n{\_}blocks points{\_}per{\_}block
-                1/points{\_}per{\_}block variance ineffsummary to stderr.\\\hline
- usage:     &   \verb"ineff [-q] [filename] [column] [skip] [read]"\\
-            &   \verb"filename:   text file with columns of (white"\\
-            &   \verb"space-separated) numeric data"\\
-            &   \verb"column:   column to work on (1 for first)"\\
-            &   \verb"skip:    number of lines to skip at beginning of file"\\
-            &   \verb"read: number of lines (data points) to read"\\
-            &   \verb"-q:    suppress table output on stdout"\\
-            &   \verb"All arguments are optional. The program will prompt for"\\
-            &   \verb"missing arguments."\\
-\hline
-\end{tabularx}
-
-\textbf{tstart}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   Find a starting point in a time series after which the average value is stable.\\\hline
- input:    &   text file, optionally multiple columns.\\\hline
- output:   &   \\\hline
- usage:    &   \verb"tstart [-q] [filename] [column] [skip] [read]"\\
-           &   \verb"filename:  text file with columns of (white "\\
-           &   \verb"space-separated) numeric data"\\
-           &   \verb"column:   column to work on (1 for first)"\\
-           &   \verb"skip:    number of lines to skip at beginning of file"\\
-           &   \verb"read: number of lines (data points) to read"\\
-           &   \verb"-q:    suppress table output on stdout"\\
-           &   \verb"All arguments are optional. The program will prompt for"\\
-           &   \verb"missing arguments".\\
-\hline
-\end{tabularx}
-
-\subsubsection{Other utility programs}
-
-\textbf{mkfep}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   Create a basic FEP file with a list of Q-atoms.\\\hline
- input:    &   Topology numbers of first and last atom to be designated as q-atoms (on command line).\\\hline
- output:   &   FEP file.\\\hline
- usage:    &   \verb"mkfep first last > simple.fep"\\
-\hline
-\end{tabularx}
-
-
-\textbf{bone}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   Compress log files, can be used as a filter to compress Qdyn output on the fly. Bone separates numbers
-               (flesh) from lines of text and stores the numbers in a binary file and the text templates (bones) in a
-               template library file. Compression ratio is typically 1:5.\\\hline
- input:    &   Qdyn log files (or any text file with repeated similar lines).\\\hline
- output:   &   Binary data file, template library file.\\\hline
- usage:    &   \verb"Qdyn test.inp | bone > test.log.bin"\\
-           &   or\\
-           &   \verb"bone uncompressed.log"\\\hline
- notes:    &   Use bone -h to get information on options. Never remove the library file (bonelib.dat) or you won't
-               be able to decompress!\\
- \hline
-\end{tabularx}
-
-\textbf{enob}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   The reverse of bone: decompress log files. Enob can also extract selected lines,
-               $e.g.$ Q-atom energies, from compressed files.\\\hline
- input:    &   Files compressed with bone, template library file.\\\hline
- output:   &   Text file (to stdout).\\\hline
- usage:    &   \verb"enobtest.log.bin | more"\\
-           &   or\\
-           &   \verb"enob -u compressed.bin"\\\hline
- notes:    &   Use enob -h to get information on options.\\
-\hline
-\end{tabularx}
-
-\textbf{re2pdb}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   Easily convert restart files to PDB files.\\\hline
- input:    &   topology file name, restart file name(s) on command line.\\\hline
- output:   &   PDB files.\\\hline
- usage:    &   \verb"re2pdb molecule.top *re"\\\hline
- notes     &   Use re2pdb -h to get information on options.\\
-\hline
-\end{tabularx}
-
-\textbf{Qdum}\\
-\begin{tabularx}{\textwidth}{|l|X|}
-\hline
- function: &   Test Qdyn input files quickly.\\\hline
- input:    &   Qdyn input file.\\\hline
+ function: &   Test \textbf{qdyn} input files quickly.\\\hline
+ input:    &   \textbf{qdyn} input file.\\\hline
  output:   &   Log file, restart file.\\\hline
- usage:    &   \verb"Qdum4 test.inp"\\\hline
- notes:    &   Qdum is a version of Qdyn without the dynamics loop. It reads all input, initiates the
+ usage:    &   \verb"qdum test.inp"\\\hline
+ notes:    &   \textbf{qdum} is a version of \textbf{qdyn} without the dynamics loop. It reads all input, initiates the
                simulation, writes a restart file and terminates. Qdum is build from the same source
-               code as Qdyn.\\
+               code as \textbf{qdyn}.\\
 \hline
 \end{tabularx}
 
@@ -4176,23 +4199,23 @@ and operating system.
 
 \subsubsection{Compilers}
 A Fortran90 compiler is required to build the main programs
-(Qdyn5, Qprep5, Qfep5, Qdum5, Qcalc5).
+(\textbf{qdyn}, \textbf{qprep}, \textbf{qfep}, \textbf{qdum} , \textbf{qcalc}).
 
 A Fortran90 compiler and a MPI library is required to build the
-parallel version of Qdyn5.
+parallel version of \textbf{qdyn}.
 
-A Fortran77 compiler is required to build some helper programs
-called by proq (disttab, repel, midpoint).
+%A Fortran77 compiler is required to build some helper programs
+%called by proq (disttab, repel, midpoint).
 
 A C compiler is required to build some of the analysis programs
 (tstart, ineff).
 
-A PERL interpreter is required to run most of the utility programs
-(bone, enob, lsextr, mdsh, mkfep, proq, Qave).
+%A PERL interpreter is required to run most of the utility programs
+%(bone, enob, lsextr, mdsh, mkfep, proq, Qave).
 
 \subsection{Installation}
 The following components, available from the Q web site
-http://xray.bmc.uu.se/~aqwww/Q, are required to use Q:
+\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
 \begin{enumerate}
 \item   Either executable images (available for some popular
         platforms) or source code (to compile on your own system).
