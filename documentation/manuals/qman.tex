@@ -1,54 +1,54 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main Latex Settings for Document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[a4paper,11pt]{article}
 \usepackage[latin1]{inputenc}
 \usepackage[dvips,pdftex]{graphicx}
-\usepackage [small]{caption2} %Set text in Figure captions
-\usepackage{parskip}          %ger noindent och snygga styckeavstånd
+\usepackage[small]{caption}  %Set text in Figure captions
+\usepackage{parskip}         %does noindent in general and nice margin distance
 \usepackage{fancyhdr}
-\usepackage{subfigure}        %fixar att stapla bilder
+\usepackage{subfigure}       %fix where figures go
 \usepackage{amsmath}
 \usepackage{courier}
-\usepackage{longtable}        %fix long tables over various pages.
+\usepackage{longtable}       %fix long tables over various pages.
 \usepackage{supertabular}
-\usepackage{tabularx}         %fix long tables
-\usepackage{multirow}         %fix nested tables
+\usepackage{tabularx}        %fix long tables
+\usepackage{multirow}        %fix nested tables
 \usepackage{bigstrut}
 \newcommand{\dirfig}{./pictures}
 \usepackage{hyperref}
-%\usepackage[linkbordercolor=1 1 1]{hyperref}
-%\usepackage{epsfig}
-\pagestyle{fancy} %\setlength{\headheight}{13.6pt}
-%\newcommand{\topcaption}{\setlength{\abovecaptionskip}{0pt}\setlength{\belowcaptionskip}{10pt}\caption}
-%\pagestyle{plain}
-
-%\includeonly{pdf2ps_omslag.ps}
-
-%Ta bort detta alt ändra det så att det blir som ett korrekt uppslag ska vara.
+\usepackage{gensymb}
+\usepackage{titlesec}
+\pagestyle{fancy}
+%Overrides all other setting to show what we want.
 \textwidth = 430pt \textheight = 640pt \voffset = -50pt
 \hoffset=-20pt
-%\linespread{1.6}
-
 \setcounter{page}{0}
 \renewcommand{\thesection}{\Alph{section}}
 
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% The document begins here with the title page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
-\setcaptionmargin{0.5cm} %Fixar bildtext
+\setcaptionmargin{0.5cm} %Fix caption margins
 %\setlength{\oddsidemargin}{0.75in} % odd page left margin
 %\setlength{\evensidemargin}{0.75in} % even page left margin
-
 \thispagestyle{empty}
 \begin{figure}[h]
 \begin{center}
 \resizebox{8cm}{!}{\includegraphics[scale=0.7]{\dirfig/qlogo.png}}
 \end{center}
 \end{figure}
-
 \begin{center}
 %\Huge{M}\huge{ANUAL}\\
 %\huge{FOR}\\
 \huge{\textbf{our}} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
 \huge{PACKAGE}\\% \Huge{Q}\\
-
 \vspace{0.7cm}
 \large{Version 5.7\\
 February 6, 2015}\\
@@ -56,12 +56,29 @@ February 6, 2015}\\
 \large{\url{http://xray.bmc.uu.se/~aqwww/q}}
 \end{center}
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Table of contents
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \newpage
 
 \tableofcontents
 
 \newpage
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Preface
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{PREFACE}
 Q started its development sometime in the nineteen nineties originally
 by  Johan \AA  qvist,  and since  then a  list  of collaborators  have
@@ -81,6 +98,14 @@ on  how to  obtain the  code  can be  found online  at the  Q-website:
 
 %History of logo and the many possible identities of what Q stands for.
 
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Introduction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INTRODUCTION} 
 Molecular  dynamics  (MD)  simulations  can  be  used  to  sample  the
 thermally   accessible  regions   of  conformational   space  using a
@@ -141,15 +166,67 @@ especially useful when simulating large systems, $e.g.$ the
 systems that are used with the periodic boundary condition.
 \end{itemize}
 
-%Old stuff:
-%The program is thus not intended for simulations of, let's say,
-%the dynamics of an entire protein in a large periodic box of
-%solvent. A main reason for this restriction of the scope is to
-%keep things as simple and efficient as possible and, since the
-%focus is on free energy calculations, to allow simulations that
-%take into account long-range electrostatics properly without the
-%use of cut-offs.
 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Installation and Setup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{INSTALLATION AND SETUP}
+\subsection{System requirements} 
+Q 5.7 can  be compiled and run  in Windows 7, Mac OSX  and Linux.  The
+parallel  \textbf{qdynp}   version  of   the  main   dynamics  program
+\textbf{qdyn} has been greatly improved from that of version 5.0 which
+was  using  an older  Message  Passing  Interface (MPI)  standard  and
+one-sided communication  instead of the  more portable point  to point
+communication.
+
+The memory requirements vary with the size of the simulated system but
+are, in general, modest.  A system of  18 Å radius with a cutoff of 10
+Å  in non-bonded  interactions uses  about  3 to  7 Mb  of RAM  memory
+depending slightly on the computer and operating system.
+
+\subsubsection{Compilers} 
+A  modern Fortran  compiler is  required  to build  the main  programs
+(\textbf{qdyn},   \textbf{qprep},   \textbf{qfep},   \textbf{qdum}   ,
+\textbf{qcalc}).
+
+A  Fortran compiler  and  an  MPI library  is  required  to build  the
+parallel version of \textbf{qdynp}.
+
+\subsection{Installation}
+The following components, available from the Q web site
+\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
+\begin{enumerate}
+\item Executable images (available for some popular platforms).
+\item Or source code (to compile on your own system).
+\item Force field parameter and library files.
+\end{enumerate}
+Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
+and download the files to this directory.
+
+\subsubsection{Installing executable images}
+\textbf{Windows 7}
+
+\textbf{Linux}
+
+\textbf{Mac OSX}
+
+\subsubsection{Building the programs from source code}
+\textbf{Windows 7}
+
+\textbf{Linux} 
+
+\textbf{Mac OSX}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main user guide.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{USER GUIDE}
 The  structure  of  Q  resembles  that of  many  other  MD  simulation
 programs.  The main  program is  \textbf{qdyn} which  carries out  the
@@ -201,7 +278,7 @@ library entries.
 \item Coordinates for all (non-solvent) atoms in the form of a PDB file.
 \end{itemize}
 
-\subsubsection{Preparing coordinates} The PDB file format
+\subsubsection{\textbf{qprep} - Preparing coordinates} The PDB file format
 \cite{pdb} used for co-ordinate input to \textbf{qprep} is a fixed format,
 $i.e.$, the number of spaces between columns of data is significant
 and tab characters are not permitted. Case is significant -
@@ -854,6 +931,24 @@ the [\textbf{wall{\_}restraints}] section is not used in combination with
 periodic boundary conditions. One can choose between harmonic or Morse
 potential.
 
+As one last possibility of restraints in Q, the [\textbf{angle{\_}restraints}]
+ are a specific type of force, based on the harmonic angle forces present in 
+any force field. It can be useful, for instance, if you want to avoid an 
+aspartate bound to a metal center to not be bidentally coordinated. In order 
+to define an angle restraint, one has to define three atoms, as follows:
+
+\begin{center}
+\begin{tabularx}{\textwidth}{|l l l l l X|}
+  \hline
+  \multicolumn{6}{|l|}{[angle{\_}restraints]} \\
+  133 & 132 & 3400 & 180.0 & 3.0 & 2 \\ \hline
+\end{tabularx}
+\end{center}
+
+In this case, a harmonic angle force is applied between the atoms 133, 132 and 3400,
+ in order to enforce a 180\degree, with 3.0 kcal$\cdot $mol$^{-1}\cdot ${degrees}$^{-2}$
+at the state 2.
+
 \subsubsection{\textbf{qdyn} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
@@ -885,6 +980,7 @@ information about the data in each section is found in the section
   \hline steps                    & 10000        & Number of steps \\
   \hline stepsize                 & 2.0          & Step size (fs) \\
   \hline temperature              & 300          & Temperature (K) \\
+  \hline thermostat               & berendsen    & Thermostat used (see pg. X for more info) \\
   \hline bath{\_}coupling         & 10           & Temperature bath relaxation time (fs) \\
   \hline random{\_}seed           & 57643        & Seed for random number generator (only for initial vel.) \\
   \hline initial{\_}temperature   & 300          & Temperature (K) for Maxwell-distributed initial velocities\\
@@ -1598,27 +1694,26 @@ atoms. By choosing $\mu $ and $\eta $ differently, H$_{ij}$ can
 either be a constant, an exponential function or a gaussian
 function.
 
-The EVB method allows calibration of simulated reference reactions
-to experimental data obtained from gas-phase or solution
-experiments. The two EVB parameters H$_{ij}$ (mostly A$_{ij})$ and
-$\Delta \alpha _{ij}$ are varied until the calculated profile and
-the experimental data coincide. $\Delta \alpha _{ij}$ is a
-constant energy shift between the states that represents their
-difference in heat of formation, which is not included in the
-force field. Generalised, the $\Delta \alpha _{ij}$ parameter
-determines the $\Delta $G$^{\circ}$ level and H$_{ij}$ regulates
-the degree of mixing of the states at the transition state $i.e.$
-the $\Delta$G$^{\ddag }$ level.
+The EVB method allows calibration  of simulated reference reactions to
+experimental data obtained from gas-phase or solution experiments. The
+two  EVB  parameters H$_{ij}$  (mostly  A$_{ij})$  and $\Delta  \alpha
+_{ij}$ are  varied until the  calculated profile and  the experimental
+data  coincide.  $\Delta \alpha  _{ij}$  is  a constant  energy  shift
+between  the  states  that  represents their  difference  in  heat  of
+formation, which is not included  in the force field. Generalized, the
+$\Delta \alpha  _{ij}$ parameter  determines the  $\Delta $G$^{\circ}$
+level and H$_{ij}$ regulates the degree of mixing of the states at the
+transition state $i.e.$ the $\Delta$G$^{\ddag }$ level.
 
-The energies describing the FEP functions and the reaction free
-energy profile are summarised in the last table generated by \textbf{qfep}.
-Note that each bin has contributions from several different values
-of $\lambda$. Likewise, each value of $\lambda$ contributes to the
+The energies describing the FEP functions and the reaction free energy
+profile are summarized  in the last table  generated by \textbf{qfep}.
+Note that each bin has  contributions from several different values of
+$\lambda$.  Likewise,  each  value  of $\lambda$  contributes  to  the
 sampling of several different bins.
 
-It is possible to handle more than two valence bond states in \textbf{qdyn}
-and \textbf{qfep}, however sampling and calibration may be a difficult task
-for more than two states.
+It  is  possible to  handle  more  than  two  valence bond  states  in
+\textbf{qdyn} and \textbf{qfep}, however  sampling and calibration may
+be a difficult task for more than two states.
 
 \begin{figure}[h]
 \caption{Example \textbf{qfep} output file}
@@ -1627,68 +1722,11 @@ for more than two states.
 \label{fig:Qfep-out}
 \end{figure}
 
-\subsubsection{Reaction free energy averaging using avefep}
-
-In the reaction free energy calculations described above, several
-mapping potentials (different $\lambda$'s) will sample each
-interval X$_{m}$. The resulting values for the potential of mean
-force have to be averaged to obtain the final values of $\Delta $G
-associated with each interval X$_{m}$. Avefep calculates the
-average values (weighted by sample size) of $\Delta$G
-corresponding to each interval from \textbf{qfep} output data.
-
-Input is an output-file created by \textbf{qfep}.
-
-Output is a table with the average $\Delta$G corresponding to the
-reaction co-ordinate X.
-
-\begin{table}[h]
-\begin{center}
-\begin{tabular}{|p{28pt}|l|}
-\hline \textbf{col.}   &   \textbf{description} \\
-\hline 1               &   Bin number \\
-\hline 2               &   Energy gap, X \\
-\hline 3               &   Average $\Delta$G \\
-\hline 4               &   Average $\Delta$G, lowest point at 0. \\
-\hline 5               &   Number of points in bin \\
-\hline
-\end{tabular}
-\label{tab:avefep}
-\end{center}
-\end{table}
-
-
-Usage: perl avefep.pl $<$ qfep.out $>$ avefep.out
-
-\subsubsection{Simple energy averaging using Qave}
-Qave calculates average energies and RMS deviations from
-.log-files. The program uses one line of input:
-
-perl Qave.pl \textit{[-s nskip]} files
-
-The value \textit{nskip} is the number of steps to be discarded at
-the beginning of the log-file. Default is zero. A number of
-log-files can be listed after one another and the average energies
-calculated from all files will be returned.
-
-\subsubsection{Trajectory averaging using Qavetr}
-Average structures from trajectory files are generated by the
-program Qavetr. Execute the program by typing:
-
-Qavetr
-
-The program will ask for the trajectory file to be processed. More
-than one trajectory file may be used in the averaging. Enter the
-files one at a time and end with a blank line. Enter the name of
-the output file that will contain the coordinates of the average
-structure. The output file is binary but can be converted to a
-pdb-file by using the program \textbf{qprep}. Root mean
-square coordinate deviation is given in {\AA}.
 
 \subsection{Scoring}\label{subsection:scoring} 
-Three     scoring    functions     are    implemented     in    QCalc:
+Three   scoring   functions   are   implemented   in   \textbf{qcalc}:
 X-Score\cite{Wang:2002},       ChemScore\cite{Eldridge:1997}       and
-PMF-Score\cite{Muegge:1999}.  X-Score  and  ChemScore  are  empiricial
+PMF-Score\cite{Muegge:1999}.   X-Score  and ChemScore  are  empiricial
 whilst PMF-Score is knowledge based.
 
 All  scoring functions  require  the  topology to  be  loaded and  the
@@ -1696,7 +1734,8 @@ correct mask be specified. The initial topology (with coordinates from
 the .top-file) can be scored to verify atom typing.
 
 Both trajectory and restart files can be scored. The following options
-are avaliable in QCalc when specifying trajectory or restart files:
+are available in \textbf{qcalc}  when specifying trajectory or restart
+files:
 \begin{itemize}
   \item{adding \emph{,frames=every n} means  calculations will only be
 performed on every $n$:th frame.}
@@ -1742,15 +1781,34 @@ confusion, examples of typical inputs will be given.
     \label{xinput}
   \end{minipage}
 
-    \subparagraph{Cofactors}
-    X-Score uses different typing schemes to assign atoms types to protein and ligands atoms. If needed, atoms in parts of the protein can be typed using the ligand atom-typing procedure by defining a cofactor. This is useful if the protein has some special residue, like HEM in P450, that is not defined in the X-Score residue library (file RESIDUE\_DEF\_XTOOL.dat). Ligand atoms are typed on the individual atom level, in contrast to the residue level for protein atoms, using data in file ATOM\_DEF\_XTOOL.dat.
-    Cofactor definitions are made on separate lines and has the form: restype=RES, where RES is the residue name, e.g. HEM. All atoms, regardless of their proximity to each other, in residues named RES will be included in the cofactor RES and typed as if they were ligand atoms (though in every other respect they are considered as part of the protein). Any number of cofactors can be defined.
+\subparagraph{Cofactors}
+X-Score uses  different typing  schemes to  assign atoms  types to
+protein and  ligands atoms. If needed,  atoms in parts of  the protein
+can  be typed  using the  ligand atom-typing  procedure by  defining a
+cofactor. This is useful if the protein has some special residue, like
+HEM in P450, that is not  defined in the X-Score residue library (file
+RESIDUE\_DEF\_XTOOL.dat).  Ligand atoms  are typed  on the  individual
+atom level, in contrast to the  residue level for protein atoms, using
+data in  file ATOM\_DEF\_XTOOL.dat.  Cofactor definitions  are made on
+separate lines and has the form: restype=RES, where RES is the residue
+name,  e.g. HEM.  All atoms,  regardless  of their  proximity to  each
+other, in residues named RES will  be included in the cofactor RES and
+typed as if they were ligand atoms (though in every other respect they
+are considered as part of the protein). Any number of cofactors can be
+defined.
 
-    \subparagraph{Force field}
-    A force field translation key has to be given to allow for the translation of atom types according to the Q convention to types according to the Sybyl convention. The translation tables are in the file ATOM\_TYPE\_CONVERSIONS.dat (shared with PMF-Score). A different translation file can be specified in the input file (see below).
+\subparagraph{Force field}
+A  force field  translation  key has  to  be given  to  allow for  the
+translation  of atom  types according  to  the Q  convention to  types
+according to the  Sybyl convention. The translation tables  are in the
+file ATOM\_TYPE\_CONVERSIONS.dat (shared  with PMF-Score). A different
+translation file can be specified in the input file (see below).
 
-    \subparagraph{Parameters}
-    Scoring parameters, output specifications and data files are specified in an input file. Default parameters can be used by specifying \emph{default} when asked for scoring parameters. In that case the following parameters and filenames are used:
+\subparagraph{Parameters}
+Scoring parameters, output specifications and data files are specified
+in  an  input file.  Default  parameters  can  be used  by  specifying
+\emph{default} when  asked for  scoring parameters.  In that  case the
+following parameters and filenames are used:
 
     \begin{tabular}{lll}
     SHOW\_ABS      & 'NO'  &          ! Show binding score for each atom? \\
@@ -1772,7 +1830,7 @@ confusion, examples of typical inputs will be given.
     ATOM\_TRANSLATIONS   &   atom\_type\_conversions.dat  \\
     \end{tabular}
 
-    Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang:2002}.
+Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang:2002}.
 
   \paragraph{Output}
   When SHOW\_LIGAND and/or SHOW\_PROTEIN is specified, a list of ligand and/or protein atoms is displayed, showing the atom type, residue, atomic properties, neighbouring atoms and bonds for each atom. In  addition, a list of bonds and aromatic rings detected are output.
@@ -2040,7 +2098,7 @@ The coordinates  of the water  sphere must  be specified in  the first
 input file. In this example, a co-ordinate file with randomly oriented
 water molecules on a grid, was used.
 
-\subsubsection{Using \textbf{qdyn}}
+\subsubsection{\textbf{qdyn}}
 To  start  the  simulation,   write:  \textbf{qdyn}  filename.inp  $>$
 filename.log, to use  a specific input file and write  the output to a
 log file. When  many input files are  used it is much  easier to write
@@ -2133,11 +2191,12 @@ and topology modules.
 The figure does not show the dependence of some modules on others.
 
 \subsection{Force field reference information}
-Q is not associated with any  particular force field. The force fields
-are  defined in  parameter files,  separate from  the program  and the
-choice of force field is thus  simply a matter of which parameter file
-to use. Any force field could be  used with the program, as long as it
-shares the common functional form of eq.  \ref{eq:V_pot}.
+Q is  not associated with  any particular  force field, that  is, it's
+force-field agnostic. The force fields are defined in parameter files,
+separate from the program and the choice of force field is thus simply
+a matter of which parameter file to use. Any force field could be used
+with the program,  as long as it shares the  common functional form of
+eq.  \ref{eq:V_pot}.
 
 \begin{multline}
 \label{eq:V_pot}
@@ -2283,14 +2342,27 @@ file must conform to some rules to be accepted by \textbf{qprep} (if not
 specified use the PDB standard):
 
 \begin{itemize}
-\item \textbf{qprep} will only accept and read ATOM and HETATM records. All other record types have to be removed.
-\item Residue numbers must be numeric, $i.e.$ alphanumeric residue identifiers like 60B are not allowed. Use the renumber script to renumber residues. The numbering does not have to start at 1, but \textbf{qprep} will renumber residues starting at 1.
-\item Molecules must be separated with a gap marker line. This line should contain only the word GAP in capital letters, optionally preceded by blanks or tabs. There should not be a gap marker at the end of the file.
-\item Atom numbering is not significant and \textbf{qprep} will renumber atoms starting from 1. Note that the numbering will change due to the insertion of hydrogen atoms.
+\item  \textbf{qprep}  will  only  accept and  read  ATOM  and  HETATM
+records. All other record types have to be removed.
+\item  Residue numbers  must be  numeric, $i.e.$  alphanumeric residue
+identifiers  like 60B  are not  allowed.  Use  the renumber  script to
+renumber residues.   The numbering does  not have  to start at  1, but
+\textbf{qprep} will renumber residues starting at 1.
+\item Molecules  must be separated with  a gap marker line.  This line
+should  contain  only the  word  GAP  in capital  letters,  optionally
+preceded by blanks  or tabs. There should  not be a gap  marker at the
+end of the file.
+\item  Atom  numbering  is  not significant  and  \textbf{qprep}  will
+renumber atoms  starting from 1.  Note that the numbering  will change
+due to the insertion of hydrogen atoms.
 \item Only upper case letters may be used in PDB files.
-\item Residue names must match fragment library entry names. The maximal length of residue names is 3 alphanumeric characters (position 13 to 16). Most other characters like +, -, {\_} are also permitted.
-\item Atom names must match atom names within the relevant fragment library entry.
-\item Temperature factors and occupancy numbers are ignored by \textbf{qprep} and are optional.
+\item  Residue names  must  match fragment  library  entry names.  The
+maximal length of residue names is 3 alphanumeric characters (position
+13 to 16). Most other characters like +, -, {\_} are also permitted.
+\item Atom  names must match  atom names within the  relevant fragment
+library entry.
+\item  Temperature  factors  and  occupancy  numbers  are  ignored  by
+\textbf{qprep} and are optional.
 \end{itemize}
 
 \subsubsection{Atom masks}\label{subsubsec:atom_masks}
@@ -2562,79 +2634,77 @@ r_{ij}^{-6} }
 \end{split}
 \end{equation}
 
-The \textbf{[atom{\_}types]} section defines a name, and lists
-Lennard-Jones parameters and mass for each atom type. There are
-three sets of LJ parameters: set 1 for normal non-bonded
-interactions, set 2 for pairs of polar atom types (listed in a the
-section LJ{\_}type2{\_}pairs) and type 3 for pairs of atoms in
-1--4 position. The B parameter is the same for sets 2 and 3. Atom
-type names are alphanumeric. The length of the name is limited to
-8 characters.
+The  \textbf{[atom{\_}types]}  section  defines   a  name,  and  lists
+Lennard-Jones parameters and mass for  each atom type. There are three
+sets of LJ parameters: set 1 for normal non-bonded interactions, set 2
+for   pairs  of   polar  atom   types   (listed  in   a  the   section
+LJ{\_}type2{\_}pairs)  and  type   3  for  pairs  of   atoms  in  1--4
+position. The  B parameter  is the same  for sets 2  and 3.  Atom type
+names  are alphanumeric.  The  length  of the  name  is  limited to  8
+characters.
 
-The section \textbf{[atom{\_}aliases]} is used facilitate the
-transition from numeric atom type names used in earlier versions.
-In this section alias names may be assigned to atom types defined
-in the atom{\_}types section, $e.g.$ to be able to use the old
-numeric name as an alias for the new descriptive atom type name in
-library files.
+The   section  \textbf{[atom{\_}aliases]}   is  used   facilitate  the
+transition from numeric atom type  names used in earlier versions.  In
+this section alias names may be  assigned to atom types defined in the
+atom{\_}types section, $e.g.$  to be able to use the  old numeric name
+as an alias for the new descriptive atom type name in library files.
 
-The \textbf{[LJ{\_}type2{\_}pairs]} section lists pairs of polar
-atom types that should interact with LJ parameters from set 2.
+The \textbf{[LJ{\_}type2{\_}pairs]} section lists  pairs of polar atom
+types that should interact with LJ parameters from set 2.
 
-The \textbf{[bonds]} section lists force constant and equilibrium
-distance for bonds between two atoms. It contains one line for
-each (applicable) unique pair of atom types. The pair 1--2 is
-equivalent with the pair 2--1, so only one of these should be
-included. The pairs may appear in any order, but for reasons of
-readability it is convenient to sort the lines by both atom types
-and always have the lower atom type number first on each line.
+The  \textbf{[bonds]} section  lists  force  constant and  equilibrium
+distance for  bonds between two atoms.  It contains one line  for each
+(applicable) unique  pair of atom  types. The pair 1--2  is equivalent
+with the pair 2--1, so only one of these should be included. The pairs
+may  appear  in any  order,  but  for  reasons  of readability  it  is
+convenient to  sort the lines by  both atom types and  always have the
+lower atom type number first on each line.
 
-The \textbf{[angles]} section lists force constant and equilibrium
-angle for 3-atom angles. contains one line for each (applicable)
-unique triplet of atom types. The pair 1--2--3 is equivalent with
-the pair 3--2--1, so only one of these should be included. The
-pairs may appear in any order, but for reasons of readability it
-is convenient to sort the lines by the middle atom type first,
-then on the left and finally by the right atom type. It is also
-preferred to have the left atom type less than or equal to the
-right one ($i.e.$ 1--2--3 rather than 3--2--1).
+The  \textbf{[angles]} section  lists force  constant and  equilibrium
+angle  for 3-atom  angles.  contains one  line  for each  (applicable)
+unique triplet of atom types. The  pair 1--2--3 is equivalent with the
+pair 3--2--1, so  only one of these should be  included. The pairs may
+appear in any  order, but for reasons of readability  it is convenient
+to sort the lines by the middle  atom type first, then on the left and
+finally by the right atom type. It  is also preferred to have the left
+atom type less  than or equal to the right  one ($i.e.$ 1--2--3 rather
+than 3--2--1).
 
-The \textbf{[torsions]} section lists parameters for torsion
-angles. Torsions can be defined by 4 atom types but in many cases
-only the two middle atoms are significant. The latter case is
-indicated by "0" (zero) or "?" in column one and four. A torsion
-defined with four atom types overrides two-atom definitions. The
-force constant in the cosine-shaped function for the torsion
-potential is equal to half the barrier height. The periodicity is
-the number of maxima passed in a full 360\r{ } rotation. The phase
-shift divided by the periodicity is the angle where the first
-maximum should be. The number of paths is the number of ways that
-a two-atom torsion can be defined, $i.e.$ the product of the
-number of atoms bonded to the two middle atoms. It is used to
-distribute the force over all the atoms involved. The preferred
-order of the lines is analogous with the bonds section: sort by
-the two middle atom types. Multiple torsion potential terms may be
-defined for the same set of atom types, to enable more complex
-torsion potentials. All terms are then added together.
+The   \textbf{[torsions]}  section   lists   parameters  for   torsion
+angles. Torsions can be defined by 4 atom types but in many cases only
+the two middle atoms are significant.  The latter case is indicated by
+"0" (zero) or "?" in column one  and four. A torsion defined with four
+atom types overrides  two-atom definitions. The force  constant in the
+cosine-shaped function for the torsion  potential is equal to half the
+barrier height.  The periodicity is the  number of maxima passed  in a
+full 360\r{ } rotation. The phase  shift divided by the periodicity is
+the angle  where the first maximum  should be. The number  of paths is
+the number of ways that a  two-atom torsion can be defined, $i.e.$ the
+product of the number  of atoms bonded to the two  middle atoms. It is
+used  to  distribute  the  force  over all  the  atoms  involved.  The
+preferred order of the lines is analogous with the bonds section: sort
+by the two middle atom types.  Multiple torsion potential terms may be
+defined for the same set of atom types, to enable more complex torsion
+potentials. All terms are then added together.
 
-The \textbf{[impropers]} section lists force constant and
-equilibrium angle for improper torsion angles, which are modelled
-by a harmonic potential. The impropers may be defined by two atom
-types, but in many cases the second type is not used and set to
-"0" or "?" as in the torsions section.
+The \textbf{[impropers]} section lists  force constant and equilibrium
+angle for  improper torsion angles,  which are modelled by  a harmonic
+potential. The impropers may be defined by two atom types, but in many
+cases the  second type is  not used and  set to "0"  or "?" as  in the
+torsions section.
 
-The \textbf{[options]} section contains three keywords.
-Vdw{\_}rule selects the rule for combining LJ parameters from two
-atom types and takes the values "geometric" or "arithmetic".
-Scale{\_}14 is the scaling factor for electrostatic interactions
-between atoms in 1--4 positions. Switch{\_}atoms selects the
-cut-off logic for non-bonded interaction: On~=~use designated
-switch (central) atoms of charge groups. Off~=~include the charge
-groups if any pair of atoms is within the cut-off distance.
+The \textbf{[options]}  section contains three  keywords.  Vdw{\_}rule
+selects the rule  for combining LJ parameters from two  atom types and
+takes  the values  "geometric"  or "arithmetic".   Scale{\_}14 is  the
+scaling factor  for electrostatic  interactions between atoms  in 1--4
+positions. Switch{\_}atoms  selects the  cut-off logic  for non-bonded
+interaction:  On~=~use designated  switch  (central)  atoms of  charge
+groups. Off~=~include the charge groups if any pair of atoms is within
+the cut-off distance.
 
-Table \ref{tab:prm_f_f} lists the data and units for each column
-in the different sections, and an example is included as a file
-example on page \pageref{fig:prm_ex}.
+Table \ref{tab:prm_f_f}  lists the data  and units for each  column in
+the different sections,  and an example is included as  a file example
+on page \pageref{fig:prm_ex}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2975,6 +3045,171 @@ and combinations thereof. \small
 \end{center}
 \end{table} \normalsize
 
+\subsection{Molecular dynamics algorithms}
+The way the equation of motions are integrated can affect drastically the 
+physics of the system. There are several ways of integrating a differential 
+equation, being some methods more precise than others. Nevertheless, 
+high precision is not necessarily the most important feature of an algorithm 
+for molecular dynamics simulations. An equation of motion must be 
+time-reversible in order to conserve the phase space volume if one is looking 
+for physical conservation laws. Q provides two options of symplectic 
+integrators: the Leapfrog and the velocity Verlet algorithms.
+
+\subsubsection{Leapfrog algorithm}
+The idea of the Leapfrog algorithm is to use simple first-order expansions of 
+both position and velocity variables, \textbf{r}(t) and \textbf{v}(t), but 
+calculating them at different times.
+
+\begin{align}
+ \textbf{r}(t+\Delta t) &= \textbf{r}(t) + \textbf{v}(t+\Delta t/2) \Delta t \\
+ \textbf{v}(t+\Delta t/2) &= \textbf{v}(t-\Delta t/2) + \frac{\textbf{F}(t)}{m}\Delta t
+\end{align}
+
+The assynchronicity of the velocities with respect to the position is assigned 
+at the moment that the velocities are randomly generated, being set at a half step 
+back. Leapfrog algorithm is derived from another symplectic algorithm: the 
+Verlet algorithm. Thus, it is also symplectic. This integrator is the fastest, 
+although it has the drawback of calculating the positions and velocities at 
+different times. This creates errors at energy measurements, although for small 
+time steps these deviations are not significant.
+
+\subsubsection{Velocity Verlet algorithm}
+Unlike the Leapfrog algorithm, the velocity Verlet calculates the position and 
+velocities of particles at the same time.
+
+\begin{align}
+ \textbf{r}(t+\Delta t) &= \textbf{r}(t) + \textbf{v}(t)\Delta t + \frac{\textbf{F}(t)}{2m}
+\Delta t^2 \\
+ \textbf{v}(t+\Delta t) &= \textbf{v}(t) + \frac{\textbf{F}(t+\Delta t) + 
+\textbf{F}(t)}{2m}\Delta t
+\end{align}
+
+This is scheme is prone to less error, as it computes positions and velocities 
+at the same time interval. However, the computational cost becomes slightly higher.
+
+\subsubsection{Constant temperature algorithms}
+Q comes with the option of choosing the thermostat which the user
+judges appropriate. The three thermostats present are
+Berendsen\cite{Berendsen:1984}, Nos\'e-Hoover chains\cite{Tuckerman:1992}
+ and Langevin\cite{Schneider:1978}. One can change the thermostat
+by inserting the keyword thermostat in the section [\textbf{MD}]
+in the input file, followed by "berendsen", "nose-hoover" or "langevin".
+Every thermostat has its own setup parameters, which will be described
+briefly below.
+
+\paragraph{Berendsen thermostat:}
+
+The idea of this thermostat is to rescale the velocities in order
+to control the kinetic energies in the system. In this algorithm,
+every particle is coupled to a heat bath, which will, in turn,
+increase or decrease the velocities of them. We set the thermostat
+temperature $T_{0}$, as well as the bath coupling time $\tau$,
+which will give the interval of time where the rescaling of the
+temperature (and consequently velocities) will take place. After every
+bath coupling time interval, the temperature is measured and rescaled
+according to:
+
+\begin {equation}
+ \frac{dT}{dt} = \frac{T_{0}-T}{\tau}
+\end{equation}
+
+The velocities are then rescaled in order to reproduce the new
+temperature.
+
+\paragraph{Nos\'e-Hoover chain thermostat:}
+
+The Nos\'e-Hoover thermostat also employs the idea of a rescaling
+factor. It inserts an extra particle that will interact
+with the whole system in a specific way in a different set of
+generalized coordinates from the original system. The idea is
+to solve this system with this extra particle as if we are
+performing a standard MD simulation, and the averages performed
+for the particles in your system will correspond to the ones from
+the canonical ensemble. The Hamiltonian of a N-particle system looks
+like this:
+
+\begin {equation}
+ \mathcal{H}_{Nos\acute{e}}(\textbf{p},\textbf{r},p_{s},s) = \sum\limits_{i=1}^N
+\frac{\textbf{p}_{i}^2}{2m_{i}s^2} + V(\textbf{r}^N) + \frac{p_{s}^2}{2Q}
++ gk_{B}T\ln(s),
+\end{equation}
+
+where $s$ and $p_{s}$ refer to the new generalized coordinate and momentum
+for the thermostat particle, $Q$ is the mass of this particle, and $g$ is
+the total number of degrees of freedom of the system. The equations of
+motion will be:
+
+\begin{align}
+ \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}s^2} \\
+ \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} \\
+ \frac{ds}{dt} &= \frac{p_{s}}{Q} \\
+ s\frac{dp_{s}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}s^2}
+  -gk_{B}T \right)
+\end{align}
+
+Now, if we call $\textbf{p'} = \textbf{p}/s$, and define a new Hamiltonian as
+
+\begin {equation}
+ \mathcal{H}(\textbf{p'},\textbf{r}) = \sum\limits_{i=1}^N
+\frac{\textbf{p'}_{i}^2}{2m_{i}} + V(\textbf{r}^N),
+\end{equation}
+
+it is possible to show that the average of any observable is (see \cite{Frenkelbook} for more details):
+
+\begin{equation}
+ \langle A(\textbf{p}/s,\textbf{r}) \rangle_{NVE} = \langle A(\textbf{p'},\textbf{r}) \rangle_{NVT}
+\end{equation}
+
+Thus, by running standard MD simulations with this new particle interacting
+with the whole system will sample the same conformations of the system without
+this particle at the canonical ensemble. Nevertheless, it has been shown that a
+single particle Nos\'e-Hoover particle was not able to sample properly
+the canonical ensemble in some cases. The solution to the problem was
+to create additional particles that would interact with each other in a
+chain-like way \cite{Tuckerman:1992}. If we apply the Nos\'e-Hoover
+thermostat in a chain way $C$ times, the new equations of motion become:
+
+\begin{align}
+ \frac{d\textbf{r}_{i}}{dt} &= \frac{\textbf{p}_{i}}{m_{i}} \\
+ \frac{d\textbf{p}_{i}}{dt} &= \textbf{F}_{i} -  \frac{p_{{s}_{1}}}{Q_{1}}
+ \textbf{p}_{i} \\
+ \frac{ds_{j}}{dt} &= \frac{p_{{s}_{j}}}{Q_{j}} \\
+ s_{1}\frac{dp_{{s}_{1}}}{dt} &= \left(\sum_{i=1}^N \frac{\textbf{p}_{i}^2}{m_{i}}
+  -gk_{B}T \right) - \frac{p_{{s}_{2}}}{Q_{2}}p_{{s}_{1}} \\
+ s_{j}\frac{dp_{{s}_{j}}}{dt} &= \left(\frac{\textbf{p}_{s_{j-1}}^2}{m_{j-1}}
+  -k_{B}T \right) - \frac{p_{{s}_{j+1}}}{Q_{j+1}}p_{{s}_{j}} \\
+ s_{C}\frac{dp_{{s}_{C}}}{dt} &= \left(\frac{\textbf{p}_{s_{C-1}}^2}{m_{C-1}}
+  -k_{B}T \right)
+\end{align}
+
+In Q, one can control the mass of the thermostat particles. The larger the mass,
+the larger the coupling with the thermostat, and less temperature oscilation will
+occur. The standard value is set to XXX.
+
+\paragraph{Langevin thermostat:}
+
+While both thermostats above have a deterministic behavior, the Langevin
+ thermostat has a stochastic character. The interaction between the heat
+bath and the system is characterized by two forces: a drag force, which will
+act against the movement of the particles, in order to remove excess of
+kinectic energy; a random force, which will give random impulses to every
+particle. The equation of motion becomes
+
+\begin{equation}
+ \frac{d\textbf{p}_{i}}{dt} = \textbf{F}_{i} - \gamma\textbf{p}_{i} + \sqrt{\frac{2\gamma k_{B}T}{m_{i}}}\Gamma,
+\end{equation}
+
+where $\gamma$ is the friction coefficient and $\Gamma$ is a white noise
+random force with zero mean. The idea of using a Langevin equation as a
+mean of maintaining constant temperature comes from the fact that such
+equation is related to the Fokker-Planck equation. Due to the noise, the
+momentum becomes a stochastic variable, and, in this very case, the
+probabilities of finding a particle with a given value of momentum is
+described by the Fokker-Planck equation. The solution for this
+Fokker-Planck equation formed from variables generated by the equation
+(27) is exactly the Maxwell-Boltzmann distribution. Thus, the Langevin
+equation enables the canonical ensemble sampling.
+
 \subsection{File and format descriptions}
 \subsubsection{\textbf{qdyn} input file format}\label{subsubsec:qdyn_inp_file_form}
 The name of the input file is passed to \textbf{qdyn} as the first argument
@@ -3005,7 +3240,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
 \hline shake\_solvent & Enable (on) or disable (off) shake constraining of bonds and angles of water. & Optional, default on. We recommend the use of shake for water.\\
-\hline shake\_solute & Shake constraining of solute bonds on or off. & Optional, default off.\\
+\hline shake\_solute & Shake constraining of bonds to hydrogen atoms in solute bonds on or off. & Optional, default off.\\
 \hline shake\_hydrogens & Shake constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default off. \\
 \hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
 \hline
@@ -3126,80 +3361,77 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \subsubsection{FEP file format}
 \label{subsubsec:fepfileformat}
 
-The FEP file which designates some atoms from the topology as
-Q-atoms and redefines the topology for these atoms in a number of
-states between which transformations can be made, is a text file.
-It is divided into sections which can appear in any order and
-which start with a section title. Within each section the data
-appears either as lines with values or as pairs of keyword and
-value.
+The FEP file  (given a .fep extension) designates some  atoms from the
+topology as  Q-atoms and redefines the  topology for these atoms  in a
+number of states between which  transformations can be made. This file
+is a plain text file. It is  divided into sections which can appear in
+any order  and which start with  a section title. Within  each section
+the data appears either as lines with values or as keyword-value pairs.
 
-Section titles are enclosed in square brackets and must be the
-first (non-white space) item on a line. They are not
-case-sensitive. Keyword-value pairs appear in that order, anywhere
-on a line but together on the same line. Keyword-value lines can
-appear in any order (within a section). White space is not
-significant in value-list lines.
+Section titles are  enclosed in square brackets and must  be the first
+(non-white    space)    item    on    a    line.    They    are    not
+case-sensitive. Keyword-value pairs appear  in that order, anywhere on
+a line but  together on the same line. Keyword-value  lines can appear
+in any  order (within a  section). White  space is not  significant in
+value-list lines.
 
-Comments start with "!", "\#" or "*" and may appear after values
-or as separate lines.
+Comments start with "!", "\#" or "*" and may appear after values or as
+separate lines.
 
-Only the section atoms where Q-atoms are designated, is required,
-all others are optional. They may appear in any order, but the
-preferred order is that of table \ref{tab:fepfileformat}. The
-section [\textbf{FEP}] contains the keyword states followed by the
-number of FEP states defined in the FEP file. An offset value to
-add to all topology atom numbers in order to avoid renumbering all
-atoms between $e.g.$ free ligand and bound ligand simulations can
-also be defined in the [\textbf{FEP}] section. New atom types for
-Q-atoms are defined in the [\textbf{atom\_types}] section. The
-assignment of Q-atom types to Q-atoms is done, for each state, in
-the [\textbf{change\_atoms}] section. Pairs of atoms between which
-bonds are made or broken should use the exponential repulsion
-non-bonded potential instead of the standard Lennard-Jones by
-listing them under the [\textbf{soft\_pairs}] heading. In some
-cases it is desirable to completely turn off certain non-bonded
-interactions. This can be done on a per-state basis in the section
-[\textbf{excluded\_pairs}].
+A  .fep file  only needs  as  a requirement  for the  \textbf{[atoms]}
+section (where  Q-atoms are  declared) to be  present, all  other 
+sections are optional. They may appear in any order, but the preferred
+order is that seen in table \ref{tab:fepfileformat}.  The section
+[\textbf{FEP}] contains the  keyword states followed by  the number of
+FEP states  defined in  the FEP file.  An offset value  to add  to all
+topology atom numbers in order  to avoid renumbering all atoms between
+$e.g.$ free ligand and bound ligand simulations can also be defined in
+the [\textbf{FEP}] section. New atom  types for Q-atoms are defined in
+the [\textbf{atom\_types}] section. The  assignment of Q-atom types to
+Q-atoms  is  done, for  each  state,  in the  [\textbf{change\_atoms}]
+section. Pairs of atoms between which  bonds are made or broken should
+use  the exponential  repulsion  non-bonded potential  instead of  the
+standard     Lennard-Jones    by     listing     them    under     the
+[\textbf{soft\_pairs}]  heading.  In some  cases  it  is desirable  to
+completely turn off certain non-bonded  interactions. This can be done
+on a per-state basis in the section [\textbf{excluded\_pairs}].
 
-New bond, angle, torsion and improper types can also be defined
-and used for any atoms in the topology, not only between Q-atoms.
-Atoms are therefore referred to by their number in the topology
-rather than by a Q-atom number. Definitions in the topology are
-overridden by definitions in the FEP file. To disable an
-interaction in one state, a zero should be used in place of the
-type number for that state.
+New bond,  angle, torsion and improper  types can also be  defined and
+used for any  atoms in the topology, not only  between Q-atoms.  Atoms
+are therefore referred to by their  number in the topology rather than
+by  a Q-atom  number. Definitions  in the  topology are  overridden by
+definitions in the FEP file. To disable an interaction in one state, a
+zero should be used in place of the type number for that state.
 
-Angles, torsions and impropers which depend on the existence of a
-bond being formed or broken should be "coupled" to that bond by
-scaling the angle energy by the ratio of the actual value of the
-Morse bond energy to the dissociation energy. These couplings are
-defined in the sections [\textbf{angle\_couplings}],
-[\textbf{torsion\_couplings}] and [\textbf{improper\_couplings}].
+Angles, torsions and impropers which depend on the existence of a bond
+being formed or broken should be "coupled" to that bond by scaling the
+angle energy by the ratio of the actual value of the Morse bond energy
+to  the  dissociation  energy.  These couplings  are  defined  in  the
+sections   [\textbf{angle\_couplings}],  [\textbf{torsion\_couplings}]
+and [\textbf{improper\_couplings}].
 
-Extra shake constraints can be imposed between any pair of atoms
-in the topology using the heading [\textbf{shake\_constraints}].
-The effective constraint distance will be the sum of the distances
-for each state weighted by their respective $\lambda$'s.
+Extra shake  constraints can be imposed  between any pair of  atoms in
+the  topology using  the  heading [\textbf{shake\_constraints}].   The
+effective constraint  distance will  be the sum  of the  distances for
+each state weighted by their respective $\lambda$'s.
 
-Quantum-mechanical mixing of states used in EVB calculations by
-introducing off-diagonal Hamiltonian matrix element functions is
+Quantum-mechanical  mixing  of  states  used in  EVB  calculations  by
+introducing  off-diagonal  Hamiltonian  matrix  element  functions  is
 defined in the section [\textbf{off\_diagonals}].
 
-If vanishing or appearing atoms are part of your FEP strategy, it
-may be desirable to use a \textit{softcore} potential for the
-Q-atoms in question.\cite{Zacharias:1994} Softcore potentials have
-been implemented in \textbf{qdyn} according to equation \ref{eq:softcore}.
-Depending on the value of
-\textbf{softcore\-\_use\-\_max\-\_potential} given in the
-[\textbf{FEP}] section, the $\alpha$-values are either read
-directly from the [\textbf{softcore}] section or calculated by
-\textbf{qdyn} in a pairwise manner based upon the desired potentials at
-$r=0$ given in the [\textbf{softcore}] section. Softcore
-potentials are only available for Q-atoms, i.e. Q-Q, Q-water and
-Q-solute interactions are treated with softcore. In the case of a
-Q-Q interaction where both Q-atoms have softcore potentials, the
-$\alpha$ which is used is that which gives rise to the lowest potential at
+If vanishing or appearing atoms are  part of your FEP strategy, it may
+be desirable to  use a \textit{softcore} potential for  the Q-atoms in
+question.\cite{Zacharias:1994}    Softcore   potentials    have   been
+implemented in \textbf{qdyn}  according to equation \ref{eq:softcore}.
+Depending on the value of \textbf{softcore\-\_use\-\_max\-\_potential}
+given in  the [\textbf{FEP}]  section, the $\alpha$-values  are either
+read directly  from the  [\textbf{softcore}] section or  calculated by
+\textbf{qdyn} in a  pairwise manner based upon  the desired potentials
+at $r=0$ given in the [\textbf{softcore}] section. Softcore potentials
+are  only  available  for  Q-atoms, i.e.  Q-Q,  Q-water  and  Q-solute
+interactions  are  treated  with  softcore.  In  the  case  of  a  Q-Q
+interaction where both Q-atoms  have softcore potentials, the $\alpha$
+which is  used is  that which  gives rise to  the lowest  potential at
 $r=0$.
 
 \begin {equation}
@@ -3210,14 +3442,14 @@ $r=0$.
  V_{vdW}(r_{ij}) = \epsilon\cdot(\frac{{R_{ij}^{*}}^{12}}{(r_{ij}^6 + \alpha)^2} - 2\cdot\frac{{R_{ij}^{*}}^{6}}{r_{ij}^6 + \alpha})
 \end{equation}
 
-If periodic boundary conditions are used an additional section
-[\textbf{PBC}] is needed. In this section one switching atom for
-all Q-atoms is defined. This switching atom is used when
-generating the Q-surrounding nonbonded pair lists.
+If  periodic  boundary  conditions  are  used  an  additional  section
+[\textbf{PBC}] is needed.  In this section one switching  atom for all
+Q-atoms is  defined. This switching  atom is used when  generating the
+Q-surrounding nonbonded pair lists.
 
-Table \ref{tab:fepfileformat} lists the data and units for each
-column in the different sections, and an example is included as
-file example on page \pageref{tab:FEP_file_f_p_t_r}.
+Table \ref{tab:fepfileformat} lists the data and units for each column
+in the different sections, and an  example is included as file example
+on page \pageref{tab:FEP_file_f_p_t_r}.
 
 \small
 \begin{longtable}{|p{53pt}|p{181pt}|p{160pt}|}
@@ -3439,7 +3671,7 @@ and the simulation is initialised.
 \hline \begin{tabular}{p{101.5pt} p{101.5pt}} Number of MD steps = 1 & Stepsize (fs) = 0.200 \end{tabular}&\\
 \hline \begin{tabular}{p{101.5pt}p{101.5pt}}Target temperature  =  1.00 & T-relax time  =  1.00 \end{tabular} & Temperature bath temperature and time constant for coupling.\\
 \hline Initial velocities will be generated from Maxwell distribution:\newline Maxwell temperature= 1.00  Random number seed= 4320 & Initial velocities are random values from Maxwell's velocity dirstibution at 1 K.\\
-\hline Shake constraints on all solvent bonds: on \newline{}Shake constaints on all solute bonds: off \newline Shake constaints on all bonds to hydrogen: off & \\
+\hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
 \hline Nonbonded method   = LRF Taylor expansion outside cut-off & Local reaction field approximation applied beyond cut-off.\\
 \hline Cut-off radii for non-bonded interactions:\newline \begin{tabular}{ll}Solute-solute:&10.00\\Solvent-solvent:&10.00\\Solute-solvent:&10.00\\Q-atom-non-Q-atom:&99.00\\LRF:&99.00 \end{tabular} & \\
 \hline \begin{tabular}{lll}Shell restraint force constant    &     =  & 50.00 \end{tabular} & Heavy solute atoms in the shell region defined in the topology will be restrained to their initial positions by harmonic potentials with force constant 50 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
@@ -4185,106 +4417,6 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 \hline
 \end{tabularx}
 
-\section{SYSTEM GUIDE}
-\subsection{System requirements}
-The Q programs will run under many operating systems including MS
-Windows NT/XP, Digital UNIX, LINUX, SGI IRIX, Sun Solaris, Cray
-UNICOS. A parallel version using the Message Passing Interface
-(MPI) standard is included in Q 5.0.
-
-The memory requirements vary with the size of the simulated system
-but are, in general, modest. A system of 18 Å radius with 10 Å
-non-bonded cut-off takes about 3 to 7 Mb depending on the computer
-and operating system.
-
-\subsubsection{Compilers}
-A Fortran90 compiler is required to build the main programs
-(\textbf{qdyn}, \textbf{qprep}, \textbf{qfep}, \textbf{qdum} , \textbf{qcalc}).
-
-A Fortran90 compiler and a MPI library is required to build the
-parallel version of \textbf{qdyn}.
-
-%A Fortran77 compiler is required to build some helper programs
-%called by proq (disttab, repel, midpoint).
-
-A C compiler is required to build some of the analysis programs
-(tstart, ineff).
-
-%A PERL interpreter is required to run most of the utility programs
-%(bone, enob, lsextr, mdsh, mkfep, proq, Qave).
-
-\subsection{Installation}
-The following components, available from the Q web site
-\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
-\begin{enumerate}
-\item   Either executable images (available for some popular
-        platforms) or source code (to compile on your own system).
-\item   Force field files.
-\item   Solvent files.
-\end{enumerate}
-Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
-and download the files to this directory.
-
-\subsubsection{Installing executable images}
-\textbf{MS Windows systems}
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the programs,
-        such as C:$\backslash$Q$\backslash$bin.
-\item   Uncompress the Pkzip archive file containing the windows
-        executables to this directory using $e.g.$ unzip or WinZip.
-\item   Add this directory to your search path by modifying the PATH
-        environment variable in the system properties control panel.
-\end{enumerate}
-
-\textbf{UNIX system}
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the executables, such as Q/bin.
-\item   Extract the executables from the gzip compressed tar archive file into this directory, $e.g.$\\
-        \verb"gunzip -c Q_DigitalUNIX4_Alpha21164.tar.gz | (cd bin; tar -xvf -)"
-\item   Add the bin directory to your search path by modifying the PATH environment variable
-(typically in $\sim$/.cshrc)
-\end{enumerate}
-
-\subsubsection{Building the programs from source code}
-\textbf{MS Windows systems} Project files and workspace file for
-Digital Visual Fortran v.6 are provided in the Windows source code
-distribution. After extracting the files from the zip archive,
-open the workspace file and build the programs using the
-configurations (Alpha or x86) that match your system.
-
-\textbf{UNIX systems} The makefile included in the UNIX source
-code distribution contains settings (compiler flags) for some
-popular platforms including Compaq Tru64 UNIX, Linux and SGI Irix.
-\begin{enumerate}
-\item   Create a subdirectory in the Q directory for the executables, such as Q/bin.
-\item   Create a subdirectory in the Q directory for the
-        source files, such as Q/src.
-\item   Extract the source files from the gzip compressed tar
-        archive file into this directory, $e.g.$\\
-        \verb"gunzip -c Q4_src.tar.gz |(cd src; tar -xvf -)".
-\item   Type make in the source directory. This will list the platforms supported in the makefile.
-\item
-\begin{enumerate}
-\item   If your platform is on the list, enter the appropriate make command, $e.g.$\\
-        \verb"make alpha-osf1-ev6".
-\item   Please note that the compiler optimisation settings
-        in the makefile are in no way guaranteed to produce the fastest
-        code. Feel free to try different settings and if you can improve
-        the result, please notify us.
-\end{enumerate}
-\item
-\begin{enumerate}
-\item   If your platform in not on the list, you need to find the appropriate compiler flags yourself and
-        edit the makefile accordingly. Consult your F90 manual. Use the generic settings as s starting point:\\
-        \verb"make generic".
-\item   When you have updated the make file for your system, please e-mail it to us, and we will merge your
-        changes into the distributed makefile.
-\end{enumerate}
-\item   Move the executables to the bin directory.
-\item   Add the bin directory to your search path by modifying the PATH environment variable (typically in
-$\sim$/.cshrc).
-\end{enumerate}
-
 \newpage
 
 \begin{thebibliography}{2}
@@ -4372,6 +4504,12 @@ Empirical scoring functions: I. The deveoplment of a fast empirical scoring func
 
 \bibitem{Muegge:1999}Ingo~Muegge and Yvonne~C.~Martin,
 A general and fast scoring function for protein--ligand interaction: A simplified approach, J. Med. Chem., 42, 701-894, 1999
+
+\bibitem{Tuckerman:1992}Martyna G.J., Klein M.L., and Tuckerman M.E., Nos\'e-Hoover chains: The canonical ensemble via continuous dynamics, J. Chem. Phys., 97, 2635-2645, 1992
+
+\bibitem{Schneider:1978}Schneider T., and Stoll E., Molecular-dynamics study of a three-dimensional one-component model for distortive phase transitions, Phys. Rev. B, 17, 1302-1322, 1978
+
+\bibitem{Frenkelbook} Frenkel D., and Smit B., Understanding Molecular Simulation - From Algorithms to Applications, Academic Press, 2002
 
 \end{thebibliography}
 

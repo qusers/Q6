@@ -132,35 +132,24 @@ module load impi/4.1.3.048
 make mpi COMP=ifort
 ```
 
-###Linux - CentOS 6.5 (glenn) AMD Opteron 6220
-Since the problem with finding the correct path to linker libraries keeps
-being an issue an alternative solution is to compile using the intel
-fortran compiler and mpi libraries. Even though the processors are not
-Intel in this cluster, the intel compiler and libraries have been shown
-in many benchmarks to be even the optimal choice for non-Intel CPU's.
-Benchmarking results comparing compilations with intel/impi against gcc/ompi
-here would be appreciated.
+
+###Linux - CentOS 6.6 (glenn) AMD Opteron 6220  
+
+For hardware info on the cluster go to:
+
+    http://www.c3se.chalmers.se/index.php/Hardware_Glenn
 
 ```bash
-git clone https://github.com/qusers/qsource.git
+unset SSH_ASKPASS
+git clone https://yourusername@github.com/qusers/qsource.git
 cd qsource/src
-module load intel-mkl/11.2
+module load intel-compilers/15.0/090
 make all COMP=ifort
-module load intel-mpi/4.1.1.036
+module load intel-mpi/5.0.1.035
 make mpi COMP=ifort
 ```
 
-As stated before there is some issue with finding the path to linker libraries, so, I've used
-the compilation flags used in the mac in this case.
-
-```bash
-git clone https://github.com/qusers/qsource.git
-cd qsource/src
-module load  gcc/4.8/4.8.1
-make all COMP=osx
-module load openmpi/1.5.4
-make mpi COMP=gcc
-```                   
+After compilation make sure to run the benchmarks changing the options to adapt to the slurm manager at Glenn and also make sure path declarations point to your Q binaries
 
 
 ###Linux - CentOS 6.3 (csb) Intel

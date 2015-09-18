@@ -2,7 +2,7 @@ qsource
 =======
 Version control of the molecular dynamics code called Q, version 5.06, via github.
 
-Q is a set of Molecular Dynamics (MD) tools tailored to specific kinds of free energy calculations, mainly:
+Q is a set of Molecular Dynamics (MD) tools tailored to the following specific kinds of free energy calculations:
 
 1. Free Energy Perturbation (FEP)
 2. Empirical Valence Bond (EVB)
@@ -12,7 +12,7 @@ Q is a set of Molecular Dynamics (MD) tools tailored to specific kinds of free e
 The current makefiles make it relatively easy to compile the code in a linux or mac OSX environment.
 
 You have to make sure first that gfortran is installed and if you want to compile the MPI version
-you also have to make sure that openmpi is installed.
+you also have to make sure that openMPI is installed.
 
 If you're using gfortran make sure that you have version 4.8 or later. This applies both to compilation in mac and linux.
 To make sure that you have version 4.8 or later use:
@@ -23,9 +23,11 @@ gfortran --version
 
 Right before issuing the "make" command.
 
-To install in a linux environment you have to move to the src/ folder where the source code and the makefile are located at. To get information on how to use the makefile just type make in your terminal:
+To install in a linux environment you have to move to the src/ folder where the source code and the makefile are located at. To get information on how to use the makefile just type **make** in your terminal:
+
 ```bash
-git clone https://github.com/qusers/qsource.git
+unset SSH_ASKPASS
+git clone https://yourgitusernamehere@github.com/qusers/qsource.git
 cd qsource/src
 make
 ```
@@ -40,7 +42,7 @@ Or for MPI compilation (after loading a proper MPI compiler library):
 make mpi COMP=gcc
 ```
 
-To compile in Mac OSX 10.9.2 you can use native gfortran binaries which you can download from  (https://gcc.gnu.org/wiki/GFortranBinaries#MacOS) or you can also compile using the GCC (Gnu Compiler Collection) distributions available to fink, macports or homebrew. In order to compile in a MAC you should call the fink environment first, usually with:
+To compile in Mac OSX 10.9.2 you can use native gfortran binaries which you can download from  (https://gcc.gnu.org/wiki/GFortranBinaries#MacOS) or you can also compile using the GCC (Gnu Compiler Collection) distributions available to fink, macports or homebrew. In order to compile in a MAC you should call the fink environment first. Usually with:
 
 ```bash
 source /sw/bin/init.sh
@@ -54,12 +56,12 @@ brew install gcc
 
 Then you proceed as in linux
 ```bash
-git clone https://github.com/qusers/qsource.git
+git clone https://yourgitusernamehere@github.com/qusers/qsource.git
 cd qsource/src
 make all COMP=osx
 ```
 
-This will take care of redirecting the binaries and object files to standard bin and obj folders for code tidyness.
+This will take care of redirecting the binaries and object files to standard bin and obj folders.
 
 After this you have to add the program to your system path by modifying your shell initiation script, that is, if your shell is bash, you can add the following lines to your .bashrc file using a text editor:
 
@@ -72,6 +74,7 @@ Where $SOFT will be the place where your software folder is located at, e.g. /Us
 
 Once the q binaries are declared in your path you should be able to call all q binaries from your terminal.
 To test that the path to your compiled Q binaries has been correctly assigned you can issue the following commands in the terminal:
+
 ```bash
 source .bashrc
 echo $path | grep qsource
@@ -81,7 +84,7 @@ echo $path | grep qsource
 qprep5
 
 ###############################################################################
-Welcome to Qprep version 5.04
+Welcome to Qprep version 5.06
 
 Qprep> 
 ```
