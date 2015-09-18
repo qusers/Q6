@@ -3572,8 +3572,11 @@ torloop: do i = 1, ntor_types
 				tor_types(i)%tacl = ''
 			endif
 		else
-			!this field may be 0
-			tor_types(i)%tacl = ''
+			!this field may be 0, no it may not be!!!!!
+			!we fail topology generation on any missing parameter
+			!Paul Bauer 17092015
+			write(*,140) i, trim(section), tacl
+			goto 1060
 		end if
 		do j = 1, ntor_prm
 			if(tor_prm(j)%fk == tor_prm_tmp%fk .and. &

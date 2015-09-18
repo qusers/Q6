@@ -192,9 +192,12 @@ sed -i s/"invalid-thermostat"/"$2"/g *inp
 #function that creates the different directories and places the files in them
 #argument is the run type serial parallel hybrid benchmark
 function make_dirs() {
-for i in SPH  ; do
-for j in  velocity-verlet ; do
-for g in berendsen langevin nose-hoover ; do
+for i in PBC SPH
+do
+for j in leap-frog velocity-verlet
+do
+for g in berendsen langevin nose-hoover
+do
 thisdir=`pwd`
 if [ "$1" != "benchmark" ] ; then
 if ! [ -f ${i}_${j}_${g}_benchmark.en ] ; then

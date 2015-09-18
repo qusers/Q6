@@ -300,9 +300,12 @@ done
 #This part runs the actual analysis ...
 
 
-for i in SPH PBC ; do
-for j in leap-frog velocity-verlet ; do
-for g in berendsen langevin nose-hoover ; do
+for i in SPH  PBC 
+do
+for j in velocity-verlet leap-frog
+do
+for g in berendsen langevin nose-hoover
+do
 thisdir=`pwd`
 if ! [ -f ${i}_${j}_${g}_benchmark.en ] ; then
 echo "No Benchmark energies present for ${i} ${j} ${g}!"
