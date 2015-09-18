@@ -300,25 +300,25 @@ done
 #This part runs the actual analysis ...
 
 
-for i in SPH  PBC 
+for iii in SPH  PBC 
 do
-for j in velocity-verlet leap-frog
+for jjj in velocity-verlet leap-frog
 do
-for g in berendsen langevin nose-hoover
+for ggg in berendsen langevin nose-hoover
 do
 thisdir=`pwd`
-if ! [ -f ${i}_${j}_${g}_benchmark.en ] ; then
-echo "No Benchmark energies present for ${i} ${j} ${g}!"
+if ! [ -f ${iii}_${jjj}_${ggg}_benchmark.en ] ; then
+echo "No Benchmark energies present for ${iii} ${jjj} ${ggg}!"
 echo "Run those first or get them from Github before running the tests"
 continue
 fi
-cd run_${1}/${i}/${j}/${g}
+cd run_${1}/${iii}/${jjj}/${ggg}
 check_existing
 check_termination
-check_initial_energy $i
+check_initial_energy $iii
 check_restart_consistency
-check_all_energies ${i} ${j} ${g} $1
-make_plots ${i} ${j} ${g} $1
+check_all_energies ${iii} ${jjj} ${ggg} $1
+make_plots ${iii} ${jjj} ${ggg} $1
 cd $thisdir
 done
 done
