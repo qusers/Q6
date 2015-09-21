@@ -94,6 +94,7 @@ program Qdyn5
 	!remove things with code 0 and maybe excluded bonded interactions
 
 	call prep_sim						! prepare for simulation (calc. inv. mass, total charge,...)
+	call prep_sim_version(QDYN_VERSION)
 	call close_input_files				! close input files
 
 	call init_shake

@@ -197,6 +197,7 @@ implicit none
                         write(*,*) 'Could not read file header! Old energy file?'
 			fileheader%arrays = 1
 			fileheader%totresid = 1
+			fileheader%version='Q 5.06'
 			if(ifile.eq.1) then
 			allocate(fileheader%gcnum(fileheader%arrays),fileheader%types(fileheader%arrays),&
 				fileheader%numres(fileheader%totresid))
@@ -216,7 +217,7 @@ implicit none
 			rewind(f)
 			read(f) canary,fileheader%arrays,fileheader%totresid,fileheader%types(1:fileheader%arrays),&
 				fileheader%numres(1:fileheader%arrays),fileheader%resid(1:fileheader%totresid),&
-				fileheader%gcnum(1:fileheader%arrays)
+				fileheader%gcnum(1:fileheader%arrays),fileheader%version
 		end if
 		if(ifile.eq.1) then
 		do jj=1,nstates
@@ -272,6 +273,7 @@ implicit none
 	                stop 'Qfep5 terminated abnormally: Out of memory.'
 	        end if
 		end if  !ifile .eq. 1
+		write(*,*) fileheader%version
 		!read 1st record to get lambdas
 		if(is_old_file) rewind(f)
 		idum = get_ene(f, EQ(:), offd, nstates,nnoffd,fileheader%arrays)
@@ -322,7 +324,7 @@ implicit none
 		if(.not.is_old_file) then
                         read(f) canary,fileheader%arrays,fileheader%totresid,fileheader%types(1:fileheader%arrays),&
                                 fileheader%numres(1:fileheader%arrays),fileheader%resid(1:fileheader%totresid),&
-                                fileheader%gcnum(1:fileheader%arrays)
+                                fileheader%gcnum(1:fileheader%arrays),fileheader%version
 
 		end if
 		do while(get_ene(f, EQ(:), offd, nstates, nnoffd,fileheader%arrays) == 0) !keep reading till EOF

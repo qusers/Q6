@@ -3,7 +3,7 @@
 ################################################################################
 
 MAYOR_VER=5
-MINOR_VER=6
+MINOR_VER=10
 OBJECTS    = $(shell ls *.o)
 BUILD_NUMBER_LDFLAGS  = -DBUILD_USERNAME=\"$(USER)\"
 BUILD_NUMBER_LDFLAGS += -DBUILD_HOSTNAME=\"$(shell hostname)\"

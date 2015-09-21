@@ -13,6 +13,7 @@ use TRJ
 use MPIGLOB
 use QATOM
 use EXC
+use VERSIONS
 #if defined (_DF_VERSION_)
 use DFPORT
 use DFLIB
@@ -155,9 +156,14 @@ type SHELL_TYPE
         integer					::	n_insh
 end type SHELL_TYPE
 
+type OLD_SHELL_TYPE
+        real                                 ::      rout, dr, cstb
+        real                                 ::      avtheta, avn_insh, theta_corr
+        integer                                 ::      n_insh
+end type OLD_SHELL_TYPE
 
 type(SHELL_TYPE), allocatable::	wshell(:)
-
+type(OLD_SHELL_TYPE), allocatable::old_wshell(:)
 
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
@@ -16293,6 +16299,10 @@ subroutine prep_coord
 
 ! local variables
 integer(4)          :: i,nat3
+logical             :: old_restart = .false.
+real(8),allocatable :: x_old(:),v_old(:)
+real(8)             :: old_boxlength(3), old_boxcentre(3)
+integer             :: headercheck
 
 ! --- Refresh topology coords. if needed (external restraints file)
 if ( implicit_rstr_from_file .eq. 1 ) then
@@ -16348,22 +16358,47 @@ call allocate_natom_arrays
 if(restart) then
         ! topology routine has determined nwat, natom and allocated storage
         call centered_heading('Reading restart file','-')
-        read (2) nat3
-        rewind(2)
+        read(2) headercheck
+        if (headercheck .ne. -1337) then
+!old restart file without header canary
+          rewind(2)
+          old_restart = .true.
+        end if
+          read (2) nat3
+          rewind(2)
         if(nat3 /= 3*natom) then
                 write(*,100) nat3/3, natom
 100			format('>>>>> ERROR:',i5,' atoms in restart file not equal to',i5,&
                         ' in topology.')
                 call die('wrong number of atoms in restart file')
         end if
-        read (2,err=112,end=112) nat3, (x(i),i=1,nat3)
-        read (2,err=112,end=112) nat3, (v(i),i=1,nat3)
+        if (.not.old_restart) then
+          read(2) headercheck
+          read (2,err=112,end=112) nat3, (x(i),i=1,nat3)
+          read (2,err=112,end=112) nat3, (v(i),i=1,nat3)
+        else
+          allocate(x_old(nat3),v_old(nat3))
+          read (2,err=112,end=112) nat3, (x_old(i),i=1,nat3)
+          read (2,err=112,end=112) nat3, (v_old(i),i=1,nat3)
+           write(*,*) 'Read coordinates and velocities from previous version of qdyn'
+          x(1:nat3) = x_old(1:nat3)
+          v(1:nat3) = v_old(1:nat3)
+          deallocate(x_old,v_old)
+        end if
         write (*,'(a30,i8)')   'Total number of atoms        =',natom
         write (*,'(a30,i8,/)') 'Number of waters encountered =',nwat
 
         if( use_PBC) then
-                read(2,err=112,end=112) boxlength(:)
-                read(2,err=112,end=112) boxcentre(:)
+           if (.not.old_restart) then
+             read(2,err=112,end=112) boxlength(:)
+             read(2,err=112,end=112) boxcentre(:)
+           else
+             read(2,err=112,end=112) old_boxlength(:)
+             read(2,err=112,end=112) old_boxcentre(:)
+             write(*,*) 'Read boxlength and center from previous version of qdyn'
+             boxlength(1:3) = old_boxlength(1:3)
+             boxcentre(1:3) = old_boxcentre(1:3)
+           end if
                 write(*,*)
                 write(*,'(a16,3f8.3)') 'Boxlength     =', boxlength(:)
                 write(*,'(a16,3f8.3)') 'Centre of box =', boxcentre(:)
@@ -16735,6 +16770,17 @@ allocate(ww_igrid(nwat))
 	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
 #endif
 end subroutine prep_sim
+
+!-----------------------------------------------------------------------
+
+subroutine prep_sim_version(version)
+! arguments
+character(*)	:: version
+!now write version number so Miha stops complaining
+ene_header%version = trim(version)
+
+end subroutine prep_sim_version
+
 
 !-----------------------------------------------------------------------
 
@@ -17916,6 +17962,13 @@ integer						::	is, n_insh
 integer						::	nwpolr_shell_restart, filestat
 integer						::	bndcodw, angcodw
 
+logical :: old_restart = .false.
+real(8),allocatable :: x_old1(:), v_old1(:)
+real(kind=prec),allocatable :: x_1(:), v_1(:)
+real(8) :: old_boxlength(3),old_boxcentre(3)
+real(kind=prec) :: boxlength(3),boxcentre(3)
+integer :: headercheck,i
+
 !calc mu_w
 !look up bond code for water
 bndcodw = bnd(nbonds)%cod
@@ -17936,13 +17989,44 @@ write(*, 100) nwpolr_shell
 100	format(/,'Setting up ', i1, ' water shells for polarisation restraints.')
 
 if(restart) then !try to load theta_corr from restart file
+!first, rewind file to find out if we have an old or new restart
+   rewind(2)
+   allocate(x_1(3*natom),v_1(3*natom),x_old1(3*natom),v_old1(3*natom))
+   read(2) headercheck
+   if (headercheck .ne. -1337) then
+     old_restart = .true.
+     rewind(2)
+     read(2) headercheck,(x_old1(i),i=1,nat3)
+     read(2) headercheck,(v_old1(i),i=1,nat3)
+     if( use_PBC) then
+       read(2) old_boxlength(:)
+       read(2) old_boxcentre(:)
+     end if
+
+   else
+     read(2) headercheck,(x_1(i),i=1,nat3)
+     read(2) headercheck,(v_1(i),i=1,nat3)
+     if( use_PBC) then
+       read(2) boxlength(:)
+       read(2) boxcentre(:)
+     end if
+   end if
+   deallocate(x_1,v_1,x_old1,v_old1)
         read(2, iostat=filestat) nwpolr_shell_restart
-        if(filestat /= 0 .or. nwpolr_shell_restart /= nwpolr_shell) then
+        if(filestat .ne. 0 .or. nwpolr_shell_restart /= nwpolr_shell) then
                 write(*,102) 
                 wshell(:)%theta_corr = zero
         else
                 backspace(2)
-                read(2) nwpolr_shell_restart, wshell(:)%theta_corr
+                if (old_restart) then
+                   allocate(old_wshell(nwpolr_shell), stat=alloc_status)
+                   read(2) nwpolr_shell_restart,old_wshell(:)%theta_corr
+                   wshell(:)%theta_corr = old_wshell(:)%theta_corr
+                   write(*,*) 'Loaded water polarization data from old qdyn restart file'
+                   deallocate(old_wshell)
+                else
+                   read(2) nwpolr_shell_restart,wshell(:)%theta_corr
+                end if
                 write(*,103)
         end if
 else
@@ -18319,10 +18403,12 @@ end subroutine write_trj
 subroutine write_xfin
 ! local variables
 integer						::	i,nat3
-
+integer        :: canary = -1337
 nat3 = natom*3
 
 rewind (3)
+!new canary on top of file
+write (3) canary
 write (3) nat3, (x(i),i=1,nat3)
 write (3) nat3, (v(i),i=1,nat3)
 !save dynamic polarisation restraint data

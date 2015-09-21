@@ -73,6 +73,7 @@ implicit none
 		integer(4),allocatable			:: 	numres(:)
 		integer(4),allocatable			::	resid(:)
 		integer(4),allocatable			::	gcnum(:)
+		character(80)				:: version
 	end type Q_ENE_HEAD
 
 	interface operator(+)
