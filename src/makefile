@@ -135,7 +135,7 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+	qfep5 qprep5 qdum5 qcalc5 move1 move2
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
@@ -268,10 +268,10 @@ maskmanip.o:maskmanip.f90 mask.o misc.o parse.o
 	${FC} ${FFLAGS} -c $<
 
 #arm grid by including this flag: -DUSE_GRID
-md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o 
+md.o:	md.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c md.f90
 
-md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o 
+md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o exc.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 exc.o -o md_dum.o
 
 md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o version.o
@@ -341,7 +341,7 @@ move1:
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdyn5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 ../bin/
 
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/
