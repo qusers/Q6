@@ -16520,7 +16520,6 @@ end subroutine init_trj
 subroutine prep_sim
 ! local variables
 integer						:: i, j, ig, istate,runvar,iw,irc_solvent
-integer,parameter				::canary=1337
 type(Q_ENE_HEAD)				:: tempheader
 
 if (nodeid .eq. 0) then	
@@ -16745,9 +16744,9 @@ if( use_PBC ) then
         end do
 end if
 !and we can write the header to the energy file :)
-write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
-	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
-	ene_header%gcnum(1:ene_header%arrays)
+!write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
+!	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
+!	ene_header%gcnum(1:ene_header%arrays)
 
 ! the last thing to prepare are the MD grids
 ! so we call them here
@@ -16776,8 +16775,18 @@ end subroutine prep_sim
 subroutine prep_sim_version(version)
 ! arguments
 character(*)	:: version
+
+! local values
+integer,parameter :: canary = 1337
+! hard coded value
 !now write version number so Miha stops complaining
 ene_header%version = trim(version)
+
+if ( iene_cycle .gt. 0 ) then
+write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
+ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
+ene_header%gcnum(1:ene_header%arrays),ene_header%version
+end if
 
 end subroutine prep_sim_version
 
