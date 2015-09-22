@@ -24,8 +24,9 @@ final           4-dyn_rlx_wat_noshake.re
 trajectory      4-dyn_rlx_wat_noshake.dcd
 
 restart	3-dyn_rlx_wat_noshake_small.re
+restraint	3-dyn_rlx_wat_noshake_small_rest.re
 [sequence_restraints]
-1 5140 200 0  0  0
+1 5124 200 0  0  0
 [distance_restraints]
-1627       5138    2       3       3       2
-4731       5140    1.5     2.5     3       2
+1628       5122    2       3       3       2
+4729	5124	1.5	2.5	3	2

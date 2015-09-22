@@ -23,8 +23,9 @@ final           10-dyn_warmRT.re
 trajectory      10-dyn_warmRT.dcd
 
 restart	9-dyn_warm150k.re
+restraint	9-dyn_warm150k_rest.re
 [sequence_restraints]
-1 5140 2 0  0  0
+1 5124 2 0  0  0
 [distance_restraints]
-1627       5138    2       3       3       2
-4731       5140    1.5     2.5     3       2
+1628       5122    2       3       3       2
+4729	5124	1.5	2.5	3	2

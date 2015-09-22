@@ -29,6 +29,7 @@ print  INP "lrf                               on\n";
 print  INP "\n[cut-offs]\n";
 print  INP "solute_solute                 10\n";
 print  INP "solvent_solvent               10\n";
+print  INP "solute_solvent		   10\n";
 print  INP "q_atom                        99\n";
 print  INP "\n[sphere]\n";
 print  INP "#excluded_freeze		on\n";                                       
@@ -37,7 +38,7 @@ print  INP "\n[intervals]\n"                              ;
 print  INP "non_bond                      30\n"            ;  # time step for nonbonded decreased
 print  INP "output                        100\n"          ;
 print  INP "trajectory                    100\n"          ;
-print  INP "energy                         5\n"            ;       ;
+print  INP "energy                         10\n"            ;       ;
 print  INP "\n[group_contribution]\n";
 print  INP "residue all 153\n";
 print  INP "residue electro 153\n";
@@ -55,8 +56,10 @@ print  INP "restraint           fep_102_rest.re\n";
 print  INP "\n[lambdas]\n"                        ;
 printf INP "%4.2f   %4.2f\n", (1-$landa[$b]) ,$landa[$b]   ;
 print  INP "\n[sequence_restraints]\n";
-print  INP "5118   5140  0.5   0   0   0\n" ;
+print  INP "5102   5124  0.5   0   0   0\n" ;
 print  INP "\n[distance_restraints]\n";
+print  INP "1629	5113	3.30	3.30	3.0	1\n" ;
+print  INP "1629	5116	3.30	3.30	3.0	1\n" ;
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 $pn=$pn-2;

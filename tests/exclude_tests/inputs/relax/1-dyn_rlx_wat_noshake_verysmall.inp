@@ -4,7 +4,7 @@ stepsize                0.00001
 temperature             0.01
 bath_coupling           0.0001
 separate_scaling        on
-random_seed     2156
+random_seed     1337
 initial_temperature     1
 shake_solvent           off
 lrf                     on
@@ -26,7 +26,7 @@ final           1-dyn_rlx_wat_noshake_verysmall.re
 trajectory      1-dyn_rlx_wat_noshake_verysmall.dcd
 
 [sequence_restraints]
-1 5140 200 0  0  0
+1 5124 200 0  0  0
 [distance_restraints]
-1627       5138    2       3       3       2
-4731       5140    1.5     2.5     3       2
+1628       5122    2       3       3       2
+4729	5124	1.5	2.5	3	2

@@ -9,8 +9,8 @@
 #written by paul.bauer@icm.uu.se
 #released under Beer-Ware Licence
 
-QPATH="/data/work/q_source/bin"
-CORES=4
+QPATH="/data/simulations/Q_metal/q_github_paul/bin"
+CORES=6
 OMPCORES=2
 
 STARTDIR=`pwd`
@@ -33,19 +33,19 @@ fi
 #arguments are file name and type of run
 function make_run_command() {
 if [ "$1" == "serial" ]  ; then
-QBIN=$QPATH/qdyn5
+QBIN=$QPATH/qdyn5_r8
 RUNCOMA="$QBIN"
 RUNCOMB=""
 fi
-if [ "$1" == "parallel" ] || [ "$1" == "relax" ] ; then
+if [ "$1" == "parallel" ]  ; then
 QBIN=$QPATH/qdyn5p
 RUNCOMA="$MPICOM -np $CORES $QBIN"
 RUNCOMB=""
 fi
-if [ "$1" == "hybrid" ] ; then
+if [ "$1" == "hybrid" ] || [ "$1" == "relax" ]; then
 QBIN=$QPATH/qdyn5h
 RUNCOMA="$MPICOM -np 1 -x OMP_NUM_THREADS=2 $QBIN " 
-RUNCOMB=": -np \$(( $CORES - 2 )) -x OMP_NUM_THREADS=1 $QBIN"
+RUNCOMB=" : -np $(( $CORES - 2 )) -x OMP_NUM_THREADS=1 $QBIN"
 fi
 
 
@@ -105,7 +105,7 @@ mkdir ${MYTMPDIR}
  cd ${MYTMPDIR}
  echo "Entering temporary directory"
  $RUNCOMA fep_${NUM}.inp >fep_${NUM}.log $RUNCOMB
- if [ `grep "Terminated normally" fep_${NUM}.log | wc -l` -ne 0 ]
+ if [ `grep "terminated normally" fep_${NUM}.log | wc -l` -ne 0 ]
  then echo -e "$OK\nCopying back the files"
  cp * ${THISDIR}
  cd ${THISDIR}
@@ -161,7 +161,7 @@ do
  echo "Entering temporary directory"
  echo "Now in ${MYTMPDIR}"
  $RUNCOMA  ${step}.inp > ${step}.log $RUNCOMB
- if [ `grep "Terminated normally" ${step}.log | wc -l` -ne 0 ]
+ if [ `grep "terminated normally" ${step}.log | wc -l` -ne 0 ]
  then echo -e "$OK\nCopying back the files"
  cp * ${THISDIR}
  cd ${THISDIR}

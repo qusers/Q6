@@ -23,8 +23,9 @@ final           6-dyn_rlx_wat_eq.re
 trajectory      6-dyn_rlx_wat_eq.dcd
 
 restart	5-dyn_rlx_wat.re
+restraint	5-dyn_rlx_wat_rest.re
 [sequence_restraints]
-1 5140 200 0  0  0
+1 5124 200 0  0  0
 [distance_restraints]
-1627       5138    2       3       3       2
-4731       5140    1.5     2.5     3       2
+1628       5122    2       3       3       2
+4729	5124	1.5	2.5	3	2

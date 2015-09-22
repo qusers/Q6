@@ -23,8 +23,9 @@ final           7-dyn_cool.re
 trajectory      7-dyn_cool.dcd
 
 restart	6-dyn_rlx_wat_eq.re
+restraint	6-dyn_rlx_wat_eq_rest.re
 [sequence_restraints]
-1 5140 200 0  0  0
+1 5124 200 0  0  0
 [distance_restraints]
-1627       5138    2       3       3       2
-4731       5140    1.5     2.5     3       2
+1628       5122    2       3       3       2
+4729	5124	1.5	2.5	3	2
