@@ -39,12 +39,12 @@ print  INP "non_bond                      30\n"            ;  # time step for no
 print  INP "output                        100\n"          ;
 print  INP "trajectory                    100\n"          ;
 print  INP "energy                         10\n"            ;       ;
-print  INP "\n[group_contribution]\n";
-print  INP "residue all 153\n";
-print  INP "residue electro 153\n";
-print  INP "residue vdw 153\n";
-print  INP "residue full 234\n";
-print  INP "residue all 153 234\n";
+print  INP "!\n[group_contribution]\n";
+print  INP "!residue all 153\n";
+print  INP "!residue electro 153\n";
+print  INP "!residue vdw 153\n";
+print  INP "!residue full 234\n";
+print  INP "!residue all 153 234\n";
 print  INP "\n[files]\n"                          ;
 print  INP "topology            2cjpFH_ionres_oplsa.top\n"        ;
 printf INP "restart             fep_%03d.re\n",$nn+2 ;

@@ -75,13 +75,13 @@ implicit none
 
 ! checking and storing precision
 if (prec .eq. singleprecision) then
-myprec = -137
+myprec = 137
 version_precision = 'Single'
 elseif (prec .eq. doubleprecision) then
-myprec = -1337
+myprec = 1337
 version_precision = 'Double'
 elseif (prec .eq. quadprecision) then
-myprec = -13337
+myprec = 13337
 version_precision = 'Quadruple'
 end if
 
@@ -222,7 +222,7 @@ end if
 			if (canary.eq.137) file_precision = 'Single'
 			if (canary.eq.1337) file_precision = 'Double'
 			if (canary.eq.13337) file_precision = 'Quadruple'
-			write(*,'(a,a,a,a,a)') 'File precision is',trim(file_precision),' , while version has ',trim(version_precision),' precision!'
+			write(*,'(a,a,a,a,a)') 'File precision is ',trim(file_precision),' , while version has ',trim(version_precision),' precision!'
 			stop 'Mismatched precisions'
 		else
 			if(ifile.eq.1) then

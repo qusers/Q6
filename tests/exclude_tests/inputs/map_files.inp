@@ -1,0 +1,61 @@
+51 	 	#file numbers
+2 0	 	#number of states and off diagonal terms
+.59616300 10  #KT=300*0.00198721 & Num of points to skip.
+99 		#bins
+10 		#points for bin.
+13.9045		#gas phase shift
+1
+1 2 66.0480 0 0 0		#Hij
+1 -1	#linear combination of the states
+fep_100.en
+fep_098.en
+fep_096.en
+fep_094.en
+fep_092.en
+fep_090.en
+fep_088.en
+fep_086.en
+fep_084.en
+fep_082.en
+fep_080.en
+fep_078.en
+fep_076.en
+fep_074.en
+fep_072.en
+fep_070.en
+fep_068.en
+fep_066.en
+fep_064.en
+fep_062.en
+fep_060.en
+fep_058.en
+fep_056.en
+fep_054.en
+fep_052.en
+fep_050.en
+fep_048.en
+fep_046.en
+fep_044.en
+fep_042.en
+fep_040.en
+fep_038.en
+fep_036.en
+fep_034.en
+fep_032.en
+fep_030.en
+fep_028.en
+fep_026.en
+fep_024.en
+fep_022.en
+fep_020.en
+fep_018.en
+fep_016.en
+fep_014.en
+fep_012.en
+fep_010.en
+fep_008.en
+fep_006.en
+fep_004.en
+fep_002.en
+fep_000.en
+stop
