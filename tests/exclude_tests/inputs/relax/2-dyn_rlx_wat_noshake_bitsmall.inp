@@ -1,0 +1,31 @@
+[MD]
+steps                   10000
+stepsize                0.0001
+temperature             0.01
+bath_coupling           0.001
+separate_scaling        on
+shake_solvent           off
+lrf                     on
+[cut-offs]
+q_atom                    99
+
+[sphere]
+[intervals]
+non_bond                 30
+output                   1000
+trajectory               1000
+
+[lambdas]
+0.00 1.00
+[files]
+fep             lig.fep
+topology        2cjpFH_ionres_oplsa.top
+final           2-dyn_rlx_wat_noshake_bitsmall.re
+trajectory      2-dyn_rlx_wat_noshake_bitsmall.dcd
+
+restart	1-dyn_rlx_wat_noshake_verysmall.re
+[sequence_restraints]
+1 5140 200 0  0  0
+[distance_restraints]
+1627       5138    2       3       3       2
+4731       5140    1.5     2.5     3       2

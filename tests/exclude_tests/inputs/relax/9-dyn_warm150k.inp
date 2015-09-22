@@ -1,0 +1,30 @@
+[MD]
+steps                   30000
+stepsize                1
+temperature             150
+bath_coupling           100
+separate_scaling        on
+lrf                     on
+[cut-offs]
+q_atom                    99
+
+[sphere]
+[intervals]
+non_bond                 30
+output                   3000
+trajectory               3000
+
+[lambdas]
+0.00 1.00
+[files]
+fep             lig.fep
+topology        2cjpFH_ionres_oplsa.top
+final           9-dyn_warm150k.re
+trajectory      9-dyn_warm150k.dcd
+
+restart	8-dyn_RLS.re
+[sequence_restraints]
+1 5140 20 0  0  0
+[distance_restraints]
+1627       5138    2       3       3       2
+4731       5140    1.5     2.5     3       2
