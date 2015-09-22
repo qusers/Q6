@@ -57,9 +57,9 @@ implicit none
 !Energy file header data type
 	type(Q_ENE_HEAD)			:: fileheader
 !to keep current residue from header
-	integer					:: curres,filestat,jj,canary
+	integer					:: curres,filestat,jj,canary,myprec
 	logical					:: is_old_file = .false.
-
+	character(80)				:: version_precision, file_precision
 	integer								::	f,gas=0,error,dummyno !!!!!!!!!masoud
 	real								::	dummy
 	character(100)							::	iline !!!!!!! masoud
@@ -72,6 +72,18 @@ implicit none
 	write(*,100) QFEP_VERSION,  QFEP_DATE
 	write(*,*)
 100	format('# Qfep',t30,'version ',a,t50,'(modified on ',a,')')
+
+! checking and storing precision
+if (prec .eq. singleprecision) then
+myprec = -137
+version_precision = 'Single'
+elseif (prec .eq. doubleprecision) then
+myprec = -1337
+version_precision = 'Double'
+elseif (prec .eq. quadprecision) then
+myprec = -13337
+version_precision = 'Quadruple'
+end if
 
 	!------------------------------------------
 	! INPUT OF PARAMETERS
@@ -190,7 +202,7 @@ implicit none
 
 		!get file header for the first time
 		read(f, iostat=filestat) canary,fileheader%arrays,fileheader%totresid
-		if (canary .ne. 1337) then
+		if ((canary .ne. 137).and.(canary.ne.1337).and.(canary.ne.13337)) then
 !could be old file type, save the info and continue
 !allocate new arrays using the same data layout as the old structures
                         is_old_file = .true.
@@ -205,6 +217,13 @@ implicit none
 		else if ( fileheader%arrays .lt. 1) then
 			write(*,*) 'Number of different types is < 1. Abort !'
 			stop 'Qfep5 failed at loading file header'
+		else if (canary .ne.myprec) then
+			write(*,*) 'Precision of data in energy file is different from precision of this Q version'
+			if (canary.eq.137) file_precision = 'Single'
+			if (canary.eq.1337) file_precision = 'Double'
+			if (canary.eq.13337) file_precision = 'Quadruple'
+			write(*,'(a,a,a,a,a)') 'File precision is',trim(file_precision),' , while version has ',trim(version_precision),' precision!'
+			stop 'Mismatched precisions'
 		else
 			if(ifile.eq.1) then
 			allocate(fileheader%types(fileheader%arrays),fileheader%numres(fileheader%arrays), &

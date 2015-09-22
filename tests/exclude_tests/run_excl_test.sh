@@ -179,6 +179,9 @@ do
 done
 
 cd $STARTDIR
+cp run_relax/12-dyn_eqPUB.re inputs/fep_102.re
+cp run_relax/12-dyn_eqPUB.re inputs/fep_102_rest.re
+
 fi
 }
 

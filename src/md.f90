@@ -162,8 +162,30 @@ type OLD_SHELL_TYPE
         integer                                 ::      n_insh
 end type OLD_SHELL_TYPE
 
+type SHELL_TYPE_SINGLE
+        real(kind=singleprecision)                                 ::      rout, dr, cstb
+        real(kind=singleprecision)                                 ::      avtheta, avn_insh, theta_corr
+        integer                                 ::      n_insh
+end type SHELL_TYPE_SINGLE
+
+type SHELL_TYPE_DOUBLE
+        real(kind=doubleprecision)                                 ::      rout, dr, cstb
+        real(kind=doubleprecision)                                 ::      avtheta, avn_insh, theta_corr
+        integer                                 ::      n_insh
+end type SHELL_TYPE_DOUBLE
+
+type SHELL_TYPE_QUAD
+        real(kind=quadprecision)                                 ::      rout, dr, cstb
+        real(kind=quadprecision)                                 ::      avtheta, avn_insh, theta_corr
+        integer                                 ::      n_insh
+end type SHELL_TYPE_QUAD
+
+
 type(SHELL_TYPE), allocatable::	wshell(:)
 type(OLD_SHELL_TYPE), allocatable::old_wshell(:)
+type(SHELL_TYPE_SINGLE), allocatable:: wshell_single(:)
+type(SHELL_TYPE_DOUBLE), allocatable:: wshell_double(:)
+type(SHELL_TYPE_QUAD), allocatable:: wshell_quad(:)
 
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
@@ -16302,13 +16324,32 @@ integer(4)          :: i,nat3
 logical             :: old_restart = .false.
 real(8),allocatable :: x_old(:),v_old(:)
 real(8)             :: old_boxlength(3), old_boxcentre(3)
-integer             :: headercheck
+integer             :: headercheck,myprec
+!new variables for differen tprecision restart files
+real(kind=singleprecision),allocatable :: x_single(:),v_single(:)
+real(kind=singleprecision)             :: boxl_single(3),boxc_single(3)
+real(kind=doubleprecision),allocatable :: x_double(:),v_double(:)
+real(kind=doubleprecision)             :: boxl_double(3),boxc_double(3)
+real(kind=quadprecision),allocatable   :: x_quad(:),v_quad(:)
+real(kind=quadprecision)               :: boxl_quad(3),boxc_quad(3)
+
+if (prec .eq. singleprecision) then
+myprec = -137
+elseif (prec .eq. doubleprecision) then
+myprec = -1337
+elseif (prec .eq. quadprecision) then
+myprec = -13337
+else
+call die('No such precision')
+end if
+
+
 
 ! --- Refresh topology coords. if needed (external restraints file)
 if ( implicit_rstr_from_file .eq. 1 ) then
 write (*,'(/,a,/)') 'Refreshing topology coords for restraining...'
 read(12) headercheck
-  if (headercheck .ne. -1337) then
+  if ((headercheck .ne. -137).and.(headercheck.ne.-1337).and.(headercheck.ne.-13337)) then
 !old restart file without header canary
       rewind(12)
       old_restart = .true.
@@ -16321,10 +16362,30 @@ read(12) headercheck
        end if
   if (.not.old_restart) then
      read (12) headercheck
-     read (12,err=112,end=112) nat3, (xtop(i),i=1,nat_pro*3)
+     if (myprec .ne. headercheck) then
+       write(*,*) '>>> WARNING: Using mismatched precision in restart file'
+       if (headercheck .eq. -137) then
+         allocate(x_single(nat3))
+         read (12,err=112,end=112) nat3, (x_single(i),i=1,nat_pro*3)
+         xtop(1:nat_pro*3) = x_single(1:nat_pro*3)
+         deallocate(x_single)
+       else if (headercheck .eq. -1337) then
+         allocate(x_double(nat3))
+         read (12,err=112,end=112) nat3, (x_double(i),i=1,nat_pro*3)
+         xtop(1:nat_pro*3) = x_double(1:nat_pro*3)
+         deallocate(x_double)
+       else if (headercheck .eq. -13337) then
+         allocate(x_quad(nat3))
+         read (12,err=112,end=112) nat3, (x_quad(i),i=1,nat_pro*3)
+         xtop(1:nat_pro*3) = x_quad(1:nat_pro*3)
+         deallocate(x_quad)
+       end if
+     else
+       read (12,err=112,end=112) nat3, (xtop(i),i=1,nat_pro*3)
+     end if
   else
      allocate(x_old(nat3))
-     read (2,err=112,end=112) nat3, (x_old(i),i=1,nat_pro*3)
+     read (12,err=112,end=112) nat3, (x_old(i),i=1,nat_pro*3)
      xtop(1:nat_pro*3) = x_old(1:nat_pro*3)
      deallocate(x_old)
   end if
@@ -16381,7 +16442,7 @@ if(restart) then
         ! topology routine has determined nwat, natom and allocated storage
         call centered_heading('Reading restart file','-')
         read(2) headercheck
-        if (headercheck .ne. -1337) then
+        if ((headercheck .ne. -137).and.(headercheck.ne.1337).and.(headercheck.ne.13337)) then
 !old restart file without header canary
           rewind(2)
           old_restart = .true.
@@ -16396,31 +16457,76 @@ if(restart) then
         end if
         if (.not.old_restart) then
           read(2) headercheck
-          read (2,err=112,end=112) nat3, (x(i),i=1,nat3)
-          read (2,err=112,end=112) nat3, (v(i),i=1,nat3)
+          if (myprec .ne. headercheck) then
+            write(*,*) '>>> WARNING: Using mismatched precision in restart file'
+            if (headercheck .eq. -137) then
+              allocate(x_single(nat3),v_single(nat3))
+              read (2,err=112,end=112) nat3, (x_single(i),i=1,nat3)
+              read (2,err=112,end=112) nat3, (v_single(i),i=1,nat3)
+              x(1:nat3) = x_single(1:nat3)
+              v(1:nat3) = v_single(1:nat3)
+              deallocate(x_single,v_single)
+              if( use_PBC) then
+                 read(2,err=112,end=112) boxl_single(:)
+                 read(2,err=112,end=112) boxc_single(:)
+                 boxlength(1:3) = boxl_single(1:3)
+                 boxcentre(1:3) = boxc_single(1:3)
+              end if
+            else if (headercheck .eq. -1337) then
+              allocate(x_double(nat3),v_double(nat3))
+              read (2,err=112,end=112) nat3, (x_double(i),i=1,nat3)
+              read (2,err=112,end=112) nat3, (v_double(i),i=1,nat3)
+              x(1:nat3) = x_double(1:nat3)
+              v(1:nat3) = v_double(1:nat3)
+              deallocate(x_double,v_double)
+              if( use_PBC) then
+                 read(2,err=112,end=112) boxl_double(:)
+                 read(2,err=112,end=112) boxc_double(:)
+                 boxlength(1:3) = boxl_double(1:3)
+                 boxcentre(1:3) = boxc_double(1:3)
+              end if
+            else if (headercheck .eq. -13337) then
+              allocate(x_quad(nat3),v_quad(nat3))
+              read (2,err=112,end=112) nat3, (x_quad(i),i=1,nat3)
+              read (2,err=112,end=112) nat3, (v_quad(i),i=1,nat3)
+              x(1:nat3) = x_quad(1:nat3)
+              v(1:nat3) = v_quad(1:nat3)
+              deallocate(x_quad,v_quad)
+              if( use_PBC) then
+                 read(2,err=112,end=112) boxl_quad(:)
+                 read(2,err=112,end=112) boxc_quad(:)
+                 boxlength(1:3) = boxl_quad(1:3)
+                 boxcentre(1:3) = boxc_quad(1:3)
+              end if
+            end if
+          else
+              read (2,err=112,end=112) nat3, (x(i),i=1,nat3)
+              read (2,err=112,end=112) nat3, (v(i),i=1,nat3)
+              if( use_PBC) then
+                read(2,err=112,end=112) boxlength(:)
+                read(2,err=112,end=112) boxcentre(:)
+              end if
+          end if
         else
           allocate(x_old(nat3),v_old(nat3))
           read (2,err=112,end=112) nat3, (x_old(i),i=1,nat3)
           read (2,err=112,end=112) nat3, (v_old(i),i=1,nat3)
-           write(*,*) 'Read coordinates and velocities from previous version of qdyn'
+          write(*,*) 'Read coordinates and velocities from previous version of qdyn'
           x(1:nat3) = x_old(1:nat3)
           v(1:nat3) = v_old(1:nat3)
           deallocate(x_old,v_old)
-        end if
-        write (*,'(a30,i8)')   'Total number of atoms        =',natom
-        write (*,'(a30,i8,/)') 'Number of waters encountered =',nwat
-
-        if( use_PBC) then
-           if (.not.old_restart) then
-             read(2,err=112,end=112) boxlength(:)
-             read(2,err=112,end=112) boxcentre(:)
-           else
+          if( use_PBC) then
              read(2,err=112,end=112) old_boxlength(:)
              read(2,err=112,end=112) old_boxcentre(:)
              write(*,*) 'Read boxlength and center from previous version of qdyn'
              boxlength(1:3) = old_boxlength(1:3)
              boxcentre(1:3) = old_boxcentre(1:3)
-           end if
+          end if
+        end if
+        write (*,'(a30,i8)')   'Total number of atoms        =',natom
+        write (*,'(a30,i8,/)') 'Number of waters encountered =',nwat
+
+        if( use_PBC) then
                 write(*,*)
                 write(*,'(a16,3f8.3)') 'Boxlength     =', boxlength(:)
                 write(*,'(a16,3f8.3)') 'Centre of box =', boxcentre(:)
@@ -16799,7 +16905,17 @@ subroutine prep_sim_version(version)
 character(*)	:: version
 
 ! local values
-integer,parameter :: canary = 1337
+integer :: canary = 1337
+
+if (prec .eq. singleprecision) then
+canary = 137
+else if (prec .eq. doubleprecision) then
+canary = 1337
+else if (prec .eq. quadprecision) then
+canary = 13337
+else
+call die('No such precision')
+end if
 ! hard coded value
 !now write version number so Miha stops complaining
 ene_header%version = trim(version)
@@ -17994,11 +18110,25 @@ integer						::	nwpolr_shell_restart, filestat
 integer						::	bndcodw, angcodw
 
 logical :: old_restart = .false.
-real(8),allocatable :: x_old1(:), v_old1(:)
-real(kind=prec),allocatable :: x_1(:), v_1(:)
+real(8),allocatable :: x_old(:), v_old(:)
+real(kind=singleprecision),allocatable :: x_1(:), v_1(:)
+real(kind=doubleprecision),allocatable :: x_2(:), v_2(:)
+real(kind=quadprecision),allocatable :: x_3(:), v_3(:)
 real(8) :: old_boxlength(3),old_boxcentre(3)
-real(kind=prec) :: boxlength(3),boxcentre(3)
-integer :: headercheck,i
+real(kind=singleprecision) :: boxlength_1(3),boxcentre_1(3)
+real(kind=doubleprecision) :: boxlength_2(3),boxcentre_2(3)
+real(kind=quadprecision) :: boxlength_3(3),boxcentre_3(3)
+integer :: headercheck,i,myprec
+
+if (prec .eq. singleprecision) then
+myprec = -137
+elseif (prec .eq. doubleprecision) then
+myprec = -1337
+elseif (prec .eq. quadprecision) then
+myprec = -13337
+else
+call die('No such precision')
+end if
 
 !calc mu_w
 !look up bond code for water
@@ -18022,27 +18152,46 @@ write(*, 100) nwpolr_shell
 if(restart) then !try to load theta_corr from restart file
 !first, rewind file to find out if we have an old or new restart
    rewind(2)
-   allocate(x_1(3*natom),v_1(3*natom),x_old1(3*natom),v_old1(3*natom))
    read(2) headercheck
-   if (headercheck .ne. -1337) then
+   if ((headercheck .ne. -137).and.(headercheck .ne. -1337).and.(headercheck .ne. -13337)) then
      old_restart = .true.
      rewind(2)
-     read(2) headercheck,(x_old1(i),i=1,nat3)
-     read(2) headercheck,(v_old1(i),i=1,nat3)
+     allocate(x_old(3*natom),v_old(3*natom))
+     read(2) headercheck,(x_old(i),i=1,nat3)
+     read(2) headercheck,(v_old(i),i=1,nat3)
      if( use_PBC) then
        read(2) old_boxlength(:)
        read(2) old_boxcentre(:)
      end if
-
-   else
+     deallocate(x_old,v_old)
+   else if (headercheck .eq. -137) then
+     allocate(x_1(3*natom),v_1(3*natom))
      read(2) headercheck,(x_1(i),i=1,nat3)
      read(2) headercheck,(v_1(i),i=1,nat3)
      if( use_PBC) then
-       read(2) boxlength(:)
-       read(2) boxcentre(:)
+       read(2) boxlength_1(:)
+       read(2) boxcentre_1(:)
      end if
+     deallocate(x_1,v_1)
+   else if (headercheck .eq. -1337) then
+     allocate(x_2(3*natom),v_2(3*natom))
+     read(2) headercheck,(x_2(i),i=1,nat3)
+     read(2) headercheck,(v_2(i),i=1,nat3)
+     if( use_PBC) then
+       read(2) boxlength_2(:)
+       read(2) boxcentre_2(:)
+     end if
+     deallocate(x_2,v_2)
+   else if (headercheck .eq. -13337) then
+     allocate(x_3(3*natom),v_3(3*natom))
+     read(2) headercheck,(x_3(i),i=1,nat3)
+     read(2) headercheck,(v_3(i),i=1,nat3)
+     if( use_PBC) then
+       read(2) boxlength_3(:)
+       read(2) boxcentre_3(:)
+     end if
+     deallocate(x_3,v_3)
    end if
-   deallocate(x_1,v_1,x_old1,v_old1)
         read(2, iostat=filestat) nwpolr_shell_restart
         if(filestat .ne. 0 .or. nwpolr_shell_restart /= nwpolr_shell) then
                 write(*,102) 
@@ -18056,7 +18205,27 @@ if(restart) then !try to load theta_corr from restart file
                    write(*,*) 'Loaded water polarization data from old qdyn restart file'
                    deallocate(old_wshell)
                 else
-                   read(2) nwpolr_shell_restart,wshell(:)%theta_corr
+                   if (headercheck .ne. myprec) then
+                   write(*,*) '>>> WARNING: Using water polarisation from restart with mismatched precision'
+                     if (headercheck .eq. -137) then
+                       allocate(wshell_single(nwpolr_shell), stat=alloc_status)
+                       read(2) nwpolr_shell_restart,wshell_single(:)%theta_corr
+                       wshell(:)%theta_corr = wshell_single(:)%theta_corr
+                       deallocate(wshell_single)
+                     else if (headercheck .eq. -1337) then
+                       allocate(wshell_double(nwpolr_shell), stat=alloc_status)
+                       read(2) nwpolr_shell_restart,wshell_double(:)%theta_corr
+                       wshell(:)%theta_corr = wshell_double(:)%theta_corr
+                       deallocate(wshell_double)
+                     else if (headercheck .eq. -13337) then
+                       allocate(wshell_quad(nwpolr_shell), stat=alloc_status)
+                       read(2) nwpolr_shell_restart,wshell_quad(:)%theta_corr
+                       wshell(:)%theta_corr = wshell_quad(:)%theta_corr
+                       deallocate(wshell_quad)
+                     end if
+                   else
+                     read(2) nwpolr_shell_restart,wshell(:)%theta_corr
+                   end if
                 end if
                 write(*,103)
         end if
@@ -18437,6 +18606,15 @@ integer						::	i,nat3
 integer        :: canary = -1337
 nat3 = natom*3
 
+if (prec .eq. singleprecision) then
+canary = -1337
+elseif (prec .eq. doubleprecision) then
+canary = -13337
+elseif (prec .eq. quadprecision) then
+canary = -133337
+else
+call die('No such precision')
+end if
 rewind (3)
 !new canary on top of file
 write (3) canary
