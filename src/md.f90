@@ -16307,9 +16307,31 @@ integer             :: headercheck
 ! --- Refresh topology coords. if needed (external restraints file)
 if ( implicit_rstr_from_file .eq. 1 ) then
 write (*,'(/,a,/)') 'Refreshing topology coords for restraining...'
-read (12) nat3,(xtop(i),i=1,nat_pro*3)
+read(12) headercheck
+  if (headercheck .ne. -1337) then
+!old restart file without header canary
+      rewind(12)
+      old_restart = .true.
+  end if
+      read (12) nat3
+      rewind(12)
+        if(nat3 /= 3*natom) then
+          write(*,100) nat3/3, natom
+          call die('wrong number of atoms in restart file')
+       end if
+  if (.not.old_restart) then
+     read (12) headercheck
+     read (12,err=112,end=112) nat3, (xtop(i),i=1,nat_pro*3)
+  else
+     allocate(x_old(nat3))
+     read (2,err=112,end=112) nat3, (x_old(i),i=1,nat_pro*3)
+     xtop(1:nat_pro*3) = x_old(1:nat_pro*3)
+     deallocate(x_old)
+  end if
+!read (12) nat3,(xtop(i),i=1,nat_pro*3)
 end if
-
+old_restart =.false.
+headercheck=0
 !Assign restraints of kind res:atom their numerical atom numbers
 do i=1,nrstr_dist
   if(rstdis(i)%itext .ne. 'nil') then
