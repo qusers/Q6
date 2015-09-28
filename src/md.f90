@@ -16442,7 +16442,7 @@ if(restart) then
         ! topology routine has determined nwat, natom and allocated storage
         call centered_heading('Reading restart file','-')
         read(2) headercheck
-        if ((headercheck .ne. -137).and.(headercheck.ne.1337).and.(headercheck.ne.13337)) then
+        if ((headercheck .ne. -137).and.(headercheck.ne.-1337).and.(headercheck.ne.-13337)) then
 !old restart file without header canary
           rewind(2)
           old_restart = .true.
@@ -18118,7 +18118,7 @@ real(8) :: old_boxlength(3),old_boxcentre(3)
 real(kind=singleprecision) :: boxlength_1(3),boxcentre_1(3)
 real(kind=doubleprecision) :: boxlength_2(3),boxcentre_2(3)
 real(kind=quadprecision) :: boxlength_3(3),boxcentre_3(3)
-integer :: headercheck,i,myprec
+integer :: headercheck,i,myprec,dummy
 
 if (prec .eq. singleprecision) then
 myprec = -137
@@ -18157,8 +18157,8 @@ if(restart) then !try to load theta_corr from restart file
      old_restart = .true.
      rewind(2)
      allocate(x_old(3*natom),v_old(3*natom))
-     read(2) headercheck,(x_old(i),i=1,nat3)
-     read(2) headercheck,(v_old(i),i=1,nat3)
+     read(2) dummy,(x_old(i),i=1,nat3)
+     read(2) dummy,(v_old(i),i=1,nat3)
      if( use_PBC) then
        read(2) old_boxlength(:)
        read(2) old_boxcentre(:)
@@ -18166,8 +18166,8 @@ if(restart) then !try to load theta_corr from restart file
      deallocate(x_old,v_old)
    else if (headercheck .eq. -137) then
      allocate(x_1(3*natom),v_1(3*natom))
-     read(2) headercheck,(x_1(i),i=1,nat3)
-     read(2) headercheck,(v_1(i),i=1,nat3)
+     read(2) dummy,(x_1(i),i=1,nat3)
+     read(2) dummy,(v_1(i),i=1,nat3)
      if( use_PBC) then
        read(2) boxlength_1(:)
        read(2) boxcentre_1(:)
@@ -18175,8 +18175,8 @@ if(restart) then !try to load theta_corr from restart file
      deallocate(x_1,v_1)
    else if (headercheck .eq. -1337) then
      allocate(x_2(3*natom),v_2(3*natom))
-     read(2) headercheck,(x_2(i),i=1,nat3)
-     read(2) headercheck,(v_2(i),i=1,nat3)
+     read(2) dummy,(x_2(i),i=1,nat3)
+     read(2) dummy,(v_2(i),i=1,nat3)
      if( use_PBC) then
        read(2) boxlength_2(:)
        read(2) boxcentre_2(:)
@@ -18184,8 +18184,8 @@ if(restart) then !try to load theta_corr from restart file
      deallocate(x_2,v_2)
    else if (headercheck .eq. -13337) then
      allocate(x_3(3*natom),v_3(3*natom))
-     read(2) headercheck,(x_3(i),i=1,nat3)
-     read(2) headercheck,(v_3(i),i=1,nat3)
+     read(2) dummy,(x_3(i),i=1,nat3)
+     read(2) dummy,(v_3(i),i=1,nat3)
      if( use_PBC) then
        read(2) boxlength_3(:)
        read(2) boxcentre_3(:)
@@ -18607,11 +18607,11 @@ integer        :: canary = -1337
 nat3 = natom*3
 
 if (prec .eq. singleprecision) then
-canary = -1337
+canary = -137
 elseif (prec .eq. doubleprecision) then
-canary = -13337
+canary = -1337
 elseif (prec .eq. quadprecision) then
-canary = -133337
+canary = -13337
 else
 call die('No such precision')
 end if
