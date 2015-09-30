@@ -11,12 +11,17 @@ PROGRAM qprep5
 	IMPLICIT none
 
 	character(10)	::	PROGRAM_NAME    = 'Qprep'
-	character(10)	::	PROGRAM_VERSION = '5.06'
-	character(12)	::	PROGRAM_DATE    = '2014-04-21'
+	character(80)	::	PROGRAM_VERSION = ''
+	character(80)	::	PROGRAM_DATE    = ''
 	character(10)	:: 	PROGRAM_SUFFIX  = ''
 	logical                 ::  use_inputfile
 	character(200)          ::  fileName=''
 !.......................................................................
+
+! first, read version info
+        PROGRAM_VERSION = trim(version_pass())
+        PROGRAM_DATE    = trim(date_pass())
+
 
 	call startup
 

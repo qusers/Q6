@@ -26,8 +26,8 @@ program QCALC
 
 	! version data
 	character(10)	::	PROGRAM_NAME    = 'Qcalc'
-	character(10)	::	PROGRAM_VERSION = '5.06'
-	character(12)	::	PROGRAM_DATE    = '2014-01-01'
+	character(80)	::	PROGRAM_VERSION = ''
+	character(80)	::	PROGRAM_DATE    = ''
 	character(10)	:: 	PROGRAM_SUFFIX  = ''
 
 	!constants
@@ -50,6 +50,11 @@ program QCALC
 	integer						::	Nkinds = 0, Ncalcs = 0
 	type(CALC_KIND_TYPE)		::	cdef(MAX_CALC_KINDS)
 	type(CALC_TYPE)				::	calcs(MAX_CALCS)
+
+! read in version info
+        PROGRAM_VERSION = trim(version_pass())
+        PROGRAM_DATE    = trim(date_pass())
+
 
 	!register the calculation kinds
 	call add_kind(desc='RMS coord. deviation',		key='rmsd', output=.true.)

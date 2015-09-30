@@ -14,11 +14,10 @@ program Qdyn5
 !$ use omp_lib
 
   implicit none
-
   ! version data
   character(10)					:: QDYN_NAME = 'Qdyn'
-  character(10)					:: QDYN_VERSION = '5.06'
-  character(12)					:: QDYN_DATE    = '2014-03-14'
+  character(80)					:: QDYN_VERSION = ''
+  character(80)					:: QDYN_DATE    = ''
 #if defined (USE_MPI)
   character(10)					:: QDYN_SUFFIX = '_parallel'
 #else
@@ -43,6 +42,11 @@ program Qdyn5
   external sigint_handler
   external sigkill_handler
   external sigabrt_handler
+
+! read in version info
+  QDYN_VERSION = trim(version_pass())
+  QDYN_DATE    = trim(date_pass())
+
 
 #if defined (USE_MPI)
   ! initialize MPI
@@ -94,7 +98,7 @@ program Qdyn5
 	!remove things with code 0 and maybe excluded bonded interactions
 
 	call prep_sim						! prepare for simulation (calc. inv. mass, total charge,...)
-	call prep_sim_version(QDYN_VERSION)
+	call prep_sim_version(version_pass())
 	call close_input_files				! close input files
 
 	call init_shake

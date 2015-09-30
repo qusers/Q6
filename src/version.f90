@@ -155,4 +155,24 @@ subroutine version_print(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
 
 end subroutine version_print
 
+!new function to pass essential version information to other routines
+character(80) function version_pass()
+! local	
+ 
+
+#if defined (BUILD_SOURCE) && defined (BUILD_NUMBER)
+ version_pass = trim(BUILD_NUMBER)//' , git id='//trim(BUILD_SOURCE)
+#else
+ version_pass = trim(BUILD_NUMBER)
+#endif
+
+end function version_pass
+
+character(80) function date_pass()
+! local 
+
+ date_pass = trim(BUILD_DATE)
+
+end function date_pass
+
 end module VERSIONS

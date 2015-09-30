@@ -96,7 +96,7 @@ else ifeq ($(COMP),gcc)
 
 	MPIFC=		mpif90
 	OMPI_FC=	${FC}
-	OMPI_FCFLAGS=	-fstack-protector -DG95=1 \
+	OMPI_FCFLAGS=	-DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy 
 	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
 	MPFLAG=		-fopenmp ${MPI}
@@ -115,7 +115,7 @@ else
 	FC_OPT=		-O3 -unroll 
 	FPP_FLG=	-cpp
 
-	MPI=		-fstack-protector -DG95=1 \
+	MPI=		-DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	MPFLAG=		-fopenmp ${MPI}
 	FFLAGS=		--static ${MPI}
@@ -187,7 +187,7 @@ qdyn5 qdum5: qdyn.o
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qfep5: qfep.o
+qfep5: qfep.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \

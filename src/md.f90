@@ -31,8 +31,8 @@ include "mpif.h"
 !-----------------------------------------------------------------------
 !	Constants
 real(kind=prec)			::	pi, deg2rad	!set in sub startup
-character*(*), parameter	::	MD_VERSION = '5.06'
-character*(*), parameter	::	MD_DATE    = '2014-04-21'
+character(80)	                ::	MD_VERSION = ''
+character(80)	                ::	MD_DATE    = ''
 real(kind=prec), parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3 !TODO: it is not place for that
 real(kind=prec), parameter		::  Boltz = 0.001986_prec !TODO: it is not place for that
 
@@ -492,7 +492,6 @@ logical						:: detail_temps			!controls whether or not solute and solvent temps
 
 !----END OF SHARED VARIABLES
 
-
 !----START OF PUBLIC SUBROUTINES
 contains
 
@@ -509,6 +508,11 @@ call trj_startup
 ! initialise constants
 pi = 4.0_prec*atan(one)
 deg2rad = pi/180.0_prec
+
+! read in version info
+  MD_VERSION = trim(version_pass())
+  MD_DATE    = trim(date_pass())
+
 
 end subroutine md_startup
 

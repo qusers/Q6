@@ -11,8 +11,8 @@ use PARSE
 
 implicit none
 	character(10)	::	QFEP_NAME    = 'Qfep'
-	character(10)	::	QFEP_VERSION = '5.06'
-	character(12)	::	QFEP_DATE    = '2014-04-21'
+	character(80)	::	QFEP_VERSION = ''
+	character(80)	::	QFEP_DATE    = ''
 	character(10)	::	QFEP_SUFFIX  = ''
 
 	integer,parameter ::mxpts=200000,mxbin=1000,mxstates=4
@@ -68,6 +68,11 @@ implicit none
         mu(:,:) = 0.0
         eta(:,:) = 0.0
         rxy0(:,:) = 0.0
+! reading in version information
+        QFEP_VERSION = trim(version_pass())
+        QFEP_DATE    = trim(date_pass())
+
+
 	!header
 	write(*,100) QFEP_VERSION,  QFEP_DATE
 	write(*,*)
@@ -209,7 +214,7 @@ end if
                         write(*,*) 'Could not read file header! Old energy file?'
 			fileheader%arrays = 1
 			fileheader%totresid = 1
-			fileheader%version='Q 5.06'
+			fileheader%version=' 5.06'
 			if(ifile.eq.1) then
 			allocate(fileheader%gcnum(fileheader%arrays),fileheader%types(fileheader%arrays),&
 				fileheader%numres(fileheader%totresid))
@@ -292,7 +297,7 @@ end if
 	                stop 'Qfep5 terminated abnormally: Out of memory.'
 	        end if
 		end if  !ifile .eq. 1
-		write(*,*) fileheader%version
+		write(*,'(a,a)') 'Energy files from Qdyn, version: ',fileheader%version
 		!read 1st record to get lambdas
 		if(is_old_file) rewind(f)
 		idum = get_ene(f, EQ(:), offd, nstates,nnoffd,fileheader%arrays)
