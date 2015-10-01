@@ -14596,21 +14596,26 @@ do iw = 1, nbqw_pair, solv_atom
 #endif
 ! init state-invariant variables:
 iq   = nbqw(iw)%i
-			i = iqseq(iq)
+i = iqseq(iq)
 i3   = i*3-3
 j    = nbqw(iw)%j
 j3   = j*3-3
 iacj = iac(j)
 
-! only q - O distance first, only one with vdW
-dx1  = x(j3+1) - x(i3+1)
-dx2  = x(j3+2) - x(i3+2)
-dx3  = x(j3+3) - x(i3+3)
+! first get the periodic shift done
+dx1  = x(j3+1) - x(3*qswitch-2)
+dx2  = x(j3+2) - x(3*qswitch-1)
+dx3  = x(j3+3) - x(3*qswitch  )
 
 !compute the periodical shift
 boxshiftx = boxlength(1)*nint(dx1*inv_boxl(1))
 boxshifty = boxlength(2)*nint(dx2*inv_boxl(2))
 boxshiftz = boxlength(3)*nint(dx3*inv_boxl(3))
+
+! only q - O distance first, only one with vdW
+dx1  = x(j3+1) - x(i3+1)
+dx2  = x(j3+2) - x(i3+2)
+dx3  = x(j3+3) - x(i3+3)
 
 dx1 = dx1 - boxshiftx
 dx2 = dx2 - boxshifty
@@ -14907,18 +14912,23 @@ ja   = j + ip
 j3   = ja*3-3
 iacj = iac(ja)
 
-dx1  = x(j3+1) - x(i3+1)
-dx2  = x(j3+2) - x(i3+2)
-dx3  = x(j3+3) - x(i3+3)
+
 
 if (ip.eq.0) then
 !compute the periodical shift
+dx1  = x(j3+1) - x(3*qswitch-2)
+dx2  = x(j3+2) - x(3*qswitch-1)
+dx3  = x(j3+3) - x(3*qswitch  )
 boxshiftx = boxlength(1)*nint(dx1*inv_boxl(1))
 boxshifty = boxlength(2)*nint(dx2*inv_boxl(2))
 boxshiftz = boxlength(3)*nint(dx3*inv_boxl(3))
 end if
 
-			dx1 = dx1 - boxshiftx  
+dx1  = x(j3+1) - x(i3+1)
+dx2  = x(j3+2) - x(i3+2)
+dx3  = x(j3+3) - x(i3+3)
+
+dx1 = dx1 - boxshiftx  
 dx2 = dx2 - boxshifty
 dx3 = dx3 - boxshiftz
 			
