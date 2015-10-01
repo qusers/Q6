@@ -452,25 +452,35 @@ logical function load_restart(fn)
 	integer, intent(in)			::	fn
 	
 	!locals
-	integer(4)					::	nat3
+	integer(4)					::	nat3,canary
+        logical                                         ::      old_restart=.false.
 	integer						::	filestat
 
 	load_restart = .false.
 	rewind(fn)
-	read(fn, iostat=filestat) nat3
+	read(fn, iostat=filestat) canary
+
  if(filestat .ne. 0) then
 		write(*,900) 
 900		format('>>>>> ERROR: Coordinate file read failure.')
-	elseif(filestat < 0) then
-		! EOF - do nothing
-	elseif(nat3 == 3) then
+        else
+                if ((canary.ne.-137).and.(canary.ne.-1337).and.(canary.ne.-13337)) then
+! old restart file found, be smart from here
+                        old_restart = .true.
+                        rewind(fn)
+                endif
+                read(fn) nat3
+        endif
+                        
+	if(nat3 .eq. 3) then
 		!We found a polarisation restraint data record in a restart file
 		!do nothing
- elseif(nat3 .ne. 3*nat_pro) then
+        elseif(nat3 .ne. 3*nat_pro) then
 		write(*,910) nat3/3
 910		format('>>>>> ERROR: Wrong number of atoms in coordinate file:',i5)
 	else
-		backspace(fn)
+		rewind(fn)
+                if (.not.old_restart) read(fn) canary
 		read(fn) nat3, xin(:)
 		load_restart = .true.
 	end if

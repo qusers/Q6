@@ -4221,16 +4221,27 @@ end subroutine readtop
 !-----------------------------------------------------------------------
 
 subroutine readx
+! fix for handling new restart files
+! needs to be done for all functions
 ! *** local variables
 	CHARACTER(len=80)			::	filnam
 	integer						::	i
-	integer(4)					::	nat3
+	integer(4)					::	nat3,canary
 	integer						::	u
+        logical                                         :: old_restart = .false.
 
 
 	CALL get_string_arg(filnam, '-----> Give name of Q-coordinate file: ')
 	u = freefile()
 	if(openit(u, filnam, 'old', 'unformatted', 'read') /= 0) return
+
+        !first try to read canary
+        read(u) canary
+        if ((canary .ne. -137).and.(canary.ne.-1337).and.(canary.ne.-13337)) then
+        ! old restart
+                rewind (u)
+                old_restart = .true.
+        end if
 
 	!read number of co-ordinates (=3*natom)
 	READ(u) nat3
@@ -4242,6 +4253,7 @@ subroutine readx
 		close(u)
 		return
 	endif
+        if (.not.old_restart) read(u) canary
 	READ(u) nat3,xtop(1:nat3)
 
 	write( * , '(a,/)') 'Coordinate file successfully read.'
