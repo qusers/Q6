@@ -6489,13 +6489,13 @@ do istep = 0, nsteps-1
 #if defined(DUMP)
 				write(*,332) 'solute-solute', 'solute-water', 'water-water', 'Q-solute', 'Q-water'
 				write(*,333) nodeid, 'count', nbpp_pair, nbpw_pair, &
-					 &  nbww_true_pair, nbqp_pair, 3*nqat*nbqw_pair
+					 &  nbww_pair, nbqp_pair, 3*nqat*nbqw_pair
 
 #if defined(USE_MPI)
 				!reduce totnxx, i.e. collect # pairs found by slave nodes
 				nbxx(1)=nbpp_pair
 				nbxx(2)=nbpw_pair
-				nbxx(3)=nbww_true_pair
+				nbxx(3)=nbww_pair
 				nbxx(4)=nbqp_pair
 				nbxx(5)=3*nqat*nbqw_pair
 
