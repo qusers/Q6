@@ -16777,8 +16777,9 @@ end if
 
 !scale charges by sqrt(coulomb_constant) 
 crg(:) = crg(:) * sqrt(coulomb_constant)
+if(nwat > 0) then
 chg_solv(:) = chg_solv(:) * sqrt(coulomb_constant)
-
+end if
 if(nqat > 0) then
         qcrg(:,:) = qcrg(:,:) * sqrt(coulomb_constant)
 end if
