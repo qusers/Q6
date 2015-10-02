@@ -297,7 +297,7 @@ end if
 	                stop 'Qfep5 terminated abnormally: Out of memory.'
 	        end if
 		end if  !ifile .eq. 1
-		write(*,'(a,a)') 'Energy files from Qdyn, version: ',fileheader%version
+		write(*,'(a,a)') '# Energy files from Qdyn, version: ',fileheader%version
 		!read 1st record to get lambdas
 		if(is_old_file) rewind(f)
 		idum = get_ene(f, EQ(:), offd, nstates,nnoffd,fileheader%arrays)
@@ -599,10 +599,10 @@ end if
 !	write(*,21)
 	curres = 1
 	do j=1,fileheader%arrays
-66	format(/,'Calculation for full system')
-67	format(/,'Calculation for system with full exclusion, residues',2x,10i4)
-68	format(/,'Calculation for system with electrostatic exclusion, residues',2x,10i4)
-69	format(/,'Calculation for system with vdW exclusion, residues',2x,10i4)
+66	format(/,'# Calculation for full system')
+67	format(/,'# Calculation for system with full exclusion, residues',2x,10i4)
+68	format(/,'# Calculation for system with electrostatic exclusion, residues',2x,10i4)
+69	format(/,'# Calculation for system with vdW exclusion, residues',2x,10i4)
 
 	write(*,21)
 
