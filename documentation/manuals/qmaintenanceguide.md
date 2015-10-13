@@ -186,13 +186,13 @@ module load openmpi/gcc/1.6.5
 make mpi COMP=gcc
 ```
 
-###Linux - Scientific Linux 6.5 (tintin) AMD
+###Linux - Scientific Linux 6.7 (tintin) AMD
 
 At tintin both gcc and intel fotran compilers are available.
 The architecture of the computer nodes is of the AMD family.
 Each node has two Opteron 6220 cpu's having 8 nodes each.
 
-To compile at tintin using gcc use these recipe:
+To compile at tintin using gcc use this recipe:
 ```bash
 
 unset SSH_ASKPASS
@@ -230,7 +230,12 @@ make mpi COMP=ifort
 
 The    Q    website    page    is    now   located    at    the    url
 http://xray.bmc.uu.se/~aqwww/q, but  plans are underway  to migrate it
-to a new address and keep it under version control.
+to a new address and keep it under version control. For now the page 
+can also be found at the tempory address:  
+
+    http://qdyn.no-ip.org/  
+
+Where versioning is being used from the https://github.com/qusers/qwebsite repository.
 
 
 ##The E-mail list
