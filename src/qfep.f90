@@ -15,45 +15,47 @@ implicit none
 	character(80)	::	QFEP_DATE    = ''
 	character(10)	::	QFEP_SUFFIX  = ''
 
-	integer,parameter ::mxpts=200000,mxbin=1000,mxstates=4
+	integer		:: mxpts=200,mxbin=10,mxstates=4
 	character(80)      ::filnam, line
 	integer           ::i,j,ifile,ipt,istate,ibin,nfiles,nstates,ERR, &
 	                      nskip,nbins,nmin,idum,noffd,nnoffd,offel
 
-	type(OFFDIAG_SAVE), dimension(mxstates)	:: offd
+	type(OFFDIAG_SAVE),allocatable		:: offd(:)
 
-        real(8) ::rt,gaprange, &
+        real(kind=prec) ::rt,gaprange, &
                         xint,dvg,dGa,dGb,dGg,alpha_B,scale_Hij, &
                         veff,min
-	real(8),dimension(mxbin)              ::sumg,sumg2,avdvg,avc1,avc2,avr
+	real(kind=prec),allocatable		:: sumg(:),sumg2(:),avdvg(:),avc1(:),avc2(:),avr(:)
+	real(kind=prec),allocatable		:: binsum(:,:)
 
-	real(8),dimension(mxbin,4)            ::binsum
-	integer,dimension(mxbin)              ::nbinpts,ptsum
+	integer,allocatable			:: nbinpts(:),ptsum(:)
 
 !Change for new save data type with different array sizes
-	type(OQ_ENERGIES), dimension(mxstates)	:: old_EQ
-	type(OQ_ENERGIES), dimension(mxstates)	:: old_avEQ
+!	type(OQ_ENERGIES), dimension(mxstates)	:: old_EQ
+!	type(OQ_ENERGIES), dimension(mxstates)	:: old_avEQ
 
-	type(Q_ENERGIES)	:: EQ(mxstates)
-	type(Q_ENERGIES)	:: avEQ(mxstates)
-	real(8),dimension(mxstates)				:: dvv,dGv,alfa,coeff
+	type(Q_ENERGIES),allocatable	:: EQ(:)
+	type(Q_ENERGIES),allocatable	:: avEQ(:)
+	real(kind=prec),allocatable	:: dvv(:),dGv(:),alfa(:),coeff(:)
 
-	real(8),dimension(3)                  ::u,y
-	real(8),allocatable              ::dgf(:,:),dgr(:,:),dgfsum(:,:),dgrsum(:,:),dG(:,:)
-	real(8),allocatable		 :: gapmin(:),gapmax(:),sum(:),dv(:),veff1(:),veff2(:)
-	real(8),dimension(mxstates,mxstates)  ::A,mu,eta,rxy0
-	real(8),allocatable                   ::Hij(:,:,:),d(:),e(:)
+
+
+	real(kind=prec),dimension(3)		::u,y
+	real(kind=prec),allocatable             :: dgf(:,:), dgr(:,:), dgfsum(:,:), dgrsum(:,:), dG(:,:)
+	real(kind=prec),allocatable		:: gapmin(:), gapmax(:), sum(:), dv(:), veff1(:), veff2(:)
+	real(kind=prec),allocatable		:: A(:,:), mu(:,:), eta(:,:), rxy0(:,:)
+	real(kind=prec),allocatable		:: Hij(:,:,:), d(:), e(:)
 	type FEP_DATA_TYPE
 		integer					::	npts
-		real(8)					::	lambda(mxstates)
-		real(8), pointer		::	v(:,:,:), r(:,:,:) !indices are calulation type, state, point
-		real(8), pointer		::	vg(:,:), gap(:,:), c1(:,:), c2(:,:) !indices are type, point
+		real(kind=prec), pointer	:: lambda(:)
+		real(kind=prec), pointer	:: v(:,:,:), r(:,:,:) !indices are calulation type, state, point
+		real(kind=prec), pointer	:: vg(:,:), gap(:,:), c1(:,:), c2(:,:) !indices are type, point
 	end type FEP_DATA_TYPE
 	type(FEP_DATA_TYPE), allocatable	::	FEP(:) !index is file
 	type(FEP_DATA_TYPE)			::	FEPtmp !temporary storage for one file
 							       !now with different types for later
 
-	real(8),dimension(mxstates,mxbin)     ::avdvv,sumv,sumv2
+	real(kind=prec), allocatable		:: avdvv(:,:), sumv(:,:), sumv2(:,:)
 !Energy file header data type
 	type(Q_ENE_HEAD)			:: fileheader
 !to keep current residue from header
@@ -61,13 +63,8 @@ implicit none
 	logical					:: is_old_file = .false.
 	character(80)				:: version_precision, file_precision
 	integer								::	f,gas=0,error,dummyno !!!!!!!!!masoud
-	real								::	dummy
+	real(kind=prec)							::	dummy
 	character(100)							::	iline !!!!!!! masoud
-! making qfep5 memory save
-        A(:,:) = 0.0
-        mu(:,:) = 0.0
-        eta(:,:) = 0.0
-        rxy0(:,:) = 0.0
 ! reading in version information
         QFEP_VERSION = trim(version_pass())
         QFEP_DATE    = trim(date_pass())
@@ -102,7 +99,7 @@ end if
 	write (*,2) nstates, noffd
 2	format('# Number of states                 =',i6,/, &
 		   '# Number of off-diagonal elements =',i6)
-
+	mxstates = nstates
 
 	!size of secular determinant is allocated
 
@@ -140,6 +137,35 @@ end if
 	write (*,4) nbins
 4	format('# Number of gap-bins              =',i6)
 
+	mxbin = nbins + 1
+! now know the number of bins needed -> allocate dependent variables + 1
+! and we have all nstates dependent variables -> allocate nstate arrays
+	allocate(sumg(mxbin),sumg2(mxbin),avdvg(mxbin),avc1(mxbin),avc2(mxbin),avr(mxbin), &
+		binsum(mxbin,4),nbinpts(mxbin),ptsum(mxbin),STAT=ERR)
+	if(ERR /= 0) then
+		stop '# >>> ERROR! Qfep5 terminated abnormally: Out of memory when allocating mxbin arrays'
+	end if
+	
+	allocate(EQ(mxstates),avEQ(mxstates),dvv(mxstates),dGv(mxstates),alfa(mxstates),coeff(mxstates),&
+		A(mxstates,mxstates), mu(mxstates,mxstates), eta(mxstates,mxstates), rxy0(mxstates,mxstates),&
+		avdvv(mxstates,mxbin), sumv(mxstates,mxbin), sumv2(mxstates,mxbin),offd(mxstates), STAT=ERR)
+	dvv   = zero
+	dGv   = zero
+	alfa  = zero
+	coeff = zero
+	A     = zero
+	mu    = zero
+	eta   = zero
+	rxy0  = zero
+	avdvv = zero
+	sumv  = zero
+	sumv2 = zero
+	
+	if(ERR /= 0) then
+		stop '# >>> ERROR! Qfep5 terminated abnormally: Out of memory when allocating mxstates arrays'
+	end if
+
+
 	call prompt ('--> Give minimum # pts/bin: ')
 	read (*,*) nmin
 	write (*,5) nmin
@@ -172,7 +198,7 @@ end if
 		end do
 9	format('# Number of off-diagonal elements =',i6)
 11	format('#   i   j   A(i,j)  mu(i,j) eta(i,j) rxy0(i,j)')
-12	format('#',2i4,4f9.2)
+12	format('#',2i4,1x,f9.2,1x,f9.2,1x,f9.2,1x,f9.2)
 	end if
 
 	call prompt ('--> linear combination of states defining reaction coord: ')
@@ -184,7 +210,7 @@ end if
 !---------------------------------
 ! Energy files are opened and read
 !---------------------------------
-	binsum(:,:)=0.
+	binsum(:,:)=zero
 	f = freefile()
 
 	write(*,*)
@@ -251,28 +277,35 @@ end if
 		if(ERR /= 0) then
 			stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 11'
 		end if
-		EQ(jj)%total(:)=0
+		EQ(jj)%total(:)=zero
 		allocate(avEQ(jj)%qx(fileheader%arrays),avEQ(jj)%qq(fileheader%arrays),&
 		avEQ(jj)%qp(fileheader%arrays), &
 		avEQ(jj)%qw(fileheader%arrays),avEQ(jj)%total(fileheader%arrays),STAT=ERR)
-		avEQ(jj)%total(:)=0.0
-		avEQ(jj)%qx(:)%el= 0.0
-		avEQ(jj)%qq(:)%el= 0.0
-		avEQ(jj)%qp(:)%el= 0.0
-		avEQ(jj)%qw(:)%el= 0.0
-		avEQ(jj)%qx(:)%vdw= 0.0
-		avEQ(jj)%qq(:)%vdw= 0.0
-		avEQ(jj)%qp(:)%vdw= 0.0
-		avEQ(jj)%qw(:)%vdw= 0.0
+		avEQ(jj)%total(:)  = zero
+		avEQ(jj)%qx(:)%el  = zero
+		avEQ(jj)%qq(:)%el  = zero
+		avEQ(jj)%qp(:)%el  = zero
+		avEQ(jj)%qw(:)%el  = zero
+		avEQ(jj)%qx(:)%vdw = zero
+		avEQ(jj)%qq(:)%vdw = zero
+		avEQ(jj)%qp(:)%vdw = zero
+		avEQ(jj)%qw(:)%vdw = zero
+
 		if(ERR /= 0) then
 			stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 12'
 		end if
 		end do
+                avEQ(:)%q%bond     = zero
+                avEQ(:)%q%angle    = zero
+                avEQ(:)%q%torsion  = zero
+                avEQ(:)%q%improper = zero
+                avEQ(:)%restraint  = zero
+
 		end if
 		if(ifile.eq.1) then
 	        !allocate large arrays
 	        allocate(FEP(nfiles), FEPtmp%v(fileheader%arrays,nstates,mxpts), &
-			FEPtmp%r(fileheader%arrays,nstates,mxpts), &
+			FEPtmp%r(fileheader%arrays,nstates,mxpts), FEPtmp%lambda(mxstates), &
 	                FEPtmp%vg(fileheader%arrays,mxpts), FEPtmp%gap(fileheader%arrays,mxpts), &
 	                FEPtmp%c1(fileheader%arrays,mxpts), FEPtmp%c2(fileheader%arrays,mxpts), &
 	                dgf(fileheader%arrays,0:nfiles+1),dgr(fileheader%arrays,0:nfiles+1), &
@@ -283,12 +316,16 @@ end if
 	        if(ERR /= 0) then
 	                stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 13'
 	        end if
+                do i=1,nfiles
+			allocate(FEP(i)%lambda(mxstates))
+		end do
+		
 		gapmin(:)=999
 		gapmax(:)=-999
-		FEPtmp%c1(:,:)=0
-		FEPtmp%c2(:,:)=0
-		FEP(ifile)%lambda(1:mxstates)=0
-		EQ(:)%lambda=0
+		FEPtmp%c1(:,:)= zero
+		FEPtmp%c2(:,:)= zero
+		FEP(ifile)%lambda(1:mxstates)= zero
+		EQ(:)%lambda= zero
 		 !size of secular determinant is allocated
 	
 	        allocate(Hij(nstates,nstates,fileheader%arrays),d(nstates),e(nstates),STAT=ERR)
@@ -319,32 +356,32 @@ end if
 			end if
 		end if
 
-		FEP(ifile)%lambda(:) = EQ(:)%lambda
+		FEP(ifile)%lambda(1:nstates) = EQ(1:nstates)%lambda
 
         rewind (f)
 
 		ipt = 0
                 do i=1,nstates
-                avEQ(i)%q%bond     = avEQ(i)%q%bond     * 0
-                avEQ(i)%q%angle    = avEQ(i)%q%angle    * 0
-                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * 0 
-                avEQ(i)%q%improper = avEQ(i)%q%improper * 0  
-                avEQ(i)%restraint  = avEQ(i)%restraint  * 0 
+                avEQ(i)%q%bond     = avEQ(i)%q%bond     * zero
+                avEQ(i)%q%angle    = avEQ(i)%q%angle    * zero
+                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * zero
+                avEQ(i)%q%improper = avEQ(i)%q%improper * zero
+                avEQ(i)%restraint  = avEQ(i)%restraint  * zero
                 do jj=1,fileheader%arrays !can not use Q energies operator any more
-                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * 0
-                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * 0
-                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * 0
-                avEQ(i)%qq(jj)%el  = avEQ(i)%qq(jj)%el  * 0
-                avEQ(i)%qq(jj)%vdw = avEQ(i)%qq(jj)%vdw * 0
-                avEQ(i)%qp(jj)%el  = avEQ(i)%qp(jj)%el  * 0
-                avEQ(i)%qp(jj)%vdw = avEQ(i)%qp(jj)%vdw * 0
-                avEQ(i)%qw(jj)%el  = avEQ(i)%qw(jj)%el  * 0
-                avEQ(i)%qw(jj)%vdw = avEQ(i)%qw(jj)%vdw * 0
+                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * zero
+                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * zero
+                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * zero
+                avEQ(i)%qq(jj)%el  = avEQ(i)%qq(jj)%el  * zero
+                avEQ(i)%qq(jj)%vdw = avEQ(i)%qq(jj)%vdw * zero
+                avEQ(i)%qp(jj)%el  = avEQ(i)%qp(jj)%el  * zero
+                avEQ(i)%qp(jj)%vdw = avEQ(i)%qp(jj)%vdw * zero
+                avEQ(i)%qw(jj)%el  = avEQ(i)%qw(jj)%el  * zero
+                avEQ(i)%qw(jj)%vdw = avEQ(i)%qw(jj)%vdw * zero
                 end do
                 end do
 
 !		avEQ(:) = avEQ(:) * 0. !set all fields to zero using multiplication operator
-		FEPtmp%gap(:,:) = 0.
+		FEPtmp%gap(:,:) = zero
 		if(.not.is_old_file) then
                         read(f) canary,fileheader%arrays,fileheader%totresid,fileheader%types(1:fileheader%arrays),&
                                 fileheader%numres(1:fileheader%arrays),fileheader%resid(1:fileheader%totresid),&
@@ -353,6 +390,10 @@ end if
 		end if
 		do while(get_ene(f, EQ(:), offd, nstates, nnoffd,fileheader%arrays) == 0) !keep reading till EOF
 			ipt = ipt + 1
+			if (ipt .eq. (mxpts-1)) then
+!ops, we need larger arrays to keep track of the temporary points
+				call qfep_reallocate
+			end if
 	!!!!!!!!!!!!!!  masoud
 !if the gas flag is > 0 then total energy will be just q (bonded), qq(nonbonded) and restraint
 			if (gas .gt. 0 ) then
@@ -393,7 +434,7 @@ end if
 ! Correct H_ii with alfa, and modify H_ij...
 !-------------------------------------------
 
-            alfa(1)=0.
+            alfa(1)= zero
 			do i=1,nstates
 				do j=1,fileheader%arrays
 				EQ(i)%total(j)=EQ(i)%total(j)+alfa(i)
@@ -411,7 +452,7 @@ end if
 			end do
 			end do
 
-			if ( scale_Hij .gt. 0.0 ) then
+			if ( scale_Hij .gt. zero ) then
 				Hij(1,2,:) = scale_Hij*Hij(1,2,:)
 			else
 				do i=1,nstates
@@ -420,7 +461,7 @@ end if
 						if (i==j) then
  							Hij(i,j,jj)=EQ(i)%total(jj)
 						else
- 							if (A(i,j)==0.0) then
+ 							if (A(i,j)==zero) then
  								Hij(i,j,jj) = A(j,i)*exp(-mu(j,i)*(offd(1)%rkl-rxy0(j,i)))* &
  								exp(-eta(j,i)*(offd(1)%rkl-rxy0(j,i))**2)
  							else
@@ -439,8 +480,8 @@ end if
 
 			do j=1,fileheader%arrays
 				if (nstates==2) then
-					FEPtmp%vg(j,ipt)=0.5*(EQ(1)%total(j)+EQ(2)%total(j))-  &
-						0.5*sqrt( (EQ(1)%total(j)-EQ(2)%total(j))**2 + 4.*Hij(1,2,j)**2 )
+					FEPtmp%vg(j,ipt)=0.5_prec*(EQ(1)%total(j)+EQ(2)%total(j))-  &
+						0.5_prec*sqrt( (EQ(1)%total(j)-EQ(2)%total(j))**2 + 4.*Hij(1,2,j)**2 )
 					if(nnoffd > 0) then
 						FEPtmp%c1(j,ipt)=1./(1.+((FEPtmp%vg(j,ipt)-EQ(1)%total(j))/Hij(1,2,j))**2)
 						FEPtmp%c2(j,ipt)=1-FEPtmp%c1(j,ipt)
@@ -498,21 +539,21 @@ end if
 			stop 'Qfep5 terminated abnormally: Too few data points in file.'
 		else
 	                do i=1,nstates
-	                avEQ(i)%q%bond     = avEQ(i)%q%bond     * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%angle    = avEQ(i)%q%angle    * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%improper = avEQ(i)%q%improper * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%restraint  = avEQ(i)%restraint  * (1./(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q%bond     = avEQ(i)%q%bond     * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q%angle    = avEQ(i)%q%angle    * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q%improper = avEQ(i)%q%improper * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%restraint  = avEQ(i)%restraint  * (one/(FEP(ifile)%npts-nskip))
 	                do jj=1,fileheader%arrays !can not use Q energies operator any more
-	                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qq(jj)%el  = avEQ(i)%qq(jj)%el  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qq(jj)%vdw = avEQ(i)%qq(jj)%vdw * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qp(jj)%el  = avEQ(i)%qp(jj)%el  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qp(jj)%vdw = avEQ(i)%qp(jj)%vdw * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qw(jj)%el  = avEQ(i)%qw(jj)%el  * (1./(FEP(ifile)%npts-nskip))
-	                avEQ(i)%qw(jj)%vdw = avEQ(i)%qw(jj)%vdw * (1./(FEP(ifile)%npts-nskip))
+	                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qq(jj)%el  = avEQ(i)%qq(jj)%el  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qq(jj)%vdw = avEQ(i)%qq(jj)%vdw * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qp(jj)%el  = avEQ(i)%qp(jj)%el  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qp(jj)%vdw = avEQ(i)%qp(jj)%vdw * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qw(jj)%el  = avEQ(i)%qw(jj)%el  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%qw(jj)%vdw = avEQ(i)%qw(jj)%vdw * (one/(FEP(ifile)%npts-nskip))
 	                end do
 	                end do
 		end if
@@ -529,17 +570,17 @@ end if
 
 		end do
 		end do !fileheader%arrays
-17	format(a,t23,i2,1x,i6,f9.6,14f8.2)
+17	format(a,1x,t23,1x,i2,1x,i9,1x,f9.6,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2)
 	end do  !ifile
 
 	if(nfiles > 1) then !the following is meaningless for a single file
 	do j=1,fileheader%arrays
-		dgf(j,:)=0.
-		dgfsum(j,:)=0.
-		sum(j)=0.
-		veff1(j)=0.
-		veff2(j)=0.
-		dv(j)=0.
+		dgf(j,:)=    zero
+		dgfsum(j,:)= zero
+		sum(j)=      zero
+		veff1(j)=    zero
+		veff2(j)=    zero
+		dv(j)=       zero
 		do ifile=1,nfiles-1
 			!check that number of points > number to skip
 			if(nskip >= FEP(ifile)%npts) then
@@ -554,21 +595,21 @@ end if
 					FEP(ifile)%v(j,istate,ipt)
    	   			end do
 				dv(j)=veff2(j)-veff1(j)
-				veff1(j)=0.
-				veff2(j)=0.
+				veff1(j)= zero
+				veff2(j)= zero
 				sum(j)=sum(j)+exp(-dv(j)/rt)
 			end do
-			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip)
+			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip, kind=prec)
 			dgf(j,ifile)=-rt*dlog(sum(j))
 			dgfsum(j,ifile+1)=dgfsum(j,ifile)+dgf(j,ifile)
-			sum(:)=0.
+			sum(:)= zero
 		end do
-		dgrsum(j,:)=0.
-		dgr(j,:)=0.
-		sum(j)=0.
-		veff1(j)=0.
-		veff2(j)=0.
-		dv(j)=0.
+		dgrsum(j,:)= zero
+		dgr(j,:)=    zero
+		sum(j)=      zero
+		veff1(j)=    zero
+		veff2(j)=    zero
+		dv(j)=       zero
 		do ifile=nfiles,2,-1
 			do ipt=nskip+1,FEP(ifile)%npts
 				do istate=1,nstates
@@ -578,20 +619,20 @@ end if
 				FEP(ifile)%v(j,istate,ipt)
      			end do
 				dv(j)=veff2(j)-veff1(j)
-				veff1(j)=0.
-				veff2(j)=0.
+				veff1(j)=zero
+				veff2(j)=zero
 				sum(j)=sum(j)+exp(-dv(j)/rt)
 			end do
-			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip)
+			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip, kind=prec)
 			dgr(j,ifile)=-rt*dlog(sum(j))
 			dgrsum(j,ifile-1)=dgrsum(j,ifile)+dgr(j,ifile)
-			sum(j)=0.
+			sum(j)= zero
 		end do
 21		format('# Part 1: Free energy perturbation summary:')
 22		format('# lambda(1)      dGf sum(dGf)      dGr sum(dGr)     <dG>')
-        dG(j,1)=0.0
+        dG(j,1)= zero
         do ifile=2,nfiles
-            dG(j,ifile)=dG(j,ifile-1)+0.5*(dgf(j,ifile-1)-dgr(j,ifile))
+            dG(j,ifile)=dG(j,ifile-1)+0.5_prec*(dgf(j,ifile-1)-dgr(j,ifile))
         end do
 	end do !FILEHEADER%ARRAYS
 	write(*,*)
@@ -631,7 +672,7 @@ end if
                FEP(ifile)%lambda(1),dgf(j,ifile-1),dgfsum(j,ifile), &
                              dgr(j,ifile+1),dgrsum(j,ifile),dG(j,ifile)
         end do
-23		format(2x,f9.6,5f9.3)
+23		format(2x,f9.6,1x,f9.3,1x,f9.3,1x,f9.3,1x,f9.3,1x,f9.3)
 
 		write (*,*)
 		write (*,'(a,f9.2)') '# Min energy-gap is: ',gapmin(j)
@@ -649,32 +690,32 @@ end if
 		write(*,25)
 24		format('# Part 2: Reaction free energy summary:')
 25		format('# Lambda(1)  bin Energy gap      dGa     dGb     dGg    # pts    c1**2    c2**2')
-26		format(2x,f9.6,i5,2x,4f9.2,2x,i5,2f9.3)
+26		format(2x,f9.6,i5,2x,f9.2,2x,f9.2,2x,f9.2,2x,f9.2,2x,i5,1x,f9.3,1x,f9.3)
 		gaprange=gapmax(j)-gapmin(j)      !Range of reaction coordinate
 		xint=gaprange/real(nbins)   !Divide R.C. into bins
-                        binsum(:,:) = 0
-                        sumg(:)=0
-                        sumv(:,:)=0
-                        ptsum(:)=0
-                        sumg2(:)=0
-                        sumv2(:,:)=0
+                        binsum(:,:) = zero
+                        sumg(:)=      zero
+                        sumv(:,:)=    zero
+                        ptsum(:)=     zero
+                        sumg2(:)=     zero
+                        sumv2(:,:)=   zero
                         ibin = 0
-                        dGv(:)=0
+                        dGv(:)=       zero
 		do ifile=1,nfiles
-			avdvv(:,:)=0.
-			avdvg(:)=0.
-			sumv=0.
-			sumg=0.
-		    	avc1(:)=0.
-            		avc2(:)=0.
-			avr=0.
-			dvv=0.
-			dvg=0.
-			nbinpts(:)=0
+			avdvv(:,:)= zero
+			avdvg(:)=   zero
+			sumv=       zero
+			sumg=       zero
+		    	avc1(:)=    zero
+            		avc2(:)=    zero
+			avr=        zero
+			dvv=        zero
+			dvg=        zero
+			nbinpts(:)= 0
 
 			do ipt=nskip+1,FEP(ifile)%npts
 				ibin=int((FEP(ifile)%gap(j,ipt)-gapmin(j))/xint)+1
-				veff=0.
+				veff= zero
 				do istate=1,nstates
 					veff=veff+FEP(ifile)%lambda(istate)*FEP(ifile)%v(j,istate,ipt)
 				end do  !states
@@ -692,9 +733,9 @@ end if
 			end do          !ipt
 			do ibin=1,nbins
 				if ( nbinpts(ibin) .ne. 0 ) then
-			                avc1(ibin)=avc1(ibin)/real(nbinpts(ibin))
-			                avc2(ibin)=avc2(ibin)/real(nbinpts(ibin))
-					avr(ibin)=avr(ibin)/real(nbinpts(ibin))
+			                avc1(ibin)=avc1(ibin)/real(nbinpts(ibin),kind=prec)
+			                avc2(ibin)=avc2(ibin)/real(nbinpts(ibin),kind=prec)
+					avr(ibin)=avr(ibin)/real(nbinpts(ibin),kind=prec)
 					avdvv(:,ibin)=avdvv(:,ibin)/nbinpts(ibin)
 					avdvg(ibin)=avdvg(ibin)/nbinpts(ibin)
 
@@ -702,7 +743,7 @@ end if
 			end do !ibin
 			do ipt=nskip+1,FEP(ifile)%npts
 				ibin=int((FEP(ifile)%gap(j,ipt)-gapmin(j))/xint)+1
-				veff=0.
+				veff= zero
 				do istate=1,nstates
 					veff=veff+FEP(ifile)%lambda(istate)*FEP(ifile)%v(j,istate,ipt)
 				end do  !istate
@@ -737,7 +778,7 @@ dGg=dG(j,ifile)+sumg2(ibin)
 binsum(ibin,1)=binsum(ibin,1)+dGg*int(nbinpts(ibin))
 
 	write (*,26) FEP(ifile)%lambda(1),ibin, &
-	gapmin(j)+real(ibin)*xint-xint/2., dGv(1),dGv(2),dGg, &
+	gapmin(j)+real(ibin,kind=prec)*xint-xint/2., dGv(1),dGv(2),dGg, &
 int(nbinpts(ibin)),avc1(ibin),avc2(ibin)
 	end if
 	end do  !ibin
@@ -752,17 +793,17 @@ write(*,28)
 
 	do ibin=1,nbins
 	if (ptsum(ibin).ge.nmin) then
-	binsum(ibin,1)=binsum(ibin,1)/real(ptsum(ibin)) ! Bin-averaged reaction free energy
- 	binsum(ibin,2)=binsum(ibin,2)/real(ptsum(ibin)) ! Bin-averaged c1**2
- 	binsum(ibin,3)=binsum(ibin,3)/real(ptsum(ibin)) ! Bin-averaged c2**2
-	binsum(ibin,4)=binsum(ibin,4)/real(ptsum(ibin)) ! Bin-averaged r_xy
+	binsum(ibin,1)=binsum(ibin,1)/real(ptsum(ibin),kind=prec) ! Bin-averaged reaction free energy
+ 	binsum(ibin,2)=binsum(ibin,2)/real(ptsum(ibin),kind=prec) ! Bin-averaged c1**2
+ 	binsum(ibin,3)=binsum(ibin,3)/real(ptsum(ibin),kind=prec) ! Bin-averaged c2**2
+	binsum(ibin,4)=binsum(ibin,4)/real(ptsum(ibin),kind=prec) ! Bin-averaged r_xy
 	end if
  	end do
  	min=MINVAL(binsum(:,1))
  	do ibin=1,nbins
 		if (ptsum(ibin).ge.nmin) then
- 29		format(i4,1x,3f9.2,2x,i5,3f8.3,4f8.2)
- 		write(*,29) ibin,gapmin(j)+real(ibin)*xint-xint/2.,binsum(ibin,1),  &
+29		format(i4,1x,f9.2,1x,f9.2,1x,f9.2,2x,i9,1x,f8.3,1x,f8.3,1x,f8.3,1x,f8.2,1x,f8.2,1x,f8.2,1x,f8.2)
+ 		write(*,29) ibin,gapmin(j)+real(ibin,kind=prec)*xint-xint/2.,binsum(ibin,1),  &
  		binsum(ibin,1)-min,int(ptsum(ibin)),binsum(ibin,2),binsum(ibin,3),binsum(ibin,4)
         end if
 	end do !ibin
@@ -772,11 +813,11 @@ write(*,28)
 	!clean up
 	do ifile=1,nfiles
 		deallocate(FEP(ifile)%v, FEP(ifile)%vg, FEP(ifile)%gap, &
-		FEP(ifile)%c1, FEP(ifile)%c2)
+		FEP(ifile)%c1, FEP(ifile)%c2,FEP(ifile)%lambda)
 		if(nnoffd > 0) deallocate(FEP(ifile)%r)
 	end do
 	deallocate(FEP)
-
+	deallocate(FEPtmp%v,FEPtmp%vg,FEPtmp%gap,FEPtmp%c1,FEPtmp%c2,FEPtmp%lambda,FEPtmp%r)
 	deallocate(Hij,d,e,STAT=ERR)
 	if (allocated(fileheader%types))  deallocate(fileheader%types)
 	if (allocated(fileheader%numres)) deallocate(fileheader%numres)
@@ -786,11 +827,79 @@ write(*,28)
 		deallocate(EQ(istate)%qx,EQ(istate)%qq,EQ(istate)%qp,EQ(istate)%qw,EQ(istate)%total)
 		deallocate(avEQ(istate)%qx,avEQ(istate)%qq,avEQ(istate)%qp,avEQ(istate)%qw,avEQ(istate)%total)
 	end do
+	deallocate(sumg,sumg2,avdvg,avc1,avc2,avr,binsum,nbinpts,ptsum,EQ,avEQ,dvv,dGv,alfa,coeff,&
+		A,mu,eta,rxy0,avdvv,sumv,sumv2,offd)
 !.......................................................................
 
 contains
 
 !------------------------------
+
+subroutine qfep_reallocate
+!this nasty piece makes sure that the reallocated tmp arrays look right
+! locals
+type(FEP_DATA_TYPE)			:: FEPlocal
+integer					:: oldmxpts
+
+	oldmxpts = mxpts
+	mxpts = oldmxpts + int(oldmxpts * 0.25_prec) + 200
+	allocate(FEPlocal%v(fileheader%arrays,nstates,oldmxpts), &
+		FEPlocal%r(fileheader%arrays,nstates,oldmxpts), FEPlocal%lambda(mxstates), &
+		FEPlocal%vg(fileheader%arrays,oldmxpts), FEPlocal%gap(fileheader%arrays,oldmxpts), &
+		FEPlocal%c1(fileheader%arrays,oldmxpts), FEPlocal%c2(fileheader%arrays,oldmxpts), &
+		STAT=ERR)
+                if(ERR /= 0) then
+                        stop '# >>> ERROR! Qfep5 terminated abnormally: Out of memory when allocating arrays for reallocation'
+                end if
+		FEPlocal%c1(:,:)  = zero
+		FEPlocal%c2(:,:)  = zero
+		FEPlocal%gap(:,:) = zero
+	
+	FEPlocal%v(1:fileheader%arrays,1:nstates,1:oldmxpts)  = FEPtmp%v(1:fileheader%arrays,1:nstates,1:oldmxpts)
+	FEPlocal%r(1:fileheader%arrays,1:nstates,1:oldmxpts)  = FEPtmp%r(1:fileheader%arrays,1:nstates,1:oldmxpts)
+	FEPlocal%vg(1:fileheader%arrays,1:oldmxpts)           = FEPtmp%vg(1:fileheader%arrays,1:oldmxpts)
+	FEPlocal%gap(1:fileheader%arrays,1:oldmxpts)          = FEPtmp%gap(1:fileheader%arrays,1:oldmxpts)
+	FEPlocal%c1(1:fileheader%arrays,1:oldmxpts)           = FEPtmp%c1(1:fileheader%arrays,1:oldmxpts)
+	FEPlocal%c2(1:fileheader%arrays,1:oldmxpts)           = FEPtmp%c2(1:fileheader%arrays,1:oldmxpts)
+	FEPlocal%lambda(1:nstates) = FEPtmp%lambda(1:nstates)
+
+	deallocate(FEPtmp%lambda)
+	deallocate(FEPtmp%v)
+	deallocate(FEPtmp%r)
+	deallocate(FEPtmp%vg)
+	deallocate(FEPtmp%gap)
+	deallocate(FEPtmp%c1)
+	deallocate(FEPtmp%c2)
+
+	allocate(FEPtmp%v(fileheader%arrays,nstates,mxpts), &
+	FEPtmp%r(fileheader%arrays,nstates,mxpts), FEPtmp%lambda(mxstates), &
+	FEPtmp%vg(fileheader%arrays,mxpts), FEPtmp%gap(fileheader%arrays,mxpts), &
+	FEPtmp%c1(fileheader%arrays,mxpts), FEPtmp%c2(fileheader%arrays,mxpts), &
+	STAT=ERR)
+	if(ERR /= 0) then
+		stop '# >>> ERROR! Qfep5 terminated abnormally: Out of memory when reallocating arrays for energy calculation'
+	end if
+	FEPtmp%c1(:,:)  = zero
+	FEPtmp%c2(:,:)  = zero
+	FEPtmp%gap(:,:) = zero
+	FEPtmp%v(1:fileheader%arrays,1:nstates,1:oldmxpts)  = FEPlocal%v(1:fileheader%arrays,1:nstates,1:oldmxpts)
+	FEPtmp%r(1:fileheader%arrays,1:nstates,1:oldmxpts)  = FEPlocal%r(1:fileheader%arrays,1:nstates,1:oldmxpts)
+	FEPtmp%vg(1:fileheader%arrays,1:oldmxpts)           = FEPlocal%vg(1:fileheader%arrays,1:oldmxpts)
+	FEPtmp%gap(1:fileheader%arrays,1:oldmxpts)          = FEPlocal%gap(1:fileheader%arrays,1:oldmxpts)
+	FEPtmp%c1(1:fileheader%arrays,1:oldmxpts)           = FEPlocal%c1(1:fileheader%arrays,1:oldmxpts)
+	FEPtmp%c2(1:fileheader%arrays,1:oldmxpts)           = FEPlocal%c2(1:fileheader%arrays,1:oldmxpts)
+	FEPtmp%lambda(1:nstates) = FEPlocal%lambda(1:nstates)
+
+        deallocate(FEPlocal%lambda)
+        deallocate(FEPlocal%v)
+        deallocate(FEPlocal%r)
+        deallocate(FEPlocal%vg)
+        deallocate(FEPlocal%gap)
+        deallocate(FEPlocal%c1)
+        deallocate(FEPlocal%c2)
+
+
+end subroutine qfep_reallocate
 
 subroutine prompt (outtxt)
 	character(*) outtxt
@@ -825,36 +934,36 @@ SUBROUTINE TRED2(A,N,NP,D,E)
 ! from http://rsc.anu.au/HWS/COURSES/MATHMETH/node70.html
 ! and rewritten in f90.
 !------------------------------------------------------------
-	  real(8),dimension(:)      ::D,E
-	  real(8),dimension(:,:)    ::A
+	  real(kind=prec),dimension(:)      ::D,E
+	  real(kind=prec),dimension(:,:)    ::A
       integer                   ::NP,I,J,K,L,N,ERR
-	  real(8)                   ::SCALE,F,G,H,HH
+	  real(kind=prec)                   ::SCALE,F,G,H,HH
 
       IF(N.GT.1)THEN
         DO I=N,2,-1
            L=I-1
-           H=0.
-           SCALE=0.
+           H=zero
+           SCALE=zero
           IF(L.GT.1)THEN
             DO K=1,L
               SCALE=SCALE+ABS(A(I,K))
             end do
-            IF(SCALE.EQ.0.)THEN
+            IF(SCALE.EQ.zero)THEN
               E(I)=A(I,L)
             ELSE
               DO K=1,L
                 A(I,K)=A(I,K)/SCALE
-                H=H+A(I,K)**2
+                H=H+A(I,K)**2.0_prec
               end do
               F=A(I,L)
               G=-SIGN(SQRT(H),F)
               E(I)=SCALE*G
               H=H-F*G
               A(I,L)=F-G
-              F=0.
+              F=zero
               DO J=1,L
                 A(J,I)=A(I,J)/H
-                G=0.
+                G=zero
                 DO K=1,J
                   G=G+A(J,K)*A(I,K)
                 end do
@@ -882,13 +991,13 @@ SUBROUTINE TRED2(A,N,NP,D,E)
           D(I)=H
         end do
       END IF
-      D(1)=0.
-      E(1)=0.
+      D(1)=zero
+      E(1)=zero
       DO I=1,N
         L=I-1
-        IF(D(I).NE.0.)THEN
+        IF(D(I).NE.zero)THEN
           DO J=1,L
-            G=0.
+            G=zero
             DO K=1,L
               G=G+A(I,K)*A(K,J)
             end do
@@ -898,11 +1007,11 @@ SUBROUTINE TRED2(A,N,NP,D,E)
           end do
         END IF
         D(I)=A(I,I)
-        A(I,I)=1.
+        A(I,I)=one
         IF(L.GE.1)THEN
           DO J=1,L
-            A(I,J)=0.
-            A(J,I)=0.
+            A(I,J)=zero
+            A(J,I)=zero
           end do
         END IF
       end do
@@ -919,16 +1028,16 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
 ! and rewritten in f90
 !------------------------------------------------------------
    implicit none
-      real(8),dimension(:)               ::D,E
-	  real(8),dimension(:,:)             ::Z
+      real(kind=prec),dimension(:)               ::D,E
+	  real(kind=prec),dimension(:,:)             ::Z
 	  integer                            ::I,N,NP,K,L,M,ITER
-	  real(8)                            ::DD,G,R,S,C,P,F,B
+	  real(kind=prec)                            ::DD,G,R,S,C,P,F,B
 
         IF (N.GT.1) THEN
         DO I=2,N
           E(I-1)=E(I)
         end do
-        E(N)=0.
+        E(N)=zero
         DO L=1,N
           ITER=0
 1         DO M=L,N-1
@@ -939,30 +1048,30 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
 2         IF(M.NE.L)THEN
             IF(ITER.EQ.30)STOP 'too many iterations'
             ITER=ITER+1
-            G=(D(L+1)-D(L))/(2.*E(L))
-            R=SQRT(G**2+1.)
+            G=(D(L+1)-D(L))/(2.0_prec*E(L))
+            R=SQRT(G**2.0_prec+one)
             G=D(M)-D(L)+E(L)/(G+SIGN(R,G))
-            S=1.
-            C=1.
-            P=0.
+            S=one
+            C=one
+            P=zero
             DO I=M-1,L,-1
               F=S*E(I)
               B=C*E(I)
               IF(ABS(F).GE.ABS(G))THEN
                 C=G/F
-                R=SQRT(C**2+1.)
+                R=SQRT(C**2.0_prec+one)
                 E(I+1)=F*R
-                S=1./R
+                S=one/R
                 C=C*S
               ELSE
                 S=F/G
-                R=SQRT(S**2+1.)
+                R=SQRT(S**2.0_prec+one)
                 E(I+1)=G*R
-                C=1./R
+                C=one/R
                 S=S*C
               END IF
               G=D(I+1)-P
-              R=(D(I)-G)*S+2.*C*B
+              R=(D(I)-G)*S+2.0_prec*C*B
               P=S*R
               D(I+1)=G+P
               G=C*R-B
@@ -974,7 +1083,7 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
             end do
             D(L)=D(L)-P
             E(L)=G
-            E(M)=0.
+            E(M)=zero
             GO TO 1
           END IF
         end do

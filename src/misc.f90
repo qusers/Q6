@@ -22,8 +22,6 @@ use SIZES
 	ENUM, bind(c)
 		ENUMERATOR	:: ATOM,RESIDUE
 	END ENUM
-	real(kind=prec),parameter               ::      zero = 0.0_prec
-	real(kind=prec),parameter               ::      one = 1.0_prec
 
 
 contains

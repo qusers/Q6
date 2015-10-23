@@ -16,6 +16,8 @@ module	SIZES
 
 	integer, parameter :: prec = doubleprecision 
 
+	real(kind=prec),parameter	:: zero = 0.0_prec
+	real(kind=prec),parameter	:: one  = 1.0_prec
 	! STORAGE SPECIFICATIONS FOR Q
 	! Change according to 
 	! 1)	alignment preferences of your machine
