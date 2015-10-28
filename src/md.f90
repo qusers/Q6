@@ -173,20 +173,21 @@ type SHELL_TYPE_DOUBLE
         real(kind=doubleprecision)                                 ::      avtheta, avn_insh, theta_corr
         integer                                 ::      n_insh
 end type SHELL_TYPE_DOUBLE
-
+#ifndef PGI
 type SHELL_TYPE_QUAD
         real(kind=quadprecision)                                 ::      rout, dr, cstb
         real(kind=quadprecision)                                 ::      avtheta, avn_insh, theta_corr
         integer                                 ::      n_insh
 end type SHELL_TYPE_QUAD
-
+#endif
 
 type(SHELL_TYPE), allocatable::	wshell(:)
 type(OLD_SHELL_TYPE), allocatable::old_wshell(:)
 type(SHELL_TYPE_SINGLE), allocatable:: wshell_single(:)
 type(SHELL_TYPE_DOUBLE), allocatable:: wshell_double(:)
+#ifndef PGI
 type(SHELL_TYPE_QUAD), allocatable:: wshell_quad(:)
-
+#endif
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
 real(kind=prec),  parameter			::	wpolr_layer			= 3.0001_prec !TODO: it is not place for that
@@ -16344,15 +16345,18 @@ real(kind=singleprecision),allocatable :: x_single(:),v_single(:)
 real(kind=singleprecision)             :: boxl_single(3),boxc_single(3)
 real(kind=doubleprecision),allocatable :: x_double(:),v_double(:)
 real(kind=doubleprecision)             :: boxl_double(3),boxc_double(3)
+#ifndef PGI
 real(kind=quadprecision),allocatable   :: x_quad(:),v_quad(:)
 real(kind=quadprecision)               :: boxl_quad(3),boxc_quad(3)
-
+#endif
 if (prec .eq. singleprecision) then
 myprec = -137
 elseif (prec .eq. doubleprecision) then
 myprec = -1337
+#ifndef PGI
 elseif (prec .eq. quadprecision) then
 myprec = -13337
+#endif
 else
 call die('No such precision')
 end if
@@ -16389,10 +16393,14 @@ read(12) headercheck
          xtop(1:nat_pro*3) = x_double(1:nat_pro*3)
          deallocate(x_double)
        else if (headercheck .eq. -13337) then
+#ifndef PGI
          allocate(x_quad(nat3))
          read (12,err=112,end=112) nat3, (x_quad(i),i=1,nat_pro*3)
          xtop(1:nat_pro*3) = x_quad(1:nat_pro*3)
          deallocate(x_quad)
+#else
+         call die('Quadruple precision not supported in PGI')
+#endif
        end if
      else
        read (12,err=112,end=112) nat3, (xtop(i),i=1,nat_pro*3)
@@ -16500,6 +16508,7 @@ if(restart) then
                  boxcentre(1:3) = boxc_double(1:3)
               end if
             else if (headercheck .eq. -13337) then
+#ifndef PGI
               allocate(x_quad(nat3),v_quad(nat3))
               read (2,err=112,end=112) nat3, (x_quad(i),i=1,nat3)
               read (2,err=112,end=112) nat3, (v_quad(i),i=1,nat3)
@@ -16512,6 +16521,9 @@ if(restart) then
                  boxlength(1:3) = boxl_quad(1:3)
                  boxcentre(1:3) = boxc_quad(1:3)
               end if
+#else
+              call die('Quadruple precision not supported in PGI')
+#endif
             end if
           else
               read (2,err=112,end=112) nat3, (x(i),i=1,nat3)
@@ -16926,8 +16938,10 @@ if (prec .eq. singleprecision) then
 canary = 137
 else if (prec .eq. doubleprecision) then
 canary = 1337
+#ifndef PGI
 else if (prec .eq. quadprecision) then
 canary = 13337
+#endif
 else
 call die('No such precision')
 end if
@@ -18128,19 +18142,25 @@ logical :: old_restart = .false.
 real(8),allocatable :: x_old(:), v_old(:)
 real(kind=singleprecision),allocatable :: x_1(:), v_1(:)
 real(kind=doubleprecision),allocatable :: x_2(:), v_2(:)
+#ifndef PGI
 real(kind=quadprecision),allocatable :: x_3(:), v_3(:)
+#endif
 real(8) :: old_boxlength(3),old_boxcentre(3)
 real(kind=singleprecision) :: boxlength_1(3),boxcentre_1(3)
 real(kind=doubleprecision) :: boxlength_2(3),boxcentre_2(3)
+#ifndef PGI
 real(kind=quadprecision) :: boxlength_3(3),boxcentre_3(3)
+#endif
 integer :: headercheck,i,myprec,dummy
 
 if (prec .eq. singleprecision) then
 myprec = -137
 elseif (prec .eq. doubleprecision) then
 myprec = -1337
+#ifndef PGI
 elseif (prec .eq. quadprecision) then
 myprec = -13337
+#endif
 else
 call die('No such precision')
 end if
@@ -18198,6 +18218,7 @@ if(restart) then !try to load theta_corr from restart file
      end if
      deallocate(x_2,v_2)
    else if (headercheck .eq. -13337) then
+#ifndef PGI
      allocate(x_3(3*natom),v_3(3*natom))
      read(2) dummy,(x_3(i),i=1,nat3)
      read(2) dummy,(v_3(i),i=1,nat3)
@@ -18206,6 +18227,9 @@ if(restart) then !try to load theta_corr from restart file
        read(2) boxcentre_3(:)
      end if
      deallocate(x_3,v_3)
+#else
+     call die('Quadruple precision not supported in PGI')
+#endif
    end if
         read(2, iostat=filestat) nwpolr_shell_restart
         if(filestat .ne. 0 .or. nwpolr_shell_restart /= nwpolr_shell) then
@@ -18233,10 +18257,14 @@ if(restart) then !try to load theta_corr from restart file
                        wshell(:)%theta_corr = wshell_double(:)%theta_corr
                        deallocate(wshell_double)
                      else if (headercheck .eq. -13337) then
+#ifndef PGI
                        allocate(wshell_quad(nwpolr_shell), stat=alloc_status)
                        read(2) nwpolr_shell_restart,wshell_quad(:)%theta_corr
                        wshell(:)%theta_corr = wshell_quad(:)%theta_corr
                        deallocate(wshell_quad)
+#else
+                       call die('Quadruple precision not supported in PGI')
+#endif
                      end if
                    else
                      read(2) nwpolr_shell_restart,wshell(:)%theta_corr
@@ -18625,8 +18653,10 @@ if (prec .eq. singleprecision) then
 canary = -137
 elseif (prec .eq. doubleprecision) then
 canary = -1337
+#ifndef PGI
 elseif (prec .eq. quadprecision) then
 canary = -13337
+#endif
 else
 call die('No such precision')
 end if

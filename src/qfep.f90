@@ -82,9 +82,11 @@ version_precision = 'Single'
 elseif (prec .eq. doubleprecision) then
 myprec = 1337
 version_precision = 'Double'
+#ifndef PGI
 elseif (prec .eq. quadprecision) then
 myprec = 13337
 version_precision = 'Quadruple'
+#endif
 end if
 
 	!------------------------------------------

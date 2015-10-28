@@ -24,10 +24,10 @@ ifeq ($(COMP),ifort)
 	FC_OPT=		-O3 -ip -ipo -unroll -xHost -inline-forceinline \
 				-unroll-aggressive -finline-limit=1000 \
 				-no-inline-max-size -no-prec-div
-	FFLAGS=		-fp-model precise -fp-model except 
+	FFLAGS=		-fp-model precise -fp-model except
 	FFLAGS_R8=	-r8
 	FC_DEBUG=	-unroll 
-	FPP_FLG=	-fpp
+	FPP_FLG=	-fpp -DINTEL
 
 	MPIFC=		mpif90
 	MPIFLAGS=	-f90=${FC} -Nmpi
@@ -50,9 +50,9 @@ else ifeq ($(COMP),osx)
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics\
-                        -std=legacy -Wall -Wtabs
+                        -std=legacy -Wall -Wtabs 
 	FFLAGS_R8=	-fdefault-real-8
-	FPP_FLG=        -cpp
+	FPP_FLG=        -cpp -DOSX
 
 	MPIFC=          mpif90
 	OMPI_FC=        ${FC}
@@ -70,7 +70,7 @@ else ifeq ($(COMP),pgi)
 	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
 	FFLAGS=		
 	FFLAGS_R8=	-r8
-	FPP_FLG=	-Mpreprocess
+	FPP_FLG=	-Mpreprocess -DPGI
 
 	MPIFC=		mpif90
 	MPIFLAGS=	-lmpi
@@ -84,7 +84,7 @@ else ifeq ($(COMP),pgi)
 else ifeq ($(COMP),ibm)
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
-	FFLAGS=		-qrealsize=8
+	FFLAGS=		-qrealsize=8 -DIBM
 
 ################################################################################
 # GNU gcc-gfortran
@@ -92,7 +92,7 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll
-	FPP_FLG=	-cpp
+	FPP_FLG=	-cpp -DGCC
 
 	MPIFC=		mpif90
 	OMPI_FC=	${FC}
@@ -113,7 +113,7 @@ else ifeq ($(COMP),gcc)
 else
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll 
-	FPP_FLG=	-cpp
+	FPP_FLG=	-cpp -DUNKNOWN
 
 	MPI=		-DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
@@ -322,7 +322,7 @@ qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
 sizes.o: sizes.f90
-	${FC} ${FFLAGS} -c $<
+	${FC} ${FFLAGS} ${FPP_FLG} -c $<
 
 topo.o:  topo.f90 misc.o mpiglob.o sizes.o
 	${FC} ${FFLAGS} -c $<
