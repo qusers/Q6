@@ -1,32 +1,39 @@
 [MD]
-steps                  20000
-stepsize                   0.5
-temperature              300.0
-bath_coupling            400000
-
-separate_scaling                on
-skake_solvent           off
-shake_hydrogens         off
+steps                     100000
+stepsize                  2.0
+temperature               300.0
+bath_coupling             100
+random_seed               1
+initial_temperature       300.0
+shake_solvent             on
+shake_solute              off
+shake_hydrogens           on
 lrf                       on
 
-[PBC]
 
-[cut-offs]
-solute_solute           24
-solute_solvent          24
-solvent_solvent         24
-q_atom                  24
-lrf                     24
+[cut_offs]
+solute_solute             10
+solute_solvent            10
+solvent_solvent           10
+q_atom                    99
+lrf                       99
+
+[sphere]
+shell_radius              16
+shell_force               20
 
 [intervals]
 non_bond                  25
 output                    50
+energy                    0
+trajectory                1000
 
 [files]
-topology                  lig_w.top
-fep                       lig_w.fep
+topology                  prep/lig_w.top
+fep                       prep/lig_w.fep
 restart                   dc4.re
 final                     dc5.re
+trajectory                dc5.dcd
 
 [sequence_restraints]
-
+1 46 0.5 0 1

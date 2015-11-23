@@ -1,11 +1,11 @@
 ################################################################################
-#  Q V.5.06 Makefile                                                           #
-#  code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
+#  Q V.5.7 Makefile                                                            #
+#  Code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
 #  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          #
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
-#  keeper of the code: Paul Bauer                                              #
-#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
-#  latest update: Oct 17, 2014                                                 #
+#  Maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra, #
+#  Irek Szeler                                                                 #
+#  Latest update: October 15, 2015                                             #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
@@ -20,44 +20,48 @@ BUILD_NUMBER_FILE=build-number.txt
 # Intel Fortran ifort ( tested in linux and osx)
 ################################################################################
 ifeq ($(COMP),ifort)
-	FC=			ifort 
-	FC_OPT=		-O3 -ip -ipo -unroll -xHost -inline-forceinline \
-				-unroll-aggressive -finline-limit=1000 \
-				-no-inline-max-size -no-prec-div
-	FFLAGS=		-fp-model precise -fp-model except
-	FFLAGS_R8=	-r8
-	FC_DEBUG=	-unroll 
-	FPP_FLG=	-fpp -DINTEL
+	FC=             ifort 
+	FC_OPT=         -O3 -ip -ipo -unroll -xHost -inline-forceinline \
+	                -unroll-aggressive -finline-limit=1000 \
+	                -no-inline-max-size -no-prec-div
+	FFLAGS=         -fp-model precise -fp-model except
+	FFLAGS_R8=      -r8
+	FC_DEBUG=       -unroll
+	FPP_FLG=        -fpp -DINTEL
 
-	MPIFC=		mpif90
-	MPIFLAGS=	-f90=${FC} -Nmpi
-	OMPI_FC=	${FC}
-	MPI_FC=		${FC}
-	MPI_FCFLAGS=	${FFLAGS} ${FC_OPT}
-	MPI=		${MPI_FCFLAGS}
-	MPFLAG=		-openmp ${MPI}
+	MPIFC=          mpif90
+	MPIFLAGS=       -f90=${FC} -Nmpi
+	OMPI_FC=        ${FC}
+	MPI_FC=         ${FC}
+	MPI_FCFLAGS=    ${FFLAGS} ${FC_OPT}
+	MPI=            ${MPI_FCFLAGS}
+	MPFLAG=         -openmp ${MPI}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
-	DEBUGMP=        -openmp -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} \
+	                ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} \
+	                ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUGMP=        -openmp -debug -traceback -g  -I${VT_ROOT}/include \
+	                -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 
 
 ################################################################################
-# OSX Mavericks using gfortran
+# OSX Yosemite using gfortran 5.1.0
 ################################################################################
 else ifeq ($(COMP),osx)
 	FC= gfortran
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
-                        -ffree-line-length-none -fcray-pointer -fall-intrinsics\
-                        -std=legacy -Wall -Wtabs 
-	FFLAGS_R8=	-fdefault-real-8
+	                -ffree-line-length-none -fcray-pointer -fall-intrinsics\
+	                -std=legacy -Wall -Wtabs 
+	FFLAGS_R8=      -fdefault-real-8
+
 	FPP_FLG=        -cpp -DOSX
 
 	MPIFC=          mpif90
 	OMPI_FC=        ${FC}
 	OMPI_FCFLAGS=   ${FFLAGS} ${FC_OPT}
-	MPI=		${OMPI_FCFLAGS}
+	MPI=            ${OMPI_FCFLAGS}
 
 	DEBUG=          -debug  -g ${FFLAGS}
 	DEBUGMPI=       -debug  -g ${FFLAGS}
@@ -66,17 +70,19 @@ else ifeq ($(COMP),osx)
 # PGI Compiler -- compiles at csb
 ################################################################################
 else ifeq ($(COMP),pgi)
-	FC=		pgf90
-	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
-	FFLAGS=		
-	FFLAGS_R8=	-r8
-	FPP_FLG=	-Mpreprocess -DPGI
+	FC=             pgf90
+	FC_OPT=         -fastsse -Mipa=fast,inline \
+	                -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll \
+	                -mcmodel=medium -Minfo=inline
+	FFLAGS=         
+	FFLAGS_R8=      -r8
+	FPP_FLG=        -Mpreprocess -DPGI
 
-	MPIFC=		mpif90
-	MPIFLAGS=	-lmpi
-	MPI=		${MPIFLAGS} ${FFLAGS} ${FC_OPT}
-	MPI_FC=		${FC}
-	MPFLAG=		-mp ${MPI}
+	MPIFC=          mpif90
+	MPIFLAGS=       -lmpi
+	MPI=            ${MPIFLAGS} ${FFLAGS} ${FC_OPT}
+	MPI_FC=         ${FC}
+	MPFLAG=         -mp ${MPI}
 
 ################################################################################
 # IBM Compiler -- untested
@@ -84,42 +90,46 @@ else ifeq ($(COMP),pgi)
 else ifeq ($(COMP),ibm)
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
-	FFLAGS=		-qrealsize=8 -DIBM
+	FFLAGS=         -qrealsize=8 -DIBM
 
 ################################################################################
 # GNU gcc-gfortran
 ################################################################################
 else ifeq ($(COMP),gcc)
-	FC=		gfortran
-	FC_OPT=		-O3 -unroll
-	FPP_FLG=	-cpp -DGCC
+	FC=             gfortran
+	FC_OPT=         -O3 -unroll
+	FPP_FLG=        -cpp -DGCC
 
-	MPIFC=		mpif90
-	OMPI_FC=	${FC}
-	OMPI_FCFLAGS=	-DG95=1 \
-                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy 
-	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
-	MPFLAG=		-fopenmp ${MPI}
+	MPIFC=          mpif90
+	OMPI_FC=        ${FC}
+	OMPI_FCFLAGS=   -DG95=1 -ffree-line-length-none -fcray-pointer \
+	                -fall-intrinsics -std=legacy
 
-	FFLAGS=		--static ${OMPI_FCFLAGS}
-	FFLAGS_R8=	-fdefault-real-8
+	MPI=            ${OMPI_FCFLAGS} ${FC_OPT}
+	MPFLAG=         -fopenmp ${MPI}
 
-	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	DEBUGMP=        -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
+	FFLAGS=         --static ${OMPI_FCFLAGS}
+	FFLAGS_R8=      -fdefault-real-8
 
-	PROF=		-pg ${DEBUG}
+	DEBUG=          -fbacktrace -g ${DEBUG_FC} -ffree-line-length-none \
+	                -fcray-pointer -fall-intrinsics -std=legacy
+	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC} -ffree-line-length-none \
+	                -fcray-pointer -fall-intrinsics -std=legacy
+	DEBUGMP=        -fopenmp -fbacktrace -g ${DEBUG_FC} -ffree-line-length-none\
+	                -fcray-pointer -fall-intrinsics -std=legacy
+
+	PROF=           -pg ${DEBUG}
 
 else
-	FC=		gfortran
-	FC_OPT=		-O3 -unroll 
-	FPP_FLG=	-cpp -DUNKNOWN
+	FC=             gfortran
+	FC_OPT=         -O3 -unroll
+	FPP_FLG=        -cpp -DUNKNOWN
 
-	MPI=		-DG95=1 \
-                        -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
-	MPFLAG=		-fopenmp ${MPI}
-	FFLAGS=		--static ${MPI}
-	FFLAGS_R8=	-fdefault-real-8
+	MPI=            -DG95=1 -ffree-line-length-none -fcray-pointer \
+	                -fall-intrinsics -std=legacy
+	MPFLAG=         -fopenmp ${MPI}
+	FFLAGS=         --static ${MPI}
+	FFLAGS_R8=      -fdefault-real-8
 endif
 
 ################################################################################
@@ -130,81 +140,82 @@ default: what
 ################################################################################
 # Targets
 ################################################################################
-all:    tools serial 
-	
+all:    tools serial
+
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qfep5 qprep5 qdum5 qcalc5 move1 move2
+	qfep qprep qdum qcalc move1 move2
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
-	qdyn5 move1 moveqdyn
+	qdyn move1 moveqdyn
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+	qfep qprep qdyn qdum qcalc move1 move2
 
 prof:
 	@make FFLAGS="${PROF}" \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+	qfep qprep qdyn qdum qcalc move1 move2
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	qdyn5p move1 move3
+	qdynp move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	qdyn5p move1 move3
+	qdynp move1 move3
 hybrid:
 	@make FFLAGS="${MPFLAG}" \
-	qdyn5h move1 move4
+	qdynh move1 move4
 
 hybriddebug:
 	@make FFLAGS="${DEBUGMP}" \
-	qdyn5h move1 move4
+	qdynh move1 move4
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il *.oo
 
 nuke:
-	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5h qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
+	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep qdynh qdynp qdyn qprep qcalc \
+	qdum ../bin ../obj
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5: version.o misc.o mpiglob.o
+qcalc qdyn qdum qdynp qdynh qprep qfep: version.o misc.o mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
+qcalc qdyn qdum qdynp qdynh qprep: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5: nrgy.o
+qcalc qdyn qdum qdynp qdynh qfep: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o
+qcalc qdyn qdum qdynp qdynh: qatom.o exc.o
 
-qcalc5 qprep5 qfep5: parse.o
+qcalc qprep qfep: parse.o
 
-qcalc5 qprep5: maskmanip.o
+qcalc qprep: maskmanip.o
 
-qdyn5 qdum5: qdyn.o
+qdyn qdum: qdyn.o
 
-qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
+qprep: qprep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qfep5: qfep.o 
+qfep: qfep.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
+qcalc: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
 	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5 : md.o
+qdyn : md.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdum5 : md_dum.o
+qdum : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5p : md_mpi.o qdyn_mpi.o
+qdynp : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5h : md_mpi.o qdyn_mpi.o
+qdynh : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
@@ -231,10 +242,12 @@ calc_geom.o:calc_geom.f90 calc_base.o
 calc_nb.o:calc_nb.f90 calc_base.o maskmanip.o parse.o qatom.o prmfile.o
 	${FC} ${FFLAGS} -c $<
 
-calc_pmfscore.o: calc_pmfscore.f90 calc_base.o maskmanip.o trj.o topo.o prmfile.o index.o qatom.o misc.o
+calc_pmfscore.o: calc_pmfscore.f90 calc_base.o maskmanip.o trj.o topo.o \
+	prmfile.o index.o qatom.o misc.o
 	${FC} ${FFLAGS} -c $<
 
-calc_xscore.o: calc_xscore.f90 calc_base.o maskmanip.o trj.o topo.o prmfile.o index.o qatom.o misc.o
+calc_xscore.o: calc_xscore.f90 calc_base.o maskmanip.o trj.o topo.o prmfile.o \
+	index.o qatom.o misc.o
 	${FC} ${FFLAGS} -c $<
 
 calc_rdf.o:calc_rdf.f90 calc_base.o parse.o maskmanip.o
@@ -299,24 +312,26 @@ prep.o: prep.f90 maskmanip.o sizes.o parse.o prmfile.o trj.o index.o prefs.o
 prmfile.o: prmfile.f90 misc.o mpiglob.o
 	${FC} ${FFLAGS} -c $<
 
-q_prep.o: q_prep.f90 prep.o avetr.o version.o
+qprep.o: qprep.f90 prep.o avetr.o version.o
 	${FC} ${FFLAGS} -c $<
 
 qatom.o: qatom.f90 misc.o nrgy.o prmfile.o sizes.o index.o topo.o
 	${FC} ${FFLAGS} -c $<
 
-qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o version.o
+qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o \
+	calc_base.o calc_rms.o calc_fit.o calc_geom.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
 qdyn.o: qdyn.f90 md.o mpiglob.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qdyn.f90
 
 qdyn_dum.o: qdyn.f90 md.o mpiglob.o version.o
-	${FC} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DDUM -c qdyn.f90 -o qdyn_dum.o
+	${FC} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DDUM -c qdyn.f90 \
+	-o qdyn_dum.o
 
 qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o version.o
-	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
-        -c qdyn.f90 -o qdyn_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} \
+	-DUSE_MPI -c qdyn.f90 -o qdyn_mpi.o
 
 qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
@@ -334,20 +349,21 @@ version.o: version.f90
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c $<
 
 moveqdyn:
-	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_r8
+	mkdir -p ../bin ; mv qdyn ../bin/qdyn
+
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
 	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep qprep qdum qcalc ../bin/
 
 move3:
-	mkdir -p ../bin ; mv qdyn5p ../bin/
+	mkdir -p ../bin ; mv qdynp ../bin/
 
 move4:
-	mkdir -p ../bin ; mv qdyn5h ../bin/
+	mkdir -p ../bin ; mv qdynh ../bin/
 
 
 include buildnumber.mak
@@ -362,18 +378,18 @@ what:
 	@echo "Use: make [target] [COMP=compiler]"
 	@echo
 	@echo "[target] is one of:"
-	@echo "all              Everything, including non optimized and optimized qdyn5/qdyn5p"
-	@echo "tools            Non speed optimized versions of qdyn5, qdum5, qfep5, qcalc5 and qprep5"
-	@echo "debug            Tools with debug information (stacktraces)."
-	@echo "mpi              qdyn5p using a currently loaded MPI library"
-	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
-	@echo "hybrid           qdyn5h using a currently loaded MPI library and OpenMP library"
-	@echo "hybriddebug      qdyn5h with debug information (stacktraces)."
+	@echo "all          Everything, including non optimized and optimized qdyn"
+	@echo "tools        qdum, qfep, qcalc and qprep"
+	@echo "debug        Tools with debug information (stacktraces)."
+	@echo "mpi          qdynp needs an MPI library to be loaded"
+	@echo "mpidebug     qdynp with debug information (stacktraces)."
+	@echo "hybrid       qdynh needs an MPI and OpenMP library"
+	@echo "hybriddebug  qdynh with debug information (stacktraces)."
 	@echo
 	@echo "For compiler/os pick one of:"
-	@echo "ifort            Intel Fortran compiler"
-	@echo "osx              Gnu Compiler Collection (GCC) in mac"
-	@echo "gcc              GCC in linux"
-	@echo "pgi              Portland Group compiler"
+	@echo "ifort        Intel Fortran compiler"
+	@echo "osx          Gnu Compiler Collection (GCC) in mac"
+	@echo "gcc          GCC in linux"
+	@echo "pgi          Portland Group Fortran compiler"
 ################################################################################
 

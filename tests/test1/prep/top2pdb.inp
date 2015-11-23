@@ -1,0 +1,4 @@
+rt oldtopo.top
+wp top-orig.pdb
+y
+q

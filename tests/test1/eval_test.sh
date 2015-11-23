@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Useful stuff:
+# Define OK and FAILED:
 OK="(\033[0;32m   OK   \033[0m)"
 FAILED="(\033[0;31m FAILED \033[0m)"
 
@@ -10,7 +10,7 @@ FAILED="(\033[0;31m FAILED \033[0m)"
 
 for step in {1..5}
 do
- echo -n "Checking presence of equilibration step $step                   "
+ echo -n "Checking for equilibration step $step                   "
 
  if [ -e eq${step}.log ]
  then echo -e "$OK"
@@ -23,7 +23,7 @@ done
 
 for step in {1..5}
 do
- echo -n "Checking presence of production step $step                      "
+ echo -n "Checking for production step $step                      "
 
  if [ -e dc${step}.log ]
  then echo -e "$OK"
@@ -62,8 +62,8 @@ done
 
 echo -n "Checking initial energy consistency                         "
 
-INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./ p }' \
-            eq1.log`
+#INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ { /Q-surr./p }' eq1.log`
+INIT_QSURR=`sed -n '/Q-atom energies at step      0/,/==/ p' eq1.log | grep "Q-surr"` 
 INIT_QSURR_BM="Q-surr. 1 1.0000      3.12    139.43"
 
 if [ "$INIT_QSURR" == "$INIT_QSURR_BM" ]
@@ -76,15 +76,15 @@ fi
 
 ###############################################################################
 # Testing restart consistency. Checking that the final total potential energy #
-# in the preceeding run equals the pot. energy in step 0 of the subsequent    #
-# run.                                                                        #
+# in the preceeding run equals the potential energy in step 0 of the          #
+# subsequent run.                                                             #
 # (Need not always be true, but in this case it is.)                          #
 ###############################################################################
 
-sed -n '/Energy summary at step      0/,/==/ { /SUM/ p }' dc{2..5}.log \
-    > step0.tmp
-sed -n '/FINAL  Energy summary/,/==/ { /SUM/ p }' dc{1..4}.log \
-    > final.tmp
+sed -n '/Energy summary at step      0/,/==/ p' dc{2..5}.log \
+ | grep "SUM"    > step0.tmp
+sed -n '/FINAL  Energy summary/,/==/ p' dc{1..4}.log \
+ | grep "SUM"   > final.tmp
 
 step=1
 paste -d' ' final.tmp step0.tmp | tr -s [:blank:] | \
@@ -119,7 +119,7 @@ rm {final,step0}.tmp
 # first few steps and then fall somewhere in the ball park of the benchmark   #
 # bounds. (Benchmark bounds were generated from a 'trusted' version of        #
 # Q by taking the average +/- std dev from ten runs with different random     #
-# seeds. Hence this is a statistical figure of measure.)                      #
+# seeds. Hence this is a statistical figure of replicate reproducibility)     #
 ###############################################################################
 
 echo -n "Checking that benchmark energies are present                "
@@ -152,7 +152,7 @@ set style line 3 lt 1 lc 5 lw 1 pt 6
 set xlabel 'Simulation step'
 set ylabel 'VdW energy [kcal/mol]'
 set log x
-set xrange [1:3000]
+set xrange [1:6000]
 plot 'qsurr_benchmark.en' using 1:2                         \
                             notitle  with lines ls 1,       \
      'qsurr_benchmark.en' using 1:3                         \
@@ -173,11 +173,11 @@ echo -e "$OK"
 
 echo -n "Checking if Gnuplot is installed on the system              "
 
-if which gnuplot >& /dev/null 
+if which /sw/bin/gnuplot >& /dev/null 
 then 
  echo -e "$OK"
  echo "Launching Gnuplot..."
- gnuplot -persist < qsurr.plot &
+ /sw/bin/gnuplot -persist < qsurr.plot &
 else
  echo -e "$FAILED"
  echo "Gnuplot file qsurr.plot written."

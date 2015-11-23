@@ -1,10 +1,21 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-! qdyn.f90
-! Initial date: 2000
-! by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
-! Qdyn molecular dynamics main program
+!------------------------------------------------------------------------------!
+!  Q v.5.7 makefile                                                            !
+!  Code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      !
+!  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          !
+!  Kajsa Ljunjberg, John Marelius, Martin Nervall                              !
+!  Maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra, !
+!  Irek Szeler                                                                 !
+!  latest update: july 13, 2015                                                !
+!------------------------------------------------------------------------------!
 
-program Qdyn5
+!------------------------------------------------------------------------------!
+!  (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+!  qdyn.f90
+!  by Johan Aqvist, John Marelius, Anders Kaplan & Martin Nervall
+!  Qdyn molecular dynamics main program
+!------------------------------------------------------------------------------!
+
+program qdyn
   use MD
   use VERSIONS
   use MPIGLOB ! use MPI global data
@@ -183,7 +194,7 @@ INTEGER(4) FUNCTION qsignal( signum, proc, sigflag )
        qsignal = 1
 END FUNCTION qsignal
 
-end program Qdyn5
+end program qdyn
 
 ! signal handlers
 
