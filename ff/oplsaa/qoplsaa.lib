@@ -1,10 +1,29 @@
 *-------------------------------------------------------------
+*
 * Q-library:
 * J. Aqvist's version of the OPLS-AA potential.
 *
 * Name convention on basic and acidic a.a.: 
 * ARG, ARN, HIP, HID, HIE, LYS, LYN, ASP, ASH, GLU, GLH
 *  +1    0   +1    0    0   +1    0   -1    0   -1    0
+*
+* VERSION V1.2
+*
+* NOTES:
+* - V1.1 => V1.2 ASH/GLH are now set to actual OPLS-AA ODE
+*   Differences to old library, github bc3cbf9:
+*     ARN improper HH21 NH2 CZ HH22 was added
+*     LYN atom HE2 and HE3 changed from HCN to HC
+*     old ASH OD1 atomtype OH changed to ODE
+*     old GLH OE1 atomtype OH changed to ODE
+*     old GLH OE2 atomtype O  changed to O1
+* - V1.0 => V1.1 ASH OD1 was changed from OH to ODE
+*   Note, that ASH/GLH OD2 are different atomtypes for no obv. reason.      
+* - This file was contributed by Masoud. Release Date: 131125
+* - This files name was originally (Qoplsaa_QM_zn1.lib)
+* - You should not need to edit this file, instead you might want 
+*   to load additional library entries from additional lib files.
+*
 *----------------------------------------------------------------------
 {ALA}                 ! Alanine
     [info]
@@ -173,6 +192,7 @@
         O    C    CA    +N
         HE   NE   CD    CZ
         NH2  CZ   NH1   NE
+        HH21 NH2  CZ    HH22
     [charge_groups]
         N    H    CA   HA   
         CB   HB2  HB3
@@ -281,7 +301,7 @@
          6 HB2     HC          0.0600
          7 HB3     HC          0.0600
          8 CG      C2          0.5200
-         9 OD1     OH         -0.5300
+         9 OD1     ODE        -0.5300
         10 OD2     O1         -0.4400
         11 HD1     HO          0.4500
         12 C       C           0.5000
@@ -502,8 +522,8 @@
          9 HG2     HC          0.0600
         10 HG3     HC          0.0600
         11 CD      C2          0.5200
-        12 OE1     OH         -0.5300
-        13 OE2     O          -0.4400
+        12 OE1     ODE        -0.5300
+        13 OE2     O1         -0.4400
         14 HE1     HO          0.4500
         15 C       C           0.5000
         16 O       O          -0.5000
@@ -920,8 +940,8 @@
         12 HD2     HC          0.0600
         13 HD3     HC          0.0600
         14 CE      CT          0.0600
-        15 HE2     HCN         0.0600
-        16 HE3     HCN         0.0600
+        15 HE2     HC          0.0600
+        16 HE3     HC          0.0600
         17 NZ      NT         -0.9000
         18 HZ1     H           0.3600
         19 HZ2     H           0.3600
