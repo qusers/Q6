@@ -1,31 +1,44 @@
-#Read the topology file/files
+!Read the topology (library) file/files.
 rl  lig.lib
 rl  Qoplsaa.lib
 
-#Read the parameter file
+!Read the parameter file (i.e. force-field specific).
 rff Qoplsaa.prm
 
-#Read the starting, usually precleaned pdb file.
+!Read the starting, usually precleaned pdb file.
 rp  lig.pdb
 
+!list residues sequence.
 ls
+
+!list atoms in residue 1.
 lr 1
+
+!show a list of Q preferences.
 preferences
 
-#you need to create the sulfur-sulfur bridges.
-#addbond atomnum atomnum y
+!you need to create the sulfur-sulfur bridges.
+!addbond atomnum atomnum y
 
+<<<<<<< HEAD
 #Create water sphere
-boundary 1 9.911   4.984  -2.011 20.0
-solvate 9.911   4.984  -2.011 20.0 1 HOH
+boundary box 1:C7 50 50 50
+solvate 1 HOH
+=======
+!Create water sphere.
+boundary 1 9.911   4.984  -2.011 20
+solvate 9.911   4.984  -2.011 20 1 HOH
+>>>>>>> c53917828c348d48b54b216fc5b616e094811f33
 
 mt lig_w
 wt lig_w.top
 
+!Punch to output unusually large energies.
 checkbonds 6
 checkangs  6
 checktors  6
 checkimps  6
 
+!Write pdb file corresponding to the created topology.
 wp lig_w.pdb y
 quit

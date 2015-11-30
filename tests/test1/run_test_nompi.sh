@@ -1,8 +1,10 @@
 #!/bin/bash 
 
-qbinary=$QDIR/bin/qdyn5
+qbinary=/home/x_pauba/glob/debug/noseho/bin/qdyn5
+wd=`pwd`
 
-if [ "x$qbinary" == "x" ]
+#set -e
+if [ -z $qbinary ]
 then 
  echo "Please set the qbinary variable to point to the Q folder"
  exit 1
@@ -15,7 +17,16 @@ else
  echo "Detected qdyn in ${QDIR}"
 fi
 
-rm eq{1..5}.log dc{1..5}.log >& /dev/null
+rm -rf $wd/run-nompitest
+mkdir $wd/run-nompitest
+cp *inp eval_test.sh qsurr_benchmark.en $wd/run-nompitest
+cp $wd/prep/lig_w.top $wd/run-nompitest/lig_w.top
+cp $wd/prep/lig_w.fep $wd/run-nompitest/lig_w.fep
+  
+cd $wd/run-nompitest
+
+
+rm -f eq{1..5}.log dc{1..6}.log >& /dev/null
 
 # Useful vars
 OK="(\033[0;32m   OK   \033[0m)"
@@ -23,7 +34,7 @@ FAILED="(\033[0;31m FAILED \033[0m)"
 
 for step in {1..5}
 do
- echo -n "Running equilibration step ${step} of 5                         "
+ echo "Running equilibration step ${step} of 5                         "
  if $qbinary eq${step}.inp > eq${step}.log
  then echo -e "$OK"
  else 
@@ -33,9 +44,9 @@ do
  fi
 done
 
-for step in {1..5}
+for step in {1..6}
 do
- echo -n "Running production run step ${step} of 5                        "
+ echo "Running production run step ${step} of 6                        "
  if $qbinary dc${step}.inp > dc${step}.log
   then echo -e "$OK"
  else 

@@ -1,22 +1,10 @@
-!------------------------------------------------------------------------------!
-!  Q v.5.7 makefile                                                            !
-!  Code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      !
-!  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          !
-!  Kajsa Ljunjberg, John Marelius, Martin Nervall                              !
-!  Maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra, !
-!  Irek Szeler                                                                 !
-!  latest update: october 14, 2015                                             !
-!------------------------------------------------------------------------------!
-
-!------------------------------------------------------------------------------!
-!  (c) 2015 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-!  qprep.f90
-!  by Johan Aqvist & John Marelius
-!  qprep topology preparation main program
-!------------------------------------------------------------------------------!
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! q_prep.f90
+! by Johan Åqvist & John Marelius
+! Qprep topology preparation main program
 !TODO: precision not fixed
 
-PROGRAM qprep
+PROGRAM qprep5
 	use VERSIONS
 	use PREP
 	use AVETR
@@ -336,4 +324,4 @@ end function check_inputfile
 
 
 
-END PROGRAM qprep
+END PROGRAM qprep5

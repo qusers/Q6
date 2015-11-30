@@ -1,19 +1,7 @@
-!------------------------------------------------------------------------------!
-!  Q v.5.7 makefile                                                            !
-!  Code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      !
-!  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          !
-!  Kajsa Ljunjberg, John Marelius, Martin Nervall                              !
-!  Maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra, !
-!  Irek Szeler                                                                 !
-!  latest update: july 13, 2015                                                !
-!------------------------------------------------------------------------------!
-
-!-------------------------------------------------------------------------------
-!  (C) 2015 Molekylmekanikerna HB, Uppsala, Sweden
-!  qfep.f90
-!  by Johan Aqvist, Karin Kolmodin, John Marelius, Johan Sund
-!  qfep free energy analysis program for FEP, EVB & Umbrella Sampling
-!-------------------------------------------------------------------------------
+! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! qfep.f90
+! by Johan Åqvist, Karin Kolmodin & John Marelius
+! Qfep free energy analysis program for FEP, EVB & umbrella sampling
 !TODO: precision not fixed
 
 program qfep

@@ -1,5 +1,5 @@
 [MD]
-steps                  20000
+steps                  200000
 stepsize                   0.5
 temperature              300.0
 bath_coupling            400000
@@ -25,8 +25,8 @@ output                    50
 [files]
 topology                  lig_w.top
 fep                       lig_w.fep
-restart                   dc1.re
-final                     dc2.re
+restart                   dc5.re
+final                     dc6.re
 
 [sequence_restraints]
 
