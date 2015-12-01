@@ -4,7 +4,7 @@
 #  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          #
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code: Paul Bauer                                              #
-#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer, Mauricio Esguerra  #
+#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer                     #
 #  latest update: Oct 17, 2014                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
