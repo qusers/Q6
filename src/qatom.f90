@@ -1100,7 +1100,7 @@ logical function qatom_load_fep(fep_file)
 !then get the angles that those atoms are involved in if not set to zero
 !and check if they are broken in the angles section
 !allocate the maximum number of angles that can theoretically break
-	allocate(break_angles(nbreak_bnd*3),stat=alloc_status_qat)
+	allocate(break_angles(nqangle+1),stat=alloc_status_qat)
 	call check_alloc_general(alloc_status_qat,'Q angle break array')
 	nbreak_ang = 0
 	do i=1,nbreak_bnd
@@ -1294,7 +1294,7 @@ logical function qatom_load_fep(fep_file)
 !then get the torsions that those atoms are involved in if not set to zero
 !and check if they are broken in the torsion section
 !allocate the maximum number of torsions that can theoretically break
-        allocate(break_torsions(nbreak_bnd*13),stat=alloc_status_qat)
+        allocate(break_torsions(nqtor+1),stat=alloc_status_qat)
 	call check_alloc_general(alloc_status_qat,'Q torsion breaking array')
 	nbreak_tor=0
         do i=1,nbreak_bnd
