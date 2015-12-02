@@ -3719,7 +3719,7 @@ logical function countpdb(pdb_fileno, atoms, residues, molecules)
 	integer						::	rescode, oldrescode
 
 ! old 10	format(13x,a4,a4,i5,4x,3f8.3)
-10	format(12x,a5,a3,2x,i4,4x,3f8.3)
+10	format(12x,a5,a4,1x,i4,4x,3f8.3)
 
 	countpdb = .true.
 
@@ -3856,7 +3856,8 @@ subroutine readpdb()
 
 !Old format line  10	FORMAT(13x,a4,a4,i5,4x,3f8.3)
 !Format if all is read  10	format(a6,i5,1x,a4,a1,a3,1x,a1,i4,a1,3x,3f8.3)
-10	format(12x,a5,a3,2x,i4,4x,3f8.3)
+! Changed format so that residues for 4 letter codes can also be read P. Bauer
+10	format(13x,a4,a4,1x,i4,4x,3f8.3)
 
 !	progress output formats
 20	format('molecule ',i4,': ',a4,i5)
@@ -6122,8 +6123,8 @@ subroutine writepdb
 !Old format  10	format(a6,i5,2x,a4,a4,i5,4x,3f8.3)
 !TODO: Fix writing of chainID, requires chain info in topology.
    !(PDBtype,atomNr,atomName,resName,resNr,coords)
-10	format(a6,i5,1x,a5,a3,2x,i4,4x,3f8.3)
-11	format(a6,11x,a3,2x,i4) !For TER cards
+10	format(a6,i5,1x,a5,a4,1x,i4,4x,3f8.3)
+11	format(a6,11x,a4,1x,i4) !For TER cards
 	iat = 0
 	imol = 1
 	wrote_atom_in_molecule = .false.
