@@ -192,6 +192,10 @@ character(len=256)			::	prm_file
 	INTEGER						::	nmol, max_mol
 	INTEGER, allocatable		::	istart_mol(:)
 
+!Solvent dielectric information
+!saved as integer (num * 1000) to make reading easier
+        integer                         :: dielectric        
+
 contains
 
 !----------------------------------------------------------------------
@@ -586,22 +590,28 @@ logical function topo_read(u, require_version, extrabonds)
 	read (u, '(a)', err=1000) line
 	read (line,*,err=1000) nat_pro !first read what must be there
 
-	read (line,*,iostat=filestat) nat_pro, nat_solute, solv_atom !then try to read optional things too
+	read (line,*,iostat=filestat) nat_pro, nat_solute, solv_atom, dielectric !then try to read optional things too
 	if (filestat .ne. 0) then
-! maybe just does not have solv atom, try without first
-          read (line,*,iostat=filestat) nat_pro, nat_solute
-	if (filestat .ne. 0) then
-	  nat_solute = nat_pro !default is nat_solute = nat_pro
+! maybe just does not have dielectric and solv atom, try without first
+          read (line,*,iostat=filestat) nat_pro, nat_solute, solv_atom
+          if (filestat .ne. 0) then
+! ok, maybe even solv_atom is not there??
+            read (line,*,iostat=filestat) nat_pro, nat_solute
+	    if (filestat .ne. 0) then
+	      nat_solute = nat_pro !default is nat_solute = nat_pro
+            end if
+            solv_atom  = 3        !default for solv atom to keep rest from crashing
+            dielectric = int(80.1*1000) !default for dielectric (of water) to keep rest working
           end if
-          solv_atom  = 3        !default for solv atom to keep rest from crashing
-	end if
+          dielectric = int(80.1*1000) !default for dielectric (of water) to keep rest working
+        end if
 
 	write (*,20) nat_solute, nat_pro-nat_solute
 20	format ('No. of solute atoms     = ',i10,/,&
 			'No. of solvent atoms    = ',i10)
 	max_atom = nat_pro
 	nwat = (max_atom - nat_solute) / solv_atom
-
+        write (*,'(a,i10)') 'Solvent dielectric*1000 =',dielectric
 	call topo_allocate_atom
 
 	if ( nat_pro .eq. 0 ) write (*,'(a)')  &
@@ -1086,11 +1096,13 @@ subroutine topo_save(name)
 	write(*, 20) nat_pro-nat_solute
         write(*, 10, advance='no') 'solvent mol atoms'
         write(*, 20) solv_atom
+        write(*, 10, advance='no') 'solvent dielectric as num*1000'
+        write(*, 20) dielectric
 
 ! --- NAT_PRO / COORDINATES
 	write(*, 10, advance='no') 'co-ordinates'
-	write(u, '(3i8,a)') nat_pro, nat_solute, solv_atom, &
-		' = Total no. of atoms, no. of solute atoms, atoms per solvent molecule. Coordinates: (2*3 per line)'
+	write(u, '(4i8,a)') nat_pro, nat_solute, solv_atom, dielectric, &
+		' = Total no. of atoms, no. of solute atoms, atoms per solvent molecule, solvent dielectric as eps*1000. Coordinates: (2*3 per line)'
 	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop(si), si = 1,3*nat_pro )
 	write(*, 20) 3*nat_pro
 

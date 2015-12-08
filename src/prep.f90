@@ -72,7 +72,7 @@ MODULE PREP
 	integer, parameter		::	BUILD_RULE_TORSION = 1
 
 	TYPE LIB_ENTRY_TYPE
-		integer					::	nat, nbnd, nimp, ncgp, nrules
+		integer					::	nat, nbnd, nimp, ncgp, nrules, dielectric
 		integer					::	head, tail
 		logical					::	HETATM, solvent
 		real(kind=prec)					::	density
@@ -196,7 +196,8 @@ MODULE PREP
 ! --- Types for creation of larger solvent molecules
 	TYPE MISSING_TYPE
 		integer                                 ::      bonds(4), angles(12)
-		logical                                 ::      bond_set(4), angle_set(12)
+		logical                                 ::      bond_notset(4), angle_notset(12)
+                logical                                 ::      atom_missing
 	end TYPE MISSING_TYPE
 	TYPE MISSING_BOND_TYPE
 		integer					::	i,j,cod
@@ -1757,7 +1758,7 @@ integer function genH(j, residue)
 	real(kind=prec)						::	rnj(3), rnk(3), bj, bk
 	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
 	logical						::	flipped
-	integer                     :: setH
+	integer                     :: setH, seed=1337
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
 
 	genH = 0
@@ -1827,7 +1828,7 @@ integer function genH(j, residue)
 			!generate initial co-ordinates for H
 			!random vector
 			do axis = 1,3
-				xH(axis) = randm() - 0.5_prec
+				xH(axis) = randm(seed) - 0.5_prec
 			end do
 			!normalise to unit length and scale by bond length from lib.
 			bond_length = sqrt(dot_product(xH,xH))
@@ -1980,11 +1981,11 @@ integer function genH(j, residue)
 	end do !hydrogens to make
 end function genh
 
-integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
+integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 !arguments
-	integer, intent(in)			::	residue
-	type(MISSING_TYPE), intent(in)		::	missing_heavy(:)
-	type(MISSING_BOND_TYPE),intent(in)	::	missing_bonds(:)
+        real(kind=prec)                 ::      waterarray(:,:)
+	type(MISSING_TYPE),intent(in)		::	missing_heavy(:)
+	type(MISSING_BOND_TYPE),intent(in) 	::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),intent(in)	::	missing_angles(:)
 !locals
 	real(kind=prec)						::	xj(3), xk(3)
@@ -1999,7 +2000,11 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 	real(kind=prec)						::	tors_fk = 10.0_prec
 	integer, parameter			::	max_cg_iterations = 100, max_line_iterations = 35
 	integer						::	cgiter, lineiter
-	real(kind=prec)						::	bnd0
+	real(kind=prec)						:: bnd0
+        type TMP_ANGLE_TYPE
+             real(kind=prec)                                    ::      ang0,fk
+        end type TMP_ANGLE_TYPE
+        type(TMP_ANGLE_TYPE)                            ::      ang(max_conn)
 	integer						::	nHang, Hang_atom(max_conn)
 	integer						::	Hang_code(max_conn)
 	integer						::	rule
@@ -2014,25 +2019,39 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 	logical						::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
+        integer                                                 :: addatom,mbond,mangle,miss,j,seed=1337
+        type(MISSING_TYPE),allocatable                          :: missing_local(:)        
+
+        
 
 	genHeavy = 0
-	xj(:) = xtop(3*j-2:3*j)
+        allocate(missing_local(lib(irc_solvent)%nat))
+        missing_local(:) = missing_heavy(:)
 
 ! for the solvent all heavy atoms other than the center will be missing initially
 ! so generate all of them sequentially
 
 	!loop over connected atoms for first atom
-	do addatom = 1, lib((irc_solvent)%irc)%nat
+	do addatom = 1, lib(irc_solvent)%nat
+! the first reference atom is the relevant atom of the solvent
+                if(lib(irc_solvent)%atnam(addatom)(1:1) == 'H') cycle
+
+                xj(:) = waterarray(1:3,addatom)
+
+
 		do mbond = 1, 4
-		if (missing_heavy(addatom)%bond_notset(mbond) .eqv. .true.) then
+		if (missing_local(addatom)%bond_notset(mbond) .eqv. .true.) then
 			miss = missing_heavy(addatom)%bonds(mbond)
-			if (missing_bonds(miss)%i .eq. addatom) then
-				H = missing_bonds(miss)%j
-			else
+			if (missing_local(missing_bonds(miss)%i)%atom_missing) then
 				H = missing_bonds(miss)%i
+			elseif((missing_local(missing_bonds(miss)%j)%atom_missing)) then
+				H = missing_bonds(miss)%j
+                        else ! bond already made. nothing else to do
+                                missing_local(addatom)%bond_notset(mbond) = .false.
+                                cycle
 			end if
 			if (missing_bonds(miss)%cod .gt. 0) then
-				bnd0 = bondlib(missing_bonds(miss)%cod)%bnd0
+				bnd0 = bnd_prm(missing_bonds(miss)%cod)%prm%bnd0
 			else
 				bnd0 = 1.0_prec !default when missing parameters
 			end if
@@ -2040,52 +2059,58 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 ! now check all the angles for the atoms, if we can add them already
 			nHang = 0
 			do mangle = 1 , 12
-				if(missing_heavy(addatom)%angle_notset(mangle) .eqv. .true.) then
-					miss = missing_heavy(addatom)%angles(mangle)
-					if(missing_heavy(missing_angles(miss)%i)%atom_missing .or. missing_heavy(missing_angles(miss)%j)%atom_missing &
-						.or. missing_heavy(missing_angles(miss)%k)%atom_missing) cycle
-					if(
-		!find all the angles
-		nHang = 0
-		do a = 1, nangles
-			if(ang(a)%j == j .and. ang(a)%cod > 0) then
-				if(ang(a)%i == H .and. .not. makeH(ang(a)%k)) then
-					nHang = nHang + 1
-					Hang_atom(nHang) = ang(a)%k
-					Hang_code(nHang) = ang(a)%cod
-				elseif(ang(a)%k == H .and. .not. makeH(ang(a)%i)) then
-					nHang = nHang + 1
-					Hang_atom(nHang) = ang(a)%i
-					Hang_code(nHang) = ang(a)%cod
-				end if
-			end if
-		end do
-		!look up build rule
-		lp => lib(res(residue)%irc)
-		do rule = lp%nrules, 1, -1
-			if(lp%rules(rule)%kind == BUILD_RULE_TORSION) then
-				if(lp%rules(rule)%atom(1) == H - res(residue)%start + 1 .and. &
-					lp%rules(rule)%atom(2) == j - res(residue)%start + 1) then
-					exit
-				end if
-			end if
-		end do
-
-		!find the torsion rule defined in the library, if any
-		if(rule > 0) then
-			kt = lp%rules(rule)%atom(3) + res(residue)%start - 1
-			lt = lp%rules(rule)%atom(4) + res(residue)%start - 1
-			xkt(:) = xtop(3*kt-2:3*kt)
-			xlt(:) = xtop(3*lt-2:3*lt)
-			rjkt(:) = xkt(:) - xj(:)
-			rktlt(:) = xlt(:) - xkt(:)
-			rnk(:) = -cross_product(rjkt, rktlt)
-			bk = sqrt(dot_product(rnk, rnk))
-		end if
+				if(missing_local(addatom)%angle_notset(mangle) .eqv. .true.) then
+					miss = missing_local(addatom)%angles(mangle)
+					if((missing_angles(miss)%i .eq. H).and. &
+                                                (.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
+                                                (.not.(missing_local(missing_angles(miss)%k)%atom_missing))) then
+                                                nHang = nHang + 1
+                                                Hang_atom(nHang) = missing_angles(miss)%k
+                                                Hang_code(nHang) = missing_angles(miss)%cod
+                                                ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
+                                                ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+                                        elseif((missing_angles(miss)%k .eq. H).and. &
+                                                (.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
+                                                (.not.(missing_local(missing_angles(miss)%i)%atom_missing))) then
+                                                nHang = nHang + 1
+                                                Hang_atom(nHang) = missing_angles(miss)%i
+                                                Hang_code(nHang) = missing_angles(miss)%cod
+                                                ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
+                                                ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+                                        end if
+                                end if
+                        end do
+!		!look up build rule
+!		lp => lib(irc_solvent%irc)
+!		do rule = lp%nrules, 1, -1
+!			if(lp%rules(rule)%kind == BUILD_RULE_TORSION) then
+!				if(lp%rules(rule)%atom(1) == H - res(residue)%start + 1 .and. &
+!					lp%rules(rule)%atom(2) == j - res(residue)%start + 1) then
+!					exit
+!				end if
+!			end if
+!		end do
+!
+!		!find the torsion rule defined in the library, if any
+!		if(rule > 0) then
+!                        if(.not.((missing_heavy(lp%rules(rule)%atom(3))%atom_missing).or.(missing_heavy(lp%rules(rule)%atom(4))%atom_missing).or. &
+!                                (missing_heavy(lp%rules(rule)%atom(2))%atom_missing).or.(missing_heavy(lp%rules(rule)%atom(1))%atom_missing))) then
+!        			kt = lp%rules(rule)%atom(3) + res(residue)%start - 1
+!        			lt = lp%rules(rule)%atom(4) + res(residue)%start - 1
+!        			xkt(:) = xtop(3*kt-2:3*kt)
+!        			xlt(:) = xtop(3*lt-2:3*lt)
+!        			rjkt(:) = xkt(:) - xj(:)
+!        			rktlt(:) = xlt(:) - xkt(:)
+!        			rnk(:) = -cross_product(rjkt, rktlt)
+!        			bk = sqrt(dot_product(rnk, rnk))
+!                        else
+!                                rule = 0
+!                        end if
+!		end if
 		!generate initial co-ordinates for H
 		!random vector
 		do axis = 1,3
-			xH(axis) = randm() - 0.5_prec
+			xH(axis) = randm(seed) - 0.5_prec
 		end do
 		!normalise to unit length and scale by bond length from lib.
 		bond_length = sqrt(dot_product(xH,xH))
@@ -2108,7 +2133,7 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 				!angles
 				rjH(:) = xH(:) - xj(:)
 				do a = 1, nHang
-					xk(:) = xtop(3*Hang_atom(a)-2:3*Hang_atom(a))
+					xk(:) = waterarray(1:3,Hang_atom(a))
 					rjk(:) = xk(:) - xj(:)
 					bjHinv = one/sqrt(dot_product(rjH, rjH))
 					bjkinv = one/sqrt(dot_product(rjk, rjk))
@@ -2122,10 +2147,10 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 					angle = acos(scp)
 					angle_deg = angle / deg2rad
 					! calculate da and dv
-					da = angle - anglib(Hang_code(a))%ang0*deg2rad
-					V = 0.5_prec*anglib(Hang_code(a))%fk*da**2
+					da = angle - ang(nHang)%ang0*deg2rad
+					V = 0.5_prec*ang(nHang)%fk*da**2
 					Vtot = Vtot + V
-					dVangle = anglib(Hang_code(a))%fk*da
+					dVangle = ang(nHang)%fk*da
 					! calculate f1
 					f1 = sin ( angle )
 					! avoid division by zero
@@ -2140,34 +2165,34 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 				end do
 
 				!torsion
-				if(rule > 0) then
-					rnj(1) = rjH(2) * rjkt(3) - rjH(3) * rjkt(2)
-					rnj(2) = rjH(3) * rjkt(1) - rjH(1) * rjkt(3)
-					rnj(3) = rjH(1) * rjkt(2) - rjH(2) * rjkt(1)
-					bj = sqrt(dot_product(rnj, rnj))
-					scp =dot_product(rnj, rnk)/(bj * bk)
-					if(scp>one) scp = one
-					if(scp< -one) scp = -one
-					phi = acos(scp)
-					phi_deg = phi / deg2rad
-					sgn = rjkt(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) &
-						+ rjkt(2) *(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) &
-						+ rjkt(3) *(rnj(1) * rnk(2) - rnj(2) * rnk(1) )
-					if(sgn<0) phi = - phi
-					arg = phi-lp%rules(rule)%value*deg2rad
-					V = tors_fk*(one+cos(arg))
-					!note changed sign of dVtors to get min (not max) at rule value
-					dVtors = +tors_fk*sin(arg)
-
-					! ---       forces
-
-					f1 = sin ( phi )
-					if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-					f1 =  -one/ f1
-					dH(:) = f1*(rnk(:)/(bj*bk) - scp*rnj(:)/(bj*bj))
-					dV(:) = dVtors*cross_product(rjk, dH)
-					dVtot(:) = dVtot(:) + dV(:)
-				end if
+!				if(rule > 0) then
+!					rnj(1) = rjH(2) * rjkt(3) - rjH(3) * rjkt(2)
+!					rnj(2) = rjH(3) * rjkt(1) - rjH(1) * rjkt(3)
+!					rnj(3) = rjH(1) * rjkt(2) - rjH(2) * rjkt(1)
+!					bj = sqrt(dot_product(rnj, rnj))
+!					scp =dot_product(rnj, rnk)/(bj * bk)
+!					if(scp>one) scp = one
+!					if(scp< -one) scp = -one
+!					phi = acos(scp)
+!					phi_deg = phi / deg2rad
+!					sgn = rjkt(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) &
+!						+ rjkt(2) *(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) &
+!						+ rjkt(3) *(rnj(1) * rnk(2) - rnj(2) * rnk(1) )
+!					if(sgn<0) phi = - phi
+!					arg = phi-lp%rules(rule)%value*deg2rad
+!					V = tors_fk*(one+cos(arg))
+!					!note changed sign of dVtors to get min (not max) at rule value
+!					dVtors = +tors_fk*sin(arg)
+!
+!					! ---       forces
+!
+!					f1 = sin ( phi )
+!					if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
+!					f1 =  -one/ f1
+!					dH(:) = f1*(rnk(:)/(bj*bk) - scp*rnj(:)/(bj*bj))
+!					dV(:) = dVtors*cross_product(rjk, dH)
+!					dVtot(:) = dVtot(:) + dV(:)
+!				end if
 				if(cgiter == 1 .and. lineiter == 1) then
 					!its the start of the search, use the gradient vector
 					dvLast(:) = dVtot(:)
@@ -2230,10 +2255,15 @@ integer function genHeavy(residue,missing_heavy,missing_bonds,missing_angles)
 				'Potential is ',f8.3,' kcal/mol.')
 		end if
 		!copy coordinates to topology
-		xtop(3*H-2:3*H) = xH(:)
+		waterarray(1:3,H) = xH(:)
 		!clear makeH flag
 		genHeavy = genHeavy + 1
+                missing_local(H)%atom_missing = .false.
+                missing_local(addatom)%bond_notset(mbond) = .false.
+                end if
+                end do ! mbond
 	end do !heavy atoms to make
+        deallocate(missing_local)
 end function genheavy
 
 !-----------------------------------------------------------------------
@@ -2696,7 +2726,7 @@ end subroutine prompt
 
 real FUNCTION randm(seed, seed_only)
 !arguments
-	integer, intent(in), optional::	seed
+	integer, optional::	seed
 	logical, intent(in), optional::	seed_only
 ! *** Local variables
 	integer, parameter			::	m = 100000000, m1 = 10000, mult = 31415821
@@ -2723,6 +2753,7 @@ real FUNCTION randm(seed, seed_only)
 !
 ! --- convert irand to a real random number between 0 and 1.
 !
+        seed = 1337*(int(irand)) + 1
 	r = real(irand / 10_prec,kind=prec) * 10_prec / real(m,kind=prec)
 	if((r<=0.e0_prec) .or.(r>1.e0_prec) ) r = 0.e0_prec
 	randm = r
@@ -2969,6 +3000,14 @@ subroutine readlib(file)
 			yes=prm_get_logical_by_key('solvent',lib(nlibres)%solvent,.false.)
 			if(lib(nlibres)%solvent) then
 				solvent_names = trim(solvent_names)//lib(nlibres)%nam//','
+                                if(.not.prm_get_integer_by_key('dielectric',lib(nlibres)%dielectric,80100)) then
+                                        write(*,'(a)') 'Solvent dielectric constant not understood, assuming water default'
+                                        lib(nlibres)%dielectric = 80100
+                                end if
+                                if (lib(nlibres)%dielectric .le. 0) then
+                                        write(*,'(a)') 'Solvent dielectric constant not set, assuming water default'
+                                        lib(nlibres)%dielectric = 80100
+                                end if
 			end if
 			yes=prm_get_real_by_key('density',lib(nlibres)%density,0.0_prec)
 		end if
@@ -3023,11 +3062,6 @@ subroutine readlib(file)
 			qtot = qtot + lib(nlibres)%crg_lib(iat)
 		enddo
 		write(*, 4, advance='no') qtot
-
-! if this is a solvent molecule, set solv_atoms variable
-                if(lib(nlibres)%solvent) then
-                        solv_atom = lib(nlibres)%nat
-                end if
 
 ! ---	   Read bond list
 		lib(nlibres)%nbnd = prm_count('bonds')
@@ -4093,7 +4127,7 @@ subroutine readpdb()
 	real(kind=prec)				:: xtmp(3)
 	LOGICAL res_found, at_found
 	integer						::	first_res_of_mol
-	logical						::	last_line_was_gap
+	logical						::	last_line_was_gap, solvent_found
 	integer						::	atoms, residues, molecules
 	type(RETTYPE)					:: glob
 !.......................................................................
@@ -4144,7 +4178,7 @@ subroutine readpdb()
 		close(3)
 		return
 	end if
-
+        solvent_found = .false.
 	CALL clearpdb !get rid of old PDB data.
 	call allocate_for_pdb(atoms, residues, molecules) !make space for new topology
 	!clear hydrogen make flags
@@ -4216,6 +4250,17 @@ subroutine readpdb()
 						res_found = .true.
 						res(nres)%name = lib(i)%nam
 						res(nres)%irc = i
+                                                if(index(solvent_names, trim(resnam_tmp)) .ne.0 ) then
+! we found a solvent molecule, make sure there is only one solvent type and set
+! the solv_atom flag. If this is not the first solvent molecule panic and stop
+                                                        if(solvent_found) then
+                                                        write(*,*) '>>>> ERROR: Found multiple different solvent molecules. Q can not handle this right now!'
+                                                        write(*,22)
+                                                        stop
+                                                        end if
+                                                        solvent_found = .true.
+                                                        solv_atom = lib(res(nres)%irc)%nat
+                                                end if
 						exit
 					endif
 				enddo
@@ -4325,8 +4370,11 @@ subroutine readpdb()
 			end if
 		enddo
 	end if
-
-	nwat = (nat_pro - nat_solute) / solv_atom
+        if (solvent_found) then
+	        nwat = (nat_pro - nat_solute) / solv_atom
+        else
+                nwat = 0
+        end if
 	write(*,110) nmol,nres, nres_solute, nat_pro, nat_solute
 110	format(/,'Successfully read PDB file with', i5,' molecules,',/,&
 		i5,' residues totally (',i5,' in solute).',/,&
@@ -4816,6 +4864,9 @@ logical function set_irc_solvent()
 			' has been loaded.')
 		return
 	end if
+        solv_atom = lib(irc_solvent)%nat
+        dielectric = lib(irc_solvent)%dielectric
+
 	write(*,95) solvent_name
 95	format('Library entry used to generate solvent  : ',a10)
 
@@ -5293,11 +5344,11 @@ subroutine solvate_box_file
 		close(13)
 		call parse_reset
 		return
-	else if( lib(irc_solvent)%nat /= 3 ) then
-		write(*,'(a)') '>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).'
-		close(13)
-		call parse_reset
-		return
+!	else if( lib(irc_solvent)%nat /= 3 ) then
+!		write(*,'(a)') '>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).'
+!		close(13)
+!		call parse_reset
+!		return
 	else if( lib(irc_solvent)%density <= 0. ) then
 		write(*, '(a, a)' ) '>>>>> ERROR: Density not set in library entry ', lib(irc_solvent)%nam
 		close(13)
@@ -5680,10 +5731,10 @@ subroutine solvate_sphere_file(shift)
 	backspace(13)
 	if(.not. set_irc_solvent()) then
 		goto 999
-	else if(lib(irc_solvent)%nat /= 3) then
-		write(*,900)
-900		format('>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).')
-		goto 999
+!	else if(lib(irc_solvent)%nat /= 3) then
+!		write(*,900)
+!900		format('>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).')
+!		goto 999
 	else if(lib(irc_solvent)%density <= 0.) then
 		write(*,910) lib(irc_solvent)%nam
 910		format('>>>>> ERROR: Density not set in library entry ',a)
@@ -5891,11 +5942,12 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	logical						::	wheavy(max_atlib)
 	real(kind=prec)						::	dx, dy, dz, r2
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
-	integer						::	heavy_bonds, heavy_angles, added, i, j
+	integer						::	heavy_bonds, heavy_angles, added, i, j, k
 	type(MISSING_TYPE),allocatable			::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),allocatable		::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),allocatable		::	missing_angles(:)
-	type
+        real(kind=prec),allocatable                     ::      wat_temp(:,:)
+
 
 	if(use_PBC) then
 		write(*,111) waters_in_sphere
@@ -5929,16 +5981,10 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 		allocate(missing_bonds(lib(irc_solvent)%nbnd))
 		do i = 1, lib(irc_solvent)%nbnd
 			if ((.not.wheavy(lib(irc_solvent)%bnd(i)%i)).or.(.not.wheavy(lib(irc_solvent)%bnd(i)%j))) cycle
-			missing_bonds(i)%i=lib(irc_solvent)%bnd(i)%i
-			missing_bonds(i)%j=lib(irc_solvent)%bnd(i)%j
-			do j = 1, nbnd_types
-				if((wildcard_tac(lib(irc_solvent)%atnam(missing_bonds(i)%i))==bnd_types(j)%taci .and. wildcard_tac(lib(irc_solvent)%atnam(missing_bonds(i)%j))==bnd_types(j)%tacj) &
-					.or. (wildcard_tac(lib(irc_solvent)%atnam(missing_bonds(i)%j))==bnd_types(j)%taci .and. wildcard_tac(lib(irc_solvent)%atnam(missing_bonds(i)%i))==bnd_types(j)%tacj)) then
-					missing_bonds(i)%cod = bnd_types(j)%cod
-					return
-				endif
-			enddo
-			heavy_bonds = heavy_bonds + 1
+                        heavy_bonds = heavy_bonds + 1
+			missing_bonds(heavy_bonds)%i=lib(irc_solvent)%bnd(i)%i
+			missing_bonds(heavy_bonds)%j=lib(irc_solvent)%bnd(i)%j
+                        missing_bonds(heavy_bonds)%cod = bondcode(lib(irc_solvent)%tac_lib(missing_bonds(heavy_bonds)%i),lib(irc_solvent)%tac_lib(missing_bonds(heavy_bonds)%j))
 		end do
 		allocate(missing_angles(heavy_bonds*4))
 		heavy_angles = 0
@@ -5965,14 +6011,11 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 					missing_angles(heavy_angles)%j = missing_bonds(i)%j
 					missing_angles(heavy_angles)%k = missing_bonds(j)%i
 				endif
-				do j = 1, nang_types
-					if((wildcard_tac(lib(irc_solvent)%atnam(missing_angles(heavy_angles)%i))==ang_types(j)%taci .and. wildcard_tac(lib(irc_solvent)%atnam(missing_angles(heavy_angles)%j))==ang_types(j)%tacj &
-						.and. wildcard_tac(lib(irc_solvent)%atnam(missing_angles(heavy_angles)%k))==bnd_types(j)%tack).or.(wildcard_tac(lib(irc_solvent)%atnam(missing_angles(heavy_angles)%i))==ang_types(j)%tack &
-						.and. wildcard_tac(lib(irc_solvent)%atnam(missing_angles(i)%j))==ang_types(j)%tacj .and. wildcard_tac(lib(irc_solvent)%atnam(missing_angles(i)%k))==bnd_types(j)%taci)) then
-						missing_angles(heavy_angles)%cod = ang_types(j)%cod
-						return
-					end if
-				end do
+                                if (heavy_angles .gt. 0) then
+                                        missing_angles(heavy_angles)%cod = anglecode(lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%i), &
+                                                lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%j), &
+                                                lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%k))
+                                end if
 			end do
 		end do
 ! now make data structure that has the information dependent on the individual atoms that are missing
@@ -5982,16 +6025,19 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 			missing_heavy(i)%atom_missing = .true.
 			missing_heavy(i)%bond_notset(:)=.false.
 			missing_heavy(i)%angle_notset(:)=.false.
+                        if(lib(irc_solvent)%atnam(i)(1:1) == 'H') then
+                                missing_heavy(i)%atom_missing = .false.
+                        end if
+                                added = 0
 			do j = 1, heavy_bonds
-				added = 0
-				if((i.eq.missing_bonds(j)%i).or.(i.eq.missing_bonds(j)%j)) then
+				if((i.eq.missing_bonds(j)%i) .or.(i.eq.missing_bonds(j)%j)) then
 					added = added + 1
 					missing_heavy(i)%bonds(added) = j
 					missing_heavy(i)%bond_notset(added) = .true.
 				end if
 			end do
+                                added = 0
 			do j = 1, heavy_angles
-				added = 0
 				if((i.eq.missing_angles(j)%i).or.(i.eq.missing_angles(j)%j).or.(i.eq.missing_angles(j)%k)) then
 					added = added + 1
 					missing_heavy(i)%angles(added) = j
@@ -6001,16 +6047,25 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 		end do
 		missing_heavy(1)%atom_missing = .false.
 
+                allocate(wat_temp(3,lib(irc_solvent)%nat))
+
 		added_heavy = 0
 		do w_mol = 1, max_waters
 ! Q always generates the first solvent atom on a grid, so we start generating missing heavy atoms after that
 ! means first atom has to be heavy center atom
 ! we stole the genH function for that
-			added_heavy = added_heavy + genHeavy(w_mol,missing_heavy,missing_bonds,missing_angles)
+! make temporary array to store info for the water atoms of the current molecule
+                        wat_temp(1,:) = xw(1,:,w_mol)
+                        wat_temp(2,:) = xw(2,:,w_mol)
+                        wat_temp(3,:) = xw(3,:,w_mol)
+			added_heavy = added_heavy + genHeavy(wat_temp,missing_heavy,missing_bonds,missing_angles)
+                        xw(1,:,w_mol) = wat_temp(1,:)
+                        xw(2,:,w_mol) = wat_temp(2,:)
+                        xw(3,:,w_mol) = wat_temp(3,:)
 		end do
 166	format('Number of heavy solvent atoms added:',i6)
 		write(*,166) added_heavy
-		deallocate(missing_bonds,missing_angles,missing_heavy)
+		deallocate(missing_bonds,missing_angles,missing_heavy,wat_temp)
 	end if
 
 

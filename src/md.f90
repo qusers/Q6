@@ -94,7 +94,7 @@ integer						::	iseed, numchain
 logical						::	restart
 real(kind=prec)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, nhq
 logical						::	shake_solvent, shake_solute
-logical						::	shake_hydrogens
+logical						::	shake_hydrogens, shake_heavy
 logical						::	separate_scaling
 !new logical to select for gaussian or uniform random numbers in LANGEVIN
 !themorstat
@@ -4117,6 +4117,8 @@ end if
 if (nodeid .eq. 0) write (*,'(80a)') 'Shake control data'
 call MPI_Bcast(shake_hydrogens,1,MPI_LOGICAL,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake hydrogens')
+call MPI_Bcast(shake_heavy,1,MPI_LOGICAL,0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake heavy')
 call MPI_Bcast(shake_solvent,1,MPI_LOGICAL,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake solvent')
 call MPI_Bcast(shake_solute,1,MPI_LOGICAL,0, MPI_COMM_WORLD, ierr)
@@ -4232,6 +4234,7 @@ integer						::	mol, b, ia, ja, constr, angle, i
 real(kind=prec)						:: exclshk
 integer						::	src, trg
 integer						::	solute_shake_constraints
+logical                                         ::      shaken
 
 !allocate molecule list
 allocate(shake_mol(nmol), stat=alloc_status)
@@ -4252,17 +4255,40 @@ do b=1,nbonds
         end do
         !skip redefined bonds
         if(bnd(b)%cod == 0) cycle
-        if((shake_hydrogens .and. (.not. heavy(ia) .or. .not. heavy(ja))) .or. &
-           (shake_solute .and. ia <= nat_solute) .or. &
-           (shake_solvent .and. ia > nat_solute)) then
-           shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+!new shake flag to spec if people want all atoms, all solvent hydrogens, solute
+!hydrogens, solute atoms ...
+        shaken = .false.
+        if(shake_solute .and. (ia.le.nat_solute)) then
+                if(.not. heavy(ia) .or. .not. heavy(ja)) then
+                        if(shake_hydrogens) then
+                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                shaken = .true.
+                        end if
+                else
+                        if(shake_heavy) then
+                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                shaken = .true.
+                        end if
+                end if
+        end if
+        if(shake_solvent .and. (ia.gt.nat_solute)) then
+                if(.not. heavy(ia) .or. .not. heavy(ja)) then
+                        if(shake_hydrogens) then
+                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                shaken = .true.
+                        end if
+                else
+                        if(shake_heavy) then
+                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                shaken = .true.
+                        end if
+                end if
+        end if
 
-           if( .not. use_PBC ) then
+           if(shaken .and. ( .not. use_PBC) ) then
                 if(excl(ia)) exclshk = exclshk + 0.5_prec
                 if(excl(ja)) exclshk = exclshk + 0.5_prec
            end if
-
-        end if
 
 end do
 !count extra shake constraints from fep file in appropriate molecule
@@ -4286,6 +4312,7 @@ end do
 mol = 0
 !add the constraint
 do b=1,nbonds
+        shaken = .false.
         ia = bnd(b)%i
         ja = bnd(b)%j
         do while(ia >= istart_mol(mol+1)) 
@@ -4295,9 +4322,31 @@ do b=1,nbonds
         end do
         !skip redefined bonds
         if(bnd(b)%cod == 0) cycle
-if((shake_hydrogens .and. (.not. heavy(ia) .or. .not. heavy(ja))) .or.&
-           (shake_solute .and. ia <= nat_solute) .or. &
-           (shake_solvent .and. ia > nat_solute)) then
+        if(shake_solute .and. (ia.le.nat_solute)) then
+                if(.not. heavy(ia) .or. .not. heavy(ja)) then
+                        if(shake_hydrogens) then
+                                shaken = .true.
+                        end if
+                else
+                        if(shake_heavy) then
+                                shaken = .true.
+                        end if
+                end if
+        end if
+        if(shake_solvent .and. (ia.gt.nat_solute)) then
+                if(.not. heavy(ia) .or. .not. heavy(ja)) then
+                        if(shake_hydrogens) then
+                                shaken = .true.
+                        end if
+                else
+                        if(shake_heavy) then
+                                shaken = .true.
+                        end if
+                end if
+        end if
+
+
+        if(shaken) then
                 shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
                 shake_mol(mol)%bond(shake_mol(mol)%nconstraints)%i = ia
                 shake_mol(mol)%bond(shake_mol(mol)%nconstraints)%j = ja
@@ -4454,12 +4503,14 @@ logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
 character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
+logical                                         :: shake_all,shake_all_solvent,shake_all_solute
+logical                                         :: shake_all_hydrogens,shake_all_heavy
 
 ! this subroutine will init:
 !  nsteps, stepsize, dt
 !  Temp0, tau_T, iseed, Tmaxw
 !  use_LRF, NBcycle, Rcpp, Rcww, Rcpw, Rcq
-!  shake_solute, shake_solvent, shake_hydrogens
+!  shake_solute, shake_solvent, shake_hydrogens, shake_heavy
 ! fk_pshell
 !  fk_wsphere=-1, wpol_restr, wpol_born
 !  fkwpol=-1, Dwmz=-1 (values  ized to -1 will
@@ -4714,20 +4765,100 @@ if(.not. prm_get_logical_by_key('shake_solvent', shake_solvent, .true.)) then
         write(*,'(a)') '>>> Error: shake_solvent must be on or off.'
         initialize = .false.
 end if
-write(*,17) 'all solvent bonds', onoff(shake_solvent)
-17	format('Shake constaints on ',a,t42,': ',a3)
+!write(*,17) 'all solvent bonds', onoff(shake_solvent)
+17	format('Shake constraints on ',a,' to ',a,' : ',a3)
 
 if(.not. prm_get_logical_by_key('shake_solute', shake_solute, .false.)) then
         write(*,'(a)') '>>> Error: shake_solute must be on or off.'
         initialize = .false.
 end if 
-write(*,17) 'all solute bonds', onoff(shake_solute)
+!write(*,17) 'all solute bonds', onoff(shake_solute)
 
-if(.not. prm_get_logical_by_key('shake_hydrogens', shake_hydrogens, .false.)) then
+if(.not. prm_get_logical_by_key('shake_hydrogens', shake_hydrogens, .true.)) then
         write(*,'(a)') '>>> Error: shake_hydrogens must be on or off.'
         initialize = .false.
 end if 
-write(*,17) 'all bonds to hydrogen', onoff(shake_hydrogens)
+
+if(.not. prm_get_logical_by_key('shake_heavy', shake_heavy, .false.) ) then
+        write(*,'(a)') '>>> Error: shake_heavy must be on or off.'
+        initialize = .false.
+end if
+
+
+if(.not.prm_get_logical_by_key('shake_all',shake_all,.false.)) then
+        write(*,'(a)') '>>> Error: shake_all was not understood.'
+        initialize = .false.
+elseif(shake_all) then
+        shake_solute    = .true.
+        shake_solvent   = .true.
+        shake_hydrogens = .true.
+        shake_heavy     = .true.
+else
+        shake_solute    = .false.
+        shake_solvent   = .false.
+        shake_hydrogens = .false.
+        shake_heavy     = .false.
+
+end if
+
+if(.not.prm_get_logical_by_key('shake_all_solvent',shake_all_solvent,.false.)) then
+        write(*,'(a)') '>>> Error: shake_all_solvent was not understood.'
+        initialize = .false.
+elseif(shake_all_solvent) then
+        shake_solvent   = .true.
+        shake_hydrogens = .true.
+        shake_heavy     = .true.
+else
+        shake_solvent   = .false.
+
+end if
+
+if(.not.prm_get_logical_by_key('shake_all_solute',shake_all_solute,.false.)) then
+        write(*,'(a)') '>>> Error: shake_all_solute was not understood.'
+        initialize = .false.
+elseif(shake_all_solute) then
+        shake_solute    = .true.
+        shake_hydrogens = .true.
+        shake_heavy     = .true.
+else
+        shake_solute    = .false.
+end if
+
+if(.not.prm_get_logical_by_key('shake_all_hydrogens',shake_all_hydrogens,.false.)) then
+        write(*,'(a)') '>>> Error: shake_all_hydrogens was not understood.'
+        initialize = .false.
+elseif(shake_all_hydrogens) then
+        shake_solute    = .true.
+        shake_solvent   = .true.
+        shake_hydrogens = .true.
+else
+        shake_hydrogens = .false.
+end if
+
+if(.not.prm_get_logical_by_key('shake_all_heavy',shake_all_heavy,.false.)) then
+        write(*,'(a)') '>>> Error: shake_all_heavy was not understood.'
+        initialize = .false.
+elseif(shake_all_heavy) then
+        shake_solute  = .true.
+        shake_solvent = .true.
+        shake_heavy   = .true.
+else
+        shake_heavy   = .false.
+end if
+
+if(shake_solvent) then
+        if(shake_heavy) write(*,17) 'solvent bonds','heavy atoms',onoff(shake_heavy)
+        if(shake_hydrogens) write(*,17) 'solvent bonds','hydrogens',onoff(shake_hydrogens)
+else
+        write(*,17) 'solvent bonds','any atoms',onoff(shake_solvent)
+endif
+if(shake_solute) then
+        if(shake_heavy) write(*,17) 'solute bonds','heavy atoms',onoff(shake_heavy)
+        if(shake_hydrogens) write(*,17) 'solute bonds','hydrogens',onoff(shake_hydrogens)
+else
+        write(*,17) 'solute bonds','any atoms',onoff(shake_solute)
+endif
+!write(*,17) 'all bonds to hydrogen', onoff(shake_hydrogens)
 
 
        yes = prm_get_logical_by_key('lrf', use_LRF, .true.)
@@ -18131,7 +18262,7 @@ subroutine wat_shells
 ! set up the shells for polarisation restraining
 
 ! local variables
-real(kind=prec)						::	rout, dr, ri, Vshell, rshell, drs
+real(kind=prec)						::	rout, dr, ri, Vshell, rshell, drs, eps_diel
 integer						::	is, n_insh
 
 
@@ -18298,7 +18429,12 @@ rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
 
 
         ! --- Note below: 0.98750 = (1-1/epsilon) for water
-wshell(is)%cstb = crgQtot*0.98750_prec/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
+        ! now deprecated because we actually read the dielectric from the
+        ! solvent files as dielectric = epsilon * 1000
+        eps_diel = real(dielectric/1000,kind=prec)
+        eps_diel = 1-(1/eps_diel)
+!wshell(is)%cstb = crgQtot*0.98750_prec/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
+        wshell(is)%cstb = crgQtot*eps_diel/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
         write(*, 110) is, rout, ri
         rout = rout - dr
 end do
@@ -18312,10 +18448,10 @@ end subroutine wat_shells
 
 subroutine watpol
 ! local variables
-integer						:: iw,is,i,i3,il,jl,jw,imin,jmin
+integer						:: iw,is,i,i3,il,jl,jw,imin,jmin,isolv,jsolv,j3
 real(kind=prec)						:: dr,rw,rshell,rm,rc,scp
 real(kind=prec)						:: tmin,arg,avtdum,dv,f0
-real(kind=prec), save					:: f1(9),f2(3)
+real(kind=prec), save					:: f1(3),f2(3),f3(3)
 real(kind=prec), save					:: rmu(3),rcu(3)
 
 ! global variables used:
@@ -18330,19 +18466,27 @@ do iw = 1, nwat
 theta(iw)  = zero
 theta0(iw) = zero
 
-i  = nat_solute + iw*3-2
-if(excl(i)) cycle ! skip excluded topology waters
+i  = nat_solute + solv_atom*iw - (solv_atom-1) 
+if(excl(i)) cycle ! skip excluded topology solvent
 i3 = i*3-3
 
-rmu(1) = x(i3+4) + x(i3+7) - 2.0_prec*x(i3+1)   !Water vector
-rmu(2) = x(i3+5) + x(i3+8) - 2.0_prec*x(i3+2)
-rmu(3) = x(i3+6) + x(i3+9) - 2.0_prec*x(i3+3)
+rmu(:)=zero ! solvent vector
+do isolv = 1, solv_atom - 1
+jsolv = i + isolv
+j3 = jsolv*3-3
+rmu(1) = rmu(1) + x(j3+1)
+rmu(2) = rmu(2) + x(j3+2)
+rmu(3) = rmu(3) + x(j3+3)
+end do
+rmu(1) = rmu(1) - 2.0_prec*x(i3+1)   
+rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
+rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
 rmu(3) = rmu(3)/rm
 
-rcu(1) = x(i3+1) - xwcent(1)    !Radial vector to OW
+rcu(1) = x(i3+1) - xwcent(1)    !Radial vector to center solvent atom
 rcu(2) = x(i3+2) - xwcent(2) 
 rcu(3) = x(i3+3) - xwcent(3) 
 rc = sqrt ( rcu(1)**2 + rcu(2)**2 + rcu(3)**2 )
@@ -18350,7 +18494,7 @@ rcu(1) = rcu(1)/rc
 rcu(2) = rcu(2)/rc
 rcu(3) = rcu(3)/rc
 
-scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)   !Calculate angle between water vector and radial vector
+scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)   !Calculate angle between solvent vector and radial vector
 if ( scp .gt.  one ) scp =  one
 if ( scp .lt. -one ) scp = -one
 theta(iw) = acos( scp )
@@ -18368,7 +18512,7 @@ if ( rc > wshell(nwpolr_shell)%rout-wshell(nwpolr_shell)%dr ) then
 end if
 end do
 
-! sort the waters according to theta
+! sort the solvent molecules according to theta
 do is = 1, nwpolr_shell
 imin = 0
 do il = 1, wshell(is)%n_insh
@@ -18390,7 +18534,7 @@ end do
 
 ! calculate energy and force
 if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0) then
-call centered_heading('Water polarisation restraint data', '-')
+call centered_heading('Solvent polarisation restraint data', '-')
 write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
 wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update, kind=prec)
@@ -18424,10 +18568,17 @@ dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
 
 i  = nat_solute + solv_atom*iw - (solv_atom-1)
 i3 = i*3-3
-
-rmu(1) = x(i3+4) + x(i3+7) - 2.0_prec*x(i3+1)
-rmu(2) = x(i3+5) + x(i3+8) - 2.0_prec*x(i3+2)
-rmu(3) = x(i3+6) + x(i3+9) - 2.0_prec*x(i3+3)
+rmu(:)=zero ! solvent vector
+do isolv = 1, solv_atom - 1
+jsolv = i + isolv
+j3 = jsolv*3-3
+rmu(1) = rmu(1) + x(j3+1)
+rmu(2) = rmu(2) + x(j3+2)
+rmu(3) = rmu(3) + x(j3+3)
+end do
+rmu(1) = rmu(1) - 2.0_prec*x(i3+1)
+rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
+rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
@@ -18454,12 +18605,9 @@ f0 = dv*f0
 f1(1) = -2.0_prec*(rcu(1)-rmu(1)*scp)/rm
 f1(2) = -2.0_prec*(rcu(2)-rmu(2)*scp)/rm
 f1(3) = -2.0_prec*(rcu(3)-rmu(3)*scp)/rm
-f1(4) =     (rcu(1)-rmu(1)*scp)/rm
-f1(5) =     (rcu(2)-rmu(2)*scp)/rm
-f1(6) =     (rcu(3)-rmu(3)*scp)/rm
-f1(7) =     (rcu(1)-rmu(1)*scp)/rm
-f1(8) =     (rcu(2)-rmu(2)*scp)/rm
-f1(9) =     (rcu(3)-rmu(3)*scp)/rm
+f3(1) = (rcu(1)-rmu(1)*scp)/rm
+f3(2) = (rcu(2)-rmu(2)*scp)/rm
+f3(3) = (rcu(3)-rmu(3)*scp)/rm
 
 f2(1) = ( rmu(1)-rcu(1)*scp)/rc
 f2(2) = ( rmu(2)-rcu(2)*scp)/rc
@@ -18468,12 +18616,13 @@ f2(3) = ( rmu(3)-rcu(3)*scp)/rc
 d(i3+1) = d(i3+1) + f0 * ( f1(1) + f2(1) )
 d(i3+2) = d(i3+2) + f0 * ( f1(2) + f2(2) )
 d(i3+3) = d(i3+3) + f0 * ( f1(3) + f2(3) )
-d(i3+4) = d(i3+4) + f0 * ( f1(4) )
-d(i3+5) = d(i3+5) + f0 * ( f1(5) )
-d(i3+6) = d(i3+6) + f0 * ( f1(6) )
-d(i3+7) = d(i3+7) + f0 * ( f1(7) )
-d(i3+8) = d(i3+8) + f0 * ( f1(8) )
-d(i3+9) = d(i3+9) + f0 * ( f1(9) )
+do isolv = 1, solv_atom - 1
+jsolv = i + isolv
+j3 = jsolv*3-3
+d(j3+1) = d(j3+1) + f0 * ( f3(1) )
+d(j3+2) = d(j3+2) + f0 * ( f3(2) )
+d(j3+3) = d(j3+3) + f0 * ( f3(3) )
+end do
 end do
 
 wshell(is)%avtheta = wshell(is)%avtheta + avtdum/real(wshell(is)%n_insh, kind=prec)
