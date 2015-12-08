@@ -18126,7 +18126,7 @@ end function torsion
 !-----------------------------------------------------------------------
 subroutine restrain_solvent 
 ! local variables
-integer						::	iw,i,i3
+integer						::	iw,i,i3,isolv,jsolv
 real(kind=prec)						::	b,db,erst,dv,fexp
 real(kind=prec), save					::	dr(3)
 real(kind=prec)						::	shift
@@ -18167,9 +18167,22 @@ do iw = ncgp_solute + 1, ncgp
 
         ! update energy and forces
         E%restraint%solvent_radial = E%restraint%solvent_radial + erst
-        d(i3+1) = d(i3+1) + dv*dr(1)
-        d(i3+2) = d(i3+2) + dv*dr(2)
-        d(i3+3) = d(i3+3) + dv*dr(3)
+        if (solvent_type .gt. 0) then
+                jsolv = iw - ncgp_solute
+                i = nat_solute + solv_atom*jsolv - (solv_atom-1)
+                do isolv = 0 , solv_atom - 1
+                        if(heavy(i+isolv)) then
+                                i3 = 3*(i+isolv)-3
+                                d(i3+1) = d(i3+1) + dv*dr(1)
+                                d(i3+2) = d(i3+2) + dv*dr(2)
+                                d(i3+3) = d(i3+3) + dv*dr(3)
+                        end if
+                end do
+        else
+                d(i3+1) = d(i3+1) + dv*dr(1)
+                d(i3+2) = d(i3+2) + dv*dr(2)
+                d(i3+3) = d(i3+3) + dv*dr(3)
+        end if
 end do
 end subroutine restrain_solvent
 
