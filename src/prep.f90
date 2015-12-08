@@ -4903,7 +4903,7 @@ subroutine set_solvent_type
 	end do
 
 	!now we know all solvent molecules are the same type of n-atomic molecules
-        if(solv_atom .gt. 3) return
+        !if(solv_atom .gt. 3) return
 	solvent_type = SOLVENT_ALLATOM
 
 	!further checks for SPC water, for which special optimisations can be used
