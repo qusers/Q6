@@ -583,7 +583,7 @@ logical function topo_read(u, require_version, extrabonds)
 	end if
 	write (*,'(a80,/)') title
 
-	if(version < require_version) goto 1100
+	if(version .lt. require_version) goto 1100
 
   ! --> 2. nat_pro (no. of atoms in topology)
   ! =========================================
@@ -628,7 +628,7 @@ logical function topo_read(u, require_version, extrabonds)
   ! --> 4. integer atom codes      ---->     iac
   ! =========================
   read (unit=u, fmt=*, err=1000)                      ! skip
-  if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (iac(rd),rd=1,nat_pro)
+  if(nat_pro .gt. 0) read (unit=u, fmt=*, err=1000) (iac(rd),rd=1,nat_pro)
   write (*,50) nat_pro
 50 format ('No. of atom type codes  = ',i10)
 
@@ -638,7 +638,7 @@ logical function topo_read(u, require_version, extrabonds)
 	read(u,'(a)',err=1000) line
 	read(line,*,err=1000) nbonds !first read what must be there
 	read (line, fmt=*, iostat=filestat) nbonds, nbonds_solute
-	if(filestat /= 0) nbonds_solute = nbonds
+	if(filestat .ne. 0) nbonds_solute = nbonds
 	write (*,60) nbonds_solute
 	write (*,61) nbonds-nbonds_solute
 
@@ -648,7 +648,7 @@ logical function topo_read(u, require_version, extrabonds)
   allocate(bnd(max_bonds), stat=alloc_status)
   call topo_check_alloc('bond list')
 
-  if(nbonds > 0) read (unit=u, fmt=*, err=1000) (bnd(rd),rd=1,nbonds)
+  if(nbonds .gt. 0) read (unit=u, fmt=*, err=1000) (bnd(rd),rd=1,nbonds)
 
 	read(unit=u, fmt=*, err=1000) nbndcod
   !allocate one extra for water bond
@@ -674,7 +674,7 @@ logical function topo_read(u, require_version, extrabonds)
 	read(u,'(a)',err=1000) line
 	read(line,*,err=1000) nangles
 	read(line, *, iostat=filestat) nangles, nangles_solute
-	if(filestat /= 0) nangles_solute = nangles
+	if(filestat .ne. 0) nangles_solute = nangles
 	write (*,80) nangles_solute
 	write (*,81) nangles-nangles_solute
 80  format ('No. of solute angles    = ',i10)
@@ -683,7 +683,7 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(ang(max_angles), stat=alloc_status)
 	call topo_check_alloc('angle list')
 
-	if(nangles > 0) read (unit=u, fmt=*, err=1000) ( ang(si), si = 1,nangles )
+	if(nangles .gt. 0) read (unit=u, fmt=*, err=1000) ( ang(si), si = 1,nangles )
 
 	read(unit=u, fmt=*, err=1000) nangcod
 
@@ -692,8 +692,8 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(anglib(max_anglib), stat=alloc_status)
 	call topo_check_alloc('angle library')
 	!set optional parameters to zero
-	anglib(:)%ureyfk=0.0_prec
-	anglib(:)%ureyr0=0.0_prec
+	anglib(:)%ureyfk=zero
+	anglib(:)%ureyr0=zero
 
 	do i=1,nangcod
 		!handle optional Urey-Bradley params
@@ -701,7 +701,7 @@ logical function topo_read(u, require_version, extrabonds)
 		!try to read all things
 		read(unit=line, fmt=*, iostat=filestat) j, anglib(i)
 		!accept end-of-data but not read errors
-		if(filestat > 0) goto 1000
+		if(filestat .gt. 0) goto 1000
 	end do
 
 
@@ -710,7 +710,7 @@ logical function topo_read(u, require_version, extrabonds)
 	read(u,'(a)',err=1000) line
 	read(line,*,err=1000) ntors
 	read(line, *, iostat=filestat) ntors, ntors_solute
-	if(filestat /= 0) ntors_solute = ntors
+	if(filestat .ne. 0) ntors_solute = ntors
 	write (*,100) ntors_solute
 	write (*,101) ntors-ntors_solute
 100 format ('No. of solute torsions  = ',i10)
@@ -718,7 +718,7 @@ logical function topo_read(u, require_version, extrabonds)
 	max_tors = ntors + 4*extra
 	allocate(tor(max_tors), stat=alloc_status)
 	call topo_check_alloc('torsion list')
-	if(ntors > 0) read (unit=u, fmt=*, err=1000) (tor(si), si = 1,ntors)
+	if(ntors .gt. 0) read (unit=u, fmt=*, err=1000) (tor(si), si = 1,ntors)
 
 	read (unit=u, fmt=*, err=1000) ntorcod
 	max_torlib = ntorcod + extra
@@ -735,7 +735,7 @@ logical function topo_read(u, require_version, extrabonds)
 	read(u,'(a)',err=1000) line
 	read(line,*,err=1000) nimps
 	read(line, *, iostat=filestat) nimps, nimps_solute
-	if(filestat /= 0) nimps_solute = nimps
+	if(filestat .ne. 0) nimps_solute = nimps
 	write (*,120) nimps_solute
 	write (*,121) nimps-nimps_solute
 120 format ('No. of solute impropers = ',i10)
@@ -743,10 +743,10 @@ logical function topo_read(u, require_version, extrabonds)
 	max_imps = nimps + 4*extra
 	allocate(imp(max_imps), stat=alloc_status)
 	call topo_check_alloc('impoper torsion list')
-	if(nimps > 0) read (unit=u, fmt=*, err=1000) imp(1:nimps)
+	if(nimps .gt. 0) read (unit=u, fmt=*, err=1000) imp(1:nimps)
 
 	read (unit=u, fmt=*, iostat=filestat) nimpcod, imp_type
-	if(filestat /= 0) then !water atom type data present
+	if(filestat .ne. 0) then !water atom type data present
 		imp_type = 1 !default to harmonic
 	end if
 	max_implib = nimpcod + extra
@@ -763,7 +763,7 @@ logical function topo_read(u, require_version, extrabonds)
 	read (unit=u, fmt='(a)', err=1000) line
 	read (unit=line, fmt=*, iostat=filestat) nat_pro
 
-	if(nat_pro > 0) read (unit=u, fmt=*, err=1000) crg(1:nat_pro)
+	if(nat_pro .gt. 0) read (unit=u, fmt=*, err=1000) crg(1:nat_pro)
 	write (*,130) nat_pro
 130 format ('No. of atomic charges   = ',i10)
 
@@ -773,9 +773,9 @@ logical function topo_read(u, require_version, extrabonds)
 	read(u,'(a)',err=1000) line
 	read(line,*,err=1000) ncgp !first read what must be there
 	read (line, fmt=*, iostat=filestat) i, ncgp_solute
-	if(filestat /= 0) ncgp_solute = ncgp
+	if(filestat .ne. 0) ncgp_solute = ncgp
 	read (line, fmt=*, iostat=filestat) i, i, iuse_switch_atom
-	if(filestat /= 0) iuse_switch_atom = 1 !default to using sw. atoms
+	if(filestat .ne. 0) iuse_switch_atom = 1 !default to using sw. atoms
 	write (*,140) ncgp_solute
 	write (*,141) ncgp-ncgp_solute
 140 format ('No. of solute chargegrps= ',i10)
@@ -821,7 +821,7 @@ logical function topo_read(u, require_version, extrabonds)
 	!then try to read optional things
 	read (line,*, iostat=filestat) el14_scale, coulomb_constant
 	!set coulomb_constant to default if not present
-	if(filestat /= 0. .or. coulomb_constant <= 0) coulomb_constant = 332.
+	if((filestat .ne. 0) .or. (coulomb_constant .le. zero)) coulomb_constant = 332.0_prec
 	write (*,164) el14_scale
 	write (*,165) coulomb_constant
 164 format ('El-static 1-4 damping   = ',f10.3)
@@ -876,7 +876,7 @@ logical function topo_read(u, require_version, extrabonds)
 180 format ('No. of 1-4 neighbours   = ',i10)
 
 	allocate(temp_list(max_nbr_range,nat_solute), stat=alloc_status)
-	if(nat_solute > 0) then
+	if(nat_solute .gt. 0) then
 	! work-around to preserve file format
 	! read (unit=u,fmt='(80i1)', err=1000) ((list14(i,j),i=1,max_nbr_range),j=1,nat_solute)
 	  call topo_check_alloc('temporary neighbor list')
@@ -902,7 +902,7 @@ logical function topo_read(u, require_version, extrabonds)
 	write (*,220) nexnbrs
 220 format ('No. of nbor exclusions  = ',i10)
 
-	if(nat_solute > 0) then
+	if(nat_solute .gt. 0) then
 	  read (unit=u,fmt='(80i1)', err=1000) ((temp_list(i,j),i=1,max_nbr_range),j=1,nat_solute)
 	  do j=1,nat_solute
 		do i=1,max_nbr_range
@@ -938,15 +938,15 @@ logical function topo_read(u, require_version, extrabonds)
 	allocate(res(nres), stat=alloc_status)
 	call topo_check_alloc('residue list')
 
-	if(nres > 0) READ(unit=u, fmt=*, err=1000) res(1:nres)%start
+	if(nres .gt. 0) READ(unit=u, fmt=*, err=1000) res(1:nres)%start
 	READ(unit=u, fmt=*, err=1000)
-	if(nres > 0) then
+	if(nres .gt. 0) then
 	    do i = 0, int((nres+15)/16)-1
 		READ(unit=u, fmt='(16(a4,1x))', err=1000) (res(i*16+j)%name, j = 1, min(16, nres-i*16))
 	    end do
 	endif
 	WRITE(*, '(a,i10)') 'No. of residues         = ', nres
-	if(nres_solute < nres) then
+	if(nres_solute .lt. nres) then
 		WRITE(*, '(a,i10)') 'No of solute residues   = ', nres_solute
 	end if
 
@@ -957,13 +957,13 @@ logical function topo_read(u, require_version, extrabonds)
 	WRITE(*, '(a,i10)') 'No. of molecules        = ', nmol
 
 	read(unit=u, fmt=*, iostat=filestat)
-	if(natyps > 0) then
+	if(natyps .gt. 0) then
 	    do i = 0, int((natyps+7)/8)-1
 		read(unit=u, fmt='(8(a8,1x))', err=900, end=900) (tac(i*8+j), j = 1, min(8, natyps-i*8))
 	    end do
 	endif
-	if(filestat /= 0) then
-		if(version > 3.5) then
+	if(filestat .ne. 0) then
+		if(version .gt. 3.5) then
 			goto 1000 !its an error
 		elseif(require_version > 3.5) then
 			goto 1100
@@ -974,13 +974,13 @@ logical function topo_read(u, require_version, extrabonds)
 	WRITE(*, '(a,i10)') 'Atom type names         = ', natyps
 
 	read(unit=u, fmt=*, iostat=filestat)
-	if(natyps > 0) then
+	if(natyps .gt. 0) then
 	    do i = 0, int((natyps+12)/13)-1
 		read(unit=u, fmt='(13(a5,1x))', iostat=filestat) &
 		    (SYBYL_atom_type(i*13+j), j = 1, min(13, natyps-i*13))
 	    end do
 	endif
-	if(filestat /= 0) then
+	if(filestat .ne. 0) then
 		if(version > 3.5) then
 			goto 1000 !its an error
 		elseif(require_version > 3.5) then
@@ -992,7 +992,7 @@ logical function topo_read(u, require_version, extrabonds)
 
 	WRITE(*, '(a,i10)') 'SYBYL atom types        = ', natyps
 
-	if(version < 4) then
+	if(version .lt. 4) then
 		if(require_version >= 4) then
 			goto 1100
 		else
@@ -1020,7 +1020,7 @@ logical function topo_read(u, require_version, extrabonds)
 		write(*,'(a)')'Boundary: sphere'
 
     !For backward compatibility the shell radius from the topology can be used.
-    if (version < 5.01) then
+    if (version .lt. 5.01) then
       print*,'Using shell radius from topology < v5.01! '
 		  read(line, *, err=1000) rexcl_o, rexcl_i, rwat
 		  write(*, '(a,f10.3)') 'Exclusion radius        = ', rexcl_o
@@ -1268,7 +1268,7 @@ subroutine topo_save(name)
 		if (list14(i,j)) temp_list(i,j) = 1
 	  end do
 	end do
-	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
+	if(nat_solute .gt. 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
 
 	write(*, 20) n14nbrs
 	write(*, 10, advance='no') 'long-range neighbour list'
@@ -1292,7 +1292,7 @@ subroutine topo_save(name)
 		if (listex(i,j)) temp_list(i,j) = 1
 	  end do
 	end do
-	if(nat_solute > 0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
+	if(nat_solute .gt.0) write(u, '(80i1)') temp_list(1:max_nbr_range, 1:nat_solute)
 	deallocate(temp_list)
 
 	write(*, 20) nexnbrs
