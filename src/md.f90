@@ -4788,62 +4788,70 @@ end if
 if(.not.prm_get_logical_by_key('shake_all',shake_all,.false.)) then
         write(*,'(a)') '>>> Error: shake_all was not understood.'
         initialize = .false.
-elseif(shake_all) then
-        shake_solute    = .true.
-        shake_solvent   = .true.
-        shake_hydrogens = .true.
-        shake_heavy     = .true.
 else
-        shake_solute    = .false.
-        shake_solvent   = .false.
-        shake_hydrogens = .false.
-        shake_heavy     = .false.
-
+        if(shake_all) then
+               shake_solute    = .true.
+               shake_solvent   = .true.
+               shake_hydrogens = .true.
+               shake_heavy     = .true.
+        else
+               shake_solute    = .false.
+               shake_solvent   = .false.
+               shake_hydrogens = .false.
+               shake_heavy     = .false.
+        end if
 end if
 
 if(.not.prm_get_logical_by_key('shake_all_solvent',shake_all_solvent,.false.)) then
         write(*,'(a)') '>>> Error: shake_all_solvent was not understood.'
         initialize = .false.
-elseif(shake_all_solvent) then
-        shake_solvent   = .true.
-        shake_hydrogens = .true.
-        shake_heavy     = .true.
 else
-        shake_solvent   = .false.
-
+        if(shake_all_solvent) then
+               shake_solvent   = .true.
+               shake_hydrogens = .true.
+               shake_heavy     = .true.
+        else
+               shake_solvent   = .false.
+        end if
 end if
 
 if(.not.prm_get_logical_by_key('shake_all_solute',shake_all_solute,.false.)) then
         write(*,'(a)') '>>> Error: shake_all_solute was not understood.'
         initialize = .false.
-elseif(shake_all_solute) then
-        shake_solute    = .true.
-        shake_hydrogens = .true.
-        shake_heavy     = .true.
 else
-        shake_solute    = .false.
+        if(shake_all_solute) then
+               shake_solute    = .true.
+               shake_hydrogens = .true.
+               shake_heavy     = .true.
+        else
+               shake_solute    = .false.
+        end if
 end if
 
 if(.not.prm_get_logical_by_key('shake_all_hydrogens',shake_all_hydrogens,.false.)) then
         write(*,'(a)') '>>> Error: shake_all_hydrogens was not understood.'
         initialize = .false.
-elseif(shake_all_hydrogens) then
-        shake_solute    = .true.
-        shake_solvent   = .true.
-        shake_hydrogens = .true.
 else
-        shake_hydrogens = .false.
+        if(shake_all_hydrogens) then
+                shake_solute    = .true.
+                shake_solvent   = .true.
+                shake_hydrogens = .true.
+        else
+                shake_hydrogens = .false.
+        end if
 end if
 
 if(.not.prm_get_logical_by_key('shake_all_heavy',shake_all_heavy,.false.)) then
         write(*,'(a)') '>>> Error: shake_all_heavy was not understood.'
         initialize = .false.
-elseif(shake_all_heavy) then
-        shake_solute  = .true.
-        shake_solvent = .true.
-        shake_heavy   = .true.
 else
-        shake_heavy   = .false.
+        if(shake_all_heavy) then
+                 shake_solute  = .true.
+                 shake_solvent = .true.
+                 shake_heavy   = .true.
+        else
+                 shake_heavy   = .false.
+        end if
 end if
 
 if(shake_solvent) then
