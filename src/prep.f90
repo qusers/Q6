@@ -6104,27 +6104,28 @@ ploop:		do p_atom = 1, nat_pro !for each water check all other atoms
 					end if
 				end if
 			end do ploop
-
-		!*****PWadded new loop checking water-water distance
-			if(use_PBC) then
-				do next_wat = w_mol+1, max_waters
-					if(.not. keep(next_wat) ) cycle
-					do next_atom = 1,lib(irc_solvent)%nat
-						if(.not. wheavy(next_atom) ) cycle
-						dx = xw(1, w_at, w_mol) - xw(1, next_atom, next_wat)
-						dy = xw(2, w_at, w_mol) - xw(2, next_atom, next_wat)
-						dz = xw(3, w_at, w_mol) - xw(3, next_atom, next_wat)
-						dx = dx - boxlength(1)*nint( dx*inv_boxl(1) )
-						dy = dy - boxlength(2)*nint( dy*inv_boxl(2) )
-						dz = dz - boxlength(3)*nint( dz*inv_boxl(3) )
-						r2 = dx**2 + dy**2 + dz**2
-						if( r2<rpack2 ) then
-							keep(w_mol) = .false.
-							cycle wloop
-						end if
-					end do
+! and another loop to check solvent for heavy atoms in solvent being too close
+! to each other included into the loop below
+	!*****PWadded new loop checking water-water distance
+			do next_wat = w_mol+1, max_waters
+				if(.not. keep(next_wat) ) cycle
+				do next_atom = 1,lib(irc_solvent)%nat
+					if(.not. wheavy(next_atom) ) cycle
+					dx = xw(1, w_at, w_mol) - xw(1, next_atom, next_wat)
+					dy = xw(2, w_at, w_mol) - xw(2, next_atom, next_wat)
+					dz = xw(3, w_at, w_mol) - xw(3, next_atom, next_wat)
+                                        if (use_PBC) then
+					dx = dx - boxlength(1)*nint( dx*inv_boxl(1) )
+					dy = dy - boxlength(2)*nint( dy*inv_boxl(2) )
+					dz = dz - boxlength(3)*nint( dz*inv_boxl(3) )
+                                        end if
+					r2 = dx**2 + dy**2 + dz**2
+					if( r2<rpack2 ) then
+						keep(w_mol) = .false.
+						cycle wloop
+					end if
 				end do
-			end if
+			end do
 
 		end do !w_at
 		if(keep(w_mol)) then
