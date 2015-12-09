@@ -4785,10 +4785,7 @@ if(.not. prm_get_logical_by_key('shake_heavy', shake_heavy, .false.) ) then
 end if
 
 
-if(.not.prm_get_logical_by_key('shake_all',shake_all,.false.)) then
-        write(*,'(a)') '>>> Error: shake_all was not understood.'
-        initialize = .false.
-else
+if(prm_get_logical_by_key('shake_all',shake_all)) then
         if(shake_all) then
                shake_solute    = .true.
                shake_solvent   = .true.
@@ -4802,10 +4799,7 @@ else
         end if
 end if
 
-if(.not.prm_get_logical_by_key('shake_all_solvent',shake_all_solvent,.false.)) then
-        write(*,'(a)') '>>> Error: shake_all_solvent was not understood.'
-        initialize = .false.
-else
+if(prm_get_logical_by_key('shake_all_solvent',shake_all_solvent)) then
         if(shake_all_solvent) then
                shake_solvent   = .true.
                shake_hydrogens = .true.
@@ -4815,10 +4809,7 @@ else
         end if
 end if
 
-if(.not.prm_get_logical_by_key('shake_all_solute',shake_all_solute,.false.)) then
-        write(*,'(a)') '>>> Error: shake_all_solute was not understood.'
-        initialize = .false.
-else
+if(prm_get_logical_by_key('shake_all_solute',shake_all_solute)) then
         if(shake_all_solute) then
                shake_solute    = .true.
                shake_hydrogens = .true.
@@ -4828,10 +4819,7 @@ else
         end if
 end if
 
-if(.not.prm_get_logical_by_key('shake_all_hydrogens',shake_all_hydrogens,.false.)) then
-        write(*,'(a)') '>>> Error: shake_all_hydrogens was not understood.'
-        initialize = .false.
-else
+if(prm_get_logical_by_key('shake_all_hydrogens',shake_all_hydrogens)) then
         if(shake_all_hydrogens) then
                 shake_solute    = .true.
                 shake_solvent   = .true.
@@ -4841,10 +4829,7 @@ else
         end if
 end if
 
-if(.not.prm_get_logical_by_key('shake_all_heavy',shake_all_heavy,.false.)) then
-        write(*,'(a)') '>>> Error: shake_all_heavy was not understood.'
-        initialize = .false.
-else
+if(prm_get_logical_by_key('shake_all_heavy',shake_all_heavy)) then
         if(shake_all_heavy) then
                  shake_solute  = .true.
                  shake_solvent = .true.
