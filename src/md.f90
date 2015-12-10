@@ -3508,6 +3508,8 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iseed')
 
 ! water parameters: chg_solv array and solv_atom (used by nonbond_?w)
 if (nwat .gt. 0 ) then
+call MPI_Bcast(solvent_type,1,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast solvent_type')
 call MPI_Bcast(solv_atom,1,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast solv_atom')
 if (nodeid .ne. 0 ) then
@@ -15404,7 +15406,7 @@ do iw = 1, nbww_pair, solv_atom
         r    = sqrt ( r2 )
         Vel  = solvchg1 * solvchg2 *r
 	dv   = r2*( -Vel)
-        iLJ = ljcod(iac(i),iac(j))
+        iLJ = ljcod(iac(i),iac(ja))
         solvLJa1 = aLJ_solv(ichg,iLJ)
         solvLJa2 = aLJ_solv(ip+1,iLJ)
         solvLJb1 = bLJ_solv(ichg,iLJ)
@@ -15512,7 +15514,7 @@ do iw = 1, nbww_pair, solv_atom
         r    = sqrt ( r2 )
         Vel  = solvchg1 * solvchg2 *r
         dv = r2*( -Vel)
-        iLJ = ljcod(iac(i),iac(j))
+        iLJ = ljcod(iac(i),iac(ja))
         solvLJa1 = aLJ_solv(ichg,iLJ)
         solvLJa2 = aLJ_solv(ip+1,iLJ)
         solvLJb1 = bLJ_solv(ichg,iLJ)
