@@ -18440,7 +18440,7 @@ rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
         ! now deprecated because we actually read the dielectric from the
         ! solvent files as dielectric = epsilon * 1000
         eps_diel = real(dielectric/1000,kind=prec)
-        eps_diel = 1-(1/eps_diel)
+        eps_diel = one-(one/eps_diel)
 !wshell(is)%cstb = crgQtot*0.98750_prec/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
         wshell(is)%cstb = crgQtot*eps_diel/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
         write(*, 110) is, rout, ri

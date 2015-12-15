@@ -13,12 +13,12 @@
 #Released under Beer - Ware licence
 #Author: paul.bauer@icm.uu.se
 
-QPATH="/data/simulations/Q_metal/q_github_paul/bin"
-MODULES="intel/14.0 openmpi/1.8.1"
+QPATH=""
+MODULES=""
 CORES=4
 OMPCORES=2
-PROJECT="SNIC2014-11-2"
-MAIL="paul.bauer@icm.uu.se"
+PROJECT=""
+MAIL=""
 BENCHMARKS=20
 
 MPICOM="mpirun "
