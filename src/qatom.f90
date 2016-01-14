@@ -28,7 +28,8 @@ implicit none
 !-----------------------------------------------------------------------
 
 	integer, parameter			::	max_states		= 10
-	integer, parameter			::	max_qat			= 100
+! no longer parameter, final value assigned later
+	integer         			::	max_qat			= 100
 	integer, parameter			::	max_link		= 10
 
 	integer						::	nstates, nqat
@@ -103,13 +104,13 @@ implicit none
 	integer						::	nqimp
 
 	integer						::	nang_coupl,ntor_coupl,nimp_coupl
-	integer(AI)					::	iang_coupl(3,max_qat)
-	integer(AI)					::	itor_coupl(3,max_qat)
-	integer(AI)					::	iimp_coupl(3,max_qat)
+	integer(AI),allocatable					::	iang_coupl(:,:)!3,max_qat)
+	integer(AI),allocatable					::	itor_coupl(:,:)!3,max_qat)
+	integer(AI),allocatable					::	iimp_coupl(:,:)!3,max_qat)
 
 	integer						::	nqshake
-	integer(AI)				::	iqshake(max_qat),jqshake(max_qat)
-	real(kind=prec)						::	qshake_dist(max_qat,max_states)
+	integer(AI),allocatable 			::	iqshake(:),jqshake(:)
+	real(kind=prec),allocatable			::	qshake_dist(:,:)!max_qat,max_states)
 
 	integer						::	noffd
 	type(OFFDIAG_SAVE), allocatable::	offd(:)
@@ -181,9 +182,9 @@ implicit none
 	type(Q_ENERGIES), allocatable::	EQ(:)
 	type(Q_ENERGIES), allocatable:: old_EQ(:)
 	real(kind=prec)						::	Hij(max_states,max_states)
-	real(kind=prec)						::	EMorseD(max_qat)
-	real(kind=prec)						::	dMorse_i(3,max_qat)
-	real(kind=prec)						::	dMorse_j(3,max_qat)
+	real(kind=prec),allocatable				::	EMorseD(:)!max_qat)
+	real(kind=prec),allocatable				::	dMorse_i(:,:)!3,max_qat)
+	real(kind=prec),allocatable				::	dMorse_j(:,:)!3,max_qat)
 
 !miscellany
 	logical						::	use_new_fep_format
@@ -245,6 +246,15 @@ subroutine qatom_shutdown
 	if (allocated(qtac)) deallocate(qtac)
 	if (allocated(alpha_max)) deallocate(alpha_max)
 	if (allocated(sc_lookup)) deallocate(sc_lookup)
+        if (allocated(iang_coupl)) deallocate(iang_coupl)
+        if (allocated(itor_coupl)) deallocate(itor_coupl)
+        if (allocated(iimp_coupl)) deallocate(iimp_coupl)
+        if (allocated(iqshake)) deallocate(iqshake)
+        if (allocated(jqshake)) deallocate(jqshake)
+        if (allocated(qshake_dist)) deallocate(qshake_dist)
+        if (allocated(EMorseD)) deallocate(EMorseD)
+        if (allocated(dMorse_i)) deallocate(dMorse_i)
+        if (allocated(dMorse_j)) deallocate(dMorse_j)
 end subroutine qatom_shutdown
 
 !-------------------------------------------------------------------------
@@ -408,6 +418,10 @@ logical function qatom_load_atoms(fep_file)
 		nqat = prm_max_enum('atoms', type_count) !count number of q-atoms & get highest q-atom number
 		!allocate memory for qatom list
 		allocate(iqseq(nqat))
+! allocate all stuff that was hard coded before
+                allocate(iang_coupl(3,nqat),itor_coupl(3,nqat),iimp_coupl(3,nqat),iqshake(nqat) , &
+                        jqshake(nqat),qshake_dist(nqat,max_states),EMorseD(nqat) , &
+                        dMorse_i(3,nqat),dMorse_j(3,nqat))
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
 			if(prm_get_int_int(s, topno)) then

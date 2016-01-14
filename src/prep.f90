@@ -24,8 +24,8 @@ MODULE PREP
 	integer, parameter		::	max_entry = 1000
 	!max atoms in a residue (only used when reading PDB file)
 	integer, parameter		::	max_atlib = 500
-	integer, parameter		::	max_cgplib = 100
-	integer, parameter		::	max_atcgplib = 100
+	integer, parameter		::	max_cgplib = 200
+	integer, parameter		::	max_atcgplib = 200
 
 
 	!FF parameters
