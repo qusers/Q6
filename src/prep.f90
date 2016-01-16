@@ -4126,7 +4126,7 @@ subroutine readpdb()
 	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j , oldnum2 , resnum_tmp2
 	real(kind=prec)				:: xtmp(3)
 	LOGICAL res_found, at_found
-	integer						::	first_res_of_mol
+	integer						::	first_res_of_mol, solvent
 	logical						::	last_line_was_gap, solvent_found
 	integer						::	atoms, residues, molecules
 	type(RETTYPE)					:: glob
@@ -4179,6 +4179,7 @@ subroutine readpdb()
 		return
 	end if
         solvent_found = .false.
+		solvent = -1
 	CALL clearpdb !get rid of old PDB data.
 	call allocate_for_pdb(atoms, residues, molecules) !make space for new topology
 	!clear hydrogen make flags
@@ -4254,12 +4255,15 @@ subroutine readpdb()
 ! we found a solvent molecule, make sure there is only one solvent type and set
 ! the solv_atom flag. If this is not the first solvent molecule panic and stop
                                                         if(solvent_found) then
+														if(resnam_tmp .ne. res(solvent)%name) then
                                                         write(*,*) '>>>> ERROR: Found multiple different solvent molecules. Q can not handle this right now!'
                                                         write(*,22)
                                                         stop
                                                         end if
+														end if
                                                         solvent_found = .true.
                                                         solv_atom = lib(res(nres)%irc)%nat
+														solvent = nres
                                                 end if
 						exit
 					endif
@@ -5345,11 +5349,6 @@ subroutine solvate_box_file
 		close(13)
 		call parse_reset
 		return
-!	else if( lib(irc_solvent)%nat /= 3 ) then
-!		write(*,'(a)') '>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).'
-!		close(13)
-!		call parse_reset
-!		return
 	else if( lib(irc_solvent)%density <= 0. ) then
 		write(*, '(a, a)' ) '>>>>> ERROR: Density not set in library entry ', lib(irc_solvent)%nam
 		close(13)
@@ -5732,10 +5731,6 @@ subroutine solvate_sphere_file(shift)
 	backspace(13)
 	if(.not. set_irc_solvent()) then
 		goto 999
-!	else if(lib(irc_solvent)%nat /= 3) then
-!		write(*,900)
-!900		format('>>>>> ERROR: Solvate only works for 3-atom solvents (in this version).')
-!		goto 999
 	else if(lib(irc_solvent)%density <= 0.) then
 		write(*,910) lib(irc_solvent)%nam
 910		format('>>>>> ERROR: Density not set in library entry ',a)

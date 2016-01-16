@@ -8,7 +8,6 @@ integrator	invalid-integrator
 separate_scaling        on
 random_seed                1
 initial_temperature        0.1
-shake_hydrogens           off
 lrf                       on
 
 invalid-boundary

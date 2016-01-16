@@ -6,7 +6,7 @@ bath_coupling            100
 integrator		invalid-integrator
 separate_scaling		on
 thermostat		invalid-thermostat
-shake_hydrogens           on
+shake_all_hydrogens           on
 lrf                       on
 
 invalid-boundary
