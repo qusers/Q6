@@ -120,8 +120,10 @@ real(kind=prec), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:)
 logical						::	use_LRF
 integer						::	NBcycle
 real(kind=prec)						::	Rcpp, Rcww, Rcpw, Rcq, RcLRF
-integer, parameter			                ::	max_atyp = 255
-integer						::	ljcod(max_atyp,max_atyp)
+! we do this now without limits
+!integer, parameter			                ::	max_atyp = 255
+integer                                                 ::      num_atyp = -1
+integer,allocatable					::	ljcod(:,:)!max_atyp,max_atyp)
 
 
 ! --- Output control parameters
@@ -785,6 +787,8 @@ deallocate (v, stat=alloc_status)
 deallocate (d, stat=alloc_status)
 deallocate (winv, stat=alloc_status)
 deallocate (iqatom, stat=alloc_status)
+
+if(allocated(ljcod)) deallocate(ljcod, stat=alloc_status)
 
 ! shake stuff
 if(allocated(shake_mol)) then
@@ -3728,7 +3732,13 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast winv')
 call MPI_Bcast(iqatom, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr) !(TINY)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iqatom')
 
+call MPI_Bcast(num_atyp,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast num_atyp')
+
 !Broadcast ljcod
+if (nodeid .ne. 0) then
+allocate(ljcod(num_atyp,num_atyp))
+end if
 call MPI_Bcast(ljcod, size(ljcod), MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast ljcod')
 
@@ -17917,6 +17927,10 @@ anglib(1:nangcod)%ang0 = deg2rad*anglib(1:nangcod)%ang0
 torlib(1:ntorcod)%paths = one/torlib(1:ntorcod)%paths
 torlib(1:ntorcod)%deltor = deg2rad*torlib(1:ntorcod)%deltor
 implib(1:nimpcod)%imp0 = deg2rad*implib(1:nimpcod)%imp0
+
+num_atyp = maxval(iac)
+
+allocate(ljcod(num_atyp,num_atyp))
 
 ljcod(:,:) = 1
 do i=1,nlj2
