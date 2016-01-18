@@ -290,7 +290,7 @@ type(RSTRWAL_TYPE), allocatable::	rstwal(:)
 ! New ! Type for internal interactions of solvent atoms
 ! will be precomputed in prep sim
 type SOLV_INT_TYPE
-	integer					:: i,j
+	integer(AI)         			:: i,j
 	real(kind=prec)				:: vdWA,vdWB
 	real(kind=prec)				:: elec
 end type SOLV_INT_TYPE
@@ -359,11 +359,8 @@ end type NBQ_TYPE
 ! Paul Bauer 2015
 
 type NB_GRID_POS_TYPE
-!        integer(AI) 			:: groups         ! number of groups in the current grid
-!        integer(AI),allocatable		:: group(:)       ! array of crg group ids
         real(kind=prec)			:: x,y,z           ! grid starting coordinates
         real(kind=prec)			:: xend,yend,zend  ! grid end coordinates
-!        logical,allocatable		:: interact(:,:,:) ! interaction matrix
 end type NB_GRID_POS_TYPE
 #endif
 integer						::	nbpp_pair !current no solute-solute pairs
@@ -807,6 +804,11 @@ if(allocated(shake_mol)) then
 	end do
 	deallocate(shake_mol)
 end if
+! solvent stuff
+if(allocated(aLJ_solv)) deallocate(aLJ_solv)
+if(allocated(bLJ_solv)) deallocate(bLJ_solv)
+if(allocated(chg_solv)) deallocate(chg_solv)
+if(allocated(nonbnd_solv_int)) deallocate(nonbnd_solv_int)
 ! Nosé-Hoover array
 if ( thermostat == NOSEHOOVER) then
 deallocate (xnh, stat=alloc_status)
@@ -3522,8 +3524,8 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iseed')
 
 ! water parameters: chg_solv array and solv_atom (used by nonbond_?w)
 ! also data type and internal interaction array
-ftype(1) = MPI_INTEGER
-ftype(2) = MPI_INTEGER
+ftype(1) = MPI_INTEGER4
+ftype(2) = MPI_INTEGER4
 ftype(3) = MPI_REAL8
 ftype(4) = MPI_REAL8
 ftype(5) = MPI_REAL8
@@ -3533,10 +3535,10 @@ blockcnt(3) = 1
 blockcnt(4) = 1
 blockcnt(5) = 1
 fdisp(1) = 0
-fdisp(2) = 1*8
-fdisp(3) = 2*8
-fdisp(4) = 3*8
-fdisp(5) = 4*8
+fdisp(2) = 4
+fdisp(3) = 4+4
+fdisp(4) = 4+4+8
+fdisp(5) = 4+4+8+8
 call MPI_Type_create_struct(5, blockcnt, fdisp, ftype, mpitype_batch_solv_int, ierr)
 if (ierr .ne. 0) call die('init_nodes MPI_Type_create_struct solv_int')
 call MPI_Type_commit(mpitype_batch_solv_int, ierr)
@@ -3553,18 +3555,18 @@ if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast num_solv_int')
 if (nodeid .ne. 0 ) then
 allocate(chg_solv(solv_atom),stat=alloc_status)
 call check_alloc('chg_solv')
-allocate(aLJ_solv(solv_atom,2),stat=alloc_status)
+allocate(aLJ_solv(solv_atom,3),stat=alloc_status)
 call check_alloc('aLJ_solv')
-allocate(bLJ_solv(solv_atom,2),stat=alloc_status)
+allocate(bLJ_solv(solv_atom,3),stat=alloc_status)
 call check_alloc('bLJ_solv')
 allocate(nonbnd_solv_int(num_solv_int),stat=alloc_status)
 call check_alloc('nonbnd_solv_int')
 end if
 call MPI_Bcast(chg_solv,solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
-call MPI_Bcast(aLJ_solv,2*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(aLJ_solv,3*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
-call MPI_Bcast(bLJ_solv,2*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(bLJ_solv,3*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
 call MPI_Bcast(nonbnd_solv_int,num_solv_int,mpitype_batch_solv_int, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nonbnd_solv_int struct')
@@ -17055,14 +17057,14 @@ end if
 if(nwat > 0) then
 ! solv atom is read in during topo read now :)
 	allocate(chg_solv(solv_atom))
-	allocate(aLJ_solv(solv_atom,2))
-	allocate(bLJ_solv(solv_atom,2))
+	allocate(aLJ_solv(solv_atom,3))
+	allocate(bLJ_solv(solv_atom,3))
         select case (solvent_type)
 	 case (SOLVENT_SPC,SOLVENT_ALLATOM)
 		do iw=1,solv_atom
 			chg_solv(iw)=crg(nat_solute+iw)
-			aLJ_solv(iw,1:2)=iaclib(iac(nat_solute+iw))%avdw(1:2)
-			bLJ_solv(iw,1:2)=iaclib(iac(nat_solute+iw))%bvdw(1:2)
+			aLJ_solv(iw,1:3)=iaclib(iac(nat_solute+iw))%avdw(1:3)
+			bLJ_solv(iw,1:3)=iaclib(iac(nat_solute+iw))%bvdw(1:3)
 		end do
         case(SOLVENT_GENERAL)
                 !add appropriate code here
@@ -17317,7 +17319,7 @@ interaction = 1
 
 ! first, exclude all self interactions
 do i = 1 , solv_atom
-interaction(solv_atom,solv_atom) = 0
+interaction(i,i) = 0
 end do
 
 ! need to know kast atom of first solvent molecule, because we can stop searching there :)
@@ -17355,7 +17357,7 @@ if (na.gt.last .or. nb.gt.last) cycle
 na = na - nat_solute
 nb = nb - nat_solute
 if ((interaction(na,nb) .ne. 0) .or. (interaction(nb,na) .ne. 0) ) then
-interaction(na,nb) = 2
+interaction(na,nb) = 3
 interaction(nb,na) = 0
 end if
 end do
@@ -17385,7 +17387,7 @@ tmp_solv_int(counter)%vdWB = 2.0_prec * tempA * tempB
 
 end select
 
-nonbnd_solv_int(counter)%elec = chg_solv(i) * chg_solv(j)
+tmp_solv_int(counter)%elec = chg_solv(i) * chg_solv(j)
 end if
 end do
 end do
