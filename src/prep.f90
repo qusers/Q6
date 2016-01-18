@@ -1758,7 +1758,7 @@ integer function genH(j, residue)
 	real(kind=prec)						::	rnj(3), rnk(3), bj, bk
 	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
 	logical						::	flipped
-	integer                     :: setH, seed=1337
+	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
 
 	genH = 0
@@ -1828,7 +1828,7 @@ integer function genH(j, residue)
 			!generate initial co-ordinates for H
 			!random vector
 			do axis = 1,3
-				xH(axis) = randm(seed) - 0.5_prec
+				xH(axis) = randm() - 0.5_prec
 			end do
 			!normalise to unit length and scale by bond length from lib.
 			bond_length = sqrt(dot_product(xH,xH))
@@ -2019,7 +2019,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 	logical						::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
-        integer                                                 :: addatom,mbond,mangle,miss,j,seed=1337
+        integer                                                 :: addatom,mbond,mangle,miss,j
         type(MISSING_TYPE),allocatable                          :: missing_local(:)        
 
         
@@ -2080,37 +2080,9 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
                                         end if
                                 end if
                         end do
-!		!look up build rule
-!		lp => lib(irc_solvent%irc)
-!		do rule = lp%nrules, 1, -1
-!			if(lp%rules(rule)%kind == BUILD_RULE_TORSION) then
-!				if(lp%rules(rule)%atom(1) == H - res(residue)%start + 1 .and. &
-!					lp%rules(rule)%atom(2) == j - res(residue)%start + 1) then
-!					exit
-!				end if
-!			end if
-!		end do
-!
-!		!find the torsion rule defined in the library, if any
-!		if(rule > 0) then
-!                        if(.not.((missing_heavy(lp%rules(rule)%atom(3))%atom_missing).or.(missing_heavy(lp%rules(rule)%atom(4))%atom_missing).or. &
-!                                (missing_heavy(lp%rules(rule)%atom(2))%atom_missing).or.(missing_heavy(lp%rules(rule)%atom(1))%atom_missing))) then
-!        			kt = lp%rules(rule)%atom(3) + res(residue)%start - 1
-!        			lt = lp%rules(rule)%atom(4) + res(residue)%start - 1
-!        			xkt(:) = xtop(3*kt-2:3*kt)
-!        			xlt(:) = xtop(3*lt-2:3*lt)
-!        			rjkt(:) = xkt(:) - xj(:)
-!        			rktlt(:) = xlt(:) - xkt(:)
-!        			rnk(:) = -cross_product(rjkt, rktlt)
-!        			bk = sqrt(dot_product(rnk, rnk))
-!                        else
-!                                rule = 0
-!                        end if
-!		end if
-		!generate initial co-ordinates for H
 		!random vector
 		do axis = 1,3
-			xH(axis) = randm(seed) - 0.5_prec
+			xH(axis) = randm() - 0.5_prec
 		end do
 		!normalise to unit length and scale by bond length from lib.
 		bond_length = sqrt(dot_product(xH,xH))
@@ -2753,7 +2725,6 @@ real FUNCTION randm(seed, seed_only)
 !
 ! --- convert irand to a real random number between 0 and 1.
 !
-        seed = 1337*(int(irand)) + 1
 	r = real(irand / 10_prec,kind=prec) * 10_prec / real(m,kind=prec)
 	if((r<=0.e0_prec) .or.(r>1.e0_prec) ) r = 0.e0_prec
 	randm = r
@@ -5936,13 +5907,14 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	real(kind=prec)						::	rpack2
 	integer						::	w_at, w_mol, p_atom
 	logical						::	wheavy(max_atlib)
-	real(kind=prec)						::	dx, dy, dz, r2
+	real(kind=prec)						::	dx, dy, dz, r2, r
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
 	integer						::	heavy_bonds, heavy_angles, added, i, j, k
 	type(MISSING_TYPE),allocatable			::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),allocatable		::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),allocatable		::	missing_angles(:)
         real(kind=prec),allocatable                     ::      wat_temp(:,:)
+	integer						::	random_seed_heavy = 1333337
 
 
 	if(use_PBC) then
@@ -6051,6 +6023,8 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 ! means first atom has to be heavy center atom
 ! we stole the genH function for that
 ! make temporary array to store info for the water atoms of the current molecule
+! we seed this one also independent from the genH stuff
+		        r=randm(random_seed_heavy, seed_only=.true.)
                         wat_temp(1,:) = xw(1,:,w_mol)
                         wat_temp(2,:) = xw(2,:,w_mol)
                         wat_temp(3,:) = xw(3,:,w_mol)
