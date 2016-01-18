@@ -65,7 +65,7 @@ use NRGY
  integer,allocatable  :: nbqw_per_cgp(:)
 
  ! stuff for mpi type create
- integer                :: mpitype_batch_lrf,mpi_lrf_add,mpi_lrf_cgp_rep
+ integer                :: mpitype_batch_lrf,mpi_lrf_add,mpi_lrf_cgp_rep,mpitype_batch_solv_int
  integer                :: mpitype_batch_ppgrid,mpitype_batch_pwgrid,mpitype_batch_wwgrid,mpi_grid_add
 #ifdef _OPENMP
  !for omp use

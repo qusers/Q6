@@ -287,6 +287,16 @@ type(RSTRDIS_TYPE), allocatable::	rstdis(:)
 type(RSTRANG_TYPE), allocatable:: rstang(:)
 type(RSTRWAL_TYPE), allocatable::	rstwal(:)
 
+! New ! Type for internal interactions of solvent atoms
+! will be precomputed in prep sim
+type SOLV_INT_TYPE
+	integer					:: i,j
+	real(kind=prec)				:: vdWA,vdWB
+	real(kind=prec)				:: elec
+end type SOLV_INT_TYPE
+
+type(SOLV_INT_TYPE),allocatable			:: nonbnd_solv_int(:)
+integer						:: num_solv_int = -1
 
 !-----------------------------------------------------------------------
 !	Coordinates, velocities, forces
@@ -3511,11 +3521,35 @@ call MPI_Bcast(Temp0,1,MPI_REAL8,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iseed')
 
 ! water parameters: chg_solv array and solv_atom (used by nonbond_?w)
+! also data type and internal interaction array
+ftype(1) = MPI_INTEGER
+ftype(2) = MPI_INTEGER
+ftype(3) = MPI_REAL8
+ftype(4) = MPI_REAL8
+ftype(5) = MPI_REAL8
+blockcnt(1) = 1
+blockcnt(2) = 1
+blockcnt(3) = 1
+blockcnt(4) = 1
+blockcnt(5) = 1
+fdisp(1) = 0
+fdisp(2) = 1*8
+fdisp(3) = 2*8
+fdisp(4) = 3*8
+fdisp(5) = 4*8
+call MPI_Type_create_struct(5, blockcnt, fdisp, ftype, mpitype_batch_solv_int, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_create_struct solv_int')
+call MPI_Type_commit(mpitype_batch_solv_int, ierr)
+if (ierr .ne. 0) call die('init_nodes MPI_Type_commit solv_int')
+
 if (nwat .gt. 0 ) then
 call MPI_Bcast(solvent_type,1,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast solvent_type')
 call MPI_Bcast(solv_atom,1,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast solv_atom')
+call MPI_Bcast(num_solv_int,1,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0 ) call die('init_nodes/MPI_Bcast num_solv_int')
+
 if (nodeid .ne. 0 ) then
 allocate(chg_solv(solv_atom),stat=alloc_status)
 call check_alloc('chg_solv')
@@ -3523,6 +3557,8 @@ allocate(aLJ_solv(solv_atom,2),stat=alloc_status)
 call check_alloc('aLJ_solv')
 allocate(bLJ_solv(solv_atom,2),stat=alloc_status)
 call check_alloc('bLJ_solv')
+allocate(nonbnd_solv_int(num_solv_int),stat=alloc_status)
+call check_alloc('nonbnd_solv_int')
 end if
 call MPI_Bcast(chg_solv,solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
@@ -3530,6 +3566,8 @@ call MPI_Bcast(aLJ_solv,2*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
 call MPI_Bcast(bLJ_solv,2*solv_atom,MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast chg_solv array')
+call MPI_Bcast(nonbnd_solv_int,num_solv_int,mpitype_batch_solv_int, 0, MPI_COMM_WORLD, ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast nonbnd_solv_int struct')
 end if
 
 ! cutoffs: Rcpp, Rcww, Rcpw, Rcq, RcLRF (used by pair list generating functions)
@@ -15560,6 +15598,184 @@ end subroutine nonbond_3atomsolvent_box
 
 !-----------------------------------------------------------------------
 
+subroutine nonbond_solvent_internal
+! new function that handles non bonded interactions within a solvent molecule
+! only called for solvents with several heavy atoms and if the solvent has torsions
+! all interactions are precomputed, only need distances
+! each node only works on its own solvent atoms
+! local variables
+integer                                         :: iw,is,ip,ia,ib,ia3,ib3
+real(kind=prec)					:: dx1,dx2,dx3,r2,r6,r
+real(kind=prec)					:: Vel,V_a,V_b,dv
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end
+#else
+do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
+is  = nat_solute + solv_atom*iw-(solv_atom)
+
+! loop over all interactions within this solvent molecule
+do ip = 1 , num_solv_int 
+ia   = is + nonbnd_solv_int(ip)%i
+ib   = is + nonbnd_solv_int(ip)%j
+
+ia3  = ia*3-3
+ib3  = ib*3-3
+
+dx1  = x(ib3+1) - x(ia3+1)
+dx2  = x(ib3+2) - x(ia3+2)
+dx3  = x(ib3+3) - x(ia3+3)
+
+r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
+r6   = r2*r2*r2
+r2   = one/r2
+r    = sqrt ( r2 )
+r6   = one/r6
+
+Vel  = nonbnd_solv_int(ip)%elec * r
+V_a  = nonbnd_solv_int(ip)%vdWA * r6 *r6
+V_b  = nonbnd_solv_int(ip)%vdWB * r6
+
+dv   = r2*( -Vel) + r2*(-12.0_prec*V_a +6.0_prec*V_b )
+#ifdef _OPENMP
+Vel_omp  = Vel_omp + Vel
+Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+E%ww%el  = E%ww%el + Vel
+E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
+d(ia3+1) = d(ia3+1) - dv*dx1
+d(ia3+2) = d(ia3+2) - dv*dx2
+d(ia3+3) = d(ia3+3) - dv*dx3
+d(ib3+1) = d(ib3+1) + dv*dx1
+d(ib3+2) = d(ib3+2) + dv*dx2
+d(ib3+3) = d(ib3+3) + dv*dx3
+end do
+end do
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
+
+end subroutine nonbond_solvent_internal
+
+!-----------------------------------------------------------------------
+
+subroutine nonbond_solvent_internal_box
+! new function that handles non bonded interactions within a solvent molecule
+! only called for solvents with several heavy atoms and if the solvent has torsions
+! all interactions are precomputed, only need distances
+! each node only works on its own solvent atoms
+! local variables
+integer                                         :: iw,is,ip,ia,ib,ia3,ib3
+real(kind=prec)                                 :: dx1,dx2,dx3,r2,r6,r
+real(kind=prec)					:: boxshiftx,boxshifty,boxshiftz
+real(kind=prec)                                 :: Vel,V_a,V_b,dv
+#ifdef _OPENMP
+integer :: quotient, remainder
+real(kind=prec) :: Vel_omp, Vvdw_omp
+#endif
+
+#ifdef _OPENMP
+threads_num = omp_get_num_threads()
+thread_id = omp_get_thread_num()
+quotient = (calculation_assignment%ww%end - calculation_assignment%ww%start + 1)/threads_num
+remainder = MOD(calculation_assignment%ww%end - calculation_assignment%ww%start + 1, threads_num)
+mp_start = thread_id * quotient + calculation_assignment%ww%start + MIN(thread_id, remainder)
+mp_end = mp_start + quotient - 1
+mp_start = (mp_start*solv_atom) - solv_atom + 1
+if (remainder .gt. thread_id) then
+    mp_end = mp_end + 1
+endif
+
+Vel_omp = zero
+Vvdw_omp = zero
+
+do iw = mp_start,mp_end
+#else
+do iw = calculation_assignment%ww%start, calculation_assignment%ww%end
+#endif
+is  = nat_solute + solv_atom*iw-(solv_atom)
+
+! loop over all interactions within this solvent molecule
+do ip = 1 , num_solv_int
+ia   = is + nonbnd_solv_int(ip)%i
+ib   = is + nonbnd_solv_int(ip)%j
+
+ia3  = ia*3-3
+ib3  = ib*3-3
+
+dx1  = x(ib3+1) - x(ia3+1)
+dx2  = x(ib3+2) - x(ia3+2)
+dx3  = x(ib3+3) - x(ia3+3)
+
+boxshiftx = boxlength(1)*nint( dx1*inv_boxl(1) )
+boxshifty = boxlength(2)*nint( dx2*inv_boxl(2) )
+boxshiftz = boxlength(3)*nint( dx3*inv_boxl(3) )
+
+dx1 = dx1 -boxshiftx
+dx2 = dx2 -boxshifty
+dx3 = dx3 -boxshiftz
+
+r2   = dx1*dx1 + dx2*dx2 + dx3*dx3
+r6   = r2*r2*r2
+r2   = one/r2
+r    = sqrt ( r2 )
+r6   = one/r6
+
+Vel  = nonbnd_solv_int(ip)%elec * r
+V_a  = nonbnd_solv_int(ip)%vdWA * r6 *r6
+V_b  = nonbnd_solv_int(ip)%vdWB * r6
+
+dv   = r2*( -Vel) + r2*(-12.0_prec*V_a +6.0_prec*V_b )
+#ifdef _OPENMP
+Vel_omp  = Vel_omp + Vel
+Vvdw_omp = Vvdw_omp + V_a - V_b
+#else
+E%ww%el  = E%ww%el + Vel
+E%ww%vdw = E%ww%vdw + V_a - V_b
+#endif
+d(ia3+1) = d(ia3+1) - dv*dx1
+d(ia3+2) = d(ia3+2) - dv*dx2
+d(ia3+3) = d(ia3+3) - dv*dx3
+d(ib3+1) = d(ib3+1) + dv*dx1
+d(ib3+2) = d(ib3+2) + dv*dx2
+d(ib3+3) = d(ib3+3) + dv*dx3
+end do
+end do
+#ifdef _OPENMP
+!$omp atomic update
+E%ww%el = E%ww%el + Vel_omp
+!$omp atomic update
+E%ww%vdw = E%ww%vdw + Vvdw_omp
+#endif
+
+
+end subroutine nonbond_solvent_internal_box
+
+!-----------------------------------------------------------------------
+
 subroutine offdiag
 ! local variables
 integer						:: io,i,j,k,l,k3,l3
@@ -16404,6 +16620,12 @@ if( use_PBC ) then !periodic box
 			 elseif(solvent_type == SOLVENT_ALLATOM) then !otherwise calc. LJ with all atoms
                                 call nonbond_3atomsolvent_box
                                 call nonbond_qw_3atom_box
+! now we get started on the funky stuff with solvent torsions
+! only run this if we have torsions in the solvent
+! because it means we have at least 1-4 interactions
+				if(ntors>ntors_solute) then
+					call nonbond_solvent_internal_box
+				end if
                         end if
                 end if
         case(VDW_ARITHMETIC)
@@ -16413,6 +16635,9 @@ if( use_PBC ) then !periodic box
                         call nonbon2_pw_box
                         call nonbon2_qw_box !no SPC-specific optimised routines here
                         call nonbon2_ww_box
+			if(ntors>ntors_solute) then
+				call nonbond_solvent_internal_box
+			end if
                 end if
         end select
         
@@ -16442,6 +16667,9 @@ else !simulation sphere
                         elseif(solvent_type == SOLVENT_ALLATOM) then !otherwise calc. LJ with all atoms
                                 call nonbond_3atomsolvent
                                 call nonbond_qw_3atom
+				if(ntors>ntors_solute) then
+					call nonbond_solvent_internal
+				end if
                         end if
                 end if
         case(VDW_ARITHMETIC)
@@ -16451,6 +16679,9 @@ else !simulation sphere
                         call nonbon2_pw
                         call nonbon2_qw !no SPC-specific optimised routines here
                         call nonbon2_ww
+			if(ntors>ntors_solute) then
+				call nonbond_solvent_internal
+			end if
                 end if	
         end select
 
@@ -17056,10 +17287,142 @@ allocate(pw_igrid(ncgp_solute))
 allocate(ww_igrid(nwat))
 #endif
 
+! prepare internal nonbonded interactions for solvent
+call prep_sim_precompute_solvent
+
 #if defined (USE_MPI)
 	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
 #endif
 end subroutine prep_sim
+
+!-----------------------------------------------------------------------
+
+subroutine prep_sim_precompute_solvent
+! locals
+integer,allocatable		:: interaction(:,:)
+integer				:: i,j,na,nb,counter,last
+real(kind=prec)			:: tempA,tempB
+type(SOLV_INT_TYPE),allocatable	:: tmp_solv_int(:)
+
+if (ntors .gt. ntors_solute) then
+! we need a way to troll the solvent interactions without having to build a list for the 1-4
+! interactions and save it in the topology, this could kill topology reading otherwise
+! so we start trolling them here before shake and other stuff is assigned
+! This means we know all solvent internal stuff
+! the maximum possible number is n^2, but we exclude self interaction and nearest neighbors
+
+allocate(interaction(solv_atom,solv_atom),stat=alloc_status)
+call check_alloc('solvent self interaction array')
+interaction = 1
+
+! first, exclude all self interactions
+do i = 1 , solv_atom
+interaction(solv_atom,solv_atom) = 0
+end do
+
+! need to know kast atom of first solvent molecule, because we can stop searching there :)
+last = nat_solute + solv_atom
+
+! now, troll the bond list for interactions to exclude
+do i = nbonds_solute+1 , nbonds
+na = bnd(i)%i
+nb = bnd(i)%j
+if (na.gt.last .or. nb.gt.last) cycle
+! get the actual index of the solvent atom
+! and set this index to zero
+na = na - nat_solute
+nb = nb - nat_solute
+interaction(na,nb) = 0
+interaction(nb,na) = 0
+end do
+! same for angle list
+do i = nangles_solute+1, nangles
+na = ang(i)%i
+nb = ang(i)%k
+if (na.gt.last .or. nb.gt.last) cycle
+na = na - nat_solute
+nb = nb - nat_solute
+interaction(na,nb) = 0
+interaction(nb,na) = 0
+end do
+! different now for torsion
+! set to type 2 (1-4 interaction) if not previously set to zero
+! and set inverted interaction to zero to prevent double counting
+do i = ntors_solute+1, ntors
+na = tor(i)%i
+nb = tor(i)%l
+if (na.gt.last .or. nb.gt.last) cycle
+na = na - nat_solute
+nb = nb - nat_solute
+if ((interaction(na,nb) .ne. 0) .or. (interaction(nb,na) .ne. 0) ) then
+interaction(na,nb) = 2
+interaction(nb,na) = 0
+end if
+end do
+counter = 0
+! now we know the remaining interactions that we need to precalculate
+! allocate full size array and later shrink it to the number needed
+allocate(tmp_solv_int(solv_atom**2),stat=alloc_status)
+call check_alloc('tmp solvent internal nonbonds')
+do i = 1, solv_atom
+do j = 1, solv_atom
+if (interaction(i,j) .ne. 0 ) then
+counter = counter + 1
+tmp_solv_int(counter)%i=i
+tmp_solv_int(counter)%j=j
+select case(ivdw_rule)
+case(VDW_GEOMETRIC)
+tmp_solv_int(counter)%vdWA = aLJ_solv(i,interaction(i,j)) * aLJ_solv(j,interaction(i,j))
+tmp_solv_int(counter)%vdWB = bLJ_solv(i,interaction(i,j)) * bLJ_solv(j,interaction(i,j))
+case(VDW_ARITHMETIC)
+tempA = aLJ_solv(i,interaction(i,j)) + aLJ_solv(j,interaction(i,j))
+tempA = tempA**2
+tempA = tempA * tempA * tempA
+tempB = bLJ_solv(i,interaction(i,j)) * bLJ_solv(j,interaction(i,j))
+
+tmp_solv_int(counter)%vdWA = (tempA**2) * tempB
+tmp_solv_int(counter)%vdWB = 2.0_prec * tempA * tempB
+
+end select
+
+nonbnd_solv_int(counter)%elec = chg_solv(i) * chg_solv(j)
+end if
+end do
+end do
+if (counter .le. 0) then
+num_solv_int = 1
+tmp_solv_int(:)%i=-1
+tmp_solv_int(:)%j=-1
+tmp_solv_int(:)%vdWA=-1E35_prec
+tmp_solv_int(:)%vdWB=-1E35_prec
+tmp_solv_int(:)%elec=-1E35_prec
+else
+num_solv_int = counter
+end if
+
+! now make real array to shrink done to the actual number of interactions
+allocate(nonbnd_solv_int(num_solv_int),stat=alloc_status)
+call check_alloc('solvent internal nonbonds')
+nonbnd_solv_int(1:num_solv_int) = tmp_solv_int(1:num_solv_int)
+
+! done, clean up
+deallocate(tmp_solv_int)
+deallocate(interaction)
+
+else
+! needed to prevent MPI from crashing during broadcast
+num_solv_int = 1
+allocate(nonbnd_solv_int(num_solv_int),stat=alloc_status)
+call check_alloc('solvent internal nonbonds')
+nonbnd_solv_int(:)%i=-1
+nonbnd_solv_int(:)%j=-1
+nonbnd_solv_int(:)%vdWA=-1E35_prec
+nonbnd_solv_int(:)%vdWB=-1E35_prec
+nonbnd_solv_int(:)%elec=-1E35_prec
+end if
+
+
+end subroutine prep_sim_precompute_solvent
 
 !-----------------------------------------------------------------------
 
