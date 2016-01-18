@@ -17388,6 +17388,8 @@ tmp_solv_int(counter)%vdWB = 2.0_prec * tempA * tempB
 end select
 
 tmp_solv_int(counter)%elec = chg_solv(i) * chg_solv(j)
+if (interaction(i,j) .eq. 3) &
+tmp_solv_int(counter)%elec = tmp_solv_int(counter)%elec * el14_scale
 end if
 end do
 end do
