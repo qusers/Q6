@@ -2698,7 +2698,7 @@ end subroutine prompt
 
 real FUNCTION randm(seed, seed_only)
 !arguments
-	integer, optional::	seed
+	integer, intent(in),optional::	seed
 	logical, intent(in), optional::	seed_only
 ! *** Local variables
 	integer, parameter			::	m = 100000000, m1 = 10000, mult = 31415821
