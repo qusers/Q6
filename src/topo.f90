@@ -609,8 +609,17 @@ logical function topo_read(u, require_version, extrabonds)
 	write (*,20) nat_solute, nat_pro-nat_solute
 20	format ('No. of solute atoms     = ',i10,/,&
 			'No. of solvent atoms    = ',i10)
+
+! prevent div/0 if topology has no info on solvent atoms
+! then jsut set it to one and nwat to zero
 	max_atom = nat_pro
-	nwat = (max_atom - nat_solute) / solv_atom
+	if (solv_atom .eq. 0) then
+! now means that there can not be any solvent
+		nwat = 0
+		solv_atom = 1
+	else
+		nwat = (max_atom - nat_solute) / solv_atom
+	end if
         write (*,'(a,i10)') 'Solvent dielectric*1000 =',dielectric
 	call topo_allocate_atom
 
