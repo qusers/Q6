@@ -5907,14 +5907,13 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	real(kind=prec)						::	rpack2
 	integer						::	w_at, w_mol, p_atom
 	logical						::	wheavy(max_atlib)
-	real(kind=prec)						::	dx, dy, dz, r2, r
+	real(kind=prec)						::	dx, dy, dz, r2
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
 	integer						::	heavy_bonds, heavy_angles, added, i, j, k
 	type(MISSING_TYPE),allocatable			::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),allocatable		::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),allocatable		::	missing_angles(:)
         real(kind=prec),allocatable                     ::      wat_temp(:,:)
-	integer						::	random_seed_heavy = 1333337
 
 
 	if(use_PBC) then
@@ -6023,8 +6022,6 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 ! means first atom has to be heavy center atom
 ! we stole the genH function for that
 ! make temporary array to store info for the water atoms of the current molecule
-! we seed this one also independent from the genH stuff
-		        r=randm(random_seed_heavy, seed_only=.true.)
                         wat_temp(1,:) = xw(1,:,w_mol)
                         wat_temp(2,:) = xw(2,:,w_mol)
                         wat_temp(3,:) = xw(3,:,w_mol)
