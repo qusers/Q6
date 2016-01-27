@@ -71,6 +71,7 @@ use NRGY
  !for omp use
  integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter
  real(kind=prec)  :: mp_real_tmp
+ real(kind=prec),allocatable  :: qomp_elec(:,:),qomp_vdw(:,:)
 
  !$omp threadprivate(thread_id, mp_real_tmp, mp_start, mp_end, mp_counter)
 #endif

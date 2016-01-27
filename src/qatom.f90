@@ -126,9 +126,19 @@ implicit none
 	! Monitoring of nonbonded interactions between selected groups of atoms
 	type monitor_group_pair_TYPE
 		integer					::	i,j
+! where to start and stop reading the list containing the precomputed
+! interactions for monitor groups
+                integer                                         ::      lstart(max_states),lend(max_states) 
 		real(kind=prec)					::	Vel(max_states), Vlj(max_states)
 		real(kind=prec)					::	Vwel, Vwlj, Vwsum
 	end type  monitor_group_pair_TYPE
+        type monitor_group_interaction_type
+                integer                                 :: i,j
+                logical                                 :: soft
+                real(kind=prec)                         :: elec,vdWA,vdWB,score
+        end type monitor_group_interaction_type
+
+        type(monitor_group_interaction_type),allocatable        :: monitor_group_int(:,:)
 
 	type(monitor_group_pair_TYPE), allocatable::monitor_group_pair(:)
 

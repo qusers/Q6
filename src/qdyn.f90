@@ -102,9 +102,10 @@ program Qdyn5
 	call close_input_files				! close input files
 
 	call init_shake
+!the nb monitor now needs to be initialised after! we got the precomputed interactions
+!so it is moved in later 
 	call make_nbqqlist
 	call shrink_topology
-	call nbmonitorlist
 	call init_trj
 
     ! generate Maxwellian velocities and shake initial x and v if necessary
@@ -121,7 +122,16 @@ program Qdyn5
 #endif
 	! count non-bonded pairs to get the maximum number, then distribute them among the nodes
 
-call distribute_nonbonds
+  call distribute_nonbonds
+
+! before doing actual work, make each node do a precomputation of all possible
+! interactions
+! so we don't have to do this at every step
+! has to be after distribute_nonbonds because we need to know what is actually
+! needed on each node
+  call precompute_interactions
+!now we can call the nbmonitor
+  call nbmonitorlist
 
  ! do the work!
   call md_run
