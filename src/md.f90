@@ -14147,7 +14147,7 @@ subroutine pp_int_comp
 
 ! locals
 integer                         :: ig,jg,nl
-
+integer                         :: ia,ja,i,j
 allocate(pp_precomp(nat_solute,nat_solute),stat=alloc_status)
 call check_alloc('Protein-Protein precomputation array')
 
@@ -14158,47 +14158,67 @@ pp_precomp(:,:)%elec  = zero
 pp_precomp(:,:)%vdWA  = zero
 pp_precomp(:,:)%vdWB  = zero
 
-igloop:do ig = 1, nat_solute
-        if ( iqatom(ig) .ne. 0 ) cycle igloop
-jgloop: do jg = 1, nat_solute
-                if ( iqatom(jg).ne.0 ) cycle jgloop
-                if ( ig .ge. jg ) cycle jgloop
-                if ( abs(jg-ig) .le. max_nbr_range ) then
-                        if ( ig .lt. jg ) then
-                                if ( listex(jg-ig,ig) ) then
-                                        cycle jgloop
-                                else if (list14(jg-ig,ig)) then
-                                        call precompute_set_values_pp(ig,jg,3)
-                                        cycle jgloop
+igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
+        ia = cgp(ig)%iswitch
+        if ( excl(ia) ) cycle igloop
+
+jgloop: do jg = 1, ncgp_solute
+                ja = cgp(jg)%iswitch
+                if ( excl(ja) ) cycle jgloop
+! count each charge group pair once only
+                if ( ((ig .gt. jg) .and. (mod(ig+jg,2) .eq. 0)) .or. &
+                        ((ig .lt. jg) .and. (mod(ig+jg,2) .eq. 1)) ) &
+                        cycle jgloop
+ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
+                        i = cgpatom(ia)
+!             --- q-atom ? ---
+                        if ( iqatom(i) .ne. 0 ) cycle ialoop
+
+jaloop:                 do ja = cgp(jg)%first, cgp(jg)%last
+                                j = cgpatom(ja)
+!             --- q-atom ? ---
+                                if ( iqatom(j).ne.0 ) cycle jaloop
+! count once
+                                if ( ig .eq. jg .and. i .ge. j ) cycle jaloop
+
+                                if ( abs(j-i) .le. max_nbr_range ) then
+                                        if ( i .lt. j ) then
+                                                if ( listex(j-i,i) ) then
+                                                        cycle jaloop
+                                                else if (list14(j-i,i)) then
+                                                        call precompute_set_values_pp(i,j,3)
+                                                        cycle jaloop
+                                                end if
+                                        else
+                                                if ( listex(i-j,j) ) then
+                                                        cycle jaloop
+                                                else if ( list14(i-j,j)) then
+                                                        call precompute_set_values_pp(i,j,3)
+                                                        cycle jaloop
+                                                end if
+                                        end if
+                                else
+                                        do nl = 1, nexlong
+                                                if ( (listexlong(1,nl) .eq. i .and. &
+                                                        listexlong(2,nl) .eq. j      ) .or. &
+                                                        (listexlong(1,nl) .eq. j .and. &
+                                                        listexlong(2,nl) .eq. i      ) ) then
+                                                        cycle jaloop
+                                                end if
+                                        end do
+                                        do nl = 1, n14long
+                                                if ( (list14long(1,nl) .eq. i .and. &
+                                                        list14long(2,nl) .eq. j      ) .or. &
+                                                        (list14long(1,nl) .eq. j .and. &
+                                                        list14long(2,nl) .eq. i      ) ) then
+                                                        call precompute_set_values_pp(i,j,3)
+                                                        cycle jaloop
+                                                end if
+                                        end do
                                 end if
-                        else
-                                if ( listex(ig-jg,jg) ) then
-                                        cycle jgloop
-                                else if ( list14(ig-jg,jg)) then
-                                        call precompute_set_values_pp(ig,jg,3)
-                                        cycle jgloop
-                                end if
-                        end if
-                else
-                        do nl = 1, nexlong
-                                if ( (listexlong(1,nl) .eq. ig .and. &
-                                        listexlong(2,nl) .eq. jg      ) .or. &
-                                        (listexlong(1,nl) .eq. jg .and. &
-                                        listexlong(2,nl) .eq. ig      ) ) then
-                                        cycle jgloop
-                                end if
-                        end do
-                        do nl = 1, n14long
-                                if ( (list14long(1,nl) .eq. ig .and. &
-                                        list14long(2,nl) .eq. jg      ) .or. &
-                                        (list14long(1,nl) .eq. jg .and. &
-                                        list14long(2,nl) .eq. ig      ) ) then
-                                        call precompute_set_values_pp(ig,jg,3)
-                                        cycle jgloop
-                                end if
-                        end do
-                end if
-                call precompute_set_values_pp(ig,jg,ljcod(iac(ig),iac(jg)))
+                                call precompute_set_values_pp(i,j,ljcod(iac(i),iac(j)))
+                        end do jaloop
+                end do ialoop
         end do jgloop
 end do igloop
 end subroutine pp_int_comp
