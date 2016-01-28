@@ -7177,10 +7177,12 @@ jgloop: do jgr = 1, ncgp_solute
 ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
                 i = cgpatom(ia)
 !	         --- q-atom ? ---
-                if ( iqatom(i)/=0 ) cycle ialoop
+                if ( iqatom(i).ne.0 ) cycle ialoop
 
 jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
                                 j = cgpatom(ja)
+!                --- q-atom ? ---
+                                if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7312,9 +7314,11 @@ jgloop:         do jgr = 1, ncgp_solute
 ialoop:                 do ia = cgp(ig)%first, cgp(ig)%last
                                 i = cgpatom(ia)
 !	         --- q-atom ? ---
-                                if ( iqatom(i)/=0 ) cycle ialoop
+                                if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
                                         j = cgpatom(ja)
+!                --- q-atom ? ---
+                                        if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7453,9 +7457,11 @@ jgloop: do jgr = 1, ncgp_solute
 ialoop:                 do ia = cgp(ig)%first, cgp(ig)%last
                                 i = cgpatom(ia)
 !	         --- q-atom ? ---
-                                if ( iqatom(i)/=0 ) cycle ialoop
+                                if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
                                         j = cgpatom(ja)
+!                --- q-atom ? ---
+                                        if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7601,9 +7607,11 @@ ialoop:                 do ia = cgp(ig)%first, cgp(ig)%last
                                 i = cgpatom(ia)
 
                                 !	             --- q-atom ? ---
-                                if ( iqatom(i)/=0 ) cycle ialoop
+                                if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:				do ja = cgp(jgr)%first, cgp(jgr)%last
                                         j = cgpatom(ja)
+!                --- q-atom ? ---
+                                        if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7727,10 +7735,12 @@ ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
 ! for every atom in the charge group (of the outermost loop):
                         i = cgpatom(ia)
 ! skip if q-atom
-                        if ( iqatom(i)/=0 ) cycle ialoop
+                        if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
 ! for every atom in the charge group (innermost loop)
                                 j = cgpatom(ja)
+!                --- q-atom ? ---
+                                if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7861,10 +7871,12 @@ ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
 ! for every atom in the charge group ig (of the outermost loop):
                         i = cgpatom(ia)
 ! skip if q-atom
-                        if ( iqatom(i)/=0 ) cycle ialoop
+                        if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
 ! for every atom in the charge group jg (innermost loop)
                                 j = cgpatom(ja)
+!                --- q-atom ? ---
+                                if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -7990,9 +8002,11 @@ jgloop: do jgr = 1, ncgp_solute
 ialoop:                 do ia = cgp(ig)%first, cgp(ig)%last
 ! skip if q-atom
                                 i = cgpatom(ia)
-                                if ( iqatom(i)/=0 ) cycle ialoop
+                                if ( iqatom(i).ne.0 ) cycle ialoop
 jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
                                         j = cgpatom(ja)
+! skip if q-atom
+                                        if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
@@ -8134,11 +8148,13 @@ ialoop:                 do ia = cgp(ig)%first, cgp(ig)%last
 ! for every atom in the charge group ig (of the outermost loop):
                                 i = cgpatom(ia)
 !skip if q-atom
-                                if ( iqatom(i)/=0 ) cycle ialoop
+                                if ( iqatom(i).ne.0 ) cycle ialoop
 
 jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 ! for every atom in the charge group jg (innermost loop)
                                         j = cgpatom(ja)
+!                --- q-atom ? ---
+                                        if ( iqatom(j).ne.0 ) cycle jaloop
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
