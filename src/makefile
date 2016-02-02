@@ -324,7 +324,7 @@ qfep.o: qfep.f90 nrgy.o parse.o version.o
 sizes.o: sizes.f90
 	${FC} ${FFLAGS} ${FPP_FLG} -c $<
 
-topo.o:  topo.f90 misc.o mpiglob.o sizes.o
+topo.o:  topo.f90 misc.o mpiglob.o sizes.o version.o
 	${FC} ${FFLAGS} -c $<
 
 trj.o:  trj.f90 mask.o misc.o
