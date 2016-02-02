@@ -14336,7 +14336,7 @@ do iq = 1, nqat - 1
                                 if(qconn(is, ja, iq) .eq. 4) then
                                         vdw = 3
                                 elseif(.not. qvdw_flag) then
-                                        vdw = ljcod(iac(iac(ia)),iac(ja))
+                                        vdw = ljcod(iac(ia),iac(ja))
                                 else
                                         vdw = 1
                                         i = 1
