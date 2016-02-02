@@ -16,9 +16,6 @@ MODULE PREP
 	IMPLICIT none
 
 !constants
-	character(*), private, parameter	::	MODULE_VERSION = '5.06'
-	character(*), private, parameter	::	MODULE_DATE    = '2014-01-01'
-
 	!library
 	!max number of library entries
 	integer, parameter		::	max_entry = 1000
@@ -4469,7 +4466,7 @@ subroutine readtop
 
 	coord_source = 'topology'
 	auto_name = filnam !for automatic naming of pdb and mol2 files
-	nwat = (nat_pro - nat_solute) / solv_atom
+!	nwat = (nat_pro - nat_solute) / solv_atom
 	!reset makeH - don't need to make any hydrogens
 	deallocate(makeH, stat=alloc_status)
 	allocate(makeH(nat_pro))
@@ -4841,6 +4838,13 @@ logical function set_irc_solvent()
 	end if
         solv_atom = lib(irc_solvent)%nat
         dielectric = lib(irc_solvent)%dielectric
+        topo_rho_wat = lib(irc_solvent)%density
+! check if user is retarted and has not set solvent density right
+! set to default if this is the case
+        if (topo_rho_wat .lt. zero) then
+                lib(irc_solvent)%density = 0.0335_prec
+                topo_rho_wat = 0.0335_prec
+        end if
 
 	write(*,95) solvent_name
 95	format('Library entry used to generate solvent  : ',a10)
@@ -6234,7 +6238,7 @@ real(kind=prec) function rwat_eff()
 	do i = 1, nat_solute
 		rc    = sqrt(dot_product(xtop(3*i-2:3*i)-xwcent(:),&
 			xtop(3*i-2:3*i)-xwcent(:)))
-		isort = int ( 100. * rc )
+		isort = int ( 100.0_prec * rc )
 		if ( isort .eq. 0 ) isort = 1
 		if ( isort .le. bins ) then
 			if(heavy(i) .and. (.not. excl(i)))  &
@@ -6245,7 +6249,7 @@ real(kind=prec) function rwat_eff()
 	!calc solvent density
 	solvent_volume = 0.
 	do i = nres_solute + 1, nres
-		if(lib(res(i)%irc)%density > 0) then
+		if(lib(res(i)%irc)%density .gt. zero) then
 			solvent_volume = solvent_volume + 1./lib(res(i)%irc)%density
 		end if
 	end do

@@ -33,7 +33,9 @@ include "mpif.h"
 real(kind=prec)			::	pi, deg2rad	!set in sub startup
 character(80)	                ::	MD_VERSION = ''
 character(80)	                ::	MD_DATE    = ''
-real(kind=prec), parameter		::  rho_wat = 0.0335_prec  ! molecules / A**3 !TODO: it is not place for that
+! no hard coded values for something like this
+! rho will now be read from the topology, as it should be
+real(kind=prec) 		::  rho_wat = -1.0_prec  ! molecules / A**3, set from topo
 real(kind=prec), parameter		::  Boltz = 0.001986_prec !TODO: it is not place for that
 
 !Read status
@@ -14144,11 +14146,11 @@ end subroutine init_trj
 subroutine precompute_interactions
 ! nice and small routine to call all the other stuff below
 call pp_int_comp
-call pw_int_comp
+if (nwat .gt. 0) call pw_int_comp
 call qp_int_comp
 call qq_int_comp
-call qw_int_comp
-call ww_int_comp
+if (nwat .gt. 0) call qw_int_comp
+if (nwat .gt. 0) call ww_int_comp
 
 
 end subroutine precompute_interactions
@@ -14336,7 +14338,7 @@ do iq = 1, nqat - 1
                                 if(qconn(is, ja, iq) .eq. 4) then
                                         vdw = 3
                                 elseif(.not. qvdw_flag) then
-                                        vdw = ljcod(iac(iac(ia)),iac(ja))
+                                        vdw = ljcod(iac(ia),iac(ja))
                                 else
                                         vdw = 1
                                         i = 1
@@ -14744,6 +14746,8 @@ if(nwat > 0) then
         end select
 
         if( .not. use_PBC ) then
+! sovent density also set in wat_sphere to value from topology
+! default will be  0.0335, water density
                 call wat_sphere
                 if (wpol_restr) call wat_shells
 
@@ -16181,7 +16185,7 @@ subroutine restrain_solvent
 ! local variables
 integer						::	iw,i,i3,isolv,jsolv
 real(kind=prec)						::	b,db,erst,dv,fexp
-real(kind=prec), save					::	dr(3)
+real(kind=prec) 					::	dr(3),dcent(3)
 real(kind=prec)						::	shift
 
 ! global variables used:
@@ -16195,11 +16199,25 @@ end if
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
         if (excl(i)) cycle ! skip excluded topology waters
+        if(solv_atom.eq.3) then
+!use old code
         i3 = 3*i-3
-
         dr(1) = x(i3+1) - xwcent(1)
         dr(2) = x(i3+2) - xwcent(2)
         dr(3) = x(i3+3) - xwcent(3)
+        else
+        dcent(:)=zero
+        jsolv = iw - ncgp_solute
+        i = nat_solute + solv_atom*jsolv - (solv_atom-1)
+        do isolv = 0 , solv_atom - 1
+                i3 = 3*(i+isolv)-3
+                dcent(1) = dcent(1) + x(i3+1)
+                dcent(2) = dcent(2) + x(i3+2)
+                dcent(3) = dcent(3) + x(i3+3)
+        end do
+        dcent(:) = dcent(:)/solv_atom
+        dr(:) = dcent(:) - xwcent(:)
+        end if
         b = sqrt ( dr(1)**2 + dr(2)**2 + dr(3)**2 )
         db = b - (rwat - shift)
 
@@ -16255,6 +16273,7 @@ if(rwat_in > zero) rwat = rwat_in
 !calc. total charge of non-excluded non-Q-atoms and excluded atoms
 crgtot = zero
 crgexcl = zero
+rho_wat = topo_rho_wat
 do i = 1, nat_solute
 	if ( .not. excl(i) ) then
 		if ( iqatom(i)==0 ) then
@@ -16518,7 +16537,7 @@ integer						:: iw,is,i,i3,il,jl,jw,imin,jmin,isolv,jsolv,j3
 real(kind=prec)						:: dr,rw,rshell,rm,rc,scp
 real(kind=prec)						:: tmin,arg,avtdum,dv,f0
 real(kind=prec), save					:: f1(3),f2(3),f3(3)
-real(kind=prec), save					:: rmu(3),rcu(3)
+real(kind=prec) 					:: rmu(3),rcu(3), rmc(3)
 
 ! global variables used:
 !  E, wshell, bndw0, deg2rad, angw0, nwat, theta, theta0, nat_pro, x, xwcent,
@@ -16536,7 +16555,14 @@ i  = nat_solute + solv_atom*iw - (solv_atom-1)
 if(excl(i)) cycle ! skip excluded topology solvent
 i3 = i*3-3
 
+! function needs to be rewritten as we no longer just have 3-point water
+! molecules, meaning that the simple geometry won't work any longer
+! we will only keep the old code for SPC/TIP3P like solvent
+
 rmu(:)=zero ! solvent vector
+rmc(:)=zero
+if (solv_atom .eq. 3) then
+!SPC/TIP3P solvent, keep old code
 do isolv = 1, solv_atom - 1
 jsolv = i + isolv
 j3 = jsolv*3-3
@@ -16547,14 +16573,36 @@ end do
 rmu(1) = rmu(1) - 2.0_prec*x(i3+1)   
 rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
 rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
+else
+! no longer 3-point solvent, create solvent vector using individual atom charges
+! of the solvent molecule
+do isolv = 0, solv_atom - 1
+jsolv = i + isolv
+j3 = jsolv*3-3
+rmc(1) = rmc(1) + x(j3+1)
+rmc(2) = rmc(2) + x(j3+2)
+rmc(3) = rmc(3) + x(j3+3)
+rmu(1) = rmu(1) + (chg_solv(isolv+1)*x(j3+1))
+rmu(2) = rmu(2) + (chg_solv(isolv+1)*x(j3+2))
+rmu(3) = rmu(3) + (chg_solv(isolv+1)*x(j3+3))
+end do
+rmc(:) = rmc(:)/solv_atom
+end if
+
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
 rmu(3) = rmu(3)/rm
 
+if (solv_atom .eq. 3) then
+!SPC/TIP3P solvent, keep old code
 rcu(1) = x(i3+1) - xwcent(1)    !Radial vector to center solvent atom
 rcu(2) = x(i3+2) - xwcent(2) 
 rcu(3) = x(i3+3) - xwcent(3) 
+else
+! different solvent, use new code for geometric center
+rcu(:) = rmc(:) - xwcent(:)
+end if
 rc = sqrt ( rcu(1)**2 + rcu(2)**2 + rcu(3)**2 )
 rcu(1) = rcu(1)/rc
 rcu(2) = rcu(2)/rc
@@ -16635,6 +16683,9 @@ dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
 i  = nat_solute + solv_atom*iw - (solv_atom-1)
 i3 = i*3-3
 rmu(:)=zero ! solvent vector
+rmc(:)=zero
+if (solv_atom .eq. 3) then
+!SPC/TIP3P solvent, keep old code
 do isolv = 1, solv_atom - 1
 jsolv = i + isolv
 j3 = jsolv*3-3
@@ -16645,14 +16696,34 @@ end do
 rmu(1) = rmu(1) - 2.0_prec*x(i3+1)
 rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
 rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
+else
+! no longer 3-point solvent, create solvent vector based on individual charges of
+! the solvent molecule
+do isolv = 0, solv_atom - 1
+jsolv = i + isolv
+j3 = jsolv*3-3
+rmc(1) = rmc(1) + x(j3+1)
+rmc(2) = rmc(2) + x(j3+2)
+rmc(3) = rmc(3) + x(j3+3)
+rmu(1) = rmu(1) + (chg_solv(isolv+1)*x(j3+1))
+rmu(2) = rmu(2) + (chg_solv(isolv+1)*x(j3+2))
+rmu(3) = rmu(3) + (chg_solv(isolv+1)*x(j3+3))
+end do
+rmc(:) = rmc(:)/solv_atom
+end if
 rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
 rmu(1) = rmu(1)/rm
 rmu(2) = rmu(2)/rm
 rmu(3) = rmu(3)/rm
-
+if (solv_atom .eq. 3) then
+!SPC/TIP3P solvent, keep old code
 rcu(1) = x(i3+1) - xwcent(1)
 rcu(2) = x(i3+2) - xwcent(2)
 rcu(3) = x(i3+3) - xwcent(3)
+else
+! different solvent, use new code for geometric center
+rcu(:) = rmc(:) - xwcent(:)
+end if
 rc = sqrt ( rcu(1)**2 + rcu(2)**2 + rcu(3)**2 )
 rcu(1) = rcu(1)/rc
 rcu(2) = rcu(2)/rc

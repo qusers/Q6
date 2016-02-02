@@ -6,13 +6,14 @@
 
 module TOPO
 	use SIZES
+        use VERSIONS
 	use MISC
 
 	implicit none
 
 ! constants
-        real, private, parameter                ::      MODULE_VERSION = 5.06
-        character(*), private, parameter        ::      MODULE_DATE    = '2014-04-21'
+        character(80),private                ::      MODULE_VERSION 
+        character(80),private                ::      MODULE_DATE     
 
         integer, parameter                      ::      nljtyp = 3	!TINY
 
@@ -113,7 +114,7 @@ character(len=256)			::	prm_file
 	!!sim. sphere & water sphere centres
 	real(kind=prec)						::	xpcent(3), xwcent(3)
 	real(kind=prec)						::	rwat !solvation radius
-	real(kind=prec)						::	rexcl_o,rexcl_i
+	real(kind=prec)						::	rexcl_o,rexcl_i,topo_rho_wat
 	integer						::	nexats, nshellats, nexwat
 	logical, allocatable		::	shell(:)
 	logical, allocatable		::	excl(:)
@@ -201,6 +202,8 @@ contains
 !----------------------------------------------------------------------
 
 subroutine topo_startup
+MODULE_VERSION = version_pass()
+MODULE_DATE    = date_pass()
 end subroutine topo_startup
 
 !----------------------------------------------------------------------
@@ -512,10 +515,11 @@ logical function topo_read(u, require_version, extrabonds)
 	integer						:: nhyds
 	integer						:: paths
 	character(len=256)			:: line, restofline
+        character(256)                          :: version_string
 	character(len=10)			:: key, boundary_type !PWadded
 	integer						:: filestat
 	integer(1), allocatable		:: temp_list(:,:)
-	integer						:: extra
+	integer						:: extra,fdot
 	real(kind=prec)						:: deprecated
 
 	topo_read = .false.
@@ -561,7 +565,10 @@ logical function topo_read(u, require_version, extrabonds)
 			case ('DATE')
 				creation_date = restofline
 			case ('VERSION')
-				read(restofline, *) version
+				read(restofline, *) version_string
+                                fdot = string_part(version_string,'.',1) + 2
+                                fdot = string_part(version_string,'.',fdot)
+                                version = strtod(version_string(1:fdot))
 			case ('PDB_FILE')
 				pdb_file = restofline
 			case ('LIB_FILES')
@@ -1035,10 +1042,21 @@ logical function topo_read(u, require_version, extrabonds)
 		  write(*, '(a,f10.3)') 'Exclusion radius        = ', rexcl_o
       write(*, '(a,f10.3)') 'Restrained shell radius = ', rexcl_i
 		  write(*, '(a,f10.3)') 'Eff. solvent radius     = ', rwat
+! old version does not have rho in file, set to default
+        topo_rho_wat = 0.0335_prec
+        write(*, '(a,f12.8)') 'Solvent density set to default = ', topo_rho_wat
     else
-		  read(line, *, err=1000) rexcl_o, rwat
+        read (line,*,err=1000) rexcl_o, rwat
+! now try reading solvent density from next line
+        read (line,*,iostat=filestat) rexcl_o, rwat, topo_rho_wat        
+        if (filestat .ne. 0) then
+! ok, no info on solvent density
+          topo_rho_wat = 0.0335_prec
+          read (line,*,err=1000) rexcl_o, rwat
+        end if
 		  write(*, '(a,f10.3)') 'Exclusion radius        = ', rexcl_o
 		  write(*, '(a,f10.3)') 'Eff. solvent radius     = ', rwat
+                  write(*, '(a,f12.8)') 'Solvent density         = ', topo_rho_wat
     end if
 		read(unit=u, fmt=*, err=1000) xpcent(:)
 		write(*, '(a,3f10.3)') 'Solute centre           = ', xpcent(:)
@@ -1075,7 +1093,7 @@ subroutine topo_save(name)
 	!locals
 	integer						:: i, j, u, ig, si
 	integer(1), allocatable		:: temp_list(:,:)
-    real                        :: crgtot
+    real(kind=prec)                        :: crgtot
 
 10	format(a, t29,': ')
 20	format(i6)
@@ -1091,7 +1109,7 @@ subroutine topo_save(name)
 	write(u, '(a)') 'Q topology file'
 	if(title > '') write(u, 2) 'TITLE', trim(title)
 	write(u, 2) 'DATE', trim(creation_date)
-	write(u, '(a,t12,f5.2)') 'VERSION', MODULE_VERSION
+	write(u, '(a,t12,a)') 'VERSION', MODULE_VERSION
 	if(pdb_file > '') write(u, 2) 'PDB_FILE', trim(pdb_file)
 	if(lib_files > '') write(u, 2) 'LIB_FILES', trim(lib_files)
 	if(forcefield > '') write(u,2) 'FORCEFIELD', trim(forcefield)
@@ -1355,14 +1373,12 @@ subroutine topo_save(name)
 		write(u,'(3f8.3, a)') boxcentre(:), ' = Centre coordinate of box'
 	else !use simulation sphere
 		!radii & centres
-		write(u, '(2f8.3,a)') rexcl_o, rwat, &
-			' = Exclusion, solvent radii'
+		write(u, '(2f8.3,f12.8,a)') rexcl_o, rwat, topo_rho_wat,' = Exclusion, solvent radii, Solvent density'
 		write(u, '(3f8.3,a)') xpcent(:), ' = Solute centre'
 		write(u, '(3f8.3,a)') xwcent(:), ' = Solvent centre'
 		!exluded atoms
 		write(*, 10, advance='no') 'excluded atom list'
-		write(u, '(2i9,a)') nexats, nexwat, &
-			' = No. of excluded atoms (incl. water), no. of excluded waters'
+		write(u, '(2i9,a)') nexats, nexwat, ' = No. of excluded atoms (incl. water), no. of excluded waters'
 		write(u, fmt='(80l1)') excl(1:nat_pro)
 		write(*, 20) nexats
 	end if
