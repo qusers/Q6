@@ -16235,6 +16235,9 @@ do iw = ncgp_solute + 1, ncgp
                   erst = 0
                 end if
         end if
+        if (solvent_type .gt. 0) then
+                dv = dv / solv_atom
+        end if
 
         ! update energy and forces
         E%restraint%solvent_radial = E%restraint%solvent_radial + erst
@@ -16242,12 +16245,10 @@ do iw = ncgp_solute + 1, ncgp
                 jsolv = iw - ncgp_solute
                 i = nat_solute + solv_atom*jsolv - (solv_atom-1)
                 do isolv = 0 , solv_atom - 1
-                        if(heavy(i+isolv)) then
-                                i3 = 3*(i+isolv)-3
-                                d(i3+1) = d(i3+1) + dv*dr(1)
-                                d(i3+2) = d(i3+2) + dv*dr(2)
-                                d(i3+3) = d(i3+3) + dv*dr(3)
-                        end if
+                i3 = 3*(i+isolv)-3
+                d(i3+1) = d(i3+1) + dv*dr(1)
+                d(i3+2) = d(i3+2) + dv*dr(2)
+                d(i3+3) = d(i3+3) + dv*dr(3)
                 end do
         else
                 d(i3+1) = d(i3+1) + dv*dr(1)
