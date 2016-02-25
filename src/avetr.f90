@@ -10,7 +10,9 @@ module AVETR
 
 	integer, parameter             :: AVE_PDB = 11
 	integer(4), private            :: ncoords, N_sets = 0
-	real(kind=prec), allocatable, private  :: x_in(:), x_sum(:), x2_sum(:)
+! changed to use q vector structure to store coordinates
+! one element has all three coordinates
+	TYPE(qr_vec), allocatable, private  :: x_in(:), x_sum(:), x2_sum(:)
 	real(kind=prec), private               :: rmsd
 contains
 !TODO: *choose which frames, add more trajectories, divide x_sum every 100 steps
@@ -24,8 +26,12 @@ subroutine avetr_calc
   logical :: fin
   N_sets = 0
   call trajectory
-  ncoords = trj_get_ncoords()
-  allocate(x_in(ncoords), x_sum(ncoords), x2_sum(ncoords), &
+! number of coordinates is still natom*3
+! but store is now size of natom so we can
+! access everything by the atom index instead of 
+! having to play around with numbers
+  ncoords = trj_get_ncoords() 
+  allocate(x_in(ncoords/3), x_sum(ncoords/3), x2_sum(ncoords/3), &
 				stat=allocation_status)
   if (allocation_status .ne. 0) then
     write(*,*) 'Out of memory!'

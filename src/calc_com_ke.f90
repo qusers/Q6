@@ -19,29 +19,30 @@ module CALC_COM_KE
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type COM_KE_COORD_TYPE
-		real(kind=prec), pointer		::	x(:), y(:), z(:), mass(:)
+                TYPE(qr_vec), pointer    :: xyz(:)
+		real(kind=prec), pointer :: mass(:)
 	end type COM_KE_COORD_TYPE
 	type(COM_KE_COORD_TYPE), private	::	coords_mass(MAX_MASKS), prev_coords_mass(MAX_MASKS)
 
 	type COM_KE_VELOCITY_TYPE
-		real(kind=prec), pointer		::	x(:), y(:), z(:)
+		TYPE(qr_vec), pointer :: xyz
 	end type COM_KE_VELOCITY_TYPE
 	type(COM_KE_VELOCITY_TYPE), private	::	velocity(MAX_MASKS), rel_coords(MAX_MASKS), prev_rel_coords(MAX_MASKS),rad_vec(MAX_MASKS,3) !rel_coords is not velocities
 	
 	type COORD_TYPE
-		real(kind=prec), pointer		::	xyz(:)
+		TYPE(qr_vec), pointer :: xyz(:)
 	end type COORD_TYPE
 	type(COORD_TYPE), private	::	coords(MAX_MASKS), prev_coords(MAX_MASKS)
 
 	type DP_TYPE
-		real(kind=prec), pointer		::	dp(:)
+		TYPE(qr_vec), pointer :: dp(:)
 	end type DP_TYPE
 	type(DP_TYPE), private	::	dp_vect(MAX_MASKS)
 
 
 
 	type MASS_AVE_TYPE
-		real(kind=prec)		::	x,y,z
+		TYPE(qr_vec) :: xyz
 	end type MASS_AVE_TYPE
 	type(MASS_AVE_TYPE), private	::	mass_ave(MAX_MASKS), prev_mass_ave(MAX_MASKS) , ang_momentum(MAX_MASKS,3)
 	
@@ -107,26 +108,22 @@ integer function COM_KE_add(desc)
 		return
 	end if
 
-	allocate(coords(Nmasks)%xyz(3*ats), prev_coords(Nmasks)%xyz(3*ats))
-	allocate(coords_mass(Nmasks)%x(ats), coords_mass(Nmasks)%y(ats), coords_mass(Nmasks)%z(ats), coords_mass(Nmasks)%mass(ats))
-	allocate(prev_coords_mass(Nmasks)%x(ats), prev_coords_mass(Nmasks)%y(ats))
-	allocate(prev_coords_mass(Nmasks)%z(ats), prev_coords_mass(Nmasks)%mass(ats))
-	allocate(velocity(Nmasks)%x(ats), velocity(Nmasks)%y(ats), velocity(Nmasks)%z(ats))
-	allocate(rel_coords(Nmasks)%x(ats), rel_coords(Nmasks)%y(ats), rel_coords(Nmasks)%z(ats))
-	allocate(dp_vect(Nmasks)%dp(ats) ,prev_rel_coords(Nmasks)%x(ats))
-	allocate(prev_rel_coords(Nmasks)%y(ats), prev_rel_coords(Nmasks)%z(ats))
+	allocate(coords(Nmasks)%xyz(ats), prev_coords(Nmasks)%xyz(ats))
+	allocate(coords_mass(Nmasks)%xyz(ats), coords_mass(Nmasks)%mass(ats))
+	allocate(prev_coords_mass(Nmasks)%xyz(ats), prev_coords_mass(Nmasks)%mass(ats))
+	allocate(velocity(Nmasks)%xyz(ats))
+	allocate(rel_coords(Nmasks)%xyz(ats))
+	allocate(dp_vect(Nmasks)%dp(ats) ,prev_rel_coords(Nmasks)%xyz(ats))
 
 	do j=1,3
-		allocate(rad_vec(Nmasks,j)%x(ats),rad_vec(Nmasks,j)%y(ats),rad_vec(Nmasks,j)%z(ats))
+		allocate(rad_vec(Nmasks,j)%xyz(ats))
 	end do
 
 
 
-	coords_mass(Nmasks)%x(:) = 0
-	coords_mass(Nmasks)%y(:) = 0
-	coords_mass(Nmasks)%z(:) = 0
-	coords_mass(Nmasks)%mass(:) = 0
-	coords(Nmasks)%xyz(:) = 0
+	coords_mass(Nmasks)%xyz(:)  = zero
+	coords_mass(Nmasks)%mass(:) = zero
+	coords(Nmasks)%xyz(:) = zero
 	
 	frames(Nmasks) = 0
 	call COM_KE_put_mass(Nmasks)
@@ -143,7 +140,7 @@ subroutine COM_KE_calc(i)
 	real(kind=prec)	:: A(3,3), B(3), W(30), K(6), C(6)
 
 	!locals
-	real(8)						::	KE, IXX, IXY, IXZ, IYY, IYZ, IZZ, tot_KE_rot
+	real(kind=prec)	::	KE, IXX, IXY, IXZ, IYY, IYZ, IZZ, tot_KE_rot
 
 	if(i < 1 .or. i > Nmasks) return
 
@@ -159,45 +156,41 @@ subroutine COM_KE_calc(i)
 	end if		
 
 	!split coords into x, y, and z coords
-	coords_mass(i)%x = coords(i)%xyz(1::3)
-	coords_mass(i)%y = coords(i)%xyz(2::3)
-	coords_mass(i)%z = coords(i)%xyz(3::3)
-	prev_coords_mass(i)%x = prev_coords(i)%xyz(1::3)
-	prev_coords_mass(i)%y = prev_coords(i)%xyz(2::3)
-	prev_coords_mass(i)%z = prev_coords(i)%xyz(3::3)
+	coords_mass(i)%xyz = coords(i)%xyz
+	prev_coords_mass(i)%xyz = prev_coords(i)%xyz
 	
 
 	!calculate center of mass
-	mass_ave(i)%x = dot_product(coords_mass(i)%x(:),coords_mass(i)%mass)/tot_mass(i)
-	mass_ave(i)%y = dot_product(coords_mass(i)%y(:),coords_mass(i)%mass)/tot_mass(i)
-	mass_ave(i)%z = dot_product(coords_mass(i)%z(:),coords_mass(i)%mass)/tot_mass(i)
-	prev_mass_ave(i)%x = dot_product(prev_coords_mass(i)%x(:),coords_mass(i)%mass)/tot_mass(i)
-	prev_mass_ave(i)%y = dot_product(prev_coords_mass(i)%y(:),coords_mass(i)%mass)/tot_mass(i)
-	prev_mass_ave(i)%z = dot_product(prev_coords_mass(i)%z(:),coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%xyz%x = dot_product(coords_mass(i)%xyz(:)%x,coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%xyz%y = dot_product(coords_mass(i)%xyz(:)%y,coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%xyz%z = dot_product(coords_mass(i)%xyz(:)%z,coords_mass(i)%mass)/tot_mass(i)
+	prev_mass_ave(i)%xyz%x = dot_product(prev_coords_mass(i)%xyz(:)%x,coords_mass(i)%mass)/tot_mass(i)
+	prev_mass_ave(i)%xyz%y = dot_product(prev_coords_mass(i)%xyz(:)%y,coords_mass(i)%mass)/tot_mass(i)
+	prev_mass_ave(i)%xyz%z = dot_product(prev_coords_mass(i)%xyz(:)%z,coords_mass(i)%mass)/tot_mass(i)
 
 
 	!create coordinate set relative mass center
-	rel_coords(i)%x = coords_mass(i)%x - mass_ave(i)%x
-	rel_coords(i)%y = coords_mass(i)%y - mass_ave(i)%y
-	rel_coords(i)%z = coords_mass(i)%z - mass_ave(i)%z
-	prev_rel_coords(i)%x = prev_coords_mass(i)%x - prev_mass_ave(i)%x
-	prev_rel_coords(i)%y = prev_coords_mass(i)%y - prev_mass_ave(i)%y
-	prev_rel_coords(i)%z = prev_coords_mass(i)%z - prev_mass_ave(i)%z
+	rel_coords(i)%xyz%x = coords_mass(i)%xyz%x - mass_ave(i)%xyz%x
+	rel_coords(i)%xyz%y = coords_mass(i)%xyz%y - mass_ave(i)%xyz%y
+	rel_coords(i)%xyz%z = coords_mass(i)%xyz%z - mass_ave(i)%xyz%z
+	prev_rel_coords(i)%xyz%x = prev_coords_mass(i)%xyz%x - prev_mass_ave(i)%xyz%x
+	prev_rel_coords(i)%xyz%y = prev_coords_mass(i)%xyz%y - prev_mass_ave(i)%xyz%y
+	prev_rel_coords(i)%xyz%z = prev_coords_mass(i)%xyz%z - prev_mass_ave(i)%xyz%z
 
 
 	!calculate moment of inertia tensor
-	IXX = dot_product( (rel_coords(i)%y)**2 + (rel_coords(i)%z)**2, coords_mass(i)%mass)
-	IYY = dot_product( (rel_coords(i)%x)**2 + (rel_coords(i)%z)**2, coords_mass(i)%mass)
-	IZZ = dot_product( (rel_coords(i)%y)**2 + (rel_coords(i)%x)**2, coords_mass(i)%mass)
-	IXY = -1._8 * sum( (rel_coords(i)%y) * (rel_coords(i)%x) * coords_mass(i)%mass )
-	IXZ = -1._8 * sum( (rel_coords(i)%x) * (rel_coords(i)%z) * coords_mass(i)%mass )
-	IYZ = -1._8 * sum( (rel_coords(i)%y) * (rel_coords(i)%z) * coords_mass(i)%mass )
+	IXX = dot_product( (rel_coords(i)%xyz%y)**2 + (rel_coords(i)%xyz%z)**2, coords_mass(i)%mass)
+	IYY = dot_product( (rel_coords(i)%xyz%x)**2 + (rel_coords(i)%xyz%z)**2, coords_mass(i)%mass)
+	IZZ = dot_product( (rel_coords(i)%xyz%y)**2 + (rel_coords(i)%xyz%x)**2, coords_mass(i)%mass)
+	IXY = -1.0_prec * sum( (rel_coords(i)%xyz%y) * (rel_coords(i)%xyz%x) * coords_mass(i)%mass )
+	IXZ = -1.0_prec * sum( (rel_coords(i)%xyz%x) * (rel_coords(i)%xyz%z) * coords_mass(i)%mass )
+	IYZ = -1.0_prec * sum( (rel_coords(i)%xyz%y) * (rel_coords(i)%xyz%z) * coords_mass(i)%mass )
 	
 
 	!calculate individual atom (relative?) velocities
-	velocity(i)%x = (rel_coords(i)%x - prev_rel_coords(i)%x) / frame_length
-	velocity(i)%y = (rel_coords(i)%y - prev_rel_coords(i)%y) / frame_length
-	velocity(i)%z = (rel_coords(i)%z - prev_rel_coords(i)%z) / frame_length
+	velocity(i)%xyz%x = (rel_coords(i)%xyz%x - prev_rel_coords(i)%xyz%x) / frame_length
+	velocity(i)%xyz%y = (rel_coords(i)%xyz%y - prev_rel_coords(i)%xyz%y) / frame_length
+	velocity(i)%xyz%z = (rel_coords(i)%xyz%z - prev_rel_coords(i)%xyz%z) / frame_length
 
 
 
@@ -228,9 +221,9 @@ subroutine COM_KE_calc(i)
 		    rel_coords(i)%y + eigen_stuff(i)%evector(3,j) * &
 		    rel_coords(i)%z
 
-		rad_vec(i,j)%x = rel_coords(i)%x - dp_vect(i)%dp*eigen_stuff(i)%evector(1,j)
-		rad_vec(i,j)%y = rel_coords(i)%y - dp_vect(i)%dp*eigen_stuff(i)%evector(2,j)
-		rad_vec(i,j)%z = rel_coords(i)%z - dp_vect(i)%dp*eigen_stuff(i)%evector(3,j)
+		rad_vec(i,j)%xyz%x = rel_coords(i)%xyz%x - dp_vect(i)%dp%x*eigen_stuff(i)%evector(1,j)
+		rad_vec(i,j)%xyz%y = rel_coords(i)%xyz%y - dp_vect(i)%dp%y*eigen_stuff(i)%evector(2,j)
+		rad_vec(i,j)%xyz%z = rel_coords(i)%xyz%z - dp_vect(i)%dp%z*eigen_stuff(i)%evector(3,j)
 
 	end do
 	!now rad_vec(i,j)%x,y,z contains all the vectors of each atom to the principal axis j
