@@ -17194,10 +17194,11 @@ old_boxl(:) = boxlength(:)
 old_inv(:) = inv_boxl(:)
 
 !qatom stuff
-old_EMorseD = EMorseD
-old_dMorse_i = dMorse_i
-old_dMorse_j = dMorse_j
-
+if(nqat.gt.0) then
+        old_EMorseD = EMorseD
+        old_dMorse_i = dMorse_i
+        old_dMorse_j = dMorse_j
+end if
 !shake stuff
 old_xx(:) = xx(:)
 
@@ -17253,7 +17254,7 @@ call new_potential(previous_E)   !compute energies from previous md-step
 
 if (nodeid .eq. 0 ) then
 	old_E = E                !Update to fresh E before changing volume
-	old_EQ(1:nstates) = EQ(1:nstates)
+        if (nqat.gt.0)	old_EQ(1:nstates) = EQ(1:nstates)
 	old_V = old_boxl(1) * old_boxl(2) * old_boxl(3)
 
 
@@ -17427,10 +17428,12 @@ else
         EQ(1:nstates) = old_EQ(1:nstates)
         boxlength(:) = old_boxl(:)
         inv_boxl(:) = old_inv(:)
-        EMorseD = old_EMorseD
-	dMorse_i = old_dMorse_i
-	dMorse_j = old_dMorse_j
-
+        if(nqat.gt.0) then
+                EQ(1:nstates) = old_EQ(1:nstates)
+                EMorseD = old_EMorseD
+        	dMorse_i = old_dMorse_i
+        	dMorse_j = old_dMorse_j
+        end if
 	xx(:) = old_xx(:)
 
 	if (use_LRF) then
