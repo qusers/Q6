@@ -5,7 +5,7 @@
 !TODO: precision not fixed
 
 MODULE PREP
-
+	use BONDED
 	use TRJ
 	use PARSE
 	use PRMFILE
@@ -164,9 +164,9 @@ MODULE PREP
 
 	integer, allocatable		::	iconn(:,:)
 
-	real(kind=prec)						::	pi, deg2rad
+!	real(kind=prec)						::	pi, deg2rad
 	!temporary storage for solvent coordinates
-	real(kind=prec), allocatable		::	xw(:,:,:) !solvent coordinates zyx,atom,molecule
+	TYPE(qr_vec) allocatable		::	xw(:,:) !solvent coordinates atom,molecule
 	!flag for solvent molecules not clashing with any solute heavy atom
 	logical, allocatable		::	keep(:)
 	!residue code for solvent
@@ -224,8 +224,8 @@ subroutine prep_startup
 	l = pref_add('solute_density', rval=rho_solute)
 	l = pref_add('random_seed_solute', ival=random_seed_solute)
 	l = pref_add('random_seed_solvent', ival=random_seed_solvent)
-	pi = 4.0_prec * atan(1.0_prec)
-	deg2rad = pi/180.0_prec
+!	pi = 4.0_prec * q_atan(one)
+!	deg2rad = pi/180.0_prec
 
 	!make sure all arrays are allocated so that solvation can be done
 	!without reading solute pdb file
@@ -239,7 +239,7 @@ end subroutine prep_startup
 subroutine allocate_for_pdb(atoms, residues, molecules)
 !arguments
 	integer, intent(in)			::	atoms, residues, molecules
-	allocate(xtop(3*atoms), heavy(atoms), makeH(atoms), &
+	allocate(xtop(atoms), heavy(atoms), makeH(atoms), &
 		res(residues), istart_mol(molecules), &
 		stat=alloc_status)
 
@@ -284,10 +284,10 @@ end subroutine check_alloc
 
 subroutine addbond
 ! *** local variables
-	integer						::	ia, ja
-	real(kind=prec)						::	bond_dist, rij(3)
-	character(len=80)			::	reply
-	integer						::	readstat
+	integer			::	ia, ja
+	TYPE(bond_val)		::	bond_dist
+	character(len=80)	::	reply
+	integer			::	readstat
 
 	call get_string_arg(reply, &
 		'-----> First atom (number or residue:atom_name): ')
@@ -331,10 +331,9 @@ subroutine addbond
 		write(*,'(a)') 'First and second atom must be different!'
 		return
 	end if
-	rij(:) = xtop(3*ia-2:3*ia) - xtop(3*ja-2:3*ja)
-	bond_dist = sqrt(dot_product(rij,rij))
-	if(bond_dist >  max_xlink) then
-		write(*,100) bond_dist
+	bond_dist = bond_calc(xtop(ia),xtop(ja))
+	if(bond_dist%dist >  max_xlink) then
+		write(*,100) bond_dist%dist
 100		format('>>> WARNING: Bond distance is',f6.2,' A.')
 		call get_string_arg(reply, '-----> Make bond anyway (y/n)? ')
 		call upcase(reply)
@@ -364,9 +363,9 @@ end subroutine clearbond
 
 subroutine angle_ene(emax, nlarge, av_ene)
 ! *** local variables
-	integer i, j, k, ia, ic, istart, iend, i3, j3, k3, nlarge
-	real(kind=prec) rji(3), rjk(3), bji, bjk, scp, angle, da, ae, dv, f1, di(3),&
-	dk(3)
+	integer		:: i, j, k, ia, ic, istart, iend, nlarge
+	real(kind=prec)	:: da, ae
+        TYPE(angl_val)  :: angle
 	real(kind=prec) emax, av_ene
 
 
@@ -385,30 +384,14 @@ subroutine angle_ene(emax, nlarge, av_ene)
 		write(*, '(4i5,1x,a)') ia, i, j, k, 'MISSING PARAMETERS'
 		cycle
 	end if
-	i3 = i * 3 - 3
-	j3 = j * 3 - 3
-	k3 = k * 3 - 3
-	rji(1) = xtop(i3 + 1) - xtop(j3 + 1)
-	rji(2) = xtop(i3 + 2) - xtop(j3 + 2)
-	rji(3) = xtop(i3 + 3) - xtop(j3 + 3)
-	rjk(1) = xtop(k3 + 1) - xtop(j3 + 1)
-	rjk(2) = xtop(k3 + 2) - xtop(j3 + 2)
-	rjk(3) = xtop(k3 + 3) - xtop(j3 + 3)
-	bji = sqrt(rji(1) **2 + rji(2) **2 + rji(3) **2)
-	bjk = sqrt(rjk(1) **2 + rjk(2) **2 + rjk(3) **2)
-	scp =(rji(1) * rjk(1) + rji(2) * rjk(2) + rji(3) * rjk(3) )
-	scp = scp /(bji * bjk)
-	if(scp>one) scp = one
-	if(scp< -one) scp = -one
-	angle = acos(scp)
-	da = angle - anglib(ic)%ang0 * pi / 180.0_prec
+	angle = angle_calc(xtop(i),xtop(j),xtop(k))
+	da    = angle%angl - anglib(ic)%ang0 * deg2rad
 	ae = 0.5_prec * anglib(ic)%fk * da**2.0_prec
 	av_ene = av_ene+ae
-
 	if(ae>emax) then
 		nlarge = nlarge+1
 		write( * , '(5i5,4f8.2)') ia, i, j, k, ic, anglib(ic)%fk ,&
-			anglib(ic)%ang0, angle * 180.0_prec / pi, ae
+			anglib(ic)%ang0, angle%angl * rad2deg, ae
 	endif
 
 	enddo
@@ -453,8 +436,9 @@ end function anglecode
 
 subroutine bond_ene(emax, nlarge, av_ene)
 ! *** local variables
-	integer i, j, ib, ic, istart, iend, i3, j3, nlarge
-	real(kind=prec) rij(3), b, db, be, dv, emax, av_ene
+	integer		:: i, j, ib, ic, istart, iend, nlarge
+	TYPE(bond_val)	:: bond
+	real(kind=prec)	::db, be, emax, av_ene
 
 !.......................................................................
 
@@ -472,21 +456,15 @@ subroutine bond_ene(emax, nlarge, av_ene)
 		write(*, '(3i5,1x,a)') ib, i, j,  'MISSING PARAMETERS'
 		cycle
 	end if
-
-	i3 = i * 3 - 3
-	j3 = j * 3 - 3
-	rij(1) = xtop(j3 + 1) - xtop(i3 + 1)
-	rij(2) = xtop(j3 + 2) - xtop(i3 + 2)
-	rij(3) = xtop(j3 + 3) - xtop(i3 + 3)
-	b = sqrt(rij(1) **2 + rij(2) **2 + rij(3) **2)
-	db = b - bondlib(ic)%bnd0
-	be = 0.5_prec * bondlib(ic)%fk * db**2.0_prec
+	bond = bond_calc(xtop(i),xtop(j))
+	db   = bond%dist - bondlib(ic)%bnd0
+	be   = 0.5_prec * bondlib(ic)%fk * db**2.0_prec
 	av_ene = av_ene+be
 
 	if(be>emax) then
 		nlarge = nlarge+1
 		write( * , '(4i5,4f8.2)') ib, i, j, ic, bondlib(ic)%fk,&
-			bondlib(ic)%bnd0, b, be
+			bondlib(ic)%bnd0, bond%dist, be
 	endif
 
 	enddo
@@ -689,25 +667,13 @@ subroutine checktors
 end subroutine checktors
 
 !-----------------------------------------------------------------------
-
-function cross_product(a,b)
-	real(kind=prec)						::	a(3), b(3), cross_product(3)
-
-	cross_product(1) = a(2) * b(3) - a(3) * b(2)
-	cross_product(2) = a(3) * b(1) - a(1) * b(3)
-	cross_product(3) = a(1) * b(2) - a(2) * b(1)
-end function cross_product
-
-!-----------------------------------------------------------------------
-
-
 subroutine xlink
 !add cross-linking bonds like SS-bridges
 !locals
-	integer						::	ires, jres, iat, jat, i, j, b
-	integer						::	irc, jrc
-	real(kind=prec)						::	d2
-	character(len=1)			::	reply
+	integer			::	ires, jres, iat, jat, i, j, b
+	integer			::	irc, jrc
+	TYPE(qr_dist)		::	dist
+	character(len=1)	::	reply
 
 	if(.not. check_residues()) then
 		return
@@ -734,10 +700,10 @@ subroutine xlink
 jloop:			do jat=1, lib(jrc)%nat-1
 					j = jat+res(jres)%start-1
 					if(.not. heavy(j)) cycle !skip hydrogens
+					
 					!check distance
-					d2=(xtop(3*i-2)-xtop(3*j-2))**2+ &
-						(xtop(3*i-1)-xtop(3*j-1))**2+(xtop(3*i)-xtop(3*j))**2
-					if(d2 < max_xlink**2) then
+					dist = q_dist(xtop(i),xtop(j))
+					if(dist%r < max_xlink) then
 						!found atom pair within limit Å, loop over all bonds
 						do b=1, nbonds
 							if(bnd(b)%i == i .and. bnd(b)%j == j) cycle jloop
@@ -747,7 +713,7 @@ jloop:			do jat=1, lib(jrc)%nat-1
 						write(*,100, advance='no') i, trim(lib(irc)%nam), &
 							ires, trim(lib(irc)%atnam(iat)), &
 							j, trim(lib(jrc)%nam), jres, &
-							trim(lib(jrc)%atnam(jat)), sqrt(d2)
+							trim(lib(jrc)%atnam(jat)), dist%r
 						!add
 						read(*,*) reply
 						if(reply=='N' .or. reply=='n') cycle
@@ -1119,9 +1085,9 @@ end function impcode
 
 subroutine impr_ene(emax, nlarge, av_ene, mode)
 ! *** local variables
-	integer i, j, k, l, ip, ic, i3, j3, k3, l3, nlarge, mode
-	real(kind=prec) rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
-	phi, sgn, pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
+	integer		:: i, j, k, l, ip, ic, nlarge, mode
+	TYPE(tors_val)	:: improper
+	real(kind=prec)	:: pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
 	dl(3)
 	real(kind=prec) emax, av_ene
 
@@ -1141,46 +1107,18 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 			write(*, '(5i5,1x,a)') ip, i, j, k, l, 'MISSING PARAMETERS'
 			cycle
 		end if
-		i3 = i * 3 - 3
-		j3 = j * 3 - 3
-		k3 = k * 3 - 3
-		l3 = l * 3 - 3
-		rji(1) = xtop(i3 + 1) - xtop(j3 + 1)
-		rji(2) = xtop(i3 + 2) - xtop(j3 + 2)
-		rji(3) = xtop(i3 + 3) - xtop(j3 + 3)
-		rjk(1) = xtop(k3 + 1) - xtop(j3 + 1)
-		rjk(2) = xtop(k3 + 2) - xtop(j3 + 2)
-		rjk(3) = xtop(k3 + 3) - xtop(j3 + 3)
-		rkl(1) = xtop(l3 + 1) - xtop(k3 + 1)
-		rkl(2) = xtop(l3 + 2) - xtop(k3 + 2)
-		rkl(3) = xtop(l3 + 3) - xtop(k3 + 3)
-		rnj(1) = rji(2) * rjk(3) - rji(3) * rjk(2)
-		rnj(2) = rji(3) * rjk(1) - rji(1) * rjk(3)
-		rnj(3) = rji(1) * rjk(2) - rji(2) * rjk(1)
-		rnk(1) = - rjk(2) * rkl(3) + rjk(3) * rkl(2)
-		rnk(2) = - rjk(3) * rkl(1) + rjk(1) * rkl(3)
-		rnk(3) = - rjk(1) * rkl(2) + rjk(2) * rkl(1)
-		bj = sqrt(rnj(1) **2.0_prec + rnj(2) **2.0_prec + rnj(3) **2.0_prec)
-		bk = sqrt(rnk(1) **2.0_prec + rnk(2) **2.0_prec + rnk(3) **2.0_prec)
-		scp =(rnj(1) * rnk(1) + rnj(2) * rnk(2) + rnj(3) * rnk(3) )/(bj * bk)
-		if(scp>one) scp = one
-		if(scp< -one) scp = -one
-		phi = acos(scp)
-		sgn = rjk(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) + rjk(2)&
-		*(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) + rjk(3) *(rnj(1)   &
-		* rnk(2) - rnj(2) * rnk(1) )
-		if(sgn<zero) phi = - phi
+		improper = improper_calc(xtop(i),xtop(j),xtop(k),xtop(l))
 
 ! ---	energy
 		if(imp_type == 1) then !harmonic
-			arg = phi - implib(ic)%imp0 * pi / 180.0_prec
+			arg = improper_calc%angl - implib(ic)%imp0 * deg2rad
 			arg = arg - 2.0_prec * pi * nint(arg /(2.0_prec * pi) )
 			dv = implib(ic)%fk * arg
 			pe = 0.5_prec * dv * arg
 		else !periodic
-			arg = 2.0_prec*phi - implib(ic)%imp0 * pi / 180.0_prec
-			pe = implib(ic)%fk * (1 + cos(arg))
-			dv = -2.0_prec*implib(ic)%fk * sin(arg)
+			arg = 2.0_prec*improper_calc%angl - implib(ic)%imp0 * deg2rad
+			pe = implib(ic)%fk * (1 + q_cos(arg))
+			dv = -2.0_prec*implib(ic)%fk * q_sin(arg)
 		end if
 
 		av_ene = av_ene+pe
@@ -1188,7 +1126,7 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 		if(pe>emax) then
 			nlarge = nlarge+1
 			if(mode==0) write( * , '(6i5,5f8.2)') ip, i, j, k, l, ic, &
-			implib(ic)%fk , implib(ic)%imp0 , phi * 180.0_prec / pi, pe
+			implib(ic)%fk , implib(ic)%imp0 , improper_calc%angl * rad2deg, pe
 			if(mode==1) then
 				imp(ip)%i = i
 				imp(ip)%j = j
@@ -1730,14 +1668,13 @@ integer function genH(j, residue)
 !arguments
 	integer, intent(in)			::	j, residue
 !locals
-	real(kind=prec)						::	xj(3), xk(3)
-	integer						::	ligand, H, kt, lt
-	real(kind=prec)						::	old_xH(3), xH(3), V, Vtot, dV(3), dvLast(3), gamma, dVtot(3)
-	real(kind=prec)						::	VtotLast
-	real(kind=prec)						::	dx(3), dx_line, rms_dV
-	real(kind=prec),parameter			::	convergence_criterum = 0.1_prec
-	real(8),parameter			::	dV_scale = 0.025_prec
-	real(8),parameter			::	max_dx = 1.0_prec !max_dx is max distance of line search step in first CG iteration (Å)
+	TYPE(qr_vec)			:: xj, xk, old_xH, xH, dV, dvLast, dx, dVtot
+	TYPE(qr_dist			:: bond_length
+	real(kind=prec)			:: V, Vtot, gamma, VtotLast, dx_line, rms_dV
+	integer				::	ligand, H, kt, lt
+	real(kind=prec),parameter	::	convergence_criterum = 0.1_prec
+	real(kind=prec),parameter	::	dV_scale = 0.025_prec
+	real(kind=prec),parameter	::	max_dx = one !max_dx is max distance of line search step in first CG iteration (Å)
 	real(kind=prec)						::	local_min = 30
 	real(kind=prec)						::	tors_fk = 10.0_prec
 	integer, parameter			::	max_cg_iterations = 100, max_line_iterations = 35
@@ -1747,19 +1684,19 @@ integer function genH(j, residue)
 	integer						::	Hang_code(max_conn)
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
-	integer						::	a, b, axis
-	real(kind=prec)						::	bond_length, db
-	real(kind=prec)						::	rjH(3), rjk(3), bjHinv, bjkinv
-	real(kind=prec)						::	scp, angle, angle_deg, dVangle, da, f1
-	real(kind=prec)						::	xkt(3), xlt(3), rjkt(3), rktlt(3)
-	real(kind=prec)						::	rnj(3), rnk(3), bj, bk
-	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
-	logical						::	flipped
+	integer					::	a, b, axis
+	real(kind=prec)				::	bond_length, db
+	real(kind=prec)				::	rjH(3), rjk(3), bjHinv, bjkinv
+	real(kind=prec)				::	scp, angle, angle_deg, dVangle, da, f1
+	TYPE(qr_vec)				::	xkt, xlt, rjkt, rktlt, rnj, rnk
+	real(kind=prec)				::	bj, bk
+	real(kind=prec)				::	phi, phi_deg, sgn, dVtors, arg, dH(3)
+	logical					::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
 
 	genH = 0
-	xj(:) = xtop(3*j-2:3*j)
+	xj = xtop(j)
 
 	!First find the bond, angle and torsion parameters to use
 
@@ -1810,29 +1747,24 @@ integer function genH(j, residue)
 					end if
 				end if
 			end do
-
+! only need to define atoms, calc later with torsion_calc
 			!find the torsion rule defined in the library, if any
 			if(rule > 0) then
 				kt = lp%rules(rule)%atom(3) + res(residue)%start - 1
 				lt = lp%rules(rule)%atom(4) + res(residue)%start - 1
-				xkt(:) = xtop(3*kt-2:3*kt)
-				xlt(:) = xtop(3*lt-2:3*lt)
-				rjkt(:) = xkt(:) - xj(:)
-				rktlt(:) = xlt(:) - xkt(:)
-				rnk(:) = -cross_product(rjkt, rktlt)
-				bk = sqrt(dot_product(rnk, rnk))
+				xkt = xtop(kt)
+				xlt = xtop(lt)
 			end if
 			!generate initial co-ordinates for H
 			!random vector
-			do axis = 1,3
-				xH(axis) = randm() - 0.5_prec
-			end do
+			xH%x = randm() - 0.5_prec
+			xH%y = randm() - 0.5_prec
+			xH%z = randm() - 0.5_prec
 			!normalise to unit length and scale by bond length from lib.
-			bond_length = sqrt(dot_product(xH,xH))
-			xH(:) = xH(:) / bond_length * bnd0
+			bond_length = q_sqrt(q_dotprod(xH,xH))
+			xH = xH / bond_length * bnd0
 			!place near atom j
-			xH(:) = xH(:) + xj(:)
-!			write(*,800) 0,H,xH(:)
+			xH = xH + xj
 			!conjugate gradient minimisation
 			do setH = 1,nsetH
 			do cgiter = 1, max_cg_iterations
@@ -1842,121 +1774,84 @@ integer function genH(j, residue)
 				dx_line = max_dx*2.0_prec**(-cgiter)
 				flipped = .false.
 				do lineiter = 1, max_line_iterations
-					Vtot = zero
-					dVtot(:) = zero
+					Vtot  = zero
+					dVtot = zero
 					!calc. potential & gradient
 					!angles
-					rjH(:) = xH(:) - xj(:)
 					do a = 1, nHang
-						xk(:) = xtop(3*Hang_atom(a)-2:3*Hang_atom(a))
-						rjk(:) = xk(:) - xj(:)
-						bjHinv = one/sqrt(dot_product(rjH, rjH))
-						bjkinv = one/sqrt(dot_product(rjk, rjk))
-						! calculate scp and angv
-						scp = dot_product(rjH, rjk) * bjHinv*bjkinv
-						if(scp >  one) then
-							scp =  one
-						else if(scp < -one) then
-							scp = -one
-						end if
-						angle = acos(scp)
-						angle_deg = angle / deg2rad
+						xk    = xtop(Hang_atom(a))
+						angle = angle_calc(xH,xj,xk)
+						angle_deg = angle%angl * rad2deg
 						! calculate da and dv
-						da = angle - anglib(Hang_code(a))%ang0*deg2rad
+						da = angle%angl - anglib(Hang_code(a))%ang0*deg2rad
 						V = 0.5_prec*anglib(Hang_code(a))%fk*da**2
 						Vtot = Vtot + V
 						dVangle = anglib(Hang_code(a))%fk*da
-						! calculate f1
-						f1 = sin ( angle )
-						! avoid division by zero
-						if ( abs(f1) < 1.e-12_prec ) then
-							f1 = -1.e12_prec
-						else
-							f1 =  -one / f1
-						end if
-						dV(:) = dVangle &
-							* (f1*(rjk(:)*bjHinv*bjkinv - scp*rjH(:)*bjHinv*bjHinv))
-						dVtot(:) = dVtot(:) + dV(:)
+						dV    = angle%a_vec * dVangle
+						dVtot = dVtot + dV
 					end do
 
 					!torsion
 					if(rule > 0) then
-						rnj(1) = rjH(2) * rjkt(3) - rjH(3) * rjkt(2)
-						rnj(2) = rjH(3) * rjkt(1) - rjH(1) * rjkt(3)
-						rnj(3) = rjH(1) * rjkt(2) - rjH(2) * rjkt(1)
-						bj = sqrt(dot_product(rnj, rnj))
-						scp =dot_product(rnj, rnk)/(bj * bk)
-						if(scp>one) scp = one
-						if(scp< -one) scp = -one
-						phi = acos(scp)
-						phi_deg = phi / deg2rad
-						sgn = rjkt(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) &
-							+ rjkt(2) *(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) &
-							+ rjkt(3) *(rnj(1) * rnk(2) - rnj(2) * rnk(1) )
-						if(sgn<0) phi = - phi
-						arg = phi-lp%rules(rule)%value*deg2rad
-						V = tors_fk*(one+cos(arg))
+						torsion = torsion_calc(xH,xj,xkt,xlt)
+						arg = torsion_calc%angl-lp%rules(rule)%value*deg2rad
+						V = tors_fk*(one+q_cos(arg))
 						!note changed sign of dVtors to get min (not max) at rule value
-						dVtors = +tors_fk*sin(arg)
+						dVtors = +tors_fk*q_sin(arg)
 
 						! ---       forces
-
-						f1 = sin ( phi )
-						if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-						f1 =  -one/ f1
-						dH(:) = f1*(rnk(:)/(bj*bk) - scp*rnj(:)/(bj*bj))
-						dV(:) = dVtors*cross_product(rjk, dH)
-						dVtot(:) = dVtot(:) + dV(:)
+						dV    = torsion_calc%a_vec * dVtors
+						dVtot = dVtot + dV
 					end if
 					if(cgiter == 1 .and. lineiter == 1) then
 						!its the start of the search, use the gradient vector
-						dvLast(:) = dVtot(:)
+						dvLast = dVtot
 					elseif(VtotLast < Vtot) then
 						dx_line = -dx_line !next step back
 						flipped = .true.
 					endif
-					rms_dV = sqrt(abs(dot_product(dVtot, dVLast)))
+					rms_dV = q_sqrt(abs(q_dotprod(dVtot, dVLast)))
 					if(rms_dV < convergence_criterum / 10) then
 						exit !reached a potential minimum along the search line
 					endif
 
 					!update position in line search
-					dx(:) = -dVLast(:) / sqrt(dot_product(dVlast, dVLast)) * dx_line
+					dx = -dVLast / q_sqrt(q_dotprod(dVlast, dVLast)) * dx_line
 					if(flipped) dx_line = 0.5_prec * dx_line !reduce step size only after first change of direction
 					VtotLast = Vtot
-					xH(:) = xH(:) + dx(:)
+					xH = xH + dx
 				end do !lineiter
 
 !				write(*,*) lineiter
 
-				rjH(:) = xH(:) - xj(:)
-				bond_length = sqrt(dot_product(rjH, rjH))
-				rjH(:) = rjH(:) / bond_length * bnd0      !adjust bond length
-				xH(:) = xj(:) + rjH(:)
-				rms_dV = sqrt(dot_product(dVtot,dVtot))
+				rjH = qvec_sub(xH,xj)
+				bond_length = qr_dist(xH,xj)%dist
+				rjH = rjH / bond_length * bnd0      !adjust bond length
+				xH  = xj + rjH
+				rms_dV = q_sqrt(q_dotprod(dVtot,dVtot))
 				if(rms_dV <  convergence_criterum) then
 					if(Vtot < local_min) then
 						!found global min
 						exit
 					else
 						!it's a local min - flip 180 deg.
-						dVlast(:) = -dVlast(:)
-						xH(:) = xj(:) - rjH(:)
+						dVlast = -dVlast
+						xH = qvec_sub(xj,rjH)
 					end if
 				end if
 
 				!get new gradient search direction
-				gamma = dot_product(dVtot, dVlast) / dot_product(dVlast, dVlast)
+				gamma = q_dotprod(dVtot, dVlast) / q_dotprod(dVlast, dVlast)
 				!use conjugate gradient
-				dVlast(:) = dVtot(:) - gamma*dVlast(:)
+				dVlast = dVtot - gamma*dVlast
 
 			end do  !cgiter
 
 				!Check if local min -> restart iteration ; problem with conversion
 					if(Vtot > local_min) then
 						!it's a local min - flip 180 deg.
-						dVlast(:) = -dVlast(:)
-						xH(:) = xj(:) - rjH(:)
+						dVlast = -dVlast
+						xH = qvec_sub(xj,rjH)
 					else
 					exit
 					end if
@@ -1970,7 +1865,7 @@ integer function genH(j, residue)
 					'Potential is ',f8.3,' kcal/mol.')
 			end if
 			!copy coordinates to topology
-			xtop(3*H-2:3*H) = xH(:)
+			xtop(H) = xH
 			!clear makeH flag
 			makeH(H) = .false.
 			genH = genH + 1
@@ -1980,7 +1875,7 @@ end function genh
 
 integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 !arguments
-        real(kind=prec)                 ::      waterarray(:,:)
+	TYPE(qr_vec)			::	waterarray(:)
 	type(MISSING_TYPE),intent(in)		::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),intent(in) 	::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),intent(in)	::	missing_angles(:)
@@ -2033,7 +1928,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 ! the first reference atom is the relevant atom of the solvent
                 if(lib(irc_solvent)%atnam(addatom)(1:1) == 'H') cycle
 
-                xj(:) = waterarray(1:3,addatom)
+                xj = waterarray(addatom)
 
 
 		do mbond = 1, 4
@@ -2078,15 +1973,14 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
                                 end if
                         end do
 		!random vector
-		do axis = 1,3
-			xH(axis) = randm() - 0.5_prec
-		end do
+		xH%x = randm() - 0.5_prec
+		xH%y = randm() - 0.5_prec
+		xH%z = randm() - 0.5_prec
 		!normalise to unit length and scale by bond length from lib.
-		bond_length = sqrt(dot_product(xH,xH))
-		xH(:) = xH(:) / bond_length * bnd0
+		bond_length = q_sqrt(q_dotprod(xH,xH))
+		xH = xH / bond_length * bnd0
 		!place near atom j
-		xH(:) = xH(:) + xj(:)
-!			write(*,800) 0,H,xH(:)
+		xH = qvec_add(xH,xj)
 		!conjugate gradient minimisation
 		do setH = 1,nsetH
 		do cgiter = 1, max_cg_iterations
@@ -2096,8 +1990,8 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 			dx_line = max_dx*2.0_prec**(-cgiter)
 			flipped = .false.
 			do lineiter = 1, max_line_iterations
-				Vtot = zero
-				dVtot(:) = zero
+				Vtot  = zero
+				dVtot = zero
 				!calc. potential & gradient
 				!angles
 				rjH(:) = xH(:) - xj(:)

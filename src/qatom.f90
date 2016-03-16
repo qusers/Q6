@@ -209,7 +209,7 @@ subroutine qatom_startup
 	call nrgy_startup
 
 	! initialise constants
-	pi = 4.0_prec*atan(1.0_prec)
+	pi = 4.0_prec*q_atan(one)
 	deg2rad = pi/180.0_prec
 
 100	format(a,' module',t30,'version ',a,t50,'(modified on ',a,')')

@@ -22,28 +22,30 @@
 !        = 1 : ONLY EIGENVALUES ARE COMPUTED                           C
 !                                                                      C
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-!                                                                       
+!    
+MODULE EIGEN                               
+use QMATH                                    
       SUBROUTINE EIGEN (A,R,N,MV) 
 
-      implicit double precision (A-H, O-Z)
+      implicit real(kind=prec) (A-H, O-Z)
       DIMENSION A(1),R(1) 
 
 !                                                                       
 !*****GENERATE IDENTITY MATRIX                                          
-    5 RANGE=1.E-12 
+    5 RANGE=1.E-12_prec
       IF (MV-1) 10,25,10 
    10 IQ=-N 
       DO 20 J=1,N 
       IQ=IQ+N 
       DO 20 I=1,N 
       IJ=IQ+I 
-      R(IJ)=0.E0 
+      R(IJ)=zero
       IF (I-J) 20,15,20 
-   15 R(IJ)=1.E0 
+   15 R(IJ)=one 
    20 CONTINUE 
 !                                                                       
 !*****COMPUTE INITIAL AND FINAL NORMS (ANORM AND ANRMX)                 
-   25 ANORM=0.E0 
+   25 ANORM=zero
       DO 35 I=1,N 
       DO 35 J=I,N 
       IF (I-J) 30,35,30 
@@ -51,13 +53,13 @@
       ANORM=ANORM+A(IA)*A(IA) 
    35 CONTINUE 
       IF (ANORM) 165,165,40 
-   40 ANORM=1.414E0* SQRT(ANORM) 
-      ANRMX=ANORM*RANGE/FLOAT(N) 
+   40 ANORM=q_sqrt(2.0_prec)* q_sqrt(ANORM) 
+      ANRMX=ANORM*RANGE/FLOAT(kind=prec,N) 
 !                                                                       
 !*****INITIALIZE INDICATORS AND COMPUTE THRESHOLD, THR                  
       IND=0 
       THR=ANORM 
-   45 THR=THR/FLOAT(N) 
+   45 THR=THR/FLOAT(kind=prec,N) 
    50 L=1 
    55 M=L+1 
 !                                                                       
@@ -69,13 +71,13 @@
    65 IND=1 
       LL=L+LQ 
       MM=M+MQ 
-      X=0.5E0*(A(LL)-A(MM)) 
-   68 Y=-A(LM)/ SQRT(A(LM)*A(LM)+X*X) 
+      X=0.5_prec*(A(LL)-A(MM)) 
+   68 Y=-A(LM)/ q_sqrt(A(LM)*A(LM)+X*X) 
       IF (X) 70,75,75 
    70 Y=-Y 
-   75 SINX=Y/ SQRT(2.E0*(1.E0+( SQRT(1.E0-Y*Y)))) 
+   75 SINX=Y/ q_sqrt(2.0_prec*(one+( q_sqrt(one-Y*Y)))) 
       SINX2=SINX*SINX 
-   78 COSX= SQRT(1.E0-SINX2) 
+   78 COSX= q_sqrt(one-SINX2) 
       COSX2=COSX*COSX 
       SINCS=SINX*COSX 
 !                                                                       
@@ -103,7 +105,7 @@
       R(IMR)=R(ILR)*SINX+R(IMR)*COSX 
       R(ILR)=X 
   125 END DO 
-      X=2.E0*A(LM)*SINCS 
+      X=2.0_prec*A(LM)*SINCS 
       Y=A(LL)*COSX2+A(MM)*SINX2-X 
       X=A(LL)*SINX2+A(MM)*COSX2+X 
       A(LM)=(A(LL)-A(MM))*SINCS+A(LM)*(COSX2-SINX2) 

@@ -89,8 +89,8 @@ subroutine write_average
 	call mask_put(mask, xtop, x_sum)
     call writepdb
 	write(*,'(a,f6.3,a)') 'Root mean square co-ordinate deviation ', rmsd, ' A'
-	x_sum = 0
-	x2_sum = 0
+	x_sum  = zero
+	x2_sum = zero
 end subroutine write_average
 
 end module AVETR

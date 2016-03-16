@@ -30,19 +30,19 @@ contains
 
 ! functions that can be called from anywhere
 
-TYPE(bond_val) function bond(a,b)
+TYPE(bond_val) function bond_calc(a,b)
 ! returns bond distance and vector
 ! args
 TYPE(qr_vec) :: a,b
 ! locals
 
-bond_val%a_vec  = qvec_sub(b,a)
-bond_val%b_vec  = -bond_val%a_vec
-bond_val%dist = sqrt(bond_val%a_vec%x**2 + bond_val%a_vec%y**2 + bond_val%a_vec%z**2)
+bond_calc%a_vec  = qvec_sub(b,a)
+bond_calc%b_vec  = -bond_calc%a_vec
+bond_calc%dist = q_sqrt(bond_calc%a_vec%x**2 + bond_calc%a_vec%y**2 + bond_calc%a_vec%z**2)
 
-end function bond
+end function bond_calc
 
-TYPE(angl_val) function angle(a,b,c)
+TYPE(angl_val) function angle_calc(a,b,c)
 ! returns angle in radians and force vector for constitute atoms
 ! uses bond_type to get bond vectors and distances directly
 ! short summary: calculate dot product between the bond vectors
@@ -53,29 +53,29 @@ TYPE(qr_vec) :: a,b,c
 TYPE(bond_val)  :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
 
-tempab = bond(a,b)
-tempbc = bond(b,c)
+tempab = bond_calc(a,b)
+tempbc = bond_calc(b,c)
 
 scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
 scalar = scalar/(tempab%dist*tempbc%dist)
 
 if ( scalar .gt.  one ) scalar =  one
 if ( scalar .lt. -one ) scalar = -one
-angle%angl = acos(scalar)
+angle_calc%angl = q_acos(scalar)
 
-inv_angl = sin(angle%angl)
+inv_angl = q_sin(angle_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
-angle%a_vec = inv_ang * ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
+angle_calc%a_vec = inv_ang * ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
                (scalar * tempab%a_vec/tempab%dist**2))
-angle%b_vec = inv_ang * ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
+angle_calc%b_vec = inv_ang * ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
                (scalar * tempbc%a_vec/tempbc%dist**2))
-angle%c_vec = -(angle%a_vec + angle%b_vec)
+angle_calc%c_vec = -(angle_calc%a_vec + angle_calc%b_vec)
 
-end function angle
+end function angle_calc
 
-TYPE(tors_val) function torsion(a,b,c,d)
+TYPE(tors_val) function torsion_calc(a,b,c,d)
 ! returns torsion angle and force vectors for constitute atoms
 ! for a derivation, please check your local copy of a vector 
 ! math book
@@ -110,8 +110,8 @@ crossbcd = -q_crossprod(bcvec,cdvec)
 abs2_abc = (crossabc%x**2 + crossabc%y**2 + crossabc%z**2)
 abs2_bcd = (crossbcd%x**2 + crossbcd%y**2 + crossbcd%z**2)
 
-abs_abc  = sqrt(abs2_abc)
-abs_bcd  = sqrt(abs2_bcd)
+abs_abc  = q_sqrt(abs2_abc)
+abs_bcd  = q_sqrt(abs2_bcd)
 
 ! angle is dotproduct divided by absolute crossproducts
 scalar = q_dotprod(crossabc,crossbcd)
@@ -122,7 +122,7 @@ if ( scalar .gt.  one ) scalar =  one
 if ( scalar .lt. -one ) scalar = -one
 
 ! final angle
-torsion%angl = acos(scalar)
+torsion_calc%angl = q_acos(scalar)
 
 ! get second crossproduct between two planes
 ! gives orientation of the angle by calculating
@@ -130,12 +130,12 @@ torsion%angl = acos(scalar)
 doublecross  = q_crossprod(crossabc,crossbcd)
 sgn          = q_dotprod(bcvec,doublecross)
 
-if ( sgn .lt. zero ) torsion%angl = -torsion%angl
+if ( sgn .lt. zero ) torsion_calc%angl = -torsion_calc%angl
 
 ! force vector calculation begins
 
 ! first derivative of angle
-inv_angl = sin(torsion%angl)
+inv_angl = q_sin(torsion_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
@@ -155,18 +155,18 @@ vec2 = inv_angl * ( (crossabc/(abs_abc*abs_bcd)) - &
 cavec = qvec_sub(bcvec,abvec)
 dbvec = qvec_sub(-bcvec,cdvec)
 
-torsion%a_vec = q_crossprod(bcvec,vec1)
-torsion%b_vec = qvec_add( &
+torsion_calc%a_vec = q_crossprod(bcvec,vec1)
+torsion_calc%b_vec = qvec_add( &
                  q_crossprod(cavec,vec1) , &
                  q_crossprod(cdvec,vec2))
-torsion%c_vec = qvec_sub( &
+torsion_calc%c_vec = qvec_sub( &
                  q_crossprod(dbvec,vec2) , &
                  q_crossprod(abvec,vec1))
-torsion%d_vec = q_crossprod(bcvec,vec2)
+torsion_calc%d_vec = q_crossprod(bcvec,vec2)
 
-end function torsion
+end function torsion_calc
 
-TYPE(tors_val) function improper(a,b,c,d)
+TYPE(tors_val) function improper_calc(a,b,c,d)
 ! returns improper torsion angle and force vectors for constitute atoms
 ! for a derivation, please check your local copy of a vector 
 ! math book
@@ -195,8 +195,8 @@ crossbcd = -q_crossprod(bcvec,cdvec)
 abs2_abc = (crossabc%x**2 + crossabc%y**2 + crossabc%z**2)
 abs2_bcd = (crossbcd%x**2 + crossbcd%y**2 + crossbcd%z**2)
 
-abs_abc  = sqrt(abs2_abc)
-abs_bcd  = sqrt(abs2_bcd)
+abs_abc  = q_sqrt(abs2_abc)
+abs_bcd  = q_sqrt(abs2_bcd)
 
 ! angle is dotproduct divided by absolute crossproducts
 scalar = q_dotprod(crossabc,crossbcd)
@@ -207,7 +207,7 @@ if ( scalar .gt.  one ) scalar =  one
 if ( scalar .lt. -one ) scalar = -one
 
 ! final angle
-improper%angl = acos(scalar)
+improper_calc%angl = q_acos(scalar)
 
 ! get second crossproduct between two planes
 ! gives orientation of the angle by calculating
@@ -215,12 +215,12 @@ improper%angl = acos(scalar)
 doublecross  = q_crossprod(crossabc,crossbcd)
 sgn          = q_dotprod(bcvec,doublecross)
 
-if ( sgn .lt. zero ) improper%angl = -improper%angl
+if ( sgn .lt. zero ) improper_calc%angl = -improper_calc%angl
 
 ! force vector calculation begins
 
 ! first derivative of angle
-inv_angl = sin(improper%angl)
+inv_angl = q_sin(improper_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
@@ -240,14 +240,14 @@ vec2 = inv_angl * ( (crossabc/(abs_abc*abs_bcd)) - &
 cavec = qvec_sub(bcvec,abvec)
 dbvec = qvec_sub(-bcvec,cdvec)
 
-improper%a_vec = q_crossprod(bcvec,vec1)
-improper%b_vec = qvec_add( &
+improper_calc%a_vec = q_crossprod(bcvec,vec1)
+improper_calc%b_vec = qvec_add( &
                  q_crossprod(cavec,vec1) , &
                  q_crossprod(cdvec,vec2))
-improper%c_vec = qvec_sub( &
+improper_calc%c_vec = qvec_sub( &
                  q_crossprod(dbvec,vec2) , &
                  q_crossprod(abvec,vec1))
-improper%d_vec = q_crossprod(bcvec,vec2)
+improper_calc%d_vec = q_crossprod(bcvec,vec2)
 
 end function improper
 
