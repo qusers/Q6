@@ -12213,7 +12213,7 @@ do3 = boxlength(3)*nint( do3*inv_boxl(3) )
 end if
 
 do ip = 0, solv_atom - 1
-j    = nbww(nbww_pair+ip)%j
+j    = nbww(iw+ip)%j
 j3   = j*3-3
 
 dx1  = x(j3+1) - x(i3+1)
@@ -14145,11 +14145,11 @@ end subroutine init_trj
 !-----------------------------------------------------------------------
 subroutine precompute_interactions
 ! nice and small routine to call all the other stuff below
-call pp_int_comp
-if (nwat .gt. 0) call pw_int_comp
-call qp_int_comp
-call qq_int_comp
-if (nwat .gt. 0) call qw_int_comp
+if (nat_solute .ne. 0) call pp_int_comp
+if ((nwat .gt. 0) .and. (nat_solute .ne.0)) call pw_int_comp
+if ((nat_solute .ne. 0) .and. (nqat .ne.0)) call qp_int_comp
+if (nqat .ne. 0) call qq_int_comp
+if ((nwat .gt. 0) .and. (nqat.ne.0)) call qw_int_comp
 if (nwat .gt. 0) call ww_int_comp
 
 
