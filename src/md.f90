@@ -201,6 +201,7 @@ real(kind=prec), parameter			::	rcpp_default		= 10.0_prec
 real(kind=prec), parameter			::	rcww_default		= 10.0_prec
 real(kind=prec), parameter			::	rcpw_default		= 10.0_prec
 real(kind=prec), parameter                      ::      rcq_default_pbc         = -1.0_prec
+real(kind=prec), parameter                      ::      rcLRF_default_pbc       = -1.0_prec
 real(kind=prec), parameter			::	rcq_default_sph		= 99.0_prec
 real(kind=prec), parameter			::	rcLRF_default		= 99.0_prec
 !recxl_i is set to rexcl_o * shell_default
@@ -5006,6 +5007,11 @@ else
                         write(*,'(a)') 'LRF cut-off set to default'
                 end if
                 if(RcLRF < rcpp .or. RcLRF < rcpw .or. RcLRF < rcww) then
+                        if (box) then
+                              rcLRF = rcLRF_default_pbc
+                              write(*,'(a)') 'LRF cut-off set to default for PBC'
+                        end if
+                else
                         write(*,'(a)') &
                                 '>>> ERROR; LRF cut-off must not be smaller than solute or solvent cut-offs!'
                         initialize = .false.
@@ -7447,7 +7453,7 @@ jgloop: do jgr = 1, ncgp_solute
                                         nbpp_cgp(nbpp_cgp_pair)%i = i
                                         nbpp_cgp(nbpp_cgp_pair)%j = j
 !$omp end critical
-                                elseif (r2 .le. RcLRF2) then
+                                elseif ((r2 .le. RcLRF2) .or. (RcLRF .eq. -one)) then
                                         inside_LRF = 1
                                 end if
                                 ja = ja + 1
@@ -8175,7 +8181,7 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 !$omp end critical
                                 end do jaloop
                         end do ialoop
-                elseif(r2 .le. RcLRF2) then
+                elseif ((r2 .le. RcLRF2) .or. (rcLRF .eq. -one)) then
 ! outside pp-cutoff but inside LRF cut-off use LRF
 !ig : jg calculation
                         call lrf_update(ig,jgr)
@@ -8604,7 +8610,7 @@ jgloop: do jgr = 1, nwat
                                 nbpw_cgp(nbpw_cgp_pair)%i = i
                                 nbpw_cgp(nbpw_cgp_pair)%j = ja
 !$omp end critical
-                        elseif (r2 <= RcLRF2) then
+                        elseif ((r2 .le. RcLRF2) .or. (RcLRF .eq. -one)) then
                                 inside_LRF = 1
                         end if
                         ig_atom = ig_atom + 1 !ia = ia + 1
@@ -9238,7 +9244,7 @@ jaloop:                         do j = 1, solv_atom
                                 end do jaloop
 !$omp end critical
                         end do ialoop
-                elseif(r2 .le. RcLRF2) then   
+                elseif((r2 .le. RcLRF2) .or. (RcLRF .eq. -one)) then   
 ! outside pw-cutoff but inside LRF cut-off: use LRF
 !solut : solvent
                         call lrf_update(ig,jg_cgp)
@@ -10720,7 +10726,7 @@ kaloop:                         do ka = 1, solv_atom
                         end do laloop
 !$omp end critical
 
-                elseif(r2 .le. RcLRF2) then
+                elseif((r2 .le. RcLRF2) .or. (RcLRF .eq. -one)) then
 ! outside ww-cutoff but inside LRF cut-off: use LRF
 !iw interaction     
                         call lrf_update(ig,jg)	
