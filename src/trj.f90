@@ -35,7 +35,7 @@ implicit none
 		
 	!mask 	
 	integer, private							::	ncoords
-	real(kind=prec), private, allocatable	::	xmasked(:)
+	TYPE(qr_vec), private, allocatable	::	xmasked(:)
 	type(MASK_TYPE), private			::	mask
 contains
 
@@ -149,7 +149,7 @@ logical function trj_create(filename, append)
 	character(len=80)			::	titlerow
 
 	!allocated masked coordinate array
-	ncoords = 3*mask%included
+	ncoords = mask%included
 	allocate(xmasked(ncoords))
 
 	titlerow = 'Q DCD trajectory version ' // MODULE_VERSION
@@ -193,19 +193,19 @@ end function trj_create
 !******************************************************
 logical function trj_write(x)
 !arguments
-	real(kind=prec) 					::	x(:)
-	real(4)							::	xloc(ncoords)
+	TYPE(qr_vec) 					::	x(:)
+	real(4)							::	xloc(3*ncoords)
 	
 	!extract coordinates
 	call mask_get(mask, x, xmasked)
 	!now need to copy to array of smaller real kind to keep dcd format
-	xloc(1:ncoords)=xmasked(1:ncoords)
+	xloc(1:3*ncoords:3)=xmasked(1:ncoords)
 	!write x record
-	write(lun, err=900) xloc(1:ncoords:3)
+	write(lun, err=900) xloc(1:3*ncoords:3)
 	!write y record
-	write(lun, err=900) xloc(2:ncoords:3)
+	write(lun, err=900) xloc(2:3*ncoords:3)
 	!write z record
-	write(lun, err=900) xloc(3:ncoords:3)
+	write(lun, err=900) xloc(3:3*ncoords:3)
 
 	trj_write = .true.
 	return
@@ -221,16 +221,16 @@ end function trj_write
 !******************************************************
 logical function trj_read(x)
 !arguments
-	real(kind=prec) 					::	x(:)
-        real(4)                                                 :: xloc(ncoords)
+	TYPE(qr_vec) 				::	x(:)
+        real(4)                                 :: xloc(3*ncoords)
 !       need to read first into xloc to get the right precision
-        read(lun, err=900, end=900) xloc(1:ncoords:3)
-        read(lun, err=900, end=900) xloc(2:ncoords:3)
-        read(lun, err=900, end=900) xloc(3:ncoords:3)
+        read(lun, err=900, end=900) xloc(1:3*ncoords:3)
+        read(lun, err=900, end=900) xloc(2:3*ncoords:3)
+        read(lun, err=900, end=900) xloc(3:3*ncoords:3)
         !now copy the coords to the second mask xmasked that has precision
         !kind=prec
         !copy records
-        xmasked(1:ncoords)=xloc(1:ncoords)
+        xmasked(1:ncoords)=xloc(1:3*ncoords:3)
 
 
 	!assign masked coordinates to right atom in topology
@@ -252,17 +252,17 @@ end function trj_read
 !******************************************************
 logical function trj_read_masked(x)
 !arguments
-	real(kind=prec) 					::	x(:)
-	real(4)							:: xloc(ncoords)
+	TYPE(qr_vec)		::	x(:)
+	real(4)			:: xloc(3*ncoords)
 	!need to store in smaller array first to keep dcd file format consistent
 	!read x record to temp variable xmasked
-	read(lun, err=900, end=900) xloc(1:ncoords:3)
+	read(lun, err=900, end=900) xloc(1:3*ncoords:3)
 	!read y record
-	read(lun, err=900, end=900) xloc(2:ncoords:3)
+	read(lun, err=900, end=900) xloc(2:3*ncoords:3)
 	!read z record
-	read(lun, err=900, end=900) xloc(3:ncoords:3)
+	read(lun, err=900, end=900) xloc(3:3*ncoords:3)
 	!now copy to the full array
-	x(1:ncoords)=xloc(1:ncoords)
+	x(1:ncoords)=xloc(1:3*ncoords:3)
 	trj_read_masked = .true.
 
 	current_frame = current_frame + 1
@@ -390,7 +390,7 @@ logical function trj_open(filename)
 			i6, ' atoms in trajectory,',i6,' atoms in mask.')
 
 	!allocated masked coordinate array
-	ncoords = 3*atoms
+	ncoords = atoms
 	allocate(xmasked(ncoords))
 
 	current_frame = 1

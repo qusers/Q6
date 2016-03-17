@@ -178,7 +178,7 @@ character*80				:: lambda
 	end if
 end function get_fepfile
 subroutine initialize
-	allocate(xin(3*nat_pro))   ! contains all coordinates, 3*no_atoms
+	allocate(xin(nat_pro))   ! contains all coordinates, no_atoms, vector format
 	call rms_initialize
 	call rmsf_initialize
 	call fit_initialize
@@ -290,7 +290,7 @@ subroutine process_data
 	!locals
 	character(len=256):: cf !coord file name
 	integer						:: fn !LUN for cf
-	real(8)						:: rms
+	real(kind=prec)					:: rms
 	integer						:: frame,p1,p2,frame_start,frame_end,every_n
 	character(len=80)	:: frames
     
@@ -481,7 +481,7 @@ logical function load_restart(fn)
 	else
 		rewind(fn)
                 if (.not.old_restart) read(fn) canary
-		read(fn) nat3, xin(:)
+		read(fn) nat3, xin(1:nat_pro:3)
 		load_restart = .true.
 	end if
 	close(fn)
@@ -562,9 +562,9 @@ subroutine add_calcs
 end subroutine add_calcs
 
 subroutine make_ref_all(x)
-	real(8)						::	x(:)
+	TYPE(qr_vec)			::	x(:)
 
-	integer						::	i
+	integer				::	i
 	
 	!copy current coordinates to xtop
 	xtop(:) = xin(:)

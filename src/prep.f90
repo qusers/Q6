@@ -1930,17 +1930,17 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 
                 xj = waterarray(addatom)
 
-
 		do mbond = 1, 4
+		opt_only = .false.
 		if (missing_local(addatom)%bond_notset(mbond) .eqv. .true.) then
 			miss = missing_heavy(addatom)%bonds(mbond)
 			if (missing_local(missing_bonds(miss)%i)%atom_missing) then
 				H = missing_bonds(miss)%i
 			elseif((missing_local(missing_bonds(miss)%j)%atom_missing)) then
 				H = missing_bonds(miss)%j
-                        else ! bond already made. nothing else to do
-                                missing_local(addatom)%bond_notset(mbond) = .false.
-                                cycle
+			else ! bond already made. optimise structure again
+				missing_local(addatom)%bond_notset(mbond) = .false.
+				opt_only = .true.
 			end if
 			if (missing_bonds(miss)%cod .gt. 0) then
 				bnd0 = bnd_prm(missing_bonds(miss)%cod)%prm%bnd0
@@ -1954,24 +1954,59 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 				if(missing_local(addatom)%angle_notset(mangle) .eqv. .true.) then
 					miss = missing_local(addatom)%angles(mangle)
 					if((missing_angles(miss)%i .eq. H).and. &
-                                                (.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
-                                                (.not.(missing_local(missing_angles(miss)%k)%atom_missing))) then
-                                                nHang = nHang + 1
-                                                Hang_atom(nHang) = missing_angles(miss)%k
-                                                Hang_code(nHang) = missing_angles(miss)%cod
-                                                ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
-                                                ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
-                                        elseif((missing_angles(miss)%k .eq. H).and. &
-                                                (.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
-                                                (.not.(missing_local(missing_angles(miss)%i)%atom_missing))) then
-                                                nHang = nHang + 1
-                                                Hang_atom(nHang) = missing_angles(miss)%i
-                                                Hang_code(nHang) = missing_angles(miss)%cod
-                                                ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
-                                                ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
-                                        end if
-                                end if
-                        end do
+						(.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
+						(.not.(missing_local(missing_angles(miss)%k)%atom_missing))) then
+						nHang = nHang + 1
+						Hang_atom(nHang) = missing_angles(miss)%k
+!						Hang_code(nHang) = missing_angles(miss)%cod
+						ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
+						ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+					elseif((missing_angles(miss)%k .eq. H).and. &
+						(.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
+						(.not.(missing_local(missing_angles(miss)%i)%atom_missing))) then
+						nHang = nHang + 1
+						Hang_atom(nHang) = missing_angles(miss)%i
+!						Hang_code(nHang) = missing_angles(miss)%cod
+						ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
+						ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+					end if
+				end if
+			end do
+! new check for torsions that might be there, too
+! so see if they can be added now
+			nHtor = 0
+			do mtor = 1, 12
+				if(missing_local(addatom)%torsion_notset(mtor) .eqv. .true.) then
+					miss = missing_local(addatom)%torsions(mtor)
+					if((missing_torsions(miss)%i .eq. H ).and. &
+						(.not.(missing_local(missing_torsions(miss)%j)%atom_missing)).and.&
+						(.not.(missing_local(missing_torsions(miss)%k)%atom_missing)).and.&
+						(.not.(missing_local(missing_torsions(miss)%l)%atom_missing))) then
+						nHtor = nHtor + 1
+						Htor_latom(nHtor) = missing_torsions(miss)%l
+						Htor_katom(nHtor) = missing_torsions(miss)%k
+!						Htor_code(nHtor)  = missing_torsions(miss)%cod 
+! remember here that tor% structures are a special data structure with 3 fields
+! maybe need to reconsider this later if we want to support more torsions
+						tor(nHtor)%mult = tor_prm(missing_torsions(miss)%cod)%mult
+						tor(nHtor)%delt = tor_prm(missing_torsions(miss)%cod)%delt
+						tor(nHtor)%path = tor_prm(missing_torsions(miss)%cod)%path
+					elseif((missing_torsions(miss)%l .eq. H ).and. &
+						(.not.(missing_local(missing_torsions(miss)%k)%atom_missing)).and.&
+						(.not.(missing_local(missing_torsions(miss)%j)%atom_missing)).and.&
+						(.not.(missing_local(missing_torsions(miss)%i)%atom_missing))) then
+						nHtor = nHtor + 1
+						Htor_latom(nHtor) = missing_torsions(miss)%j
+						Htor_katom(nHtor) = missing_torsions(miss)%i
+						tor(nHtor)%mult = tor_prm(missing_torsions(miss)%cod)%mult
+						tor(nHtor)%delt = tor_prm(missing_torsions(miss)%cod)%delt
+						tor(nHtor)%path = tor_prm(missing_torsions(miss)%cod)%path
+						tor(nHtor)%fk   = tor_prm(missing_torsions(miss)%cod)%fk
+					end if
+				end if
+			end do
+
+
 		!random vector
 		xH%x = randm() - 0.5_prec
 		xH%y = randm() - 0.5_prec
@@ -1994,68 +2029,39 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 				dVtot = zero
 				!calc. potential & gradient
 				!angles
-				rjH(:) = xH(:) - xj(:)
+				rjH = qvec_sub(xH,xj)
 				do a = 1, nHang
-					xk(:) = waterarray(1:3,Hang_atom(a))
-					rjk(:) = xk(:) - xj(:)
-					bjHinv = one/sqrt(dot_product(rjH, rjH))
-					bjkinv = one/sqrt(dot_product(rjk, rjk))
-					! calculate scp and angv
-					scp = dot_product(rjH, rjk) * bjHinv*bjkinv
-					if(scp >  one) then
-						scp =  one
-					else if(scp < -one) then
-						scp = -one
-					end if
-					angle = acos(scp)
-					angle_deg = angle / deg2rad
+					xk = waterarray(Hang_atom(a))
+					angle     = angle_calc(xH,xj,xk)
+					angle_deg = angle%angl *rad2deg
 					! calculate da and dv
-					da = angle - ang(nHang)%ang0*deg2rad
+					da = angle%angl - ang(nHang)%ang0*deg2rad
 					V = 0.5_prec*ang(nHang)%fk*da**2
 					Vtot = Vtot + V
 					dVangle = ang(nHang)%fk*da
-					! calculate f1
-					f1 = sin ( angle )
-					! avoid division by zero
-					if ( abs(f1) < 1.e-12_prec ) then
-						f1 = -1.e12_prec
-					else
-						f1 =  -one / f1
-					end if
-					dV(:) = dVangle &
-						* (f1*(rjk(:)*bjHinv*bjkinv - scp*rjH(:)*bjHinv*bjHinv))
-					dVtot(:) = dVtot(:) + dV(:)
+					dV    = dVangle * angle%vec_a
+					dVtot = dVtot + dV
 				end do
 
 				!torsion
-!				if(rule > 0) then
-!					rnj(1) = rjH(2) * rjkt(3) - rjH(3) * rjkt(2)
-!					rnj(2) = rjH(3) * rjkt(1) - rjH(1) * rjkt(3)
-!					rnj(3) = rjH(1) * rjkt(2) - rjH(2) * rjkt(1)
-!					bj = sqrt(dot_product(rnj, rnj))
-!					scp =dot_product(rnj, rnk)/(bj * bk)
-!					if(scp>one) scp = one
-!					if(scp< -one) scp = -one
-!					phi = acos(scp)
-!					phi_deg = phi / deg2rad
-!					sgn = rjkt(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) &
-!						+ rjkt(2) *(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) &
-!						+ rjkt(3) *(rnj(1) * rnk(2) - rnj(2) * rnk(1) )
-!					if(sgn<0) phi = - phi
-!					arg = phi-lp%rules(rule)%value*deg2rad
-!					V = tors_fk*(one+cos(arg))
-!					!note changed sign of dVtors to get min (not max) at rule value
-!					dVtors = +tors_fk*sin(arg)
-!
-!					! ---       forces
-!
-!					f1 = sin ( phi )
-!					if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-!					f1 =  -one/ f1
-!					dH(:) = f1*(rnk(:)/(bj*bk) - scp*rnj(:)/(bj*bj))
-!					dV(:) = dVtors*cross_product(rjk, dH)
-!					dVtot(:) = dVtot(:) + dV(:)
-!				end if
+				do a = 1, nHtor
+					xk = waterarray(Htor_atomk(a))
+					xl = waterarray(Htor_atoml(a))
+					torsion = torsion_calc(xH,xj,xk,xl)
+					V       = zero
+					dVtors  = zero
+					do ator = 1, 3
+! for all three possible torsion terms
+						arg = tor(nHtor)%mult(ator)*torsion%angl - tor(nHtor)%delt(ator)
+						V = V + tor(nHtor)%fk(ator)*(one+q_cos(arg))*tor(nHtor)%path(ator)
+						dVtors = tor(nHtor)%mult(ator)*tor(nHtor)%fk(ator) &
+							*q_sin(arg)*tor(nHtor)%path(ator)
+					end do
+					!note changed sign of dVtors to get min (not max) at rule value
+					! ---       forces
+					dV    = dVtors*torsion%vec_a
+					dVtot = dVtot + dV
+				end do
 				if(cgiter == 1 .and. lineiter == 1) then
 					!its the start of the search, use the gradient vector
 					dvLast(:) = dVtot(:)
