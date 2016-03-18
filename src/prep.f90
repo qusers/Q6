@@ -5848,7 +5848,13 @@ subroutine solvate_restart
 	integer						::	u, fstat
 	real(kind=prec),allocatable			::	xtmp(:)
 	character(len=200)			::	solvent
-
+	integer					::	headercheck,i,j,l,cindex
+	logical					::	old_restart
+	real(kind=singleprecision),allocatable	::	xtmp_single(:)
+	real(kind=doubleprecision),allocatable	::	xtmp_double(:)
+#ifndef PGI
+	real(kind=quadprecision),allocatable	::	xtmp_quad(:)
+#endif
 	u=freefile()
 
 	call get_string_arg(xfile, '-----> Restart file name: ')
@@ -5866,6 +5872,13 @@ subroutine solvate_restart
 	solvent_name = solvent(1:4)
 	!get residue code for solvent
 	if(.not. set_irc_solvent()) return
+	old_restart = .false.
+	read(u) headercheck
+	if ((headercheck .ne. -137).and.(headercheck.ne.-1337).and.(headercheck.ne.-13337)) then
+!old restart file without header canary
+		rewind(u)
+		old_restart = .true.
+	end if
 
 	read(u) nat3
 	natom = nat3/3
@@ -5886,31 +5899,73 @@ subroutine solvate_restart
 	call grow_arrays_for_solvent(waters_added, solv_atom)
 	allocate(xtmp(nat3))
 	backspace(u)
-	read(u) nat3, xtmp(1:nat3)
+	if ((old_restart .eqv. .true. ) .or. (headercheck .eq. -1337)) then
+!allocate temp array as doubleprecision
+		allocate(xtmp_double(nat3))
+		if (.not.old_restart) then
+			read(u) headercheck
+			read(u) nat3, xtmp_double(1:nat3)
+		else
+			read(u) nat3, xtmp_double(1:nat3)
+		end if
+		xtmp(1:nat3) = xtmp_double(1:nat3)
+		deallocate(xtmp_double)
+	else if (headercheck .eq. -137) then
+!allocate as singleprecision
+		allocate(xtmp_single(nat3))
+		read(u) headercheck
+		read(u) nat3, xtmp_single(1:nat3)
+		xtmp(1:nat3) = xtmp_single(1:nat3)
+		deallocate(xtmp_single)
+	else if (headercheck .eq. -13337) then
+#ifndef PGI
+!quadruple precision
+		allocate(xtmp_quad(nat3))
+		read(u) headercheck
+		read(u) nat3, xtmp_quad(1:nat3)
+		xtmp(1:nat3) = xtmp_quad(1:nat3)
+		deallocate(xtmp_quad)
+#else
+	write(*,*) 'Quadruple precision not supported in PGI'
+	stop
+#endif
+	endif
 	close(u)
 	allocate(xw(3,solv_atom,waters_added), keep(waters_added))
-	xw(:,:,:) = reshape(xtmp(3*nat_pro+1:nat3),(/3,solv_atom,waters_added/))
+!needs rewrite, array reshape only worked for 3-atom solvent
+	do l = 1, waters_added
+		do j = 1, solv_atom
+			do i = 1, 3
+				cindex = l*solv_atom - (solv_atom - j)
+				cindex = cindex*3-3
+				cindex = cindex + i
+				xw(i,j,l) = xtmp(cindex)
+			end do
+		end do
+	end do
+!	xw(:,:,:) = reshape(xtmp(3*nat_pro+1:nat3),(/3,solv_atom,waters_added/))
 	keep(:) = .true.
 
 	!allow very tight packing of waters to solute - this is a restart file!
 	call add_solvent_to_topology(waters_in_sphere=waters_added, &
-		max_waters=waters_added, make_hydrogens=.false., pack=0.0_prec)
+		max_waters=waters_added, make_hydrogens=.false., pack=0.0_prec, rest=.true.)
 	deallocate(xtmp,xw,keep)
 
 end subroutine solvate_restart
 
 !-------------------------------------------------------------------------
-subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens, pack)
+subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens, pack, rest)
 !arguments
 	integer						::	waters_in_sphere
 	integer						::	max_waters
 	logical						::	make_hydrogens
 	real(kind=prec)						::	pack
+	logical,intent(in), optional				::	rest
 !locals
 	integer						::	waters_added
 	real(kind=prec)						::	rpack2
 	integer						::	w_at, w_mol, p_atom
-	logical						::	wheavy(max_atlib)
+	logical						::	wheavy(max_atlib), restart
 	real(kind=prec)						::	dx, dy, dz, r2
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
 	integer						::	heavy_bonds, heavy_angles, added, i, j, k
@@ -5919,6 +5974,11 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	type(MISSING_ANGLE_TYPE),allocatable		::	missing_angles(:)
         real(kind=prec),allocatable                     ::      wat_temp(:,:)
 
+	if(.not.(present(rest))) then
+		 restart = .false.
+	else
+		restart = rest
+	end if
 
 	if(use_PBC) then
 		write(*,111) waters_in_sphere
@@ -5946,7 +6006,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 
 ! before checking clashes we will now have to add all the missing heavy atoms
 ! so we do one loop over all missing heavy atoms
-	if (num_heavy .gt. 1) then
+	if ((num_heavy .gt. 1).and.(.not.restart)) then
 ! make the connectivity for the solvent atoms and temporary storage of variables
 		heavy_bonds = 0
 		allocate(missing_bonds(lib(irc_solvent)%nbnd))

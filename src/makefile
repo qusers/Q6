@@ -294,7 +294,7 @@ prefs.o: prefs.f90
 	${FC} ${FFLAGS} -c $<
 
 prep.o: prep.f90 maskmanip.o sizes.o parse.o prmfile.o trj.o index.o prefs.o
-	${FC} ${FFLAGS} -c $<
+	${FC} ${FFLAGS} ${FPP_FLG} -c $<
 
 prmfile.o: prmfile.f90 misc.o mpiglob.o
 	${FC} ${FFLAGS} -c $<
