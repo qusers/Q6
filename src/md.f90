@@ -5010,11 +5010,11 @@ else
                         if (box) then
                               rcLRF = rcLRF_default_pbc
                               write(*,'(a)') 'LRF cut-off set to default for PBC'
-                        end if
-                else
-                        write(*,'(a)') &
+                        else
+                              write(*,'(a)') &
                                 '>>> ERROR; LRF cut-off must not be smaller than solute or solvent cut-offs!'
-                        initialize = .false.
+                              initialize = .false.
+                        end if
                 end if
         end if
 end if
