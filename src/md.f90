@@ -17088,12 +17088,16 @@ end do !over molecules
 end if !if(nodeid .eq. 0)
 !now that node 0 has done the job, broadcast the changes to the slaves
 #if defined(USE_MPI)
-call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-call MPI_Bcast(old_boxc, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+!only during MD, skip for first setup, mpitypes are 
+!set after this, so save to use as proxy
+if(mpitype_batch_lrf.ne.0) then
+	call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+	call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+	call MPI_Bcast(old_boxc, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+end if
 #endif
 
 #ifdef USE_GRID
@@ -17153,8 +17157,12 @@ end do
 end if ! nodeid .eq. 0
 #if defined(USE_MPI)
 !for now just bcast the whole thing
-call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast lrf')
+!only during MD, skip for first setup, mpitypes are 
+!set after this, so save to use as proxy
+if(mpitype_batch_lrf.ne.0) then
+	call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast lrf')
+end if
 ! for later use of PBC update on each node
 !call lrf_gather
 #endif
