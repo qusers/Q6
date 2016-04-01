@@ -186,6 +186,20 @@ implicit none
 	end type Q_SAN_CHECK
 !Added memory management stuff
 	integer			:: alloc_status_qat
+
+!QCP information needed to build ring polymers
+	logical				::	use_QCP
+	integer				::	num_QCP
+	integer,allocatable		::	num_beads(:)
+	real(kind=prec),allocatable	::	pos_beads(:),vel_beads(:),crg_beads(:),mass_beads(:)
+
+	ENUM, bind(c)
+		ENUMERATOR      :: QCP_HYDROGEN,QCP_ALLATOM,QCP_FEPATOM
+	END ENUM
+	ENUM, bind(c)
+		ENUMERATOR      :: QCP_SIZE_DEFAULT,QCP_SIZE_SMALL,QCP_SIZE_LARGE,QCP_SIZE_INDIVIDUAL
+	END ENUM
+	integer			:: QCP_enum, QCP_size_enum
 !-----------------------------------------------------------------------
 !	fep/evb energies
 !-----------------------------------------------------------------------
@@ -1971,6 +1985,17 @@ logical function qatom_load_fep(fep_file)
 630	format (/,'No. of group pairs to monitor= ',i5)
 640	format (i7,1x,i7)
 
+
+! information for QCP atom selection and size allocation
+	section='qcp_atoms'
+	select (QCP_enum)
+		case (QCP_ALLATOM)
+
+		case (QCP_HYDROGEN)
+
+		case (QCP_FEPATOM)
+
+	end select
 
 	call prm_close
 	return

@@ -13,6 +13,7 @@ use TRJ
 use MPIGLOB
 use QATOM
 use EXC
+use QCP
 use VERSIONS
 #if defined (_DF_VERSION_)
 use DFPORT
@@ -5420,6 +5421,80 @@ if ( ngroups_gc .gt. 0 ) then
 
 end if
 
+!new section in *inp files to control QCP behaviour
+!will only trigger if FEP file is in use -> if more than 0 states
+if(nstates > 0 ) then
+	if(.not. prm_open_section('QCP')) then
+		write(*,'(a)') 'No QCP section found, will not try to use RPMD.'
+		use_QCP = .false.
+	else
+		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
+		use_QCP = .true.
+!chose which atoms should be treated as ring polymers
+!important later when setting up NB list, RP will be treated different from classical
+!this section can be overwritten in the FEP file
+		if(.not. prm_get_string_by_key('selection', QCP_select)) then
+			write(*,'(a)') 'Will default to Hydrogen atoms only treated as RP!'
+			QCP_enum = QCP_HYDROGEN
+		else
+			QCP_select = upcase(QCP_select)
+			 if ((QCP_select .eq. 'HYDROGEN') .or. &
+				(QCP_select .eq. 'HYD') .or. &
+				(QCP_select .eq. 'H')) then
+				QCP_enum = QCP_HYDROGEN
+				write(*,'(a)') 'Only treat Hydrogen atoms as RP!'
+			elseif ((QCP_select .eq. 'ALL') .or. &
+					(QCP_select .eq. 'QATOM') .or. &
+					(QCP_select .eq. 'FEP')) then
+				QCP_enum = QCP_ALLATOM
+				write(*,'(a)') 'Treat all Q-atoms as RP!'
+			elseif (QCP_select .eq. 'INDIVIDUAL') then
+				QCP_enum = QCP_FEPATOM
+				write(*,'(a)') 'Will use information in FEP file to select QCP atoms'
+			else
+				write(*,'(a)') ' >>> ERROR: No such QCP atom selection!'
+				initialize = .false.
+			end if
+		end if
+!how large should the RP be?
+!can again be overwritten in FEP file for each atom itself
+		if(.not. prm_get_string_by_key('size',QCP_size)) then
+			write(*,'(a)') 'Will use default sizes for RP, xxx ring beads per atom!'
+			QCP_size_enum = QCP_SIZE_DEFAULT
+		else
+			QCP_size = upcase(QCP_size)
+			if(QCP_size .eq. 'DEFAULT') then
+				write(*,'(a)') 'Will use default sizes for RP, xxx ring beads per atom!'
+				QCP_size_enum = QCP_SIZE_DEFAULT
+			else if (QCP_size .eq. 'SMALL') then
+				write(*,'(a)') 'Will use small RP, xxx ring beads per atom!'
+				QCP_size_enum = QCP_SIZE_SMALL
+			else if (QCP_size .eq. 'INDIVIDUAL') then
+				write(*,'(a)') 'Will use information in FEP file to build up ring polymer sizes!'
+				QCP_size_enum = QCP_SIZE_INDIVIDUAL
+			else if (QCP_size .eq. 'LARGE') then
+				write(*,'(a)') 'Will use large RP, xxx beads per atom!'
+				QCP_size_enum = QCP_SIZE_LARGE
+			else
+				write(*,'(a)') ' >>> ERROR: No such QCP size selection!'
+				initialize = .false.
+			end if
+		end if
+!number of PI steps at each calculation
+		if(.not. prm_get_intg_by_key('steps',QCP_steps)) then
+			write(*,'(a)') 'Will use default number of PI steps, n = 10!'
+			QCP_steps = QCP_steps_default
+		else
+			if(QCP_steps .lt. 1) then
+				write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'
+				initialize = .false.
+			end if
+			write(*,'(a,i4,a)') 'Will use the follwoing number of PI steps, n = ',QCP_steps,' for each calculation!'
+		end if
+	end if
+else
+	write(*,'(a)') 'No RPMD in classical MD'
+end if
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
 
