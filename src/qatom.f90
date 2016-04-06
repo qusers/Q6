@@ -190,7 +190,7 @@ implicit none
 !QCP information needed to build ring polymers
 	logical				::	use_QCP
 	integer				::	num_QCP
-	integer,allocatable		::	num_beads(:)
+	integer,allocatable		::	num_beads(:),QCP_atom(:)
 	real(kind=prec),allocatable	::	pos_beads(:),vel_beads(:),crg_beads(:),mass_beads(:)
 
 	ENUM, bind(c)
@@ -1987,16 +1987,41 @@ logical function qatom_load_fep(fep_file)
 
 
 ! information for QCP atom selection and size allocation
+! only use if use_QCP is true at this point, otherwise skip
+! numbering is always Q-atom numbers!!!
+	if(use_QCP) then
 	section='qcp_atoms'
-	select (QCP_enum)
+	tmp_qcp_num = prm_count(section)
+	select case (QCP_enum)
 		case (QCP_ALLATOM)
-
+			if(tmp_qcp_num .gt. 0) then
+				write(*,'(a)') 'Overwriting QCP atom selection from FEP file'
+				num_QCP = tmp_qcp_num
+				allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+				do i=1,tmp_qcp_num
+					if(.not. prm_get_line(line)) goto 1000
+					read (line,*, err=1000) tmpindex, QCP_atoms(i)
+					if((QCP_atoms(i) .lt.1).or.(QCP_atoms(i).gt.nqat)) then
+						write(*,'(a,i4)') 'Invalid Q-atom number for QCP, i = ',QCP_atoms(i)
+						qatom_load_fep = .false.
+					end if
+				end do
+			else
+				num_QCP = nqat
+				allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+				do i=1, nqat
+					QCP_atoms(i) = i
+				end do
+			end if
 		case (QCP_HYDROGEN)
 
 		case (QCP_FEPATOM)
 
 	end select
 
+
+
+	end if
 	call prm_close
 	return
 
