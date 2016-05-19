@@ -1992,34 +1992,121 @@ logical function qatom_load_fep(fep_file)
 	if(use_QCP) then
 	section='qcp_atoms'
 	tmp_qcp_num = prm_count(section)
+! remember, QCP atoms will be listed as Q atoms, so use those lists later for searching
+! also, makes it easier to assign them in the files
+! first check if FEP file redefines QCP atoms
+! if list is empty in the end, print big warning and turn of QCP
+	if (tmp_qcp_num .gt. 0) then
+! redefined
+		write (*,'(a)') 'Defining QCP selection in FEP file, overwriting predefined selections!'
+		num_QCP = tmp_num_qcp
+		allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+		do i=1,tmp_qcp_num
+			if(.not. prm_get_line(line)) goto 1000
+			read (line,*, err=1000) tmpindex, QCP_atoms(i)
+			if((QCP_atoms(i) .lt.1).or.(QCP_atoms(i).gt.nqat)) then
+				write(*,'(a,i4)') 'Invalid Q-atom number for QCP, i = ',QCP_atoms(i)
+				qatom_load_fep = .false.
+			else if (i .gt. 1) then
+				if (QCP_atom(i) .eq. any(QCP_atoms(1:i-1))) then
+					write(*,'(a,i4)') 'Double definition of QCP atom, i = ',QCP_atoms(i)
+					qatom_load_fep = .false.
+				end if
+			end if
+! need to add write out part so we know the atoms actually assigned
+		end do
+	else 
+! use previous definitions from MD input file
 	select case (QCP_enum)
 		case (QCP_ALLATOM)
-			if(tmp_qcp_num .gt. 0) then
-				write(*,'(a)') 'Overwriting QCP atom selection from FEP file'
-				num_QCP = tmp_qcp_num
+! just use all atoms
+			num_QCP = nqat
+			allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+			do i=1, nqat
+				QCP_atoms(i) = i
+			end do
+		case (QCP_HYDROGEN)
+! use only atoms that can be identified as hydrogens in FEP file
+! selection is mass
+! first get number of atoms, then loop again to assign them
+			num_QCP = 0
+			do i=1, nqat
+				if (isheavy(iqseq(i))) then
+					num_QCP = num_QCP + 1
+				end if
+			end do
+			if (num_QCP .gt. 0 ) then
+! now allocate + assign :)
+! need to loop again ot have tmp allocate ... not sure which one is better
 				allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
-				do i=1,tmp_qcp_num
-					if(.not. prm_get_line(line)) goto 1000
-					read (line,*, err=1000) tmpindex, QCP_atoms(i)
-					if((QCP_atoms(i) .lt.1).or.(QCP_atoms(i).gt.nqat)) then
-						write(*,'(a,i4)') 'Invalid Q-atom number for QCP, i = ',QCP_atoms(i)
-						qatom_load_fep = .false.
+				num_QCP = 0
+				do i=1, nqat
+					if (isheavy(iqseq(i))) then
+						num_QCP = num_QCP + 1
+						QCP_atoms(num_QCP) = i
 					end if
 				end do
 			else
-				num_QCP = nqat
-				allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
-				do i=1, nqat
-					QCP_atoms(i) = i
-				end do
+! whoops, no hydrogens ????
+! turn of QCP and call the user an idiot
+				use_QCP = .false.
+				write(*,'(a)') 'QCP hydrogen setting did not result in any atoms being assigned! Did you try to be smart? QCP disabled!'
 			end if
-		case (QCP_HYDROGEN)
-
 		case (QCP_FEPATOM)
-
+! use tried to be smart and did not assign any QCP atoms in FEP file
+! disable QCP and make fun of the user
+			write(*,'(a)') 'No QCP atoms assigned in FEP file with explicit QCP assignment set! QCP is now turned off! I guess this was not intentional!'
+		case default
+! whoops memory must be trashed, because we don't know this value
+! better kill program before something bad happens
+			write(*,'(a)') 'WARNING! No such QCP setting! Program will terminate due to expected memory corruption!'
+			qatom_load_fep = .false.
 	end select
+! now check bead assignment, if redefine need a bead for every QCP atom
+! check user input for advanced retardation
+        section='qcp_beads'
+        tmp_qcp_beads = prm_count(section)
+	if (tmp_qcp_beads .gt. 0) then
+! redefined, check if numbers match or not
+! not -> user error that needs to be punished
+		if (tmp_qcp_beads .ne. num_QCP) then
+! user failed to give all bead assignments, program says bye bye
+			write(*,'(a)') 'QCP bead reassignment not for the same number of atoms as there are in the QCP selection'
+			write(*,'(a,i6,a,i6)') 'Number of QCP atoms = ',num_QCP,' , number of bead section =',tmp_qcp_beads
+			write(*,'(a)') 'This wont work, better luck next time! Force stop to prevent memory corruption'
+			stop 666
+		end if
 
-
+                write (*,'(a)') 'Defining QCP beads in FEP file, overwriting predefined selections!'
+                do i=1,tmp_qcp_beads
+                        if(.not. prm_get_line(line)) goto 1000
+                        read (line,*, err=1000) tmpindex, num_Beads(i)
+                        if(num_Beads(i) .lt.1) then
+                                write(*,'(a,i4)') 'You kind of need to have a positive integer number of beads for atom ',i
+				write(*,'(a,i4)') 'Bead number there is ',num_Beads(i)
+                                qatom_load_fep = .false.
+                        end if
+		end do
+! need to add write out part so we know the acutal numbers that get set
+        else
+! use our lovely defaults
+		select case(QCP_size_enum)
+			case(QCP_SIZE_DEFAULT)
+				num_Beads(1:num_QCP) = QCP_size
+			case(QCP_SIZE_LARGE)
+				num_Beads(1:num_QCP) = QCP_size
+			case(QCP_SIZE_SMALL)
+				num_Beads(1:num_QCP) = QCP_size
+			case(QCP_SIZE_FEP)
+! whoops, this does not work, kind of need to know stuff if you want to redefine beads
+				write(*,'(a)') 'You cannot say that you want to assign all beads yourself and then don't do it!'
+				qatom_load_fep =.false.
+			case default
+! whoops memory must be trashed, because we don't know this value
+! better kill program before something bad happens
+                        write(*,'(a)') 'WARNING! No such QCP bead setting! Program will terminate due to expected memory corruption!'
+                        qatom_load_fep = .false.
+        end select
 
 	end if
 	call prm_close
