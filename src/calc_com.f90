@@ -15,18 +15,19 @@ module CALC_COM
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type COM_COORD_TYPE
-		real(kind=prec), pointer		::	x(:), y(:), z(:), mass(:)
+                TYPE(qr_vec),pointer     :: xyz(:)
+		real(kind=prec), pointer :: mass(:)
 	end type COM_COORD_TYPE
 	type(COM_COORD_TYPE), private	::	coords_mass(MAX_MASKS)
 	
 	type COORD_TYPE
-		real(kind=prec), pointer		::	xyz(:)
+		TYPE(qr_vec), pointer		::	xyz(:)
 	end type COORD_TYPE
 	type(COORD_TYPE), private	::	coords(MAX_MASKS)
 
 
 	type MASS_AVE_TYPE
-		real(kind=prec)		::	x,y,z
+		TYPE(qr_vec)		::	xyz
 	end type MASS_AVE_TYPE
 	type(MASS_AVE_TYPE), private	::	mass_ave(MAX_MASKS)
 	
@@ -69,14 +70,12 @@ integer function COM_add(desc)
 		return
 	end if
 
-	allocate(coords(Nmasks)%xyz(3*ats))
-	allocate(coords_mass(Nmasks)%x(ats), coords_mass(Nmasks)%y(ats), coords_mass(Nmasks)%z(ats), coords_mass(Nmasks)%mass(ats))
+	allocate(coords(Nmasks)%xyz(ats))
+	allocate(coords_mass(Nmasks)%xyz(ats),coords_mass(Nmasks)%mass(ats))
 
-	coords_mass(Nmasks)%x(:) = 0
-	coords_mass(Nmasks)%y(:) = 0
-	coords_mass(Nmasks)%z(:) = 0
-	coords_mass(Nmasks)%mass(:) = 0
-	coords(Nmasks)%xyz(:) = 0
+	coords_mass(Nmasks)%xyz(:)  = zero
+	coords_mass(Nmasks)%mass(:) = zero
+	coords(Nmasks)%xyz(:) = zero
 	
 	call COM_put_mass(Nmasks)
 	COM_add = Nmasks
@@ -96,20 +95,18 @@ subroutine COM_calc(i)
 	call mask_get(masks(i), xin, coords(i)%xyz)
 
 	!split coords into x, y, and z coords
-	coords_mass(i)%x = coords(i)%xyz(1::3)
-	coords_mass(i)%y = coords(i)%xyz(2::3)
-	coords_mass(i)%z = coords(i)%xyz(3::3)
+	coords_mass(i)%xyz = coords(i)%xyz
 	
 
 	!calculate center of mass
-	mass_ave(i)%x = dot_product(coords_mass(i)%x(:),coords_mass(i)%mass)/tot_mass(i)
-	mass_ave(i)%y = dot_product(coords_mass(i)%y(:),coords_mass(i)%mass)/tot_mass(i)
-	mass_ave(i)%z = dot_product(coords_mass(i)%z(:),coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%xyz%x = dot_product(coords_mass(i)%xyz(:)%x,coords_mass(i)%mass)/tot_mass(i)
+        mass_ave(i)%xyz%y = dot_product(coords_mass(i)%xyz(:)%y,coords_mass(i)%mass)/tot_mass(i)
+        mass_ave(i)%xyz%z = dot_product(coords_mass(i)%xyz(:)%z,coords_mass(i)%mass)/tot_mass(i)
 	
 	
 
 	
- 	write(*,100, advance='no') mass_ave(i)%x,mass_ave(i)%y,mass_ave(i)%z
+ 	write(*,100, advance='no') mass_ave(i)%xyz
 100	format(3f9.4)
 end subroutine COM_calc
 
@@ -120,7 +117,7 @@ subroutine COM_put_mass(i)
 
 	if(i < 1 .or. i > Nmasks) return
 
-	tot_mass(i) = 0
+	tot_mass(i) = zero
 	!put in masses into coords_mass
 	k=1
 	do j = 1, nat_pro

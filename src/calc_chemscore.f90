@@ -32,11 +32,11 @@ module CALC_CHEMSCORE
 	type SCORE_TYPE											! structure tp keep track of scoring data
 		character(len=80)		:: chFilename	! either name of restart file, 'top' or empty if trajectory frame
 		integer							:: frame			! empty if chReFilename is present
-		real(8)							:: score
-		real(8)							:: h_bonds
-		real(8)							:: metal
-		real(8)							:: lipophil
-		real(8)							:: rot_bond
+		real(kind=prec)							:: score
+		real(kind=prec)							:: h_bonds
+		real(kind=prec)							:: metal
+		real(kind=prec)							:: lipophil
+		real(kind=prec)							:: rot_bond
 	end type SCORE_TYPE
 
 !constants
@@ -53,8 +53,8 @@ module CALC_CHEMSCORE
 	integer, private					::	Nmasks = 0
 
 	type SCORE_COORD_TYPE
-		real(8), pointer				::	xr(:)
-		real(8)							::	xrcm(3)
+		TYPE(qr_vec), pointer				::	xr(:)
+		TYPE(qr_vec)					::	xrcm
 	end type SCORE_COORD_TYPE
 	type(SCORE_COORD_TYPE), private		::	coords(MAX_MASKS)
 
@@ -156,9 +156,9 @@ module CALC_CHEMSCORE
 	character*80				::	atom_data_file
 	character*80				::  coord_file	
 	
-	real						::	hbond_term,metal_term,lipo_term,rot_term	!result from score
-	real, parameter				::	dGconst=-5.48, dGhbond=-3.34, dGmetal=-6.03 
-	real, parameter				::	dGlipo=-0.117, dGrot=2.56
+	real(kind=prec)				::	hbond_term,metal_term,lipo_term,rot_term	!result from score
+	real(kind=prec), parameter		::	dGconst=-5.48_prec, dGhbond=-3.34_prec, dGmetal=-6.03_prec
+	real(kind=prec), parameter		::	dGlipo=-0.117_prec, dGrot=2.56_prec
 	
 	integer, private			::	bDoTopcalc		! boolean flag
 	integer, private			::	iRestartCalc=-1	! flag to indicate if doing calcs on restart file or not
@@ -220,7 +220,7 @@ end subroutine score_heading
 
 subroutine calc_hbonds		  !in subroutine calc_scores
 	integer		:: i,j
-	real			:: score1,score2
+	real(kind=prec)	:: score1,score2
 
 	hbond_term = 0
 
@@ -244,7 +244,7 @@ end subroutine calc_hbonds
 
 subroutine calc_lipo				!in subroutine calc_scores
 	integer					::i,j	
-	real					::fij
+	real(kind=prec)				::fij
 
 	lipo_term = 0
 
@@ -259,7 +259,7 @@ end subroutine calc_lipo
 
 subroutine calc_metals				!in subroutine calc_scores
 	integer			:: i,j
-	real				:: score
+	real(kind=prec)		:: score
 
 	metal_term = 0
 	do i = 1,nmet_r												!metal atoms in receptor
@@ -273,24 +273,24 @@ end subroutine calc_metals
 
 subroutine calc_rot					!in subroutine calc_scores
 	integer			:: i,nfrozen
-	real				:: pa,pb,hrot,sum
+	real(kind=prec)		:: pa,pb,hrot,sum
 	
-	nfrozen = 0
-	sum = 0
+	nfrozen = zero
+	sum = zero
 
 	do i = 1,nqbonds
 		if (q_bonds(i)%acontact .and. q_bonds(i)%bcontact) then  !if the bond is rotatable and frozen
 				nfrozen = nfrozen + 1
-				pa = real(q_bonds(i)%a_nonlip)/(q_bonds(i)%a_nonlip + q_bonds(i)%a_lip) ! % non-lipophilic heavy atoms on a-side
-				pb = real(q_bonds(i)%b_nonlip)/(q_bonds(i)%b_nonlip + q_bonds(i)%b_lip)
-				sum = sum + ((pa + pb)/2)		!add to sum with weight according to pa and pb
+				pa = real(q_bonds(i)%a_nonlip,kind=prec)/(q_bonds(i)%a_nonlip + q_bonds(i)%a_lip) ! % non-lipophilic heavy atoms on a-side
+				pb = real(q_bonds(i)%b_nonlip,kind=prec)/(q_bonds(i)%b_nonlip + q_bonds(i)%b_lip)
+				sum = sum + ((pa + pb)/2.0_prec	!add to sum with weight according to pa and pb
 				write(*,*) 'qbond ', i, ', atoms ', q_bonds(i)%a%top_nr, q_bonds(i)%b%top_nr, ', contrib = ', ((pa + pb)/2)
 		end if
 	end do
 	if(nfrozen == 0) then 
-		hrot = 0					
+		hrot = zero					
 	else
-		hrot = 1 + (1-1.0/nfrozen)*sum
+		hrot = one + (one-one/nfrozen)*sum
 	end if
 
 	rot_term = hrot
@@ -476,7 +476,7 @@ subroutine get_atom_data
 	
 	do i = 1,nat_solute			!!! Go through all atoms and give them a vdW radius.
 		vdwr(i) = atom_data(iac(i))%radius	!!! I represents atom number. 
-		if (vdwr(i) == 0.0) novdw(iac(i)) = .true.		
+		if (vdwr(i) == zero) novdw(iac(i)) = .true.		
 	end do
 
 	do i = 1, natyps
@@ -674,11 +674,11 @@ end subroutine reset_waters
 subroutine score_waters
 	!calculate hydrogen bonds between each water molecule and receptor !in set_waters
 	integer				::i,j,k
-	real					::score1,score2, sum_score
+	real(kind=prec)			::score1,score2, sum_score
 
 
 	do i = 1,nwaters
-		sum_score = 0.0
+		sum_score = zero
 		
 		do j = 1,nhba_r								!water hydrogens as donors, scored against receptor acceptors
 			score1 = g1_hb(waters(i)%H1,hba_r(j))				!distance term
@@ -1166,8 +1166,11 @@ subroutine start
 	!	write(*,'(a)') '>>>>> ERROR: Failed to load topology.'
 	!	stop
 	!end if  
-	
-	nwaters = (nat_pro-nat_solute)/3
+	if (solv_atom .ne. 0 ) then
+	nwaters = (nat_pro-nat_solute)/solv_atom
+	else
+	nwaters = 0
+	end if
 	call make_tac_index			! creates text atom code index
 	call get_atom_data			!!! Takes vdw_radii from vdw_file and puts into vector vdwr.
 													!!! Also assigns radii to every solute atom
@@ -1204,135 +1207,137 @@ subroutine store_waters !order of atoms in coordinate list must be O,H,H		!in su
 
 end subroutine store_waters
 
-real function angle(a,b,c)
-!determines the angle a-b-c in degrees, using the cosine theorem
+!real(kind=prec) function angle(a,b,c)
+!!determines the angle a-b-c in degrees, using the cosine theorem
+!
+!	integer					:: a,b,c	!parameters
+!
+!	real(kind=prec)	::ab_sq,bc_sq,ca_sq, scp !local variables
+!	real(kind=prec), parameter :: pi = 4.0_prec*atan(one)
+!
+!	ab_sq = distsq(a,b)
+!	bc_sq = distsq(b,c)
+!	ca_sq = distsq(c,a)
+!
+!	scp = (ab_sq+bc_sq-ca_sq)/(2*sqrt(ab_sq*bc_sq))
+!	!it may happen that scp is very slightly outside [-1;1]
+!    if ( scp >  1.0 ) scp =  1.0
+!    if ( scp < -1.0 ) scp = -1.0
+!
+!	angle = acos(scp)*180.0/pi
+!end function angle
+!
+!real function dist (a,b)
+!	!!! Gives the distance between two atoms.
+!	
+!	integer				::	a,b			!topology numbers
+!	real,dimension(3)	::	delta
+!	
+!	if(bUseXIN) then
+!		delta = xin(3*a-2:3*a)-xin(3*b-2:3*b)
+!	else
+!		delta = xtop(3*a-2:3*a)-xtop(3*b-2:3*b)			
+!	end if
+!	dist = sqrt(dot_product(delta,delta))
+!
+!end function dist
 
-	integer					:: a,b,c	!parameters
+!real function distsq (a,b)
+!	!!! Gives the squared distance between two atoms.
+!
+!	
+!	integer				::	a,b			
+!	real,dimension(3)	::	delta
+!
+!	if(bUseXIN) then
+!		delta = xin(3*a-2:3*a)-xin(3*b-2:3*b)
+!	else
+!		delta = xtop(3*a-2:3*a)-xtop(3*b-2:3*b)
+!	end if
+!	distsq = dot_product(delta,delta)
+!
+!end function distsq
 
-	real					::ab_sq,bc_sq,ca_sq, scp !local variables
-	real, parameter :: pi = 4.0*atan(1.0)
-
-	ab_sq = distsq(a,b)
-	bc_sq = distsq(b,c)
-	ca_sq = distsq(c,a)
-
-	scp = (ab_sq+bc_sq-ca_sq)/(2*sqrt(ab_sq*bc_sq))
-	!it may happen that scp is very slightly outside [-1;1]
-    if ( scp >  1.0 ) scp =  1.0
-    if ( scp < -1.0 ) scp = -1.0
-
-	angle = acos(scp)*180.0/pi
-end function angle
-
-real function dist (a,b)
-	!!! Gives the distance between two atoms.
-	
-	integer				::	a,b			!topology numbers
-	real,dimension(3)	::	delta
-	
-	if(bUseXIN) then
-		delta = xin(3*a-2:3*a)-xin(3*b-2:3*b)
-	else
-		delta = xtop(3*a-2:3*a)-xtop(3*b-2:3*b)			
-	end if
-	dist = sqrt(dot_product(delta,delta))
-
-end function dist
-
-real function distsq (a,b)
-	!!! Gives the squared distance between two atoms.
-
-	
-	integer				::	a,b			
-	real,dimension(3)	::	delta
-
-	if(bUseXIN) then
-		delta = xin(3*a-2:3*a)-xin(3*b-2:3*b)
-	else
-		delta = xtop(3*a-2:3*a)-xtop(3*b-2:3*b)
-	end if
-	distsq = dot_product(delta,delta)
-
-end function distsq
-
-real function fr_lip(a,b)
+real(kind=prec) function fr_lip(a,b)
 	!!! Gives f(rlL) i.e. contribution from one lipophilic - lipophilic pair
 	
 	integer					::	a,b	!topology numbers of the pair
 	
-	real					::	dr	!distance between the two atoms
-	real					::  R1
+	TYPE(qr_dist)				::	dr	!distance between the two atoms
+	real(kind=prec)				::  R1
 
-	dr = dist(a,b)
-	R1 = vdwr(a)+vdwr(b)+0.5
+        dr = q_dist(a,b)
+	R1 = vdwr(a)+vdwr(b)+0.5_prec
 
-	if(dr < (R1+3)) then				!if the atoms interact at all
-		if(dr <= R1) then			
-			fr_lip = 1					!if they are closer than R1 the interaction is given full weight
+	if(dr%r < (R1+3)) then				!if the atoms interact at all
+		if(dr%r <= R1) then			
+			fr_lip = one					!if they are closer than R1 the interaction is given full weight
 		else
-			fr_lip = 1-(dr-R1)/3		!else the interaction is given reduced weight
+			fr_lip = one-(dr%r-R1)/3.0_prec		!else the interaction is given reduced weight
 		end if
 	else
-		fr_lip = 0				
+		fr_lip = zero
 	end if
 end function fr_lip
 
 
-real function fr_met(a,b)
+real(kind=prec) function fr_met(a,b)
 	! Gives f(raM) i.e. contribution from one H-bond acceptor
 	! (or H-bond acceptor/donor) - metal pair
 	integer				::	a,b	! topology numbers
-	real					::	dr	! distance between the two atoms
+	TYPE(qr_dist)			::	dr	! distance between the two atoms
 	
-	dr = dist(a,b)
-	if(dr < 2.6) then
-		if(dr <= 2.2) then
-			fr_met = 1
+	dr = q_dist(a,b)
+	if(dr < 2.6_prec) then
+		if(dr <= 2.2_prec) then
+			fr_met = one
 		else
-			fr_met = 1-(dr-2.2)/0.4
+			fr_met = one-(dr-2.2_prec)/0.4_prec
 		end if
 	else
-		fr_met = 0
+		fr_met = zero
 	end if
 end function fr_met
 
-real function g1_hb(a,b)	
+real(kind=prec) function g1_hb(a,b)	
 	! Gives g1(dev_dr) i.e. contribution depending on the distance between
 	! the H of an H-bond donor and an H-bond acceptor
 	
-	integer			::	a,b					!	top. nr
-	real				::	dr, dev_dr	! distance between the two atoms, deviation from the
-															! ideal value 1.85 Å
+	integer			:: a,b					!	top. nr
+	real(kind=prec)		:: dev_dr	! distance between the two atoms, deviation from the
+        TYPE(qr_dist)           :: dr
+						! ideal value 1.85 Å
 	dr = dist(a,b)
-	dev_dr = abs(1.85-dr)
+	dev_dr = abs(1.85_prec-dr%r)
 
-	if(dev_dr < 0.65) then		!if atoms are interacting at all
-		if(dev_dr <= 0.25) then
-			g1_hb = 1
+	if(dev_dr < 0.65_prec) then		!if atoms are interacting at all
+		if(dev_dr <= 0.25_prec) then
+			g1_hb = one
 		else
-			g1_hb = 1-(dev_dr-0.25)/0.4
+			g1_hb = one-(dev_dr-0.25_prec)/0.4_prec
 		end if
 	else
-		g1_hb = 0
+		g1_hb = zero
 	end if
 end function g1_hb
 
-real function g2_hb(a,b,c)	
+real(kind=prec) function g2_hb(a,b,c)
 	!!! Gives g2(dev_ang) i.e. contribution depending on the H-bond angle at the hydrogen atom	
-	integer					::	a,b,c			!top.nr, the hydrogen must be atom b
-	real					::	ang, dev_ang	!H-bond angle, deviation from ideal value of 180 degrees
+	integer		:: a,b,c			!top.nr, the hydrogen must be atom b
+	real(kind=prec) :: ang, dev_ang	!H-bond angle, deviation from ideal value of 180 degrees
+	TYPE(angl_val)  :: ang
 	
 	ang = angle(a,b,c)
-	dev_ang = abs(180-ang)
+	dev_ang = abs(180.0_prec-ang%angl)
 
-	if(dev_ang < 80) then
-		if(dev_ang <= 30) then
-			g2_hb = 1
+	if(dev_ang < 80.0_prec) then
+		if(dev_ang <= 30.0_prec) then
+			g2_hb = one
 		else
-			g2_hb = 1-(dev_ang-30)/50
+			g2_hb = one-(dev_ang-30.0_prec)/50.0_prec
 		end if
 	else
-		g2_hb = 0
+		g2_hb = zero
 	end if
 end function g2_hb
 
@@ -1421,7 +1426,7 @@ end function score_add
 subroutine score_mean
 	! calculate and print mean score for all contributions
 	! locals
-	real(8)					:: m_score, m_hbond, m_metal, m_lipo, m_rot
+	real(kind=prec) :: m_score, m_hbond, m_metal, m_lipo, m_rot
 
 	do i = 1,nScores
 		m_score = m_score + aScore(i)%score
@@ -1445,11 +1450,11 @@ subroutine score_mean
 110	format(       t1,a,        t25,f9.2,  t36, f9.2,  t47,f9.2,  t59,f9.2,  t70,f9.2)
 	write(*,111) '------------------------------------------------------------------------------'                                                                     
 111	format(t1,a)	
-	m_score = 0
-	m_hbond = 0
-	m_metal = 0
-	m_lipo  = 0
-	m_rot   = 0
+	m_score = zero
+	m_hbond = zero
+	m_metal = zero
+	m_lipo  = zero
+	m_rot   = zero
 	nScores = 0
 
 end subroutine score_mean

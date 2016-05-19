@@ -426,11 +426,11 @@ end subroutine finalize_storage
 subroutine mask_get(m, x, xmasked)
 	!arguments
 	type(MASK_TYPE)			::	m
-	real(kind=prec)						::	x(:)
-	real(kind=prec)						::	xmasked(:)
-	integer						::	i, i3, j
+	TYPE(qr_vec)			::	x(:)
+	TYPE(qr_vec)			::	xmasked(:)
+	integer				::	i, i3, j
 
-	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then
+	if(size(x) < nat_pro .or. size(xmasked) < m%included) then
 		write(*,900)
 900		format('>>>>> ERROR: invalid coordinate array size.')
 		return
@@ -440,7 +440,7 @@ subroutine mask_get(m, x, xmasked)
 	do i=1, nat_pro
 		if(m%mask(i)) then
 			j=j+1
-			xmasked(3*j-2:3*j) = x(3*i-2:3*i)
+			xmasked(j) = x(i)
 		end if
 	end do
 end subroutine mask_get
@@ -451,12 +451,12 @@ end subroutine mask_get
 !***************************************************
 subroutine mask_put(m, x, xmasked)
 	!arguments
-	type(MASK_TYPE)				::	m
-	real(kind=prec)     				::	x(:)
-	real(kind=prec)       					::	xmasked(:)
-	integer						::	i, i3, j
+	type(MASK_TYPE)			::	m
+	TYPE(qr_vec)			::	x(:)
+	TYPE(qr_vec)			::	xmasked(:)
+	integer				::	i, i3, j
 
-	if(size(x) < 3*nat_pro .or. size(xmasked) < 3*m%included) then
+	if(size(x) < nat_pro .or. size(xmasked) < m%included) then
 		write(*,900)
 900		format('>>>>> ERROR: invalid coordinate array size.')
 		return
@@ -466,7 +466,7 @@ subroutine mask_put(m, x, xmasked)
 	do i=1, nat_pro
 		if(m%mask(i)) then
 			j=j+1
-			x(3*i-2:3*i) = xmasked(3*j-2:3*j)
+			x(i) = xmasked(j)
 		end if
 	end do
 end subroutine mask_put

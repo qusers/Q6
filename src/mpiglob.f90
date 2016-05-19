@@ -45,7 +45,7 @@ use NRGY
 
   !Used for gathering d,E,EQ
   integer			:: reclength=-1
-  real(kind=wp8),allocatable     :: d_recv(:,:)
+  real(kind=prec),allocatable     :: d_recv(:,:)
   type(MPI_NB_ENERGIES),allocatable  :: E_recv(:),E_send(:)
 !additional dimension for new structure of EQ arrays
   type(MPI_NBQ_ENERGIES),allocatable :: EQ_recv(:,:,:),EQ_send(:,:)

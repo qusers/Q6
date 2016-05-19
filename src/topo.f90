@@ -90,13 +90,13 @@ character(len=256)			::	prm_file
 
 !atom information
 	!nat_pro = total # of atoms in topology, nat_solute = # solute atoms (no water)
-	integer											::	nat_pro, nat_solute, max_atom
-	real(kind=prec), allocatable				::	xtop(:)			! topology/coordinates
+	integer				::	nat_pro, nat_solute, max_atom
+	TYPE(qr_vec), allocatable	::	xtop(:)			! topology/coordinates
 	integer(TINY), allocatable	::	iac(:)			! integer atom codes
-	logical, allocatable				::	heavy(:)		! boolean flag, true if atom >= He
-	real(kind=prec), allocatable						::	crg(:)			! charges
-	real(kind=prec), allocatable						::	chg_solv(:)		! solvent charges
-	real(kind=prec), allocatable						::	aLJ_solv(:,:),bLJ_solv(:,:)	! solvent LJ types
+	logical, allocatable		::	heavy(:)		! boolean flag, true if atom >= He
+	real(kind=prec), allocatable	::	crg(:)			! charges
+	real(kind=prec), allocatable	::	chg_solv(:)		! solvent charges
+	real(kind=prec), allocatable	::	aLJ_solv(:,:),bLJ_solv(:,:)	! solvent LJ types
         integer :: solv_atom
 ! number of atoms/solvent molecule
 	integer(AI), allocatable		::	cgpatom(:)		! charge groups
@@ -112,17 +112,17 @@ character(len=256)			::	prm_file
 
 !sphere information
 	!!sim. sphere & water sphere centres
-	real(kind=prec)						::	xpcent(3), xwcent(3)
-	real(kind=prec)						::	rwat !solvation radius
-	real(kind=prec)						::	rexcl_o,rexcl_i,topo_rho_wat
-	integer						::	nexats, nshellats, nexwat
+	TYPE(qr_vec)			::	xpcent, xwcent
+	real(kind=prec)			::	rwat !solvation radius
+	real(kind=prec)			::	rexcl_o,rexcl_i,topo_rho_wat
+	integer				::	nexats, nshellats, nexwat
 	logical, allocatable		::	shell(:)
 	logical, allocatable		::	excl(:)
 
 !box information
-	real(kind=prec)						::	boxlength(3) !length of the boxedges
-	real(kind=prec)						::	boxcentre(3) !center coordinates of the box
-	real(kind=prec)						::	inv_boxl(3)  !inverse of the boxedges
+	TYPE(qr_vec)			::	boxlength !length of the boxedges
+	TYPE(qr_vec)			::	boxcentre !center coordinates of the box
+	TYPE(qr_vec)			::	inv_boxl  !inverse of the boxedges
 
 !flag indication if simulation sphere (.false.) or periodic box (.true.)is used.
 	logical						::	use_PBC = .false.
@@ -281,15 +281,15 @@ subroutine topo_allocate_atom(stat_out)
 	integer, optional, intent(out)::	stat_out
 
 	allocate(glb_cofactor(max_atom), &
-						iac(max_atom), &
-						crg(max_atom), &
-						xtop(3*max_atom), &
-						heavy(max_atom), &
-						cgpatom(max_atom), &
-						list14(max_nbr_range, max_atom), &
-						listex(max_nbr_range, max_atom), &
-						excl(max_atom), shell(max_atom), &
-						stat=alloc_status)
+			iac(max_atom), &
+			crg(max_atom), &
+			xtop(max_atom), &
+			heavy(max_atom), &
+			cgpatom(max_atom), &
+			list14(max_nbr_range, max_atom), &
+			listex(max_nbr_range, max_atom), &
+			excl(max_atom), shell(max_atom), &
+			stat=alloc_status)
 
 	if(alloc_status /= 0) then
 		write(*,*) 'ERROR: Out of memory when allocating topology arrays'
@@ -354,19 +354,19 @@ subroutine topo_reallocate_xtop(atoms)
 !arguments
 	integer						::	atoms
 
-	real(kind=prec), allocatable		::	r8temp(:)
-	integer						::	nat3old_array(1), nat3old
+	TYPE(qr_vec), allocatable		::	temp(:)
+	integer					::	natold_array(1), natold
 
-	nat3old_array = ubound(xtop)
-	nat3old = nat3old_array(1)
-	allocate(r8temp(nat3old), stat=alloc_status)
+	natold_array = ubound(xtop)
+	natold = natold_array(1)
+	allocate(temp(natold), stat=alloc_status)
 	call topo_check_alloc('reallocating topology atom array')
-	r8temp(1:nat3old) = xtop(1:nat3old)
+	temp(1:natold) = xtop(1:natold)
 	deallocate(xtop)
-	allocate(xtop(atoms*3),  stat=alloc_status)
+	allocate(xtop(atoms),  stat=alloc_status)
 	call topo_check_alloc('reallocating topology atom array')
-	xtop(1:nat3old) = r8temp(1:nat3old)
-	deallocate(r8temp)
+	xtop(1:natold) = temp(1:natold)
+	deallocate(temp)
 
 end subroutine topo_reallocate_xtop
 
@@ -378,7 +378,7 @@ subroutine topo_reallocate(oldatoms, atoms, waters)
 !locals
 	integer						::	oldbonds, bonds
 	integer						::	oldangles, angles
-	real(kind=prec), allocatable			::	r4temp(:)
+	real(kind=prec), allocatable			::	crgtemp(:)
 	integer(1), allocatable		::	i1temp(:)
 	type(BOND_TYPE), allocatable::	bndtemp(:)
 	type(ANG_TYPE), allocatable	::	angtemp(:)
@@ -408,18 +408,18 @@ subroutine topo_reallocate(oldatoms, atoms, waters)
 	ang(1:oldangles) = angtemp(1:oldangles)
 	deallocate(angtemp)
 
-	allocate(r4temp(oldatoms), stat=alloc_status)
+	allocate(crgtemp(oldatoms), stat=alloc_status)
 	call topo_check_alloc('reallocating atom arrays')
 
 	!realloc. crg
-	r4temp(1:oldatoms) = crg(1:oldatoms)
+	crgtemp(1:oldatoms) = crg(1:oldatoms)
 	deallocate(crg)
 	allocate(crg(atoms), stat=alloc_status)
 	call topo_check_alloc('reallocating atom arrays')
-	crg(1:oldatoms) = r4temp(1:oldatoms)
+	crg(1:oldatoms) = crgtemp(1:oldatoms)
 
 	!done with real's
-	deallocate(r4temp)
+	deallocate(crgtemp)
 	allocate(i1temp(oldatoms), stat=alloc_status)
 	call topo_check_alloc('reallocating atom arrays')
 
@@ -454,7 +454,7 @@ end subroutine topo_check_alloc
 logical function topo_load(filename, require_version)
 !arguments
 	character(*)			::	filename
-	real, intent(in)		::	require_version
+	real(kind=prec), intent(in)		::	require_version
 
 !locals
 	integer					::	u, readflag
@@ -504,23 +504,23 @@ end function topo_open
 !----------------------------------------------------------------------
 logical function topo_read(u, require_version, extrabonds)
 	! arguments
-	integer						::	u
-	real, intent(in)			::	require_version
-	integer, optional,intent(in)::	extrabonds
+	integer				:: u
+	real(kind=prec), intent(in)	:: require_version
+	integer, optional,intent(in)	:: extrabonds
 
 	! local variables
-	integer                     :: rd
-	integer						:: nat3, nwat
-	integer						:: i,j,k,n, si
-	integer						:: nhyds
-	integer						:: paths
-	character(len=256)			:: line, restofline
-        character(256)                          :: version_string
-	character(len=10)			:: key, boundary_type !PWadded
-	integer						:: filestat
+	integer				:: rd
+	integer				:: nat3, nwat
+	integer				:: i,j,k,n, si
+	integer				:: nhyds
+	integer				:: paths
+	character(len=256)		:: line, restofline
+        character(256)			:: version_string
+	character(len=10		:: key, boundary_type !PWadded
+	integer				:: filestat
 	integer(1), allocatable		:: temp_list(:,:)
-	integer						:: extra,fdot
-	real(kind=prec)						:: deprecated
+	integer				:: extra,fdot
+	real(kind=prec)			:: deprecated
 
 	topo_read = .false.
 	! get rid of old topology
@@ -618,7 +618,7 @@ logical function topo_read(u, require_version, extrabonds)
 			'No. of solvent atoms    = ',i10)
 
 ! prevent div/0 if topology has no info on solvent atoms
-! then jsut set it to one and nwat to zero
+! then just set it to one and nwat to zero
 	max_atom = nat_pro
 	if (solv_atom .eq. 0) then
 ! now means that there can not be any solvent
@@ -636,7 +636,7 @@ logical function topo_read(u, require_version, extrabonds)
 
   ! --> 3. topology coordinates    ---->     xtop
   ! ===========================    ==============
-   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(rd),rd=1,3*nat_pro)
+   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(1:rd),rd=1,3*nat_pro:3)
    write (*,40) 3*nat_pro
    40 format ('No. of coordinates      = ',i10)
 
@@ -1130,7 +1130,7 @@ subroutine topo_save(name)
 	write(*, 10, advance='no') 'co-ordinates'
 	write(u, '(4i8,a)') nat_pro, nat_solute, solv_atom, dielectric, &
 		' = Total no. of atoms, no. of solute atoms, atoms per solvent molecule, solvent dielectric as eps*1000. Coordinates: (2*3 per line)'
-	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop(si), si = 1,3*nat_pro )
+	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop(1:si:3), si = 1,nat_pro )
 	write(*, 20) 3*nat_pro
 
 ! --- INTEGER ATOM CODES
