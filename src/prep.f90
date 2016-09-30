@@ -2797,7 +2797,7 @@ subroutine oldreadlib(filnam)
 				qgrp = qgrp + lib(nlibres)%crg_lib(igp)
 			enddo
 			!check fractional charges
-			if(q_abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
+			if(q_abs(qgrp - nint(qgrp) ) .gt. QREAL_EPS)  then
 				write( *, 130) qgrp, i
 			end if
 			qtot_grp = qtot_grp + qgrp
@@ -2806,7 +2806,7 @@ subroutine oldreadlib(filnam)
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(q_abs(qtot - qtot_grp)  >0.000001_prec) then
+		if(q_abs(qtot - qtot_grp)  .gt. QREAL_EPS) then
 			write(*,160)
 		end if
 	enddo
@@ -3139,7 +3139,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 				ntot = ntot + lib(nlibres)%natcgp(i)
 
 				!check fractional charges
-				if(q_abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
+				if(q_abs(qgrp - nint(qgrp) ) .gt. QREAL_EPS)  then
 					write( *, 130) qgrp, i
 				end if
 				qtot_grp = qtot_grp + qgrp
@@ -3150,7 +3150,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(q_abs(qtot - qtot_grp)  >0.000001_prec) then
+		if(q_abs(qtot - qtot_grp)  .gt. QREAL_EPS) then
 			write(*,160)
 		end if
 	end do !entries
@@ -4035,7 +4035,8 @@ subroutine readpdb()
 
 ! *** local variables
 	character(len=256)		:: pdb_file
-	CHARACTER(len=4)		:: atnam_tmp , resnam_tmp , resnam_tmp2
+	CHARACTER(len=4)		:: atnam_tmp, resnam_tmp , resnam_tmp2
+	CHARACTER(len=5)		:: atnam_tmp_read
 	character(len=80)			::	line
 	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j , oldnum2 , resnum_tmp2
         TYPE(qr_vec)				:: xtmp
@@ -4074,7 +4075,9 @@ subroutine readpdb()
 !Old format line  10	FORMAT(13x,a4,a4,i5,4x,3f8.3)
 !Format if all is read  10	format(a6,i5,1x,a4,a1,a3,1x,a1,i4,a1,3x,3f8.3)
 ! Changed format so that residues for 4 letter codes can also be read P. Bauer
-10	format(13x,a4,a4,1x,i4,4x,3f8.3)
+! Changed format so that atom names are read from 13 (see PDB format above), not 14.
+!   It reads 5 characters (including Alt.Loc) for backwards compatibility  (M.Purg)
+10	format(12x,a5,a4,1x,i4,4x,3f8.3)
 
 !	progress output formats
 20	format('molecule ',i4,': ',a4,i5)
@@ -4121,8 +4124,11 @@ subroutine readpdb()
 		else
 			resnum_tmp2 = resnum_tmp
 			resnam_tmp2 = resnam_tmp
-			READ(line, 10, end = 100, err = 200) atnam_tmp, resnam_tmp, &
+            !read 5 characters (including Alt.Loc for backwards compatibility) for atom name
+			READ(line, 10, end = 100, err = 200) atnam_tmp_read, resnam_tmp, &
 				resnum_tmp, xtmp
+            !use only the left-adjusted 4
+            atnam_tmp = adjustl(atnam_tmp_read)
 
 		! ---	New residue ?
 			if(resnum_tmp/=oldnum) then
@@ -4625,7 +4631,7 @@ subroutine set_cgp
 				r2 = q_dist4(xtop(switchatom),xpcent)
 			else
 				!exclude by charge group centre
-          cgp_cent = cgp_cent * zero
+          cgp_cent = zero
 				  do i = 1, lib(res(ires)%irc)%natcgp(igp)
 			    	ia = res(ires)%start - 1 + lib(res(ires)%irc)%atcgp(i, igp)
 					  cgp_cent = cgp_cent + xtop(ia)
@@ -5034,7 +5040,7 @@ logical function set_solvent_box()
 	boxlength%z = coord_in
 
 	if( (boxlength%x .eq. zero .or. boxlength%y .eq. zero .or. boxlength%z .eq. zero) ) then
-		inv_boxl = inv_boxl * zero
+		inv_boxl = zero
 	else
 		inv_boxl = one/boxlength
 	end if
@@ -6577,13 +6583,17 @@ subroutine writepdb
 !Old format  10	format(a6,i5,2x,a4,a4,i5,4x,3f8.3)
 !TODO: Fix writing of chainID, requires chain info in topology.
    !(PDBtype,atomNr,atomName,resName,resNr,coords)
-10	format(a6,i5,1x,a5,a4,1x,i4,4x,3f8.3)
+!Changed format to write atom names according to PDB standard - in positions 13-16 (not 14-17)
+!  with leading space for those with less than four characters (14-16). Note: Two-character elements 
+!  (Ca, Mg, Cl..) do not conform to the standard (13-), since they also start at 14. (M.Purg)
+10	format(a6,i5,2x,a4,a4,1x,i4,4x,3f8.3)   !ATOM/HETATM - less than four character atom name
 11	format(a6,11x,a4,1x,i4) !For TER cards
+12	format(a6,i5,1x,a4,1x,a4,1x,i4,4x,3f8.3)  !ATOM/HETATM - four character atom name
 	iat = 0
 	imol = 1
 	wrote_atom_in_molecule = .false.
 	do i = 1, nres
-		if(lib(res(i)%irc )%HETATM) then
+		if(lib(res(i)%irc)%HETATM) then
 			PDBtype = 'HETATM'
 		else
 			PDBtype = 'ATOM  '
@@ -6592,8 +6602,13 @@ subroutine writepdb
 			iat = iat + 1
 			!write only atoms in mask
 			if(mask%mask(iat)) then
-				write(3, 10) PDBtype, iat, lib(res(i)%irc )%atnam(j), res(i)%name,&
-					i,xtop(iat)
+                if(len_trim(lib(res(i)%irc)%atnam(j)) .lt. 4) then
+				    write(3, 10) PDBtype, iat, lib(res(i)%irc)%atnam(j), res(i)%name,&
+					    i,xtop(iat)
+                else
+				    write(3, 12) PDBtype, iat, lib(res(i)%irc)%atnam(j), res(i)%name,&
+					    i,xtop(iat)
+                end if
 				wrote_atom_in_molecule = .true.
 			end if
 		enddo
@@ -6854,7 +6869,7 @@ type(MASK_TYPE)        :: mask
 integer                :: ats, imaskat, iat
 real(kind=prec)                :: totmass, mass
 get_centre_by_mass = .false.
-centre = centre * zero
+centre = zero
 totmass=zero
 call mask_initialize(mask)
 ats = maskmanip_make_pretop(mask)
