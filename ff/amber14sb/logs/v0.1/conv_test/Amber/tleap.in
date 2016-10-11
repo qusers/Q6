@@ -1,0 +1,9 @@
+source leaprc.protein.ff14SB
+
+mol = loadPdb ../all_amino_acids.pdb
+saveAmberParm mol mol.prmtop mol.inpcrd
+
+quit
+
+
+

@@ -1,0 +1,1303 @@
+{ACE}
+    [atoms]
+        1  HH31   HC            0.11230
+        2  CH3    CT           -0.36620
+        3  HH32   HC            0.11230
+        4  HH33   HC            0.11230
+        5  C      C             0.59720
+        6  O      O            -0.56790
+    [bonds]
+        HH31  CH3  
+        CH3   HH32 
+        CH3   HH33 
+        CH3   C    
+        C     O    
+    [impropers]
+        CH3   C     +N    O    
+    [connections]
+        tail C
+*--------------------------------------------------------------------------------
+{ALA}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.03370
+        4  HA     H1            0.08230
+        5  CB     CT           -0.18250
+        6  HB1    HC            0.06030
+        7  HB2    HC            0.06030
+        8  HB3    HC            0.06030
+        9  C      C             0.59730
+       10  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB1  
+        CB    HB2  
+        CB    HB3  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ARG}
+    [atoms]
+        1  N      N            -0.34790
+        2  H      H             0.27470
+        3  CA     CX           -0.26370
+        4  HA     H1            0.15600
+        5  CB     C8           -0.00070
+        6  HB2    HC            0.03270
+        7  HB3    HC            0.03270
+        8  CG     C8            0.03900
+        9  HG2    HC            0.02850
+       10  HG3    HC            0.02850
+       11  CD     C8            0.04860
+       12  HD2    H1            0.06870
+       13  HD3    H1            0.06870
+       14  NE     N2           -0.52950
+       15  HE     H             0.34560
+       16  CZ     CA            0.80760
+       17  NH1    N2           -0.86270
+       18  HH11   H             0.44780
+       19  HH12   H             0.44780
+       20  NH2    N2           -0.86270
+       21  HH21   H             0.44780
+       22  HH22   H             0.44780
+       23  C      C             0.73410
+       24  O      O            -0.58940
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    HD2  
+        CD    HD3  
+        CD    NE   
+        NE    HE   
+        NE    CZ   
+        CZ    NH1  
+        CZ    NH2  
+        NH1   HH11 
+        NH1   HH12 
+        NH2   HH21 
+        NH2   HH22 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        NE    CZ    NH1   NH2  
+        CD    NE    CZ    HE   
+        CZ    NH1   HH11  HH12 
+        CZ    NH2   HH21  HH22 
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ARN}
+    [atoms]
+        1  N      N            -0.61425
+        2  H      H             0.37526
+        3  CA     CX           -0.04834
+        4  HA     H1            0.09546
+        5  CB     C8            0.02335
+        6  HB2    HC            0.03300
+        7  HB3    HC            0.03300
+        8  CG     C8            0.15920
+        9  HG2    HC           -0.05893
+       10  HG3    HC           -0.05893
+       11  CD     C8            0.20895
+       12  HD2    H1            0.02506
+       13  HD3    H1            0.02506
+       14  NE     N2           -0.86040
+       15  HE     H             0.37571
+       16  CZ     CA            0.91886
+       17  NH1    N2           -0.91983
+       18  HH11   H             0.39274
+       19  HH12   H             0.39274
+       20  NH2    N2           -0.94281
+       21  HH21   H             0.35919
+       22  C      C             0.68923
+       23  O      O            -0.60332
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    HD2  
+        CD    HD3  
+        CD    NE   
+        NE    HE   
+        NE    CZ   
+        CZ    NH1  
+        CZ    NH2  
+        NH1   HH11 
+        NH1   HH12 
+        NH2   HH21 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        NE    CZ    NH1   NH2  
+        CD    NE    CZ    HE   
+        CZ    NH1   HH11  HH12 
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ASH}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.03410
+        4  HA     H1            0.08640
+        5  CB     2C           -0.03160
+        6  HB2    HC            0.04880
+        7  HB3    HC            0.04880
+        8  CG     C             0.64620
+        9  OD1    O            -0.55540
+       10  OD2    OH           -0.63760
+       11  HD2    HO            0.47470
+       12  C      C             0.59730
+       13  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    OD1  
+        CG    OD2  
+        OD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CB    CG    OD1   OD2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ASN}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.01430
+        4  HA     H1            0.10480
+        5  CB     2C           -0.20410
+        6  HB2    HC            0.07970
+        7  HB3    HC            0.07970
+        8  CG     C             0.71300
+        9  OD1    O            -0.59310
+       10  ND2    N            -0.91910
+       11  HD21   H             0.41960
+       12  HD22   H             0.41960
+       13  C      C             0.59730
+       14  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    OD1  
+        CG    ND2  
+        ND2   HD21 
+        ND2   HD22 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CB    CG    ND2   OD1  
+        CG    ND2   HD21  HD22 
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ASP}
+    [atoms]
+        1  N      N            -0.51630
+        2  H      H             0.29360
+        3  CA     CX            0.03810
+        4  HA     H1            0.08800
+        5  CB     2C           -0.03030
+        6  HB2    HC           -0.01220
+        7  HB3    HC           -0.01220
+        8  CG     CO            0.79940
+        9  OD1    O2           -0.80140
+       10  OD2    O2           -0.80140
+       11  C      C             0.53660
+       12  O      O            -0.58190
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    OD1  
+        CG    OD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CB    CG    OD1   OD2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{CYM}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.03510
+        4  HA     H1            0.05080
+        5  CB     CT           -0.24130
+        6  HB3    H1            0.11220
+        7  HB2    H1            0.11220
+        8  SG     SH           -0.88440
+        9  C      C             0.59730
+       10  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB3  
+        CB    HB2  
+        CB    SG   
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{CYS}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.02130
+        4  HA     H1            0.11240
+        5  CB     2C           -0.12310
+        6  HB2    H1            0.11120
+        7  HB3    H1            0.11120
+        8  SG     SH           -0.31190
+        9  HG     HS            0.19330
+       10  C      C             0.59730
+       11  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    SG   
+        SG    HG   
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{CYX}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.04290
+        4  HA     H1            0.07660
+        5  CB     2C           -0.07900
+        6  HB2    H1            0.09100
+        7  HB3    H1            0.09100
+        8  SG     S            -0.10810
+        9  C      C             0.59730
+       10  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    SG   
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{GLH}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.01450
+        4  HA     H1            0.07790
+        5  CB     2C           -0.00710
+        6  HB2    HC            0.02560
+        7  HB3    HC            0.02560
+        8  CG     2C           -0.01740
+        9  HG2    HC            0.04300
+       10  HG3    HC            0.04300
+       11  CD     C             0.68010
+       12  OE1    O            -0.58380
+       13  OE2    OH           -0.65110
+       14  HE2    HO            0.46410
+       15  C      C             0.59730
+       16  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    OE1  
+        CD    OE2  
+        OE2   HE2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CG    CD    OE1   OE2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{GLN}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.00310
+        4  HA     H1            0.08500
+        5  CB     2C           -0.00360
+        6  HB2    HC            0.01710
+        7  HB3    HC            0.01710
+        8  CG     2C           -0.06450
+        9  HG2    HC            0.03520
+       10  HG3    HC            0.03520
+       11  CD     C             0.69510
+       12  OE1    O            -0.60860
+       13  NE2    N            -0.94070
+       14  HE21   H             0.42510
+       15  HE22   H             0.42510
+       16  C      C             0.59730
+       17  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    OE1  
+        CD    NE2  
+        NE2   HE21 
+        NE2   HE22 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CG    CD    NE2   OE1  
+        CD    NE2   HE21  HE22 
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{GLU}
+    [atoms]
+        1  N      N            -0.51630
+        2  H      H             0.29360
+        3  CA     CX            0.03970
+        4  HA     H1            0.11050
+        5  CB     2C            0.05600
+        6  HB2    HC           -0.01730
+        7  HB3    HC           -0.01730
+        8  CG     2C            0.01360
+        9  HG2    HC           -0.04250
+       10  HG3    HC           -0.04250
+       11  CD     CO            0.80540
+       12  OE1    O2           -0.81880
+       13  OE2    O2           -0.81880
+       14  C      C             0.53660
+       15  O      O            -0.58190
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    OE1  
+        CD    OE2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CG    CD    OE1   OE2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{GLY}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.02520
+        4  HA2    H1            0.06980
+        5  HA3    H1            0.06980
+        6  C      C             0.59730
+        7  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA2  
+        CA    HA3  
+        CA    C    
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{HID}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX            0.01880
+        4  HA     H1            0.08810
+        5  CB     CT           -0.04620
+        6  HB2    HC            0.04020
+        7  HB3    HC            0.04020
+        8  CG     CC           -0.02660
+        9  ND1    NA           -0.38110
+       10  HD1    H             0.36490
+       11  CE1    CR            0.20570
+       12  HE1    H5            0.13920
+       13  NE2    NB           -0.57270
+       14  CD2    CV            0.12920
+       15  HD2    H4            0.11470
+       16  C      C             0.59730
+       17  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    ND1  
+        CG    CD2  
+        ND1   HD1  
+        ND1   CE1  
+        CE1   HE1  
+        CE1   NE2  
+        NE2   CD2  
+        CD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CE1   ND1   CG    HD1  
+        CG    CD2   HD2   NE2  
+        HE1   CE1   ND1   NE2  
+        CB    CG    CD2   ND1  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{HIE}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.05810
+        4  HA     H1            0.13600
+        5  CB     CT           -0.00740
+        6  HB2    HC            0.03670
+        7  HB3    HC            0.03670
+        8  CG     CC            0.18680
+        9  ND1    NB           -0.54320
+       10  CE1    CR            0.16350
+       11  HE1    H5            0.14350
+       12  NE2    NA           -0.27950
+       13  HE2    H             0.33390
+       14  CD2    CW           -0.22070
+       15  HD2    H4            0.18620
+       16  C      C             0.59730
+       17  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    ND1  
+        CG    CD2  
+        ND1   CE1  
+        CE1   HE1  
+        CE1   NE2  
+        NE2   HE2  
+        NE2   CD2  
+        CD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CD2   NE2   CE1   HE2  
+        CG    CD2   HD2   NE2  
+        HE1   CE1   ND1   NE2  
+        CB    CG    CD2   ND1  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{HIP}
+    [atoms]
+        1  N      N            -0.34790
+        2  H      H             0.27470
+        3  CA     CX           -0.13540
+        4  HA     H1            0.12120
+        5  CB     CT           -0.04140
+        6  HB2    HC            0.08100
+        7  HB3    HC            0.08100
+        8  CG     CC           -0.00120
+        9  ND1    NA           -0.15130
+       10  HD1    H             0.38660
+       11  CE1    CR           -0.01700
+       12  HE1    H5            0.26810
+       13  NE2    NA           -0.17180
+       14  HE2    H             0.39110
+       15  CD2    CW           -0.11410
+       16  HD2    H4            0.23170
+       17  C      C             0.73410
+       18  O      O            -0.58940
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    ND1  
+        CG    CD2  
+        ND1   HD1  
+        ND1   CE1  
+        CE1   HE1  
+        CE1   NE2  
+        NE2   HE2  
+        NE2   CD2  
+        CD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CE1   ND1   CG    HD1  
+        CD2   NE2   CE1   HE2  
+        CG    CD2   HD2   NE2  
+        HE1   CE1   ND1   NE2  
+        CB    CG    CD2   ND1  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{HYP}
+    [atoms]
+        1  N      N            -0.25480
+        2  CD     CT            0.05950
+        3  HD22   H1            0.07000
+        4  HD23   H1            0.07000
+        5  CG     CT            0.04000
+        6  HG     H1            0.04160
+        7  OD1    OH           -0.61340
+        8  HD1    HO            0.38510
+        9  CB     CT            0.02030
+       10  HB2    HC            0.04260
+       11  HB3    HC            0.04260
+       12  CA     CX            0.00470
+       13  HA     H1            0.07700
+       14  C      C             0.58960
+       15  O      O            -0.57480
+    [bonds]
+        N     CD   
+        N     CA   
+        CD    HD22 
+        CD    HD23 
+        CD    CG   
+        CG    HG   
+        CG    OD1  
+        CG    CB   
+        OD1   HD1  
+        CB    HB2  
+        CB    HB3  
+        CB    CA   
+        CA    HA   
+        CA    C    
+        C     O    
+    [impropers]
+        CA    C     +N    O    
+        -C    N     CA    CD   
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{ILE}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.05970
+        4  HA     H1            0.08690
+        5  CB     3C            0.13030
+        6  HB     HC            0.01870
+        7  CG2    CT           -0.32040
+        8  HG21   HC            0.08820
+        9  HG22   HC            0.08820
+       10  HG23   HC            0.08820
+       11  CG1    2C           -0.04300
+       12  HG12   HC            0.02360
+       13  HG13   HC            0.02360
+       14  CD1    CT           -0.06600
+       15  HD11   HC            0.01860
+       16  HD12   HC            0.01860
+       17  HD13   HC            0.01860
+       18  C      C             0.59730
+       19  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB   
+        CB    CG2  
+        CB    CG1  
+        CG2   HG21 
+        CG2   HG22 
+        CG2   HG23 
+        CG1   HG12 
+        CG1   HG13 
+        CG1   CD1  
+        CD1   HD11 
+        CD1   HD12 
+        CD1   HD13 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{LEU}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.05180
+        4  HA     H1            0.09220
+        5  CB     2C           -0.11020
+        6  HB2    HC            0.04570
+        7  HB3    HC            0.04570
+        8  CG     3C            0.35310
+        9  HG     HC           -0.03610
+       10  CD1    CT           -0.41210
+       11  HD11   HC            0.10000
+       12  HD12   HC            0.10000
+       13  HD13   HC            0.10000
+       14  CD2    CT           -0.41210
+       15  HD21   HC            0.10000
+       16  HD22   HC            0.10000
+       17  HD23   HC            0.10000
+       18  C      C             0.59730
+       19  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG   
+        CG    CD1  
+        CG    CD2  
+        CD1   HD11 
+        CD1   HD12 
+        CD1   HD13 
+        CD2   HD21 
+        CD2   HD22 
+        CD2   HD23 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{LYN}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.07206
+        4  HA     H1            0.09940
+        5  CB     CT           -0.04845
+        6  HB2    HC            0.03400
+        7  HB3    HC            0.03400
+        8  CG     CT            0.06612
+        9  HG2    HC            0.01041
+       10  HG3    HC            0.01041
+       11  CD     CT           -0.03768
+       12  HD2    HC            0.01155
+       13  HD3    HC            0.01155
+       14  CE     CT            0.32604
+       15  HE2    HP           -0.03358
+       16  HE3    HP           -0.03358
+       17  NZ     N3           -1.03581
+       18  HZ2    H             0.38604
+       19  HZ3    H             0.38604
+       20  C      C             0.59730
+       21  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    HD2  
+        CD    HD3  
+        CD    CE   
+        CE    HE2  
+        CE    HE3  
+        CE    NZ   
+        NZ    HZ2  
+        NZ    HZ3  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{LYS}
+    [atoms]
+        1  N      N            -0.34790
+        2  H      H             0.27470
+        3  CA     CX           -0.24000
+        4  HA     H1            0.14260
+        5  CB     C8           -0.00940
+        6  HB2    HC            0.03620
+        7  HB3    HC            0.03620
+        8  CG     C8            0.01870
+        9  HG2    HC            0.01030
+       10  HG3    HC            0.01030
+       11  CD     C8           -0.04790
+       12  HD2    HC            0.06210
+       13  HD3    HC            0.06210
+       14  CE     C8           -0.01430
+       15  HE2    HP            0.11350
+       16  HE3    HP            0.11350
+       17  NZ     N3           -0.38540
+       18  HZ1    H             0.34000
+       19  HZ2    H             0.34000
+       20  HZ3    H             0.34000
+       21  C      C             0.73410
+       22  O      O            -0.58940
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CD   
+        CD    HD2  
+        CD    HD3  
+        CD    CE   
+        CE    HE2  
+        CE    HE3  
+        CE    NZ   
+        NZ    HZ1  
+        NZ    HZ2  
+        NZ    HZ3  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{MET}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.02370
+        4  HA     H1            0.08800
+        5  CB     2C            0.03420
+        6  HB2    HC            0.02410
+        7  HB3    HC            0.02410
+        8  CG     2C            0.00180
+        9  HG2    H1            0.04400
+       10  HG3    H1            0.04400
+       11  SD     S            -0.27370
+       12  CE     CT           -0.05360
+       13  HE1    H1            0.06840
+       14  HE2    H1            0.06840
+       15  HE3    H1            0.06840
+       16  C      C             0.59730
+       17  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    SD   
+        SD    CE   
+        CE    HE1  
+        CE    HE2  
+        CE    HE3  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{NHE}
+    [atoms]
+        1  N      N            -0.46300
+        2  HN1    H             0.23150
+        3  HN2    H             0.23150
+    [bonds]
+        N     HN1  
+        N     HN2  
+    [impropers]
+        -C    N     HN1   HN2  
+    [connections]
+        head N
+        tail N
+*--------------------------------------------------------------------------------
+{NME}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CH3    CT           -0.14900
+        4  HH31   H1            0.09760
+        5  HH32   H1            0.09760
+        6  HH33   H1            0.09760
+    [bonds]
+        N     H    
+        N     CH3  
+        CH3   HH31 
+        CH3   HH32 
+        CH3   HH33 
+    [impropers]
+        -C    N     CH3   H    
+    [connections]
+        head N
+*--------------------------------------------------------------------------------
+{PHE}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.00240
+        4  HA     H1            0.09780
+        5  CB     CT           -0.03430
+        6  HB2    HC            0.02950
+        7  HB3    HC            0.02950
+        8  CG     CA            0.01180
+        9  CD1    CA           -0.12560
+       10  HD1    HA            0.13300
+       11  CE1    CA           -0.17040
+       12  HE1    HA            0.14300
+       13  CZ     CA           -0.10720
+       14  HZ     HA            0.12970
+       15  CE2    CA           -0.17040
+       16  HE2    HA            0.14300
+       17  CD2    CA           -0.12560
+       18  HD2    HA            0.13300
+       19  C      C             0.59730
+       20  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    CD1  
+        CG    CD2  
+        CD1   HD1  
+        CD1   CE1  
+        CE1   HE1  
+        CE1   CZ   
+        CZ    HZ   
+        CZ    CE2  
+        CE2   HE2  
+        CE2   CD2  
+        CD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CE2   CD2   CG    HD2  
+        CD2   CE2   CZ    HE2  
+        CE1   CZ    CE2   HZ   
+        CD1   CE1   CZ    HE1  
+        CE1   CD1   CG    HD1  
+        CB    CG    CD1   CD2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{PRO}
+    [atoms]
+        1  N      N            -0.25480
+        2  CD     CT            0.01920
+        3  HD2    H1            0.03910
+        4  HD3    H1            0.03910
+        5  CG     CT            0.01890
+        6  HG2    HC            0.02130
+        7  HG3    HC            0.02130
+        8  CB     CT           -0.00700
+        9  HB2    HC            0.02530
+       10  HB3    HC            0.02530
+       11  CA     CX           -0.02660
+       12  HA     H1            0.06410
+       13  C      C             0.58960
+       14  O      O            -0.57480
+    [bonds]
+        N     CD   
+        N     CA   
+        CD    HD2  
+        CD    HD3  
+        CD    CG   
+        CG    HG2  
+        CG    HG3  
+        CG    CB   
+        CB    HB2  
+        CB    HB3  
+        CB    CA   
+        CA    HA   
+        CA    C    
+        C     O    
+    [impropers]
+        CA    C     +N    O    
+        -C    N     CA    CD   
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{SER}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.02490
+        4  HA     H1            0.08430
+        5  CB     2C            0.21170
+        6  HB2    H1            0.03520
+        7  HB3    H1            0.03520
+        8  OG     OH           -0.65460
+        9  HG     HO            0.42750
+       10  C      C             0.59730
+       11  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    OG   
+        OG    HG   
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{THR}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.03890
+        4  HA     H1            0.10070
+        5  CB     3C            0.36540
+        6  HB     H1            0.00430
+        7  CG2    CT           -0.24380
+        8  HG21   HC            0.06420
+        9  HG22   HC            0.06420
+       10  HG23   HC            0.06420
+       11  OG1    OH           -0.67610
+       12  HG1    HO            0.41020
+       13  C      C             0.59730
+       14  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB   
+        CB    CG2  
+        CB    OG1  
+        CG2   HG21 
+        CG2   HG22 
+        CG2   HG23 
+        OG1   HG1  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{TRP}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.02750
+        4  HA     H1            0.11230
+        5  CB     CT           -0.00500
+        6  HB2    HC            0.03390
+        7  HB3    HC            0.03390
+        8  CG     Cstar        -0.14150
+        9  CD1    CW           -0.16380
+       10  HD1    H4            0.20620
+       11  NE1    NA           -0.34180
+       12  HE1    H             0.34120
+       13  CE2    CN            0.13800
+       14  CZ2    CA           -0.26010
+       15  HZ2    HA            0.15720
+       16  CH2    CA           -0.11340
+       17  HH2    HA            0.14170
+       18  CZ3    CA           -0.19720
+       19  HZ3    HA            0.14470
+       20  CE3    CA           -0.23870
+       21  HE3    HA            0.17000
+       22  CD2    CB            0.12430
+       23  C      C             0.59730
+       24  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    CD1  
+        CG    CD2  
+        CD1   HD1  
+        CD1   NE1  
+        NE1   HE1  
+        NE1   CE2  
+        CE2   CZ2  
+        CE2   CD2  
+        CZ2   HZ2  
+        CZ2   CH2  
+        CH2   HH2  
+        CH2   CZ3  
+        CZ3   HZ3  
+        CZ3   CE3  
+        CE3   HE3  
+        CE3   CD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CD1   NE1   CE2   HE1  
+        CE2   CZ2   CH2   HZ2  
+        CZ2   CH2   CZ3   HH2  
+        CE3   CZ3   CH2   HZ3  
+        CD2   CE3   CZ3   HE3  
+        CG    CD1   HD1   NE1  
+        CB    CG    CD1   CD2  
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{TYR}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.00140
+        4  HA     H1            0.08760
+        5  CB     CT           -0.01520
+        6  HB2    HC            0.02950
+        7  HB3    HC            0.02950
+        8  CG     CA           -0.00110
+        9  CD1    CA           -0.19060
+       10  HD1    HA            0.16990
+       11  CE1    CA           -0.23410
+       12  HE1    HA            0.16560
+       13  CZ     C             0.32260
+       14  OH     OH           -0.55790
+       15  HH     HO            0.39920
+       16  CE2    CA           -0.23410
+       17  HE2    HA            0.16560
+       18  CD2    CA           -0.19060
+       19  HD2    HA            0.16990
+       20  C      C             0.59730
+       21  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB2  
+        CB    HB3  
+        CB    CG   
+        CG    CD1  
+        CG    CD2  
+        CD1   HD1  
+        CD1   CE1  
+        CE1   HE1  
+        CE1   CZ   
+        CZ    OH   
+        CZ    CE2  
+        OH    HH   
+        CE2   HE2  
+        CE2   CD2  
+        CD2   HD2  
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+        CE2   CD2   CG    HD2  
+        CD2   CE2   CZ    HE2  
+        CD1   CE1   CZ    HE1  
+        CE1   CD1   CG    HD1  
+        CB    CG    CD1   CD2  
+        CE1   CZ    CE2   OH   
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------
+{VAL}
+    [atoms]
+        1  N      N            -0.41570
+        2  H      H             0.27190
+        3  CA     CX           -0.08750
+        4  HA     H1            0.09690
+        5  CB     3C            0.29850
+        6  HB     HC           -0.02970
+        7  CG1    CT           -0.31920
+        8  HG11   HC            0.07910
+        9  HG12   HC            0.07910
+       10  HG13   HC            0.07910
+       11  CG2    CT           -0.31920
+       12  HG21   HC            0.07910
+       13  HG22   HC            0.07910
+       14  HG23   HC            0.07910
+       15  C      C             0.59730
+       16  O      O            -0.56790
+    [bonds]
+        N     H    
+        N     CA   
+        CA    HA   
+        CA    CB   
+        CA    C    
+        CB    HB   
+        CB    CG1  
+        CB    CG2  
+        CG1   HG11 
+        CG1   HG12 
+        CG1   HG13 
+        CG2   HG21 
+        CG2   HG22 
+        CG2   HG23 
+        C     O    
+    [impropers]
+        -C    N     CA    H    
+        CA    C     +N    O    
+    [connections]
+        head N
+        tail C
+*--------------------------------------------------------------------------------

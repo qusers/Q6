@@ -1,0 +1,13 @@
+readlib hoh.lib
+readlib ff-qamber14/qamber14.lib
+readprm ff-qamber14/qamber14.prm
+readpdb mol.pdb
+
+boundary 1 15:C  100
+
+maketop   mol.top
+writetop  mol.top
+writepdb  mol_start.pdb y
+quit
+
+
