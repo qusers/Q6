@@ -36,11 +36,26 @@ TYPE(bond_val) function bond_calc(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 
-bond_calc%a_vec  = qvec_sub(b,a)
+bond_calc%a_vec  = qvec_sub(a,b)
 bond_calc%b_vec  = -bond_calc%a_vec
-bond_calc%dist = q_sqrt(bond_calc%a_vec%x**2 + bond_calc%a_vec%y**2 + bond_calc%a_vec%z**2)
+bond_calc%dist = q_sqrt(qvec_square(bond_calc%a_vec))
 
 end function bond_calc
+
+TYPE(bond_val) function box_bond_calc(a,b,boxl,invb)
+! same as above, but accounts for periodic effects
+! only used in calculation of distance restraints
+! boxl -> length of periodic box
+! invb -> inverse boxlength
+TYPE(qr_vec) :: a,b,boxl,invb
+! locals
+
+bond_calc%a_vec  = qvec_sub(a,b)
+bond_calc%a_vec  = qvec_sub(bond_calc%a_vec,q_vecscale(boxl,nint(q_vecscale(bond_calc%a_vec,invb))))
+bond_calc%b_vec  = -bond_calc%a_vec
+bond_calc%dist = q_sqrt(qvec_square(bond_calc%a_vec))
+
+end function box_bond_calc
 
 TYPE(angl_val) function angle_calc(a,b,c)
 ! returns angle in radians and force vector for constitute atoms
@@ -75,6 +90,37 @@ angle_calc%c_vec = -(angle_calc%a_vec + angle_calc%b_vec)
 
 end function angle_calc
 
+TYPE(angl_val) function box_angle_calc(a,b,c,boxl,invb)
+! same function as above, but accounts for periodic effects
+! only used in calculation of distance restraints
+! boxl -> length of periodic box
+! invb -> inverse boxlength
+TYPE(qr_vec) :: a,b,c,boxl,invb
+TYPE(bond_val)  :: tempab,tempbc
+real(kind=prec) :: inv_angl,scalar
+
+tempab = box_bond_calc(a,b,boxl,invb)
+tempbc = box_bond_calc(b,c,boxl,invb)
+
+scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
+scalar = scalar/(tempab%dist*tempbc%dist)
+
+if ( scalar .gt.  one ) scalar =  one
+if ( scalar .lt. -one ) scalar = -one
+box_angle_calc%angl = q_acos(scalar)
+
+inv_angl = q_sin(box_angle_calc%angl)
+if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
+inv_angl =  -one / inv_angl
+
+box_angle_calc%a_vec = inv_ang * ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
+               (scalar * tempab%a_vec/tempab%dist**2))
+box_angle_calc%b_vec = inv_ang * ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
+               (scalar * tempbc%a_vec/tempbc%dist**2))
+box_angle_calc%c_vec = -(box_angle_calc%a_vec + box_angle_calc%b_vec)
+
+end function box_angle_calc
+
 TYPE(tors_val) function torsion_calc(a,b,c,d)
 ! returns torsion angle and force vectors for constitute atoms
 ! for a derivation, please check your local copy of a vector 
@@ -107,8 +153,8 @@ crossabc =  q_crossprod(abvec,bcvec)
 crossbcd = -q_crossprod(bcvec,cdvec)
 
 ! absolute number of vector equals distance
-abs2_abc = (crossabc%x**2 + crossabc%y**2 + crossabc%z**2)
-abs2_bcd = (crossbcd%x**2 + crossbcd%y**2 + crossbcd%z**2)
+abs2_abc = qvec_square(crossabc)
+abs2_bcd = qvec_square(crossbcd)
 
 abs_abc  = q_sqrt(abs2_abc)
 abs_bcd  = q_sqrt(abs2_bcd)
@@ -192,8 +238,8 @@ crossabc =  q_crossprod(abvec,bcvec)
 crossbcd = -q_crossprod(bcvec,cdvec)
 
 ! absolute number of vector equals distance
-abs2_abc = (crossabc%x**2 + crossabc%y**2 + crossabc%z**2)
-abs2_bcd = (crossbcd%x**2 + crossbcd%y**2 + crossbcd%z**2)
+abs2_abc = qvec_square(crossabc)
+abs2_bcd = qvec_square(crossbcd)
 
 abs_abc  = q_sqrt(abs2_abc)
 abs_bcd  = q_sqrt(abs2_bcd)
