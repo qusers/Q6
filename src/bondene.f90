@@ -9,15 +9,21 @@ module BONDENE
 ! used modules
 !use PROFILING
 use SIZES
-use TRJ
-use QBOND
+use QMATH
+use BONDED
+use GLOBALS
+use TOPO
+use QATOM
 !$ use omp_lib
 implicit none
 
-real(kind=prec) function angle(angles,istart, iend)
+contains
+
+real(kind=prec) function angle(istart, iend,angles,ang_lib)
 ! *** arguments
 integer						::	istart, iend
-TYPE(ANG_TYPE),pointer				::	angles(:)
+TYPE(ANG_TYPE)                                  :: angles(:)
+TYPE(ANGLIB_TYPE)                               :: ang_lib(:)
 
 ! *** local variables
 TYPE(angl_val)					::	calc
@@ -64,18 +70,18 @@ do ia=istart,iend
 ! and get all variables
 	calc = angle_calc(x(i),x(j),x(k))
 ! get da and dv
-	da = calc%angl - anglib(ic)%ang0
+	da = calc%angl - ang_lib(ic)%ang0
 #ifdef _OPENMP
-    mp_real_tmp = mp_real_tmp + 0.5_prec*anglib(ic)%fk*da**2
+    mp_real_tmp = mp_real_tmp + 0.5_prec*ang_lib(ic)%fk*da**2
 #else
-    angle = angle + 0.5_prec*anglib(ic)%fk*da**2
+    angle = angle + 0.5_prec*ang_lib(ic)%fk*da**2
 #endif
-	dv = anglib(ic)%fk*da
+	dv = ang_lib(ic)%fk*da
 ! calculate forces from function vectors
 ! and update force array
-d(i) = d(i) + dv*calc%a_vec
-d(j) = d(j) + dv*calc%b_vec
-d(k) = d(k) + dv*calc%c_vec
+d(i) = d(i) + calc%a_vec*dv
+d(j) = d(j) + calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
 
 end do
 #ifdef _OPENMP
@@ -87,10 +93,11 @@ angle = angle + mp_real_tmp
 end function angle
 
 !-----------------------------------------------------------------------
-real(kind=prec) function urey_bradley(angles,istart, iend)
+real(kind=prec) function urey_bradley(istart, iend,angles,ang_lib)
 ! *** arguments
 integer						::	istart, iend
-TYPE(ANG_TYPE),pointer                          ::      angles(:)
+TYPE(ANG_TYPE)                                  :: angles(:)
+TYPE(ANGLIB_TYPE)                               :: ang_lib(:)
 ! *** local variables
 TYPE(bond_val)					::	calc
 integer						::	i,k,ia,ic
@@ -128,19 +135,19 @@ do ia=istart,iend
 #endif
 ! for each angle in range and not zero:
 	ic = angles(ia)%cod
-	if(anglib(ic)%ureyfk .gt. zero) then
+	if(ang_lib(ic)%ureyfk .gt. zero) then
 		i  = angles(ia)%i
 		k  = angles(ia)%k
-		calc = bonc_calc(x(i),x(k))
-		ru = calc%dist - anglib(ic)%ureyr0
+		calc = bond_calc(x(i),x(k))
+		ru = calc%dist - ang_lib(ic)%ureyr0
 #ifdef _OPENMP
-		mp_real_tmp = mp_real_tmp + anglib(ic)%ureyfk*ru**2
+		mp_real_tmp = mp_real_tmp + ang_lib(ic)%ureyfk*ru**2
 #else 
-                urey_bradley = urey_bradley + anglib(ic)%ureyfk*ru**2
+                urey_bradley = urey_bradley + ang_lib(ic)%ureyfk*ru**2
 #endif
-                du = 2*anglib(ic)%ureyfk*ru/calc%dist
-		d(k) = d(k) + du*calc%a_vec
-		d(i) = d(i) + du*calc%b_vec
+                du = 2*ang_lib(ic)%ureyfk*ru/calc%dist
+		d(k) = d(k) + calc%a_vec*du
+		d(i) = d(i) + calc%b_vec*du
         end if
 end do
 #ifdef _OPENMP
@@ -153,10 +160,11 @@ end function urey_bradley
 
 !-----------------------------------------------------------------------
 
-real(kind=prec) function bond(bonds,istart, iend)
+real(kind=prec) function bond(istart, iend, bonds, bnd_lib)
 ! *** arguments
 integer						::	istart, iend
-TYPE(BND_LYB),pointer				::	bonds(:)
+TYPE(BOND_TYPE)                                 :: bonds(:)
+TYPE(BONDLIB_TYPE)                              :: bnd_lib(:)
 ! *** local variables
 integer						::	i,j,ib,ic
 TYPE(bond_val)					::	calc
@@ -196,15 +204,15 @@ do ib=istart,iend
         j  = bonds(ib)%j
         ic = bonds(ib)%cod
 	calc = bond_calc(x(i),x(j))
-        db = calc%dist - bondlib(ic)%bnd0
+        db = calc%dist - bnd_lib(ic)%bnd0
 #ifdef _OPENMP
-    mp_real_tmp = mp_real_tmp + 0.5_prec*bondlib(ic)%fk*db**2
+    mp_real_tmp = mp_real_tmp + 0.5_prec*bnd_lib(ic)%fk*db**2
 #else  
-        bond = bond + 0.5_prec*bondlib(ic)%fk*db**2
+        bond = bond + 0.5_prec*bnd_lib(ic)%fk*db**2
 #endif
 
         ! calculate dv and update d
-        dv = bondlib(ic)%fk*db/calc%dist
+        dv = bnd_lib(ic)%fk*db/calc%dist
 	d(i) = d(i) + calc%a_vec*dv
 	d(j) = d(j) + calc%b_vec*dv
 end do
@@ -217,15 +225,16 @@ bond = bond + mp_real_tmp
 end function bond
 !-----------------------------------------------------------------------
 
-real(kind=prec) function improper(impropers,istart, iend)
+real(kind=prec) function improper(istart, iend, impropers, imp_lib)
 !arguments
 integer						::	istart, iend
-TYPE(TOR_TYPE),pointer				::	impropers
+TYPE(TOR_TYPE)                                  :: impropers(:)
+TYPE(IMPLIB_TYPE)                               :: imp_lib(:)
 ! evaluate harmonic impropers
 ! local variables
 integer						::	ip,i,j,k,l,ic
 TYPE(tors_val)					::	calc
-real(kind=prec)					::	dv,arg
+real(kind=prec)					::	dv,arg,phi
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -263,20 +272,20 @@ do ip = iend, istart,-1
 
 ! ---       energy
 
-	arg = phi - implib(ic)%imp0
+	arg = phi - imp_lib(ic)%imp0
 	arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
-	dv  = implib(ic)%fk*arg
-	#ifdef _OPENMP
+	dv  = imp_lib(ic)%fk*arg
+#ifdef _OPENMP
 	    mp_real_tmp = mp_real_tmp + 0.5_prec*dv*arg
-	#else 
+#else 
 	    improper = improper + 0.5_prec*dv*arg
-	#endif
+#endif
 
 ! ---       forces
-	d(i) = d(i) + dv*calc%a_vec
-	d(j) = d(j) + dv*calc%b_vec
-	d(k) = d(k) + dv*calc%c_vec
-	d(l) = d(l) + dv*calc%d_vec
+	d(i) = d(i) + calc%a_vec*dv
+	d(j) = d(j) + calc%b_vec*dv
+	d(k) = d(k) + calc%c_vec*dv
+	d(l) = d(l) + calc%d_vec*dv
 
 end do
 #ifdef _OPENMP
@@ -288,15 +297,16 @@ end function improper
 
 !-----------------------------------------------------------------------
 
-real(kind=prec) function improper2(impropers,istart, iend)
+real(kind=prec) function improper2(istart, iend, impropers, imp_lib)
 !evaluate periodic impropers
 !arguments
 integer						::	istart, iend
-TYPE(TOR_LIB),pointer				::	impropers
+TYPE(TOR_TYPE)                                  :: impropers(:)
+TYPE(IMPLIB_TYPE)                               :: imp_lib(:)
 ! local variables
 integer						::	ip,i,j,k,l,ic
-real(kind=prec)					::	dv,arg
-TYPE(tors_cval)					::	calc
+real(kind=prec)					::	dv,arg,phi
+TYPE(tors_val)					::	calc
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -332,19 +342,19 @@ do ip = iend, istart,-1
 	ic = impropers(ip)%cod
 	calc = improper_calc(x(i),x(j),x(k),x(l))
 
-	arg = 2*phi - implib(ic)%imp0
+	arg = 2*phi - imp_lib(ic)%imp0
 #ifdef _OPENMP
-	mp_real_tmp = mp_real_tmp + lib%fk * (1 + cos(arg))
+	mp_real_tmp = mp_real_tmp + imp_lib(ic)%fk * (1 + cos(arg))
 #else
-	improper2 = improper2 + lib%fk * (1 + cos(arg))
+	improper2 = improper2 + imp_lib(ic)%fk * (1 + cos(arg))
 #endif
-	dv  = -2*implib(ic)%fk * sin(arg)
+	dv  = -2*imp_lib(ic)%fk * sin(arg)
 
 ! ---       forces
-	d(i) = d(i) + dv*calc%a_vec
-	d(j) = d(j) + dv*calc%b_vec
-	d(k) = d(k) + dv*calc%c_vec
-	d(l) = d(l) + dv*calc%d_vec
+	d(i) = d(i) + calc%a_vec*dv
+	d(j) = d(j) + calc%b_vec*dv
+	d(k) = d(k) + calc%c_vec*dv
+	d(l) = d(l) + calc%d_vec*dv
 end do
 #ifdef _OPENMP
 !$omp atomic update
@@ -362,7 +372,7 @@ integer						:: istate
 ! local variables
 integer						:: ia,i,j,k,ic,im,icoupl,ib
 TYPE(angl_val)					:: calc
-real(kind=prec)					:: da,ae,dv
+real(kind=prec)					:: da,ae,dv,gamma
 
 
 do ia = 1, nqangle
@@ -455,8 +465,8 @@ do ia = 1, nqangle
         EQ(istate)%q%angle = EQ(istate)%q%angle + Eurey*gamma
         du = gamma*2*(qanglib(ic)%ureyfk*ru/calc%dist)*EQ(istate)%lambda
 
-	d(k) = d(k) + du*calc%a_vec
-	d(i) = d(i) + du*calc%b_vec
+	d(k) = d(k) + calc%a_vec*du
+	d(i) = d(i) + calc%b_vec*du
 
 if ( icoupl .ne. 0 ) then
 
@@ -479,7 +489,7 @@ integer						::	istate
 ! local variables
 integer						::	ib,i,j,ic
 TYPE(bond_val)					::	calc
-real(kind=prec)					::	b,db,be,dv,fexp
+real(kind=prec)					::	b,db,be,dv,fexp,tmp
 
 do ib = 1, nqbond
 
@@ -500,18 +510,18 @@ do ib = 1, nqbond
 	dv = (2.0_prec*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) &
 		+ qbondlib(ic)%fk*db)*EQ(istate)%lambda/calc%dist
 
-	d(i) = d(i) + dv*calc%a_vec
-	d(j) = d(j) + dv*calc%b_vec
+	d(i) = d(i) + calc%a_vec*dv
+	d(j) = d(j) + calc%b_vec*dv
 
 !Force scaling factor to be 1 when distance is smaller than r0
  if ( db > 0 ) then
  	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
- 	dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%dist*calc%a_vec)
- 	dMorse_j(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%dist*calc%b_vec)
+        dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
+ 	dMorse_j(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%b_vec*calc%dist)
  else
  	EMorseD(ib) = one
- 	dMorse_i(ib) = zero
- 	dMorse_j(ib) = zero
+ 	dMorse_i(ib) = dMorse_i(ib) * zero
+ 	dMorse_j(ib) = dMorse_j(ib) * zero
  end if
 
 end if
@@ -568,10 +578,10 @@ dv = dv*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
-d(i) = d(i) + dv*calc%a_vec
-d(j) = d(j) + dv*calc%b_vec
-d(k) = d(k) + dv*calc%c_vec
-d(l) = d(l) + dv*calc%d_vec
+d(i) = d(i) + calc%a_vec*dv
+d(j) = d(j) + calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
+d(l) = d(l) + calc%d_vec*dv
 
 if ( icoupl .ne. 0 ) then
 
@@ -632,10 +642,10 @@ dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
 
 ! ---       forces
 
-d(i) = d(i) + dv*calc%a_vec
-d(j) = d(j) + dv*calc%b_vec
-d(k) = d(k) + dv*calc%c_vec
-d(l) = d(l) + dv*calc%d_vec
+d(i) = d(i) + calc%a_vec*dv
+d(j) = d(j) + calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
+d(l) = d(l) + calc%d_vec*dv
 
 if ( icoupl .ne. 0 ) then
 
@@ -652,12 +662,13 @@ end subroutine qtorsion
 
 !-----------------------------------------------------------------------
 
-real(kind=prec) function torsion(istart, iend)
+real(kind=prec) function torsion(istart, iend, torsions, tor_lib)
 !arguments
 integer						::	istart, iend
-
+TYPE(TOR_TYPE)                                  :: torsions(:)
+TYPE(TORLIB_TYPE)                               :: tor_lib(:)
 ! local variables
-integer						::	ip,ic,i,j,k,l,ic
+integer						::	ip,ic,i,j,k,l
 real(kind=prec)					::	scp,phi,dv,arg,f1
 TYPE(tors_val)					::	calc
 #ifdef _OPENMP
@@ -692,33 +703,29 @@ do ip = mp_end, mp_start,-1
 do ip = iend, istart,-1
 #endif
 
-i  = tor(ip)%i
-j  = tor(ip)%j
-k  = tor(ip)%k
-l  = tor(ip)%l
-ic = tor(ip)%cod
+i  = torsions(ip)%i
+j  = torsions(ip)%j
+k  = torsions(ip)%k
+l  = torsions(ip)%l
+ic = torsions(ip)%cod
 
 calc = torsion_calc(x(i),x(j),x(k),x(l))
 
-
-        t => tor(ip)
-        lib => torlib(t%cod)
-
 ! ---       energy
 
-arg = torlib(ic)%rmult*calc%angl-torlib(ic)%deltor
+arg = tor_lib(ic)%rmult*calc%angl-tor_lib(ic)%deltor
 #ifdef _OPENMP
-    mp_real_tmp = mp_real_tmp + torlib(ic)%fk*(one+cos(arg))*torlib(ic)%paths   !lib%paths is previously inverted 
+    mp_real_tmp = mp_real_tmp + tor_lib(ic)%fk*(one+cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
 #else    
-    torsion = torsion + torlib(ic)%fk*(one+cos(arg))*torlib(ic)%paths   !lib%paths is previously inverted 
+    torsion = torsion + tor_lib(ic)%fk*(one+cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
 #endif
-dv = -torlib(ic)%rmult*torlib(ic)%fk*sin(arg)*torlib(ic)%paths
+dv = -tor_lib(ic)%rmult*tor_lib(ic)%fk*sin(arg)*tor_lib(ic)%paths
 
 ! ---       forces
-d(i) = d(i) + dv*calc%a_vec
-d(j) = d(j) + dv*calc%b_vec
-d(k) = d(k) + dv*calc%c_vec
-d(l) = d(l) + dv*calc%d_vec
+d(i) = d(i) + calc%a_vec*dv
+d(j) = d(j) + calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
+d(l) = d(l) + calc%d_vec*dv
 end do
 #ifdef _OPENMP
 !$omp atomic update
@@ -729,6 +736,315 @@ torsion = torsion + mp_real_tmp
 end function torsion
 
 !-----------------------------------------------------------------------
+
+recursive subroutine find_bonded(origin, current, level, state)
+!args
+integer, intent(in)			::	origin, current, level, state
+!locals
+integer						::	b, newcurrent, newlevel
+
+!find q-atom connectivity using the bond list and the q-bond list
+!shaken bonds (code -1) must be taken into account, but not 
+!redefined bonds in the topology
+do b = 1, nbonds_solute
+        if(bnd(b)%cod == 0) cycle !skip redefined (but not shaken)
+        if(bnd(b)%i  == current) then
+                newlevel = level + 1 
+                newcurrent = bnd(b)%j
+                if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
+                        qconn(state, newcurrent, iqatom(origin)) = newlevel
+                        if(newlevel < 4) then
+                                call find_bonded(origin, newcurrent, newlevel, state)
+                        end if
+                end if
+        elseif(bnd(b)%j  == current) then
+                newlevel = level + 1 
+                newcurrent = bnd(b)%i
+                if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
+                        qconn(state, newcurrent, iqatom(origin)) = newlevel
+                        if(newlevel < 4) then
+                                call find_bonded(origin, newcurrent, newlevel, state)
+                        end if
+                end if
+        end if
+end do
+do b = 1, nqbond
+        if(qbnd(b)%cod(state) > 0) then
+                if(qbnd(b)%i  == current) then
+                        newlevel = level + 1 
+                        newcurrent = qbnd(b)%j
+                        if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
+                                qconn(state, newcurrent, iqatom(origin)) = newlevel
+                                if(newlevel < 4) then
+                                        call find_bonded(origin, newcurrent, newlevel, state)
+                                end if
+                        end if
+                elseif(qbnd(b)%j  == current) then
+                        newlevel = level + 1 
+                        newcurrent = qbnd(b)%i
+                        if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
+                                qconn(state, newcurrent, iqatom(origin)) = newlevel
+                                if(newlevel < 4) then
+                                        call find_bonded(origin, newcurrent, newlevel, state)
+                                end if
+                        end if
+                end if
+        end if
+end do
+
+end subroutine find_bonded
+
+!-----------------------------------------------------------------------
+
+subroutine p_restrain
+! *** Local variables
+integer :: ir,i,j,k,istate, n_ctr
+real(kind=prec) :: fk,r2,erst,Edum,wgt,b,db,dv, totmass 
+real(kind=prec)						::	fexp
+TYPE(qr_vec)	:: dr,shift
+TYPE(bond_val)	:: distres
+TYPE(angl_val)	:: anglres
+! global variables used:
+!  E, nstates, EQ, nrstr_seq, rstseq, heavy, x, xtop, d, nrstr_pos, rstpos, nrstr_dist, 
+!  rstdis, nrstr_wall, rstang, nrstr_ang, rstwal, xwcent, excl, freeze
+
+! sequence restraints (independent of Q-state)
+do ir = 1, nrstr_seq
+fk = rstseq(ir)%fk
+
+if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
+  ! restrain to geometrical centre
+
+  ! reset dr & atom counter
+  dr    = dr * zero
+  n_ctr = 0
+
+  ! calculate deviation from center
+  do i = rstseq(ir)%i, rstseq(ir)%j
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
+          n_ctr = n_ctr + 1
+          dr = dr + (xtop(i) - x(i))
+        end if
+  end do
+
+  if(n_ctr > 0) then 
+    ! only if atoms were found:
+
+        ! form average
+        dr = dr / real(n_ctr,kind=prec)
+        r2      = qvec_square(dr)
+        erst    = 0.5_prec*fk*r2
+        E%restraint%protein  = E%restraint%protein + erst
+
+        ! apply same force to all atoms
+        do i = rstseq(ir)%i, rstseq(ir)%j
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
+                d(i) = d(i) + dr*(fk*iaclib(iac(i))%mass/12.010_prec)
+          end if
+        end do
+  end if
+ 
+else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
+  ! restrain to mass centre
+  ! reset dr & variable to put masses
+  dr = dr * zero
+  totmass = zero
+  
+! calculate deviation from mass center
+  do i = rstseq(ir)%i, rstseq(ir)%j
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
+          totmass = totmass + iaclib(iac(i))%mass                              ! Add masses
+          dr = dr + ((xtop(i)-x(i))*iaclib(iac(i))%mass)
+		end if
+  end do
+
+ if(totmass > zero) then 
+    ! only if atoms were found: (i.e has a total mass)
+
+        ! form average
+        dr = dr/totmass                                  ! divide by total mass
+        r2      = qvec_square(dr)
+        erst    = 0.5_prec*fk*r2
+        E%restraint%protein  = E%restraint%protein + erst
+
+        ! apply same force to all atoms
+        do i = rstseq(ir)%i, rstseq(ir)%j
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
+                d(i) = d(i) + dr*fk
+          end if
+        end do
+  end if
+
+else 
+  ! restrain each atom to its topology co-ordinate
+  do i = rstseq(ir)%i, rstseq(ir)%j
+        if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
+
+
+
+          dr = xtop(i)-x(i)
+
+       !use the periodically minimal distance:
+       if( use_PBC ) then
+               dr = (boxlength*q_nint(dr*inv_boxl))-dr
+       end if
+          r2      = qvec_square(dr)
+
+          erst    = 0.5_prec*fk*r2
+          E%restraint%protein  = E%restraint%protein + erst
+          d(i) = d(i) + dr*fk
+        end if
+  end do
+end if
+end do
+
+! extra positional restraints (Q-state dependent)
+do ir = 1, nrstr_pos
+istate = rstpos(ir)%ipsi
+i      = rstpos(ir)%i
+
+dr = rstpos(ir)%x - x(i)
+
+if ( istate .ne. 0 ) then
+wgt = EQ(istate)%lambda
+else
+wgt = one
+end if
+
+Edum = 0.5_prec * q_dotprod(rstpos(ir)%fk,(dr*dr))
+
+d(i) = d(i) + (rstpos(ir)%fk*dr)*wgt
+
+
+if ( istate .eq. 0 ) then
+do k = 1, nstates
+EQ(k)%restraint = EQ(k)%restraint + Edum
+end do
+if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+else
+EQ(istate)%restraint = EQ(istate)%restraint + Edum
+end if
+end do
+
+! atom-atom distance restraints (Q-state dependent)
+do ir = 1, nrstr_dist
+istate = rstdis(ir)%ipsi
+i      = rstdis(ir)%i
+j      = rstdis(ir)%j
+
+! if PBC then adjust lengths according to periodicity - MA
+if( use_PBC ) then
+	dr = x(i) - x(j)
+	distres = bond_calc(dr,boxlength*q_nint(dr*inv_boxl))
+else
+	distres = bond_calc(x(i),x(j))
+end if
+
+if ( istate .ne. 0 ) then
+wgt = EQ(istate)%lambda
+else
+wgt = one
+end if
+
+
+
+if(distres%dist < rstdis(ir)%d1) then !shorter than d1
+        db     = distres%dist - rstdis(ir)%d1
+elseif(b > rstdis(ir)%d2) then !longer than d2
+        db     = distres%dist - rstdis(ir)%d2
+else
+        db = 0
+        cycle !skip zero force calculation
+endif
+
+Edum   = 0.5_prec*rstdis(ir)%fk*db**2
+dv     = wgt*rstdis(ir)%fk*db/distres%dist
+
+d(i) = d(i) + distres%a_vec*dv
+d(j) = d(i) + distres%b_vec*dv
+
+if ( istate .eq. 0 ) then
+do k = 1, nstates
+EQ(k)%restraint = EQ(k)%restraint + Edum
+end do
+if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+else
+EQ(istate)%restraint = EQ(istate)%restraint + Edum
+end if
+end do
+
+! atom-atom-atom angle restraints (Q-state dependent)
+do ir = 1, nrstr_angl
+
+istate = rstang(ir)%ipsi
+i      = rstang(ir)%i
+j      = rstang(ir)%j
+k      = rstang(ir)%k
+
+! if PBC then adjust lengths according to periodicity - MA
+if( use_PBC ) then
+	anglres = box_angle_calc(x(i),x(j),x(k),boxlength,inv_boxl)
+else
+	anglres = angle_calc(x(i),x(j),x(k))
+
+end if
+
+if ( istate .ne. 0 ) then
+wgt = EQ(istate)%lambda
+else
+wgt = one
+end if
+
+db    = anglres%angl - (rstang(ir)%ang)*deg2rad
+
+! dv is the force to be added in module
+Edum   = 0.5_prec*rstang(ir)%fk*db**2
+dv     = wgt*rstang(ir)%fk*db
+
+
+        ! update d
+d(i) = d(i) + anglres%a_vec*dv
+d(j) = d(j) + anglres%b_vec*dv
+d(k) = d(k) + anglres%c_vec*dv
+
+if ( istate .eq. 0 ) then
+do k = 1, nstates
+EQ(k)%restraint = EQ(k)%restraint + Edum
+end do
+if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+else
+EQ(istate)%restraint = EQ(istate)%restraint + Edum
+end if
+end do
+if( .not. use_PBC ) then
+! extra half-harmonic wall restraints
+do ir = 1, nrstr_wall
+        fk = rstwal(ir)%fk
+        do i = rstwal(ir)%i, rstwal(ir)%j
+                if ( heavy(i) .or. rstwal(ir)%ih .eq. 1 ) then
+
+			distres = bond_calc(x(i),xwcent)
+                        db = distres%dist - rstwal(ir)%d
+
+                        if(db > zero) then
+                                erst =  0.5_prec * fk * db**2 - rstwal(ir)%Dmorse
+                                dv = fk*db/distres%dist
+                        else
+                                fexp = exp(rstwal(ir)%aMorse*db)
+                                erst = rstwal(ir)%dMorse*(fexp*fexp-2.0_prec*fexp)
+                                dv=-2.0_prec*rstwal(ir)%dMorse*rstwal(ir)%aMorse*(fexp-fexp*fexp)/distres%dist
+                        end if
+                        E%restraint%protein = E%restraint%protein + erst
+			d(i) = d(i) + distres%a_vec*dv
+                end if
+        end do
+end do
+
+end if
+
+end subroutine p_restrain
+!-----------------------------------------------------------------------
+
 
 integer function shake(xx, x)
 !arguments
@@ -770,11 +1086,11 @@ do mol=1,shake_molecules
                                 if(abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
                                         shake_mol(mol)%bond(ic)%ready = .true. ! in range
                                 end if
-                                xxij = qvec_sub(xx(i),xx(j))
+                                xxij = xx(i) - xx(j)
                                 scp  = q_dotprod(xij%vec,xxij)
                                 corr = diff/(2.0_prec*scp*(winv(i)+winv(j)))
-                                x(i) = qvec_add(x(i),corr*winv(i)*xxij)
-                                x(j) = qvec_add(x(i),-corr*winv(i)*xxij)
+                                x(i) = x(i) + ( xxij*corr*winv(i))
+                                x(j) = x(j) + (-xxij*corr*winv(i))
                         end if
                 end do
 
@@ -791,7 +1107,7 @@ do mol=1,shake_molecules
                                         i = shake_mol(mol)%bond(ic)%i
                                         j = shake_mol(mol)%bond(ic)%j
                                         dist = q_dist4(xx(i),xx(j))
-                                        write (*,100) i,j,sqrt(xxij2),&
+                                        write (*,100) i,j,dist,&
                                                 sqrt(shake_mol(mol)%bond(ic)%dist2)
                                 end if
                         end do

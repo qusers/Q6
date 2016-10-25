@@ -12,9 +12,6 @@ use SIZES
 use NRGY
 use NONBONDED
 use BONDED
-use QENERGY
-use PRESTRAIN
-use FILEIO
 
 ! this module does the actual path integral calculations and metropolis sampling of the bead configurations
 ! code is directly based on the paper, with more bugs than I can count
@@ -65,6 +62,18 @@ do i = 1, num_QCP
 end do
 ! what are TIAC, CHIN, CHAC????
 end subroutine qcp_init
+
+subroutine qcp_mc(qcpatom,wavelength1,wavelength2,coords)
+! this one does the monte carlo magic to propagate the RP and allow the sampling
+! needs its onw random number generator implemented below and shamelessly stolen from the original code
+! by D.T. Major and J. Gao
+! arguments
+integer                                 :: qcpatom
+real(kind=prec)                         :: wavelength1,wavelength2
+TYPE(qr_vec)                            :: coords(:)
+! locals
+
+
 
 ! QCP does not need to calculate anything related to integrator
 ! or step propagation, only brute force energy

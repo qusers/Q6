@@ -10,6 +10,7 @@ use NRGY
 use MISC
 use PRMFILE
 use INDEXER
+use GLOBALS
 !use MPIGLOB
 use TOPO
 
@@ -19,9 +20,6 @@ implicit none
 	character(*), private, parameter	:: MODULE_NAME    = 'Q-atom'
 	character(*), private, parameter	:: MODULE_VERSION = '5.06'
 	character(*), private, parameter	:: MODULE_DATE    = '2014-01-01'
-
-!	Constants
-	real(kind=prec), private					:: pi, deg2rad	!set in sub startup
 
 !-----------------------------------------------------------------------
 !	fep/evb information
@@ -132,14 +130,6 @@ implicit none
 		real(kind=prec)					::	Vel(max_states), Vlj(max_states)
 		real(kind=prec)					::	Vwel, Vwlj, Vwsum
 	end type  monitor_group_pair_TYPE
-        type monitor_group_interaction_type
-                integer                                 :: i,j
-                logical                                 :: soft
-                real(kind=prec)                         :: elec,vdWA,vdWB,score
-        end type monitor_group_interaction_type
-
-        type(monitor_group_interaction_type),allocatable        :: monitor_group_int(:,:)
-
 	type(monitor_group_pair_TYPE), allocatable::monitor_group_pair(:)
 
 	type monitor_atom_group_TYPE
@@ -187,19 +177,6 @@ implicit none
 !Added memory management stuff
 	integer			:: alloc_status_qat
 
-!QCP information needed to build ring polymers
-	logical				::	use_QCP
-	integer				::	num_QCP
-	integer,allocatable		::	num_beads(:),QCP_atom(:)
-	real(kind=prec),allocatable	::	pos_beads(:),vel_beads(:),crg_beads(:),mass_beads(:)
-
-	ENUM, bind(c)
-		ENUMERATOR      :: QCP_HYDROGEN,QCP_ALLATOM,QCP_FEPATOM
-	END ENUM
-	ENUM, bind(c)
-		ENUMERATOR      :: QCP_SIZE_DEFAULT,QCP_SIZE_SMALL,QCP_SIZE_LARGE,QCP_SIZE_INDIVIDUAL
-	END ENUM
-	integer			:: QCP_enum, QCP_size_enum
 !-----------------------------------------------------------------------
 !	fep/evb energies
 !-----------------------------------------------------------------------
@@ -207,8 +184,8 @@ implicit none
 	type(Q_ENERGIES), allocatable:: old_EQ(:)
 	real(kind=prec)						::	Hij(max_states,max_states)
 	real(kind=prec),allocatable				::	EMorseD(:)!max_qat)
-	real(kind=prec),allocatable				::	dMorse_i(:,:)!3,max_qat)
-	real(kind=prec),allocatable				::	dMorse_j(:,:)!3,max_qat)
+        TYPE(qr_vec),allocatable				::	dMorse_i(:)!3,max_qat)
+        TYPE(qr_vec),allocatable				::	dMorse_j(:)!3,max_qat)
 
 !miscellany
 	logical						::	use_new_fep_format
@@ -223,8 +200,6 @@ subroutine qatom_startup
 	call nrgy_startup
 
 	! initialise constants
-	pi = 4.0_prec*q_atan(one)
-	deg2rad = pi/180.0_prec
 
 100	format(a,' module',t30,'version ',a,t50,'(modified on ',a,')')
 end subroutine qatom_startup
@@ -445,7 +420,7 @@ logical function qatom_load_atoms(fep_file)
 ! allocate all stuff that was hard coded before
                 allocate(iang_coupl(3,nqat),itor_coupl(3,nqat),iimp_coupl(3,nqat),iqshake(nqat) , &
                         jqshake(nqat),qshake_dist(nqat,max_states),EMorseD(nqat) , &
-                        dMorse_i(3,nqat),dMorse_j(3,nqat))
+                        dMorse_i(nqat),dMorse_j(nqat))
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
 			if(prm_get_int_int(s, topno)) then
@@ -2000,7 +1975,7 @@ logical function qatom_load_fep(fep_file)
 ! redefined
 		write (*,'(a)') 'Defining QCP selection in FEP file, overwriting predefined selections!'
 		num_QCP = tmp_num_qcp
-		allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+		allocate(QCP_atoms(num_QCP))
 		do i=1,tmp_qcp_num
 			if(.not. prm_get_line(line)) goto 1000
 			read (line,*, err=1000) tmpindex, QCP_atoms(i)
@@ -2021,7 +1996,7 @@ logical function qatom_load_fep(fep_file)
 		case (QCP_ALLATOM)
 ! just use all atoms
 			num_QCP = nqat
-			allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+			allocate(QCP_atoms(num_QCP))
 			do i=1, nqat
 				QCP_atoms(i) = i
 			end do
@@ -2031,17 +2006,17 @@ logical function qatom_load_fep(fep_file)
 ! first get number of atoms, then loop again to assign them
 			num_QCP = 0
 			do i=1, nqat
-				if (isheavy(iqseq(i))) then
+				if (.not.isheavy(iqseq(i))) then
 					num_QCP = num_QCP + 1
 				end if
 			end do
 			if (num_QCP .gt. 0 ) then
 ! now allocate + assign :)
 ! need to loop again ot have tmp allocate ... not sure which one is better
-				allocate(num_Beads(num_QCP),QCP_atoms(num_QCP))
+				allocate(QCP_atoms(num_QCP))
 				num_QCP = 0
 				do i=1, nqat
-					if (isheavy(iqseq(i))) then
+					if (.not.isheavy(iqseq(i))) then
 						num_QCP = num_QCP + 1
 						QCP_atoms(num_QCP) = i
 					end if
@@ -2062,52 +2037,6 @@ logical function qatom_load_fep(fep_file)
 			write(*,'(a)') 'WARNING! No such QCP setting! Program will terminate due to expected memory corruption!'
 			qatom_load_fep = .false.
 	end select
-! now check bead assignment, if redefine need a bead for every QCP atom
-! check user input for advanced retardation
-        section='qcp_beads'
-        tmp_qcp_beads = prm_count(section)
-	if (tmp_qcp_beads .gt. 0) then
-! redefined, check if numbers match or not
-! not -> user error that needs to be punished
-		if (tmp_qcp_beads .ne. num_QCP) then
-! user failed to give all bead assignments, program says bye bye
-			write(*,'(a)') 'QCP bead reassignment not for the same number of atoms as there are in the QCP selection'
-			write(*,'(a,i6,a,i6)') 'Number of QCP atoms = ',num_QCP,' , number of bead section =',tmp_qcp_beads
-			write(*,'(a)') 'This wont work, better luck next time! Force stop to prevent memory corruption'
-			stop 666
-		end if
-
-                write (*,'(a)') 'Defining QCP beads in FEP file, overwriting predefined selections!'
-                do i=1,tmp_qcp_beads
-                        if(.not. prm_get_line(line)) goto 1000
-                        read (line,*, err=1000) tmpindex, num_Beads(i)
-                        if(num_Beads(i) .lt.1) then
-                                write(*,'(a,i4)') 'You kind of need to have a positive integer number of beads for atom ',i
-				write(*,'(a,i4)') 'Bead number there is ',num_Beads(i)
-                                qatom_load_fep = .false.
-                        end if
-		end do
-! need to add write out part so we know the acutal numbers that get set
-        else
-! use our lovely defaults
-		select case(QCP_size_enum)
-			case(QCP_SIZE_DEFAULT)
-				num_Beads(1:num_QCP) = QCP_size
-			case(QCP_SIZE_LARGE)
-				num_Beads(1:num_QCP) = QCP_size
-			case(QCP_SIZE_SMALL)
-				num_Beads(1:num_QCP) = QCP_size
-			case(QCP_SIZE_FEP)
-! whoops, this does not work, kind of need to know stuff if you want to redefine beads
-				write(*,'(a)') 'You cannot say that you want to assign all beads yourself and then don't do it!'
-				qatom_load_fep =.false.
-			case default
-! whoops memory must be trashed, because we don't know this value
-! better kill program before something bad happens
-                        write(*,'(a)') 'WARNING! No such QCP bead setting! Program will terminate due to expected memory corruption!'
-                        qatom_load_fep = .false.
-        end select
-
 	end if
 	call prm_close
 	return

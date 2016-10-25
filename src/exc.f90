@@ -10,6 +10,8 @@ module EXC
 use ATOM_MASK
 use MISC
 use QATOM
+use GLOBALS
+
 implicit none
 
 	character(*), private, parameter	:: MODULE_VERSION = '0.01'
@@ -22,17 +24,6 @@ implicit none
 		
 	!mask 	
 	integer, private							::	ncoords
-	type ::EXC_PARAMS
-		character*10		:: seltype
-		integer			:: count=0,caltype=NOGC
-		integer			:: curcount=0
-		character*80,allocatable	:: maskarray(:)
-                character*30,allocatable:: sendtomask(:)
-		type(MASK_TYPE)         :: gcmask
-		character*10		:: caltypen
-	end type EXC_PARAMS
-
-	type(EXC_PARAMS),allocatable		:: ST_gc(:)
         logical,allocatable             :: tempmask(:,:)
 contains
 
@@ -89,7 +80,7 @@ integer function get_from_mask(ST_gc_local,nres)
 	str1 = trim(ST_gc_local%maskarray(nres))
 	read(str1,*) get_from_mask
 end function get_from_mask
-		
+
 subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
 	!parameters
 	integer				:: atomi,atomj,gctype
@@ -119,6 +110,12 @@ integer			:: i
 do i=1,nexc
         call mask_deallocate(ST_gc(i)%gcmask)
 end do
+if(allocated(exc_nbqq) then
+        deallocate(exc_nbqq,exc_nbqq_list)
+end if
+if(allocated(exc_nbqp) then
+        deallocate(exc_nbqp,exc_nbqp_list)
+end if
 
 end subroutine excluded_shutdown
 

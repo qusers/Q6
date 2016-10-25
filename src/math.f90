@@ -54,27 +54,56 @@ end TYPE qr_dist5
 
 real(kind=prec) :: pi, deg2rad, rad2deg
 
+interface operator(+)
+        module procedure qvec_add
+end interface
+
+interface operator(-)
+        module procedure qvec_sub,qvec_negate
+end interface
+
+interface operator(*)
+        module procedure q_realscale,q_arrayscale,q_vecscale,q_realscale2
+end interface
+
+interface operator(/)
+        module procedure q_realdiv,q_arraydiv,q_realdiv2,q_vecdiv
+end interface
+
 contains
 
-TYPE(qr_vec) function qvec_add(a,b)
+function qvec_add(a,b)
 ! vector addition, std function used later
 ! args
-TYPE(qr_vec) :: a,b
+TYPE(qr_vec), INTENT (IN) :: a,b 
+TYPE(qr_vec) :: qvec_add 
 ! locals
 qvec_add%x = a%x + b%x
 qvec_add%y = a%y + b%y
 qvec_add%z = a%z + b%z
 end function qvec_add
 
-TYPE(qr_vec) function qvec_sub(a,b)
+function qvec_sub(a,b)
 ! vector substraction, std function used later
 ! args
-TYPE(qr_vec) :: a,b
+TYPE(qr_vec), INTENT (IN) :: a,b
+TYPE(qr_vec) :: qvec_sub 
 ! locals
-qvec_add%x = a%x - b%x
-qvec_add%y = a%y - b%y
-qvec_add%z = a%z - b%z
+qvec_sub%x = a%x - b%x
+qvec_sub%y = a%y - b%y
+qvec_sub%z = a%z - b%z
 end function qvec_sub
+
+function qvec_negate(a)
+! function negates current vector, for operator
+! args
+TYPE(qr_vec),INTENT (IN) :: a
+TYPE(qr_vec) :: qvec_negate
+! locals
+qvec_negate%x = -a%x
+qvec_negate%y = -a%y
+qvec_negate%z = -a%z
+end function qvec_negate
 
 real(kind=prec) function qvec_square(a)
 ! returns only square of vector
@@ -119,8 +148,8 @@ TYPE(qr_vec) :: a,b
 TYPE(qr_vec) :: temp
 temp = qvec_sub(b,a)
 q_dist3%r2  = one/qvec_square(temp)
-q_dist3%r   = q_sqrt(q_dist2%r2)
-q_dist3%r6  = q_dist2%r2 * q_dist2%r2 * q_dist2%r2
+q_dist3%r   = q_sqrt(q_dist3%r2)
+q_dist3%r6  = q_dist3%r2 * q_dist3%r2 * q_dist3%r2
 q_dist3%vec = temp
 end function q_dist3
 
@@ -169,11 +198,77 @@ q_crossprod%z = a%x * b%y - a%y * b%x
 
 end function q_crossprod
 
-TYPE(qr_vec) function q_vecscale(a,b)
+function q_realscale(a,b)
+! function to scale qr_vec types with real numbers
+! args
+TYPE(qr_vec), INTENT(IN) :: a
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_realscale
+q_realscale%x = a%x * b
+q_realscale%y = a%y * b
+q_realscale%z = a%z * b
+end function q_realscale
+
+function q_realscale2(b,a)
+! function to scale qr_vec types with real numbers
+! args
+TYPE(qr_vec), INTENT(IN) :: a
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_realscale
+q_realscale%x = a%x * b
+q_realscale%y = a%y * b
+q_realscale%z = a%z * b
+end function q_realscale2
+
+function q_realdiv(a,b)
+! function to divide q vectors, inverse of mult
+TYPE(qr_vec), INTENT(IN) :: a
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_realdiv
+q_realdiv%x = a%x / b
+q_realdiv%y = a%y / b
+q_realdiv%z = a%z / b
+end function q_realdiv
+
+function q_realdiv2(b,a)
+! function to divide q vectors, inverse of mult
+TYPE(qr_vec), INTENT(IN) :: a
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_realdiv2
+q_realdiv2%x =  b / a%x 
+q_realdiv2%y =  b / a%y 
+q_realdiv2%z =  b / a%z 
+end function q_realdiv2
+
+
+function q_arrayscale(a,b)
+! function to scale qr_vec types with real numbers
+! args
+TYPE(qr_vec), INTENT(IN) :: a(:)
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_arrayscale(SIZE(a))
+q_arrayscale(:)%x = a(:)%x * b
+q_arrayscale(:)%y = a(:)%y * b
+q_arrayscale(:)%z = a(:)%z * b
+end function q_arrayscale
+
+function q_arraydiv(a,b)
+! function to divide q vectors, inverse of mult
+TYPE(qr_vec), INTENT(IN) :: a(:)
+real(kind=prec), INTENT(IN) :: b
+TYPE(qr_vec) :: q_arraydiv(SIZE(a))
+q_arraydiv(:)%x = a(:)%x / b
+q_arraydiv(:)%y = a(:)%y / b
+q_arraydiv(:)%z = a(:)%z / b
+end function q_arraydiv
+
+
+function q_vecscale(a,b)
 ! function to scale one vector with another
 ! by multiplying elements for each vector unit
 ! args
-TYPE(qr_vec) :: a,b
+TYPE(qr_vec), INTENT(IN) :: a,b
+TYPE(qr_vec) ::  q_vecscale
 ! locals
 ! none
 q_vecscale%x = a%x * b%x
@@ -181,13 +276,23 @@ q_vecscale%y = a%y * b%y
 q_vecscale%z = a%z * b%z
 end function q_vecscale
 
+function q_vecdiv(a,b)
+! divides components of one vector by those of another
+! for operator
+TYPE(qr_vec), INTENT(IN) :: a,b
+TYPE(qr_vec) :: q_vecdiv
+q_vecdiv%x = a%x / b%x
+q_vecdiv%y = a%y / b%y
+q_vecdiv%z = a%z / b%z
+end function q_vecdiv
+
 real(kind=prec) function q_logarithm(a)
 ! returns results of dlog as real of chosen precision type
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1       = a
 temp2       = dlog(temp1)
@@ -201,7 +306,7 @@ real(kind=prec) function q_sqrt(a)
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1  = a
 temp2  = dsqrt(temp1)
@@ -215,7 +320,7 @@ real(kind=prec) function q_atan(a)
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1  = a
 temp2  = datan(temp1)
@@ -229,11 +334,11 @@ real(kind=prec) function q_acos(a)
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1  = a
 temp2  = dacos(temp1)
-q_atan = temp2
+q_acos = temp2
 
 end function q_acos
 
@@ -243,11 +348,11 @@ real(kind=prec) function q_cos(a)
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1  = a
 temp2  = dcos(temp1)
-q_atan = temp2
+q_cos  = temp2
 
 end function q_cos
 
@@ -257,14 +362,23 @@ real(kind=prec) function q_sin(a)
 ! args
 real(kind=prec) :: a
 ! locals
-real(kind=doubleprec) :: temp1,temp2
+real(kind=doubleprecision) :: temp1,temp2
 
 temp1  = a
 temp2  = dsin(temp1)
-q_atan = temp2
+q_sin  = temp2
 
 end function q_sin
 
+TYPE(qr_vec) function q_nint(a)
+! returns the vector of nearest integers for a given real qr_vec structure
+! used when calculating PBC stuff
+! args
+TYPE(qr_vec) :: a
+q_nint%x = nint(a%x)
+q_nint%y = nint(a%y)
+q_nint%z = nint(a%z)
+end function q_nint
 
 subroutine math_initialize
         pi = 4.0_prec*q_atan(one)

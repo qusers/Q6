@@ -21,6 +21,13 @@ use SIZES
 		ENUMERATOR	:: ATOM,RESIDUE
 	END ENUM
 
+        ! enumerator for QCP, need number and falg at same time
+        ENUM, bind(c)
+                ENUMERATOR      :: QCP_OFF,QCP_ON
+        END ENUM
+
+        ENUM, bind(c)
+                ENUMERATOR      :: QCP_HYDROGEN,QCP_ALLATOM,QCP_FEPATOM
 
 contains
 

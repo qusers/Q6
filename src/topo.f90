@@ -8,7 +8,7 @@ module TOPO
 	use SIZES
         use VERSIONS
 	use MISC
-
+        use QMATH
 	implicit none
 
 ! constants
@@ -516,7 +516,7 @@ logical function topo_read(u, require_version, extrabonds)
 	integer				:: paths
 	character(len=256)		:: line, restofline
         character(256)			:: version_string
-	character(len=10		:: key, boundary_type !PWadded
+	character(len=10)		:: key, boundary_type !PWadded
 	integer				:: filestat
 	integer(1), allocatable		:: temp_list(:,:)
 	integer				:: extra,fdot
@@ -636,7 +636,7 @@ logical function topo_read(u, require_version, extrabonds)
 
   ! --> 3. topology coordinates    ---->     xtop
   ! ===========================    ==============
-   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(1:rd),rd=1,3*nat_pro:3)
+   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(rd),rd=1,3*nat_pro)
    write (*,40) 3*nat_pro
    40 format ('No. of coordinates      = ',i10)
 
@@ -1024,10 +1024,10 @@ logical function topo_read(u, require_version, extrabonds)
 	if(boundary_type == 'PBC') then
 		use_PBC = .true.
 		write(*,'(a)')'Boundary: periodic box'
-		read(unit=u, fmt=*, err=1000) boxlength(:)
-		write(*,'(a,3f10.3)') 'Box size                = ', boxlength(:)
-		read(unit=u, fmt=*, err=1000) boxcentre(:)
-		write(*,'(a,3f10.3)') 'Box centre              = ', boxcentre(:)
+		read(unit=u, fmt=*, err=1000) boxlength
+		write(*,'(a,3f10.3)') 'Box size                = ', boxlength
+		read(unit=u, fmt=*, err=1000) boxcentre
+		write(*,'(a,3f10.3)') 'Box centre              = ', boxcentre
                 excl(:) = .false.
                 shell(:) = .false.
 
@@ -1058,10 +1058,10 @@ logical function topo_read(u, require_version, extrabonds)
 		  write(*, '(a,f10.3)') 'Eff. solvent radius     = ', rwat
                   write(*, '(a,f12.8)') 'Solvent density         = ', topo_rho_wat
     end if
-		read(unit=u, fmt=*, err=1000) xpcent(:)
-		write(*, '(a,3f10.3)') 'Solute centre           = ', xpcent(:)
-		read(unit=u, fmt=*, err=1000) xwcent(:)
-		write(*, '(a,3f10.3)') 'Solvent centre          = ', xwcent(:)
+		read(unit=u, fmt=*, err=1000) xpcent
+		write(*, '(a,3f10.3)') 'Solute centre           = ', xpcent
+		read(unit=u, fmt=*, err=1000) xwcent
+		write(*, '(a,3f10.3)') 'Solvent centre          = ', xwcent
 
 		excl(:) = .false.
 		shell(:) = .false.
@@ -1369,13 +1369,13 @@ subroutine topo_save(name)
 	if( use_PBC ) then !use periodic box
 		write(u,'(a8,a)') 'PBC', ' = kind of boundary'
 		!PBC-parameters
-		write(u,'(3f8.3, a)') boxlength(:), ' = Size of box, x y z'
-		write(u,'(3f8.3, a)') boxcentre(:), ' = Centre coordinate of box'
+		write(u,'(3f8.3, a)') boxlength, ' = Size of box, x y z'
+		write(u,'(3f8.3, a)') boxcentre, ' = Centre coordinate of box'
 	else !use simulation sphere
 		!radii & centres
 		write(u, '(2f8.3,f12.8,a)') rexcl_o, rwat, topo_rho_wat,' = Exclusion, solvent radii, Solvent density'
-		write(u, '(3f8.3,a)') xpcent(:), ' = Solute centre'
-		write(u, '(3f8.3,a)') xwcent(:), ' = Solvent centre'
+		write(u, '(3f8.3,a)') xpcent, ' = Solute centre'
+		write(u, '(3f8.3,a)') xwcent, ' = Solvent centre'
 		!exluded atoms
 		write(*, 10, advance='no') 'excluded atom list'
 		write(u, '(2i9,a)') nexats, nexwat, ' = No. of excluded atoms (incl. water), no. of excluded waters'

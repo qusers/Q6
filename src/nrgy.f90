@@ -198,7 +198,7 @@ end function add_ene
 
 function scale_ene (e1, k)
    type(OQ_ENERGIES), INTENT (IN):: e1 (:)
-   real, intent(in)				:: k
+   real(kind=prec), intent(in)				:: k
    type(OQ_ENERGIES)				:: scale_ene (SIZE (e1))
 
 	scale_ene(:)%total	=e1(:)%total*k

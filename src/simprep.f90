@@ -3,9 +3,9 @@
 ! based on
 ! md.f90
 ! by Johan Åqvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlöf
-! general simulation setup and memory management
+! general simulation setup 
 
-module MD
+module SIMPREP
 
 ! used modules
 !use PROFILING
@@ -13,13 +13,10 @@ use SIZES
 use TRJ
 use MPIGLOB
 use QATOM
-use EXC
-use QCP
 use VERSIONS
-#if defined (_DF_VERSION_)
-use DFPORT
-use DFLIB
-#endif
+use GLOBALS
+use EXC
+use QMATH
 !$ use omp_lib
 implicit none
 #if defined (USE_MPI)
@@ -27,470 +24,6 @@ include "mpif.h"
 #endif
 
 
-
-!-----------------------------------------------------------------------
-!	shared variables
-!-----------------------------------------------------------------------
-!	Constants
-real(kind=prec)			::	pi, deg2rad	!set in sub startup
-! no hard coded values for something like this
-! rho will now be read from the topology, as it should be
-real(kind=prec) 		::  rho_wat = -1.0_prec  ! molecules / A**3, set from topo
-real(kind=prec), parameter		::  Boltz = 0.001986_prec !TODO: it is not place for that
-
-!Read status
-integer                     :: stat
-
-!print temperature if it changed more than 2% in one time step
-real(kind=prec), parameter				::	TEMP_PRINT_THRESHOLD=0.02_prec !TODO: it is not place for that
-
-
-!	Memory management
-integer						::	alloc_status
-
-
-!	Topology information
-! --- Atoms
-integer						::	natom
-integer                     :: nat3
-! --- q-atom number or 0 for non-q
-integer(TINY), allocatable		::	iqatom(:)
-! --- water topology
-! atoms of water, total water molecules, excluded water molecules
-integer						::	nwat
-real(kind=prec)					:: mu_w
-
-!-------------------------------------------------------------------
-!	Periodic box information
-!-------------------------------------------------------------------
-
-!******PWadded variable 2001-10-10
-logical						:: box, rigid_box_centre
-logical						:: put_solute_back_in_box, put_solvent_back_in_box
-
-!variabels used for constant pressure algorithm
-logical						:: constant_pressure = .false.
-integer						:: volume_try, volume_acc
-logical                                         :: atom_based_scaling = .false.
-real(kind=prec)						:: pressure, max_vol_displ
-integer						:: pressure_seed
-real(kind=prec), allocatable		:: mol_mass(:)
-real(kind=prec), allocatable		:: mass(:)
-
-
-
-!variabels used when user change boxsize in inputfile
-logical						:: control_box
-real(kind=prec)						:: new_boxl(3) 
-
-!-----------------------------------------------------------------------
-!	Dynamics control information     
-!-----------------------------------------------------------------------
-
-
-! --- MD parameters
-! friction, gkT, randf and randv are variables to be used for the Langevin thermostat - A. Barrozo
-! numchain and nhchain are variables to be used for the Nosé-Hoover thermostat
-integer						::	nsteps, istep
-integer						::	iseed, numchain
-logical						::	restart
-real(kind=prec)						::	dt, dt2, Temp0, Tmaxw, tau_T, friction, gkT, randf, randv, kbT, nhq
-logical						::	shake_solvent, shake_solute
-logical						::	shake_hydrogens, shake_heavy
-logical						::	separate_scaling
-!new logical to select for gaussian or uniform random numbers in LANGEVIN
-!themorstat
-logical                                         ::      langevin_gauss_rand = .false.
-!Paul does not like overflow errors, increased character array length
-!Added ENUM for names to allow integer comparisson later on
-character(len=80)				::	name_thermostat
-ENUM, bind(c) 
-	ENUMERATOR	:: BERENDSEN, LANGEVIN, NOSEHOOVER
-END ENUM
-integer						::	thermostat = -1
-!Added support for different integration schemes
-!For now leap-frog and velocity-verlet
-!Alexandre Barrozo and Paul Bauer, October 2014
-character(len=80)			:: name_integrator
-integer						:: integrator = -1
-ENUM, bind(c)
-	ENUMERATOR	:: LEAPFROG,VELVERLET
-END ENUM
-real(kind=prec), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:) 
-
-! --- Non-bonded strategy
-logical						::	use_LRF
-integer						::	NBcycle
-real(kind=prec)						::	Rcpp, Rcww, Rcpw, Rcq, RcLRF
-! we do this now without limits
-!integer, parameter			                ::	max_atyp = 255
-integer                                                 ::      num_atyp = -1
-integer,allocatable					::	ljcod(:,:)!max_atyp,max_atyp)
-
-
-! --- Output control parameters
-integer						::	itrj_cycle, iene_cycle
-integer						::	itemp_cycle, iout_cycle
-logical						::	force_rms
-!******PWadded 2001-10-23
-integer						::	ivolume_cycle
-!PB added for box control			
-integer						:: nsolvent = 0,nsolute = 0
-
-integer,allocatable				:: mvd_mol(:)
-! --- Protein boundary
-logical						::	exclude_bonded
-real(kind=prec)						::	fk_pshell
-real(kind=prec)      :: fk_fix    = 200.0_prec
-
-! --- Water sphere
-real(kind=prec)						::	Dwmz, awmz, rwat_in
-real(kind=prec)						::	fkwpol
-logical						::	wpol_restr, wpol_Born
-logical      :: freeze
-real(kind=prec)						::	fk_wsphere, crgtot, crgQtot
-integer(AI), allocatable	::	list_sh(:,:), nsort(:,:)
-real(kind=prec),  allocatable		::	theta(:), theta0(:), tdum(:)
-integer						::	nwpolr_shell, n_max_insh
-
-
-type SHELL_TYPE
-        real(kind=prec)					::	rout, dr, cstb
-        real(kind=prec)					::	avtheta, avn_insh, theta_corr
-        integer					::	n_insh
-end type SHELL_TYPE
-
-type OLD_SHELL_TYPE
-        real                                 ::      rout, dr, cstb
-        real                                 ::      avtheta, avn_insh, theta_corr
-        integer                                 ::      n_insh
-end type OLD_SHELL_TYPE
-
-type SHELL_TYPE_SINGLE
-        real(kind=singleprecision)                                 ::      rout, dr, cstb
-        real(kind=singleprecision)                                 ::      avtheta, avn_insh, theta_corr
-        integer                                 ::      n_insh
-end type SHELL_TYPE_SINGLE
-
-type SHELL_TYPE_DOUBLE
-        real(kind=doubleprecision)                                 ::      rout, dr, cstb
-        real(kind=doubleprecision)                                 ::      avtheta, avn_insh, theta_corr
-        integer                                 ::      n_insh
-end type SHELL_TYPE_DOUBLE
-#ifndef PGI
-type SHELL_TYPE_QUAD
-        real(kind=quadprecision)                                 ::      rout, dr, cstb
-        real(kind=quadprecision)                                 ::      avtheta, avn_insh, theta_corr
-        integer                                 ::      n_insh
-end type SHELL_TYPE_QUAD
-#endif
-
-type(SHELL_TYPE), allocatable::	wshell(:)
-type(OLD_SHELL_TYPE), allocatable::old_wshell(:)
-type(SHELL_TYPE_SINGLE), allocatable:: wshell_single(:)
-type(SHELL_TYPE_DOUBLE), allocatable:: wshell_double(:)
-#ifndef PGI
-type(SHELL_TYPE_QUAD), allocatable:: wshell_quad(:)
-#endif
-! constants & default values
-integer, parameter			::	itdis_update		= 100
-real(kind=prec),  parameter			::	wpolr_layer			= 3.0001_prec !TODO: it is not place for that
-real(kind=prec), parameter				::	drout				= 0.5_prec !TODO: it is not place for that
-real(kind=prec), parameter			::	tau_T_default		= 100.0_prec
-real(kind=prec), parameter			::	rcpp_default		= 10.0_prec
-real(kind=prec), parameter			::	rcww_default		= 10.0_prec
-real(kind=prec), parameter			::	rcpw_default		= 10.0_prec
-real(kind=prec), parameter                      ::      rcq_default_pbc         = -1.0_prec
-real(kind=prec), parameter                      ::      rcLRF_default_pbc       = -1.0_prec
-real(kind=prec), parameter			::	rcq_default_sph		= 99.0_prec
-real(kind=prec), parameter			::	rcLRF_default		= 99.0_prec
-!recxl_i is set to rexcl_o * shell_default
-real(kind=prec), parameter   :: fk_fix_default = 200.0_prec
-real(kind=prec), parameter			::	shell_default		= 0.85_prec
-real(kind=prec), parameter			::	fk_pshell_default	= 10.0_prec
-integer, parameter			::	itrj_cycle_default	= 100
-integer, parameter			::	iene_cycle_default	= 10
-integer, parameter			::	iout_cycle_default	= 10
-integer, parameter			::	nb_cycle_default	= 10
-real(kind=prec), parameter			::	fkwpol_default		= 20.0_prec
-real(kind=prec), parameter			::	fk_wsphere_default	= 60.0_prec
-logical, parameter			::	wpol_restr_default	= .true.
-
-integer, parameter			::	ivolume_cycle_default = 10
-
-integer, parameter			::	ipressure_cycle_default = 100
- ! Yes, and use Born corr.
-!constants in the sigmoid function giving default Dwmz as function of radius
-
-
-! --- File names
-character(len=200)			::	top_file
-character(len=200)			::	restart_file
-character(len=200)			::	xfin_file
-character(len=200)			::	trj_file
-character(len=200)			::	fep_file
-character(len=200)			::	ene_file
-character(len=200)			::	exrstr_file
-character(len=200)			::	xwat_file
-
-! --- Excluded groups, added 2014 Paul Bauer
-integer					:: ngroups_gc
-logical					:: use_excluded_groups
-type(MASK_TYPE)                         :: allmask
-type(Q_ENE_HEAD)			:: ene_header
-
-! --- Restraints
-integer						::	implicit_rstr_from_file
-integer      :: nrstr_seq, nrstr_pos, nrstr_dist, nrstr_angl, nrstr_wall
-
-
-type RSTRSEQ_TYPE
-        integer(AI)				::	i,j
-        real(kind=prec)					::	fk
-        integer(TINY)			::	ih
-        integer					::	to_centre !flag for restraining to geom. or mass centre
-end type RSTRSEQ_TYPE
-
-
-type RSTRPOS_TYPE
-        integer(AI)				::	i
-        integer(TINY)			::	ipsi
-        real(kind=prec)					::	fk(3)
-        real(kind=prec)					::	x(3)
-end type RSTRPOS_TYPE
-
-
-type RSTRDIS_TYPE
-        integer(AI)				::	i,j
-        integer(TINY)			::	ipsi
-        real(kind=prec)					::	fk
-        real(kind=prec)					::	d1, d2
-        character(len=20)       ::  itext,jtext
-end type RSTRDIS_TYPE
-
-type RSTRANG_TYPE 
-        integer(AI)    :: i,j,k
-        integer(TINY)  :: ipsi
-        real(kind=prec)        :: fk
-        real(kind=prec)        :: ang
-!       character(len=20)       ::  itext,jtext,ktext
-end type RSTRANG_TYPE                                                                                                
-
-type RSTRWAL_TYPE
-
-        integer(AI)				::	i,j
-        real(kind=prec)					::	d, fk, aMorse, dMorse
-        integer(TINY)			::	ih
-end type RSTRWAL_TYPE
-
-
-type(RSTRSEQ_TYPE), allocatable::	rstseq(:)
-type(RSTRPOS_TYPE), allocatable::	rstpos(:)
-type(RSTRDIS_TYPE), allocatable::	rstdis(:)
-type(RSTRANG_TYPE), allocatable:: rstang(:)
-type(RSTRWAL_TYPE), allocatable::	rstwal(:)
-
-! New ! Type for internal interactions of solvent atoms
-! will be precomputed in prep sim
-type SOLV_INT_TYPE
-	integer(AI)         			:: i,j
-	real(kind=prec)				:: vdWA,vdWB
-	real(kind=prec)				:: elec
-end type SOLV_INT_TYPE
-
-type(SOLV_INT_TYPE),allocatable			:: nonbnd_solv_int(:)
-integer						:: num_solv_int = -1
-
-! New ! Type for precomputing interactions between arbitrary atoms pairs
-type PRECOMPUTE_INT
-        real(kind=prec)                         :: vdWA,vdWB,elec,score
-        logical                                 :: set
-end type PRECOMPUTE_INT
-! special for qq, because soft pairs
-type PRECOMPUTE_INT_QQ
-        real(kind=prec)                         :: vdWA,vdWB,elec,score
-        logical                                 :: set,soft
-end type PRECOMPUTE_INT_QQ
-
-
-type(PRECOMPUTE_INT),allocatable                :: pp_precomp(:,:)
-type(PRECOMPUTE_INT),allocatable                :: pw_precomp(:,:)
-type(PRECOMPUTE_INT),allocatable                :: ww_precomp(:,:)
-type(PRECOMPUTE_INT),allocatable                :: qp_precomp(:,:,:)
-type(PRECOMPUTE_INT),allocatable                :: qw_precomp(:,:,:)
-type(PRECOMPUTE_INT_QQ),allocatable             :: qq_precomp(:,:,:)
-!-----------------------------------------------------------------------
-!	Coordinates, velocities, forces
-!-----------------------------------------------------------------------
-real(kind=prec), allocatable		::	d(:)
-real(kind=prec), allocatable		::	x(:)
-real(kind=prec), allocatable		::	xx(:) !for shake
-real(kind=prec), allocatable		::	v(:)
-real(kind=prec), allocatable			::	winv(:)
-real(kind=prec)						::	grms !RMS force
-
-
-!-----------------------------------------------------------------------
-!	Energies , EQ is defined in qatom.f90
-!-----------------------------------------------------------------------
-type(ENERGIES)				::	E,old_E,previous_E
-!added the variables for the MC_volume function as globals
-real(kind=prec)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
-real(kind=prec)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
-
-
-!-----------------------------------------------------------------------
-!	Nonbonded pair information
-!-----------------------------------------------------------------------
-type NB_TYPE
-        integer(AI)				:: i, j
-        integer					:: cgp_pair ! cgp_pair only used with periodic conditions
-        real(kind=prec)                         :: vdWA,vdWB,elec
-end type NB_TYPE
-
-type CGP_PAIR_TYPE
-        integer(AI)				:: i, j !switching atoms (or equal in case of no switching atoms) of the chargegroups
-        real(kind=prec)				:: x, y, z !periodical shifts
-end type CGP_PAIR_TYPE
-
-type NBQP_TYPE
-        integer(AI)				:: i, j
-        integer					:: cgp_pair !this variable only used with periodic conditions
-        real(kind=prec)                         :: vdWA,vdWB,elec,score
-end type NBQP_TYPE
-
-
-type NBQ_TYPE
-        integer(AI)				:: iq, jq  !q-atom numbers
-        logical                                 :: soft
-        real(kind=prec)                         :: vdWA,vdWB,elec,score
-end type NBQ_TYPE
-
-#ifdef USE_GRID
-! added support for grid partitioning of md system
-! each grid is the size of NB-Cutoff for the interaction
-! with the last grid having no atoms (PBC) or the sphere atoms (SPH)
-! grids are build like this
-! 1 n+1 2n+1 . n*m+1
-! 2 n+2 2n+2 . n*m+2
-! 3 n+3 2n+3 . n*m+3
-! . .   .    . .
-! n 2n  3n   . n*(m+1)
-! Paul Bauer 2015
-
-type NB_GRID_POS_TYPE
-        real(kind=prec)			:: x,y,z           ! grid starting coordinates
-        real(kind=prec)			:: xend,yend,zend  ! grid end coordinates
-end type NB_GRID_POS_TYPE
-#endif
-integer						::	nbpp_pair !current no solute-solute pairs
-type(NB_TYPE), allocatable, target::nbpp(:)
-
-type(NB_TYPE), allocatable, target::old_nbpp(:)
-integer	::	nbww_pair !current no solvent-solvent pairs, implicit and explicit
-type(NB_TYPE), allocatable, target::nbww(:)
-integer						::	old_nbww_pair,old_nbpw_pair,old_nbpw_cgp_pair
-type(NB_TYPE), allocatable, target::old_nbww(:)
-integer						::	nbpw_pair !current no solute-solvent pairs
-type(NB_TYPE), allocatable, target::nbpw(:)
-
-type(NB_TYPE), allocatable, target::old_nbpw(:)
-integer						::	nbqq_max !max number of q-q pairs in any state
-integer(TINY), allocatable	::	qconn(:,:,:) !Q-atom connectivity list
-integer						:: nbqq_pair(max_states),nbqqp_pair(max_states)
-type(NBQ_TYPE), allocatable ::nbqq(:,:)
-type(NBQ_TYPE), allocatable ::nbqqp(:,:)
-
-integer						::	nbqp_pair !current no of qatom-solute pairs
-type(NBQP_TYPE), allocatable, target::nbqp(:,:)
-
-type(NBQP_TYPE), allocatable, target::old_nbqp(:,:)
-integer						::	nbqw_pair !current no of q-atom-water mol. pairs
-type(NBQP_TYPE), allocatable	::	nbqw(:,:)
-
-#ifdef USE_GRID
-! new structures for grid 
-! Paul Bauer 2015
-type(NB_GRID_POS_TYPE),allocatable, target::grid_pp(:)
-type(NB_GRID_POS_TYPE),allocatable, target::grid_pw(:)
-type(NB_GRID_POS_TYPE),allocatable, target::grid_ww(:)
-
-! new variables for number of grids
-integer					::pp_gridnum,pw_gridnum,ww_gridnum
-integer					::pp_ndim,pw_ndim,ww_ndim
-integer,allocatable			:: ww_igrid(:)
-integer,allocatable                     :: pw_igrid(:)
-integer,allocatable                     :: pp_igrid(:)
-integer,allocatable                     ::grid_pp_ngrp(:)
-integer,allocatable                     ::grid_pw_ngrp(:)
-integer,allocatable                     ::grid_ww_ngrp(:)
-integer,allocatable                     ::grid_pp_grp(:,:)
-integer,allocatable                     ::grid_pw_grp(:,:)
-integer,allocatable                     ::grid_ww_grp(:,:)
-
-logical,allocatable                     ::grid_pp_int(:,:,:,:)
-logical,allocatable                     ::grid_pw_int(:,:,:,:)
-logical,allocatable                     ::grid_ww_int(:,:,:,:)
-
-integer                                 :: gridstor_pp,gridstor_pw,gridstor_ww
-#endif
-!these three used only under periodic conditions
-integer						:: nbpp_cgp_pair !number of solute-solute chargegroups interacting
-type(CGP_PAIR_TYPE), allocatable:: nbpp_cgp(:)
-type(CGP_PAIR_TYPE), allocatable:: old_nbpp_cgp(:)
-integer						:: nbpw_cgp_pair
-type(CGP_PAIR_TYPE), allocatable :: nbpw_cgp(:)
-type(CGP_PAIR_TYPE), allocatable :: old_nbpw_cgp(:)
-integer						::	nbqp_cgp_pair
-type(CGP_PAIR_TYPE), allocatable :: nbqp_cgp(:)
-type(CGP_PAIR_TYPE), allocatable :: old_nbqp_cgp(:)
-
-!Note: all the variables for the MC_volume function are now added here
-
-!special monitoring of pairs
-integer (TINY),allocatable  :: special_LJcod(:,:,:,:)
-
-! LRF related variables
-integer(AI), allocatable	::	iwhich_cgp(:)
-
-
-type LRF_TYPE
-        real(kind=prec)					::	cgp_cent(3)
-        real(kind=prec)					::	phi0
-        real(kind=prec)					::	phi1(3)
-        real(kind=prec)					::	phi2(9)
-        real(kind=prec)					::	phi3(27)
-end type LRF_TYPE
-
-type(LRF_TYPE), allocatable	::	lrf(:)
-type(LRF_TYPE), allocatable	::	old_lrf(:)  !for constant pressure: MC_volume routine
-
-type(node_assignment_type)	:: calculation_assignment
-
-
-!shake types & variables
-!convergence criterion (fraction of distance)
-real(kind=prec), parameter			::	SHAKE_TOL = 0.0001_prec
-integer, parameter			::	SHAKE_MAX_ITER = 1000
-
-
-type SHAKE_BOND_TYPE
-        integer(AI)				::	i,j
-        real(kind=prec)					::	dist2
-        logical					::	ready
-end type SHAKE_BOND_TYPE
-
-
-type SHAKE_MOL_TYPE
-        integer					::	nconstraints
-        type(SHAKE_BOND_TYPE), allocatable	:: bond(:)
-end type SHAKE_MOL_TYPE
-
-
-integer						::	shake_constraints, shake_molecules
-type(SHAKE_MOL_TYPE), allocatable :: shake_mol(:)
-
-!----END OF SHARED VARIABLES
 
 !----START OF PUBLIC SUBROUTINES
 contains
@@ -523,605 +56,6 @@ call qatom_shutdown
 call index_shutdown
 call trj_shutdown
 end subroutine simprep_shutdown
-
-!----------------------------------------------------------------------
-
-subroutine die_prep(cause)
-! args
-character(*), optional		:: cause
-
-
-!
-! exit with an error message
-!
-
-
-! local vars
-integer						:: i
-! flush stuff
-integer(4), parameter			:: stdout_unit = 6
-! external flush disabled for gfortran
-! external flush
-
-if (nodeid .eq. 0) then
-        write(*,*)
-        call centered_heading('ABNORMAL TERMINATION', '!')
-        call close_output_files
-
-        ! apologise
-        write(*,'(a)') 'ABNORMAL TERMINATION of program'
-        if (present(cause)) then
-                write(*,'(79a)') 'Terminating due to ', cause
-                endif
-        write (*,'(79a)') ('!',i=1,79)
-#if defined(CRAY)
-        !Cray can't flush stdout...
-#elif defined(NO_FLUSH)
-		!When you can't flush
-#else
-        ! flush stdout
-        call flush(stdout_unit)
-#endif
-end if	
-! clean up
-call md_deallocate
-
-
-#if defined (USE_MPI)
-! abort all processes with exit code 255
-call MPI_Abort(MPI_COMM_WORLD, 255, ierr)
-#else
-! stop with a message to stderr
-stop 'Program terminated abnormally'
-#endif
-
-end subroutine die
-
-!----------------------------------------------------------------------
-
-! --- Memory management routines
-#ifdef USE_GRID
-subroutine allocate_grid_pp
-allocate(grid_pp(pp_gridnum),stat=alloc_status)
-call check_alloc('md atom grid pp')
-allocate(grid_pp_ngrp(pp_gridnum),stat=alloc_status)
-call check_alloc('md atom grid pp ngroups')
-allocate(grid_pp_grp(pp_gridnum,gridstor_pp),stat=alloc_status)
-call check_alloc('md atom grid pp groups')
-allocate(grid_pp_int(pp_gridnum,pp_ndim,pp_ndim,pp_ndim),stat=alloc_status)
-call check_alloc('md atom grid pp interaction matrix')
-end subroutine allocate_grid_pp
-
-
-subroutine allocate_grid_pw
-allocate(grid_pw(pw_gridnum),stat=alloc_status)
-call check_alloc('md atom grid pw')
-allocate(grid_pw_ngrp(pw_gridnum),stat=alloc_status)
-call check_alloc('md atom grid pw ngroups')
-allocate(grid_pw_grp(pw_gridnum,gridstor_pw),stat=alloc_status)
-call check_alloc('md atom grid pw groups')
-allocate(grid_pw_int(pw_gridnum,pw_ndim,pw_ndim,pw_ndim),stat=alloc_status)
-call check_alloc('md atom grid pw interaction matrix')
-end subroutine allocate_grid_pw
-
-subroutine allocate_grid_ww
-allocate(grid_ww(ww_gridnum),stat=alloc_status)
-call check_alloc('md atom grid ww')
-allocate(grid_ww_ngrp(ww_gridnum),stat=alloc_status)
-call check_alloc('md atom grid ww ngroups')
-allocate(grid_ww_grp(ww_gridnum,gridstor_ww),stat=alloc_status)
-call check_alloc('md atom grid ww groups')
-allocate(grid_ww_int(ww_gridnum,ww_ndim,ww_ndim,ww_ndim),stat=alloc_status)
-call check_alloc('md atom grid ww interaction matrix')
-end subroutine allocate_grid_ww
-#endif
-
-subroutine allocate_natom_arrays
-
-allocate(x(natom*3), &
-                xx(natom*3), &
-                v(natom*3), &
-                d(natom*3), &
-                winv(natom), &
-                iqatom(natom), &
-                stat=alloc_status)
-call check_alloc('atom data arrays')
-!set arrays to zero after allocation
-!we can not trust the compiler to do this
-	x(:)=0.0
-	xx(:)=0.0
-	v(:)=0.0
-	d(:)=0.0
-	winv(:)=0.0
-	iqatom(:)=0
-end subroutine allocate_natom_arrays
-
-!----------------------------------------------------------------------
-!Allocate arrays to be used for the Nosé-Hoover thermostat
-subroutine allocate_nhchain_arrays
-
-allocate(xnh(numchain), &
-                vnh(numchain), &
-                qnh(numchain), &
-		Gnh(numchain), &
-                stat=alloc_status)
-call check_alloc('Nose-Hoover data arrays')
-end subroutine allocate_nhchain_arrays
-
-!----------------------------------------------------------------------
-!Allocate arrays that hold no. pairs per chargegroup.
-subroutine allocate_nbxx_per_cgp
-
- allocate(nbpp_per_cgp(ncgp_solute), & 
-          nbww_per_cgp(nwat), &
-          nbqp_per_cgp(ncgp_solute), &
-          nbqw_per_cgp(nwat), &
-          nbpw_per_cgp(ncgp_solute), &
-          stat=alloc_status)
- call check_alloc('MPI data arrays')
-
-end subroutine allocate_nbxx_per_cgp
-
-!----------------------------------------------------------------------
-
-subroutine allocate_lrf_arrays
-
-if (use_PBC .and. constant_pressure) then
-	allocate(iwhich_cgp(natom), lrf(ncgp), old_lrf(ncgp), stat=alloc_status)
-else
-	allocate(iwhich_cgp(natom), lrf(ncgp), stat=alloc_status)
-end if
-call check_alloc('LRF arrays')
-end subroutine allocate_lrf_arrays
-
-!----------------------------------------------------------------------
-#if defined(USE_MPI)
-subroutine allocate_mpi
-
-if(nodeid .eq. 0) then
- allocate(mpi_status(MPI_STATUS_SIZE,numnodes-1), & 
-         request_recv(numnodes-1,3), &
-         d_recv(natom*3,numnodes-1), &
-         E_recv(numnodes-1), &
-         EQ_recv(nstates,ene_header%arrays,numnodes-1), &
-         stat=alloc_status)
- call check_alloc('MPI data arrays head node')
-else
- allocate(E_send(1), &
-          EQ_send(nstates,ene_header%arrays), &
-          stat=alloc_status)
- call check_alloc('MPI data arrays slave nodes')
-end if
-#ifdef _OPENMP
-allocate(qomp_elec(nstates,ene_header%arrays),qomp_vdw(nstates,ene_header%arrays),stat=alloc_status)
-call check_alloc('OMP temporary energies')
-#endif
-end subroutine allocate_mpi
-#endif
-!----------------------------------------------------------------------
-
-subroutine allocate_watpol_arrays
-
-allocate(list_sh(n_max_insh, nwpolr_shell), &
-nsort(n_max_insh,nwpolr_shell), &
-theta(nwat), &
-theta0(nwat), &
-tdum(nwat), &
-stat=alloc_status)
-call check_alloc('water polarisation shell arrays')
-
-end subroutine allocate_watpol_arrays
-!----------------------------------------------------------------------
-
-subroutine reallocate_watpol_arrays
-!local variables
-integer(AI), allocatable        ::      old_list_sh(:,:), old_nsort(:,:)
-integer				::	old_n_max_insh
-
-old_n_max_insh = n_max_insh
-allocate(old_list_sh(old_n_max_insh,nwpolr_shell),old_nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
-call check_alloc('water polarisation shell arrays reallocation')
-
-old_list_sh(1:old_n_max_insh,1:nwpolr_shell)=list_sh(1:old_n_max_insh,1:nwpolr_shell)
-old_nsort(1:old_n_max_insh,1:nwpolr_shell)=nsort(1:old_n_max_insh,1:nwpolr_shell)
-
-deallocate(list_sh,nsort)
-
-n_max_insh = int(n_max_insh * 1.5_prec) ! make array a big larger, again ...
-allocate(list_sh(n_max_insh,nwpolr_shell),nsort(n_max_insh, nwpolr_shell),stat=alloc_status)
-call check_alloc('water polarisation shell arrays new allocation')
-
-list_sh(1:old_n_max_insh,1:nwpolr_shell)=old_list_sh(1:old_n_max_insh,1:nwpolr_shell)
-nsort(1:old_n_max_insh,1:nwpolr_shell)=old_nsort(1:old_n_max_insh,1:nwpolr_shell)
-
-deallocate(old_list_sh,old_nsort)
-call check_alloc('water polarisation shell arrays')
-
-end subroutine reallocate_watpol_arrays
-
-!----------------------------------------------------------------------
-
-subroutine check_alloc(message)
-
-! argument
-character(*) message
-
-! local var
-character(120) allocmsg
-
-if (alloc_status .ne. 0) then
-allocmsg = '>>> Out of memory trying to allocate '//message
-call die(allocmsg)
-end if
-end subroutine check_alloc
-
-!----------------------------------------------------------------------
-
-subroutine md_deallocate
-! deallocatde this module's own arrays. Called by shutdown
-
-! local variables for deallocation loop
-	integer			:: ii, jj
-! use status to avoid errors if not allocated
-
-! atom arrays
-deallocate (x, stat=alloc_status)
-deallocate (xx, stat=alloc_status)
-deallocate (v, stat=alloc_status)
-deallocate (d, stat=alloc_status)
-deallocate (winv, stat=alloc_status)
-deallocate (iqatom, stat=alloc_status)
-
-if(allocated(ljcod)) deallocate(ljcod, stat=alloc_status)
-
-! shake stuff
-if(allocated(shake_mol)) then
-	do ii=1,nmol
-		if (allocated(shake_mol(ii)%bond)) deallocate(shake_mol(ii)%bond)
-	end do
-	deallocate(shake_mol)
-end if
-! solvent stuff
-if(allocated(aLJ_solv)) deallocate(aLJ_solv)
-if(allocated(bLJ_solv)) deallocate(bLJ_solv)
-if(allocated(chg_solv)) deallocate(chg_solv)
-if(allocated(nonbnd_solv_int)) deallocate(nonbnd_solv_int)
-! Nosé-Hoover array
-if ( thermostat == NOSEHOOVER) then
-deallocate (xnh, stat=alloc_status)
-deallocate (vnh, stat=alloc_status)
-deallocate (qnh, stat=alloc_status)
-deallocate (Gnh, stat=alloc_status)
-end if
-! nonbond lists
-deallocate(nbpp, nbpw, nbww, nbqq, nbqp, nbqw, qconn, stat=alloc_status)
-! precompute arrays
-if(allocated(pp_precomp)) deallocate(pp_precomp)
-if(allocated(pw_precomp)) deallocate(pw_precomp)
-if(allocated(ww_precomp)) deallocate(ww_precomp)
-if(allocated(qp_precomp)) deallocate(qp_precomp)
-if(allocated(qw_precomp)) deallocate(qw_precomp)
-if(allocated(qq_precomp)) deallocate(qq_precomp)
-! nonbond charge groups
-if (allocated(nbpp_per_cgp)) deallocate(nbpp_per_cgp)
-if (allocated(nbww_per_cgp)) deallocate(nbww_per_cgp)
-if (allocated(nbqp_per_cgp)) deallocate(nbqp_per_cgp)
-if (allocated(nbqw_per_cgp)) deallocate(nbqw_per_cgp)
-if (allocated(nbpw_per_cgp)) deallocate(nbpw_per_cgp)
-! nonbond monitor
-if (allocated(monitor_group_int)) deallocate(monitor_group_int)
-
-! stuff for PBC
-if (allocated(nbqp_cgp)) deallocate(nbqp_cgp)
-if (allocated(nbpp_cgp)) deallocate(nbpp_cgp)
-if (allocated(nbpw_cgp)) deallocate(nbpw_cgp)
-if (allocated(mvd_mol)) deallocate(mvd_mol)
-if (allocated(old_lrf)) deallocate(old_lrf)
-if (allocated(mol_mass)) deallocate(mol_mass)
-if (allocated(mass)) deallocate(mass)
-
-! watpol arrays
-deallocate(wshell, stat=alloc_status)
-deallocate(list_sh, stat=alloc_status)
-deallocate(nsort, stat=alloc_status)
-deallocate(theta, stat=alloc_status)
-deallocate(theta0, stat=alloc_status)
-deallocate(tdum, stat=alloc_status)
-
-! LRF arrays
-deallocate(iwhich_cgp, lrf, stat=alloc_status)
-
-! restraints
-deallocate(rstseq, stat=alloc_status)
-deallocate(rstpos, stat=alloc_status)
-deallocate(rstdis, stat=alloc_status)
-deallocate(rstang, stat=alloc_status)
-deallocate(rstwal, stat=alloc_status)
-
-! excluded groups
-deallocate(ST_gc, stat=alloc_status)
-#ifdef _OPENMP
-if (allocated(qomp_elec)) deallocate(qomp_elec)
-if (allocated(qomp_vdw)) deallocate(qomp_vdw)
-#endif
-! new file header for energy file
-if (allocated(ene_header%types)) then
-deallocate(ene_header%types,ene_header%numres,ene_header%gcnum,ene_header%resid)
-endif
-! header data for energy file
-if (allocated(ene_header%types)) deallocate(ene_header%types)
-if (allocated(ene_header%numres)) deallocate(ene_header%numres)
-if (allocated(ene_header%resid)) deallocate(ene_header%resid)
-if (allocated(ene_header%gcnum)) deallocate(ene_header%gcnum)
-!variables for MC_volume function
-if (allocated(old_nbww)) deallocate(old_nbww)
-if (allocated(old_nbpw)) deallocate(old_nbpw)
-if (allocated(old_nbpp)) deallocate(old_nbpp)
-if (allocated(old_nbqp)) deallocate(old_nbqp)
-
-!more variables for MC_Volume ...
-if (allocated(old_nbpp_cgp)) deallocate(old_nbpp_cgp)
-if (allocated(old_nbpw_cgp)) deallocate(old_nbpw_cgp)
-if (allocated(old_nbqp_cgp)) deallocate(old_nbqp_cgp)
-#if defined (USE_MPI)
-!MPI arrays
-deallocate(nbpp_per_cgp ,stat=alloc_status)
-deallocate(nbww_per_cgp ,stat=alloc_status)
-deallocate(nbqp_per_cgp ,stat=alloc_status)
-deallocate(nbqw_per_cgp ,stat=alloc_status)
-deallocate(nbpw_per_cgp ,stat=alloc_status)
-
-
-if(nodeid .eq. 0) then
-   deallocate(d_recv, stat=alloc_status)
-   deallocate(E_recv, stat=alloc_status)
-   deallocate(EQ_recv, stat=alloc_status)
-else
-   deallocate(E_send, stat=alloc_status)
-   deallocate(EQ_send, stat=alloc_status)
-end if
-#endif
-
-end subroutine md_deallocate
-
-!-----------------------------------------------------------------------
-
-subroutine reallocate_nonbondlist_pp
-
-! variables
-type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max
-
-! copy
-old_max = calculation_assignment%pp%max
-allocate(old_nbxx(old_max), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:old_max) = nbpp(1:old_max)
-
-! deallocate and copy back
-deallocate(nbpp)
-calculation_assignment%pp%max = int(calculation_assignment%pp%max * 1.05) + 200
-allocate(nbpp(calculation_assignment%pp%max), stat = alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-nbpp(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) calculation_assignment%pp%max
-100 format('>>> reallocating p-p pair list, new max is ', i8)
-
-end subroutine reallocate_nonbondlist_pp
-!----------------------------------------------------------------------
-subroutine reallocate_nbpp_cgp
-
-! variables
-type(CGP_PAIR_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max, new_max
-
-! copy
-old_max = size(nbpp_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-old_nbxx(1:old_max) = nbpp_cgp(1:old_max)
-
-! deallocate and copy back
-deallocate(nbpp_cgp)
-new_max = int( old_max*1.05) + 200
-allocate(nbpp_cgp(new_max), stat = alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-nbpp_cgp(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) new_max
-100 format('>>> reallocating p-p charge group pair list, new max is ', i8)
-
-end subroutine reallocate_nbpp_cgp
-!----------------------------------------------------------------------
-subroutine reallocate_nbpw_cgp
-
-! variables
-type(CGP_PAIR_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max, new_max
-
-! copy
-old_max = size(nbpw_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-old_nbxx(1:old_max) = nbpw_cgp(1:old_max)
-
-! deallocate and copy back
-deallocate(nbpw_cgp)
-new_max = int( old_max*1.05) + 200
-allocate(nbpw_cgp(new_max), stat = alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-nbpw_cgp(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) new_max
-100 format('>>> reallocating p-w charge group pair list, new max is ', i8)
-
-end subroutine reallocate_nbpw_cgp
-!----------------------------------------------------------------------
-subroutine reallocate_nbqp_cgp
-
-! variables
-type(CGP_PAIR_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max, new_max
-
-! copy
-old_max = size(nbqp_cgp, 1)
-allocate(old_nbxx(old_max), stat=alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-old_nbxx(1:old_max) = nbqp_cgp(1:old_max)
-
-! deallocate and copy back
-deallocate(nbqp_cgp)
-new_max = int( old_max*1.05) + 200
-allocate(nbqp_cgp(new_max), stat = alloc_status)
-call check_alloc('reallocating non-bonded charge group list')
-nbqp_cgp(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) new_max
-100 format('>>> reallocating q-p charge group pair list, new max is ', i8)
-
-end subroutine reallocate_nbqp_cgp
-
-!----------------------------------------------------------------------
-
-subroutine reallocate_nonbondlist_pw
-! variables
-type(NB_TYPE), allocatable	:: old_nbxx(:)
-integer						:: old_max
-
-! copy
-old_max = calculation_assignment%pw%max
-allocate(old_nbxx(old_max), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:old_max) = nbpw(1:old_max)
-
-! deallocate and copy back
-deallocate(nbpw)
-calculation_assignment%pw%max = int(calculation_assignment%pw%max * 1.05) + 200
-allocate(nbpw(calculation_assignment%pw%max), stat = alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-nbpw(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) calculation_assignment%pw%max
-100 format('>>> reallocating p-w pair list, new max is ', i8)
-
-end subroutine reallocate_nonbondlist_pw
-
-!----------------------------------------------------------------------
-
-subroutine reallocate_nonbondlist_qp
-! variables
-type(NBQP_TYPE), allocatable	:: old_nbxx(:,:)
-integer						:: old_max, is
-
-old_max = calculation_assignment%qp%max
-allocate(old_nbxx(old_max,nstates), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-
-do is=1,nstates
-! copy
-old_nbxx(1:old_max,is) = nbqp(1:old_max,is)
-end do
-! deallocate and copy back
-deallocate(nbqp)
-calculation_assignment%qp%max = int(calculation_assignment%qp%max * 1.05) + 200
-allocate(nbqp(calculation_assignment%qp%max,nstates), stat = alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-do is=1,nstates
-! copy
-nbqp(1:old_max,is) = old_nbxx(1:old_max,is)
-end do
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) calculation_assignment%qp%max
-100 format('>>> reallocating q-s pair list, new max is ', i8)
-
-end subroutine reallocate_nonbondlist_qp
-
-!----------------------------------------------------------------------
-subroutine reallocate_nonbondlist_qw
-! variables
-type(NBQP_TYPE), allocatable    :: old_nbxx(:,:)
-integer                                         :: old_max ,is
-
-! copy
-old_max = calculation_assignment%qw%max
-allocate(old_nbxx(old_max,nstates), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-do is=1,nstates
-! copy
-old_nbxx(1:old_max,is) = nbqw(1:old_max,is)
-end do
-
-! deallocate and copy back
-deallocate(nbqw)
-calculation_assignment%qw%max = int(calculation_assignment%qw%max * 1.05) + 200
-allocate(nbqw(calculation_assignment%qw%max,nstates), stat = alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-do is=1,nstates
-! copy
-nbqw(1:old_max,is) = old_nbxx(1:old_max,is)
-end do
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) calculation_assignment%qw%max
-100 format('>>> reallocating q-w pair list, new max is ', i8)
-
-end subroutine reallocate_nonbondlist_qw
-
-subroutine reallocate_nonbondlist_ww
-! variables
-type(NB_TYPE), allocatable		:: old_nbxx(:)
-integer						:: old_max
-
-! copy
-allocate(old_nbxx(calculation_assignment%ww%max), stat=alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-old_nbxx(1:calculation_assignment%ww%max) = nbww(1:calculation_assignment%ww%max)
-old_max = calculation_assignment%ww%max
-
-
-! deallocate and copy back
-deallocate(nbww)
-calculation_assignment%ww%max = int(calculation_assignment%ww%max * 1.05) + 200 + nwat
-allocate(nbww(calculation_assignment%ww%max), stat = alloc_status)
-call check_alloc('reallocating non-bonded interaction list')
-nbww(1:old_max) = old_nbxx(1:old_max)
-
-! deallocate copy
-deallocate(old_nbxx)
-
-! tell the world
-write (*,100) calculation_assignment%ww%max
-100 format('>>> reallocating w-w pair list, new max is ', i8)
-
-end subroutine reallocate_nonbondlist_ww
 
 !----------------------------------------------------------------------
 
@@ -2041,6 +975,23 @@ a=a+y
 end do
 v=(a-6.0_prec)*sd+am
 end subroutine gauss
+
+!-----------------------------------------------------------------------
+
+subroutine q_gauss (am,sd,v,ig)
+! same as gauss, but returns a qr_vec object instead of single real number
+! actually just calls gauss three times :D
+! arguments
+real(kind=prec)         :: am,sd
+integer                 :: ig
+TYPE(qr_vec)            :: v
+! locals
+
+call gauss(am,sd,v%x,ig)
+call gauss(am,sd,v%y,ig)
+call gauss(am,sd,v%z,ig)
+end subroutine q_gauss
+
 
 !-----------------------------------------------------------------------
 subroutine get_fep
@@ -3355,18 +2306,15 @@ end subroutine init_shake
 subroutine maxwell
 ! *** local variables
 integer						:: i,j,k
-real(kind=prec)						:: sd,vg,kT
-
+real(kind=prec)					:: sd,kT
+TYPE(qr_vec)                                    :: vg
 !	Generate Maxwellian velocities 
 kT = Boltz*Tmaxw
 
 do i=1,natom
         sd = sqrt (kT/iaclib(iac(i))%mass)
-        do j=1,3
-                call gauss (zero,sd,vg,iseed)
-                k=(i-1)*3+j
-                v(k)=vg
-        end do
+        call q_gauss(zero,sd,vg,iseed)
+        v(i) = vg
 end do
 
 end subroutine maxwell
@@ -3471,18 +2419,24 @@ read(12) headercheck
        if (headercheck .eq. -137) then
          allocate(x_single(natom))
          read (12,err=112,end=112) nat3, (x_single(i),i=1,natom)
-         xtop(1:natom) = x_single(1:natom)
-         deallocate(x_single)
+         xtop(1:natom)%x = x_single(1:natom)%x
+         xtop(1:natom)%y = x_single(1:natom)%y
+         xtop(1:natom)%z = x_single(1:natom)%z
+        deallocate(x_single)
        else if (headercheck .eq. -1337) then
          allocate(x_double(natom))
          read (12,err=112,end=112) nat3, (x_double(i),i=1,natom)
-         xtop(1:natom) = x_double(1:natom)
+         xtop(1:natom)%x = x_double(1:natom)%x
+         xtop(1:natom)%y = x_double(1:natom)%y
+         xtop(1:natom)%z = x_double(1:natom)%z
          deallocate(x_double)
        else if (headercheck .eq. -13337) then
 #ifndef PGI
          allocate(x_quad(natom))
          read (12,err=112,end=112) nat3, (x_quad(i),i=1,natom)
-         xtop(1:natom) = x_quad(1:natom)
+         xtop(1:natom)%x = x_quad(1:natom)%x
+         xtop(1:natom)%y = x_quad(1:natom)%y
+         xtop(1:natom)%z = x_quad(1:natom)%z
          deallocate(x_quad)
 #else
          call die('Quadruple precision not supported in PGI')
@@ -3494,7 +2448,9 @@ read(12) headercheck
   else
      allocate(x_old(natom))
      read (12,err=112,end=112) nat3, (x_old(i),i=1,natom)
-     xtop(1:natom) = x_old(1:natom)
+     xtop(1:natom)%x = x_old(1:natom)%x
+     xtop(1:natom)%y = x_old(1:natom)%y
+     xtop(1:natom)%z = x_old(1:natom)%z
      deallocate(x_old)
   end if
 
@@ -3571,41 +2527,65 @@ if(restart) then
               allocate(x_single(natom),v_single(natom))
               read (2,err=112,end=112) nat3, (x_single(i),i=1,natom)
               read (2,err=112,end=112) nat3, (v_single(i),i=1,natom)
-              x(1:natom) = x_single(1:natom)
-              v(1:natom) = v_single(1:natom)
+              x(1:natom)%x = x_single(1:natom)%x
+              x(1:natom)%y = x_single(1:natom)%y
+              x(1:natom)%z = x_single(1:natom)%z
+              v(1:natom)%x = v_single(1:natom)%x
+              v(1:natom)%y = v_single(1:natom)%y
+              v(1:natom)%z = v_single(1:natom)%z
               deallocate(x_single,v_single)
               if( use_PBC) then
                  read(2,err=112,end=112) boxl_single
                  read(2,err=112,end=112) boxc_single
-                 boxlength = boxl_single
-                 boxcentre = boxc_single
+                 boxlength%x = boxl_single%x
+                 boxlength%y = boxl_single%y
+                 boxlength%z = boxl_single%z
+                 boxcentre%x = boxc_single%x
+                 boxcentre%y = boxc_single%y
+                 boxcentre%z = boxc_single%z
               end if
             else if (headercheck .eq. -1337) then
               allocate(x_double(natom),v_double(natom))
               read (2,err=112,end=112) nat3, (x_double(i),i=1,natom)
               read (2,err=112,end=112) nat3, (v_double(i),i=1,natom)
-              x(1:natom) = x_double(1:natom)
-              v(1:natom) = v_double(1:natom)
+              x(1:natom)%x = x_double(1:natom)%x
+              x(1:natom)%y = x_double(1:natom)%y
+              x(1:natom)%z = x_double(1:natom)%z
+              v(1:natom)%x = v_double(1:natom)%x
+              v(1:natom)%y = v_double(1:natom)%y
+              v(1:natom)%z = v_double(1:natom)%z
               deallocate(x_double,v_double)
               if( use_PBC) then
                  read(2,err=112,end=112) boxl_double
                  read(2,err=112,end=112) boxc_double
-                 boxlength = boxl_double
-                 boxcentre = boxc_double
+                 boxlength%x = boxl_double%x
+                 boxlength%y = boxl_double%y
+                 boxlength%z = boxl_double%z
+                 boxcentre%x = boxc_double%x
+                 boxcentre%y = boxc_double%y
+                 boxcentre%z = boxc_double%z
               end if
             else if (headercheck .eq. -13337) then
 #ifndef PGI
               allocate(x_quad(natom),v_quad(natom))
               read (2,err=112,end=112) nat3, (x_quad(i),i=1,natom)
               read (2,err=112,end=112) nat3, (v_quad(i),i=1,natom)
-              x(1:natom) = x_quad(1:natom)
-              v(1:natom) = v_quad(1:natom)
+              x(1:natom)%x = x_quad(1:natom)%x
+              x(1:natom)%y = x_quad(1:natom)%y
+              x(1:natom)%z = x_quad(1:natom)%z
+              v(1:natom)%x = v_quad(1:natom)%x
+              v(1:natom)%y = v_quad(1:natom)%y
+              v(1:natom)%z = v_quad(1:natom)%z
               deallocate(x_quad,v_quad)
               if( use_PBC) then
                  read(2,err=112,end=112) boxl_quad
                  read(2,err=112,end=112) boxc_quad
-                 boxlength = boxl_quad
-                 boxcentre = boxc_quad
+                 boxlength%x = boxl_quad%x
+                 boxlength%y = boxl_quad%y
+                 boxlength%z = boxl_quad%z
+                 boxcentre%x = boxc_quad%x
+                 boxcentre%y = boxc_quad%y
+                 boxcentre%z = boxc_quad%z
               end if
 #else
               call die('Quadruple precision not supported in PGI')
@@ -3624,15 +2604,23 @@ if(restart) then
           read (2,err=112,end=112) nat3, (x_old(i),i=1,natom)
           read (2,err=112,end=112) nat3, (v_old(i),i=1,natom)
           write(*,*) 'Read coordinates and velocities from previous version of qdyn'
-          x(1:natom) = x_old(1:natom)
-          v(1:natom) = v_old(1:natom)
+          x(1:natom)%x = x_old(1:natom)%x
+          x(1:natom)%y = x_old(1:natom)%y
+          x(1:natom)%z = x_old(1:natom)%z
+          v(1:natom)%x = v_old(1:natom)%x
+          v(1:natom)%y = v_old(1:natom)%y
+          v(1:natom)%z = v_old(1:natom)%z
           deallocate(x_old,v_old)
           if( use_PBC) then
              read(2,err=112,end=112) old_boxlength
              read(2,err=112,end=112) old_boxcentre
              write(*,*) 'Read boxlength and center from previous version of qdyn'
-             boxlength = old_boxlength
-             boxcentre = old_boxcentre
+             boxlength%x = old_boxlength%x
+             boxlength%y = old_boxlength%y
+             boxlength%z = old_boxlength%z
+             boxcentre%x = old_boxcentre%x
+             boxcentre%y = old_boxcentre%y
+             boxcentre%z = old_boxcentre%z
           end if
         end if
         write (*,'(a30,i8)')   'Total number of atoms        =',natom
@@ -3640,8 +2628,8 @@ if(restart) then
 
         if( use_PBC) then
                 write(*,*)
-                write(*,'(a16,3f8.3)') 'Boxlength     =', boxlength(:)
-                write(*,'(a16,3f8.3)') 'Centre of box =', boxcentre(:)
+                write(*,'(a16,3f8.3)') 'Boxlength     =', boxlength
+                write(*,'(a16,3f8.3)') 'Centre of box =', boxcentre
         end if
         !water polarisation data will be read from restart file in wat_shells
 else
@@ -3676,11 +2664,7 @@ subroutine make_shell
 
 	do ig=1,ncgp_solute
        if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then 
-		i3 = 3*cgp(ig)%iswitch-3
-		r2 = ( xtop(i3+1) - xpcent(1) )**2 &
-			+( xtop(i3+2) - xpcent(2) )**2 &
-			+( xtop(i3+3) - xpcent(3) )**2
-
+                r2 = q_dist4(xtop(cgp(ig)%iswitch),xpcent)
 		if(r2 > rin2) then
 			do i=cgp(ig)%first, cgp(ig)%last
         nshellats = nshellats + 1 
@@ -3699,26 +2683,25 @@ end subroutine make_shell
 !Use coordinates from topology unless 'implicit_rstr_from_file' is specified
 subroutine make_shell2
 ! *** Local variables
-	integer						::	i,ig,i3,k
+	integer						::	i,ig,k
 	real(kind=prec)						::	rout2,rin2,r2
-	real(kind=prec), allocatable		::	cgp_cent(:,:)
+        TYPE(qr_vec), allocatable		::	cgp_cent(:)
 	nshellats = 0
 	rin2  = rexcl_i**2
 
 	shell(:) = .false.
 
-	allocate(cgp_cent(3,ncgp+nwat))
+	allocate(cgp_cent(ncgp+nwat))
 
-	cgp_cent(:,:) = zero
+	cgp_cent = cgp_cent * zero
 
 	do ig=1,ncgp_solute
     if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then
                 do i = cgp(ig)%first,cgp(ig)%last
-			i3 = cgpatom(i)*3
-			cgp_cent(:,ig) = cgp_cent(:,ig) + xtop(i3-2:i3)
+			cgp_cent(ig) = cgp_cent(ig) + xtop(cgpatom(i))
 		end do
-        cgp_cent(:,ig) = cgp_cent(:,ig)/real(cgp(ig)%last - cgp(ig)%first +1)
-		r2 = dot_product(cgp_cent(:,ig)-xpcent(:),cgp_cent(:,ig)-xpcent(:))
+        cgp_cent(ig) = cgp_cent(ig)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
+		r2 = q_dist4(cgp_cent(ig),xpcent)
 
 		if ( r2 .gt. rin2 ) then
 			do i=cgp(ig)%first, cgp(ig)%last
@@ -3765,11 +2748,80 @@ if ((nat_solute .ne. 0) .and. (nqat .ne.0)) call qp_int_comp
 if (nqat .ne. 0) call qq_int_comp
 if ((nwat .gt. 0) .and. (nqat.ne.0)) call qw_int_comp
 if (nwat .gt. 0) call ww_int_comp
-
+if (use_excluded_groups) call exc_assign
 
 end subroutine precompute_interactions
 
 !-----------------------------------------------------------------------
+
+subroutine exc_assign
+! assigns the interactions between excluded groups and q atoms
+! the information is gained from the previous generated lists
+! but needs another pass over all atoms because we have to allocate the arrays first
+!locals
+integer                         :: ig,iq,jq,istate
+integer                         :: igc
+
+! allocate all arrays
+allocate(exc_nbqq_list(ngroups_gc,nstates,maxval(exc_nbqq)),exc_nbqqp_list(ngroups_gc,nstates,maxval(exc_nbqqp)),&
+        exc_nbqp_list(ngroups_gc,nstates,maxval(exc_nbqp)))
+
+
+exc_qqlist  = 1
+exc_qplist  = 1
+exc_qqplist = 1
+
+do ig = 1, nat_solute
+        do igc = 1, ngroups_gc
+                if (ST_gc(igc)%%gcmask%mask(ig)) then
+                        do iq = 1, nqat
+                        if (iqatom(ig) .ne. 0) then
+                        ! atom ig is a qatom, add to exc_qq list with state info
+                        ! if those two atoms are allowed to interact
+                        do istate = 1, nstates
+                        if (iqatom(ig) .ne. 0) then
+                        ! atom ig is a qatom, add to exc_qq list with state info
+                                if (.not.qq_precomp(iq,iqatom(ig),istate)%set) cycle
+                                ! if those two atoms are allowed to interact
+                                exc_nbqq_list(igc,istate,exc_qqlist)%iq = iq
+                                exc_nbqq_list(igc,istate,exc_qqlist)%jq = jq
+                                exc_nbqq_list(igc,istate,exc_qqlist)%vdWA = qq_precomp(iq,jq,istate)%vdWA
+                                exc_nbqq_list(igc,istate,exc_qqlist)%vdWB = qq_precomp(iq,jq,istate)%vdWB
+                                exc_nbqq_list(igc,istate,exc_qqlist)%elec = qq_precomp(iq,jq,istate)%elec
+                                exc_nbqq_list(igc,istate,exc_qqlist)%soft = qq_precomp(iq,jq,istate)%soft
+                                exc_nbqq_list(igc,istate,exc_qqlist)%score = qq_precomp(iq,jq,istate)%score
+
+                                exc_qqlist = exc_qqlist + 1
+                        else if(any(qconn(:,ig,:) <= 3)) then
+                        ! it is bonded somehow to a q atom        
+                                if (.not.qp_precomp(ig,iq,istate)%set) cycle
+                                ! ! if atoms can interact, should not be needed but who knows
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%iq = iq
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%jq = ig
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%vdWA = qp_precomp(ig,iq,istate)%vdWA
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%elec = qp_precomp(ig,iq,istate)%elec
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%score = qp_precomp(ig,iq,istate)%score
+
+                                exc_qqplist = exc_qqplist + 1
+                        else
+                        ! plain old nonbonded qp
+                                if (.not.qp_precomp(iq,iq,istate)%set) cycle
+                                exc_nbqp_list(igc,istate,exc_qplist)%i = iq
+                                exc_nbqp_list(igc,istate,exc_qplist)%j = ig
+                                exc_nbqp_list(igc,istate,exc_qplist)%vdWA = qp_precomp(ig,iq,istate)%vdWA
+                                exc_nbqp_list(igc,istate,exc_qplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
+                                exc_nbqp_list(igc,istate,exc_qplist)%elec = qp_precomp(ig,iq,istate)%elec
+                                exc_nbqp_list(igc,istate,exc_qplist)%score = qp_precomp(ig,iq,istate)%score
+
+                                exc_qplist = exc_qplist + 1
+                        end if
+                        end do
+                end if
+        end do
+end do
+
+end subroutine exc_assign
 
 subroutine pp_int_comp
 ! here comes the real stuff
@@ -3886,11 +2938,13 @@ end subroutine pw_int_comp
 
 subroutine qp_int_comp
 ! locals
-integer                         :: ig,jq,ia,a_ind,is,vdw
+integer                         :: ig,jq,ia,a_ind,is,vdw,j
 
 allocate(qp_precomp(nat_solute,nqat,nstates),stat=alloc_status)
 call check_alloc('Protein-QAtom precomputation array')
-
+if(use_excluded_groups) then
+        allocate(exc_nbqp(ngroups_gc),exc_nbqqp(ngroups_gc))
+end if
 qp_precomp(:,:,:)%set   = .false.
 qp_precomp(:,:,:)%score = zero
 qp_precomp(:,:,:)%elec  = zero
@@ -3904,6 +2958,13 @@ igloop:do ig = 1, nat_solute
                 do is = 1 ,nstates
                         if(qconn(is, ig, jq) .eq. 4) vdw = 3
                         call precompute_set_values_qp(jq,ig,is,vdw)
+                        if (use_excluded_groups) then
+                                do k = 1, ngroups_gc
+                                if(ST_gc(k)%gcmask%mask(ig)) then
+                                        exc_nbqp(k) = exc_nbqp(k) + 1
+                                end if
+                                end do
+                        end if
                 end do
         end do
 end do igloop
@@ -3918,6 +2979,9 @@ real(kind=prec)                 :: tmp_elscale
 logical                         :: found
 allocate(qq_precomp(nqat,nqat,nstates),stat=alloc_status)
 call check_alloc('QAtom-QAtom precomputation array')
+if (use_excluded_groups) then
+        allocate(exc_nbqq(ngroups_gc))
+end if
 
 qq_precomp(:,:,:)%set   = .false.
 qq_precomp(:,:,:)%soft  = .false.
@@ -3970,6 +3034,16 @@ do iq = 1, nqat - 1
                                         end do
                                 end if ! (qconn = 4)
                                 call precompute_set_values_qq(iq,jq,is,vdw,tmp_elscale)
+                                if(use_excluded_groups) then
+                                        do k = 1, ngroups_gc
+                                        if(ST_gc(k)%gcmask%mask(ia)) then
+                                                exc_nbqq(k) = exc_nbqq(k) + 1
+                                                !call exc_add_int_qq(k,iq,jq)
+                                        else if(ST_gc(k)%gcmask%mask(ja)) then
+                                                exc_nbqq(k) = exc_nbqq(k) + 1
+                                        end if
+                                        end do
+                                end if
                         end if
                 end do
         end do
@@ -3991,6 +3065,13 @@ do ja = 1, nat_solute
                                                 vdw = ljcod(iac(ia),iac(ja))
                                         end if
                                         call precompute_set_values_qp(iq,ja,is,vdw)
+                                        if (use_excluded_groups) then
+                                                do k = 1, ngroups_gc
+                                                if (ST_gc(k)%gcmask%mask(ja)) then
+                                                        exc_nbqqp(k) = exc_nbqqp(k) + 1
+                                                end if
+                                                end do
+                                        end if
                                 end if
                         end do
                 end do
@@ -4435,7 +3516,7 @@ if( use_PBC ) then
         mass(:)=iaclib(iac(:))%mass
 ! moved here or it will segfault :(
         if (control_box) then
-        boxlength(:) = new_boxl(:)
+        boxlength = new_boxl
         if ( put_solute_back_in_box .or. put_solvent_back_in_box ) then !only put back in box if either solute or solvent should be put back (qdyn input option)
                 call put_back_in_box
         end if
@@ -4755,526 +3836,187 @@ end if
 
 end subroutine prep_sim_version
 
-
 !-----------------------------------------------------------------------
-
-subroutine qangle (istate)
-! arguments
-integer						:: istate
-
-! local variables
-integer						:: ia,i,j,k,ic,i3,j3,k3,im,icoupl,ib
-real(kind=prec)						:: bji,bjk,scp,ang,da,ae,dv,gamma
-real(kind=prec)						:: rji(3),rjk(3),f1,di(3),dk(3)
-
-
-do ia = 1, nqangle
-
-
-ic = qang(ia)%cod(istate)
- !skip if angle not present (code 0)
-if ( ic > 0 ) then
-
-gamma = one
-icoupl = 0
-
-do im = 1, nang_coupl
-   if ( iang_coupl(1,im) .eq. ia ) then
-      icoupl = im
-      ib     = iang_coupl(2,im)
-      gamma = EMorseD(ib)
-	  !couple improper to bond breaking not making
-	  if ( iang_coupl(3,im) .eq. 1) gamma = one - gamma
-	  exit
-   end if
-end do
-
-i  = qang(ia)%i
-j  = qang(ia)%j
-k  = qang(ia)%k
-i3 = 3*i-3
-j3 = 3*j-3
-k3 = 3*k-3
-
-rji(1) = x(i3+1) - x(j3+1)
-rji(2) = x(i3+2) - x(j3+2)
-rji(3) = x(i3+3) - x(j3+3)
-rjk(1) = x(k3+1) - x(j3+1)
-rjk(2) = x(k3+2) - x(j3+2)
-rjk(3) = x(k3+3) - x(j3+3)
-bji = sqrt ( rji(1)**2 + rji(2)**2 + rji(3)**2 )
-bjk = sqrt ( rjk(1)**2 + rjk(2)**2 + rjk(3)**2 )
-scp = ( rji(1)*rjk(1) + rji(2)*rjk(2) + rji(3)*rjk(3) )
-scp = scp / (bji*bjk)
-if ( scp .gt.  one ) scp =  one
-if ( scp .lt. -one ) scp = -one
-ang = acos(scp)
-da = ang - qanglib(ic)%ang0
-ae = 0.5_prec*qanglib(ic)%fk*da**2
-EQ(istate)%q%angle = EQ(istate)%q%angle + ae*gamma
-
-dv = gamma*qanglib(ic)%fk*da*EQ(istate)%lambda
-f1 = sin ( ang )
-if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-f1 =  -one / f1
-di(1) = f1 * ( rjk(1)/(bji*bjk) - scp*rji(1)/bji**2 )
-di(2) = f1 * ( rjk(2)/(bji*bjk) - scp*rji(2)/bji**2 )
-di(3) = f1 * ( rjk(3)/(bji*bjk) - scp*rji(3)/bji**2 )
-dk(1) = f1 * ( rji(1)/(bji*bjk) - scp*rjk(1)/bjk**2 )
-dk(2) = f1 * ( rji(2)/(bji*bjk) - scp*rjk(2)/bjk**2 )
-dk(3) = f1 * ( rji(3)/(bji*bjk) - scp*rjk(3)/bjk**2 )
-d(i3+1) = d(i3+1) + dv*di(1)
-d(i3+2) = d(i3+2) + dv*di(2)
-d(i3+3) = d(i3+3) + dv*di(3)
-d(k3+1) = d(k3+1) + dv*dk(1)
-d(k3+2) = d(k3+2) + dv*dk(2)
-d(k3+3) = d(k3+3) + dv*dk(3)
-d(j3+1) = d(j3+1) - dv*( di(1) + dk(1) )
-d(j3+2) = d(j3+2) - dv*( di(2) + dk(2) )
-d(j3+3) = d(j3+3) - dv*( di(3) + dk(3) )
-
-if ( icoupl .ne. 0 ) then
-
-   i  = qbnd(ib)%i
-   j  = qbnd(ib)%j
-   i3 = 3*i-3
-   j3 = 3*j-3
-
-   d(i3+1) = d(i3+1) + dMorse_i(1,ib)*ae
-   d(i3+2) = d(i3+2) + dMorse_i(2,ib)*ae
-   d(i3+3) = d(i3+3) + dMorse_i(3,ib)*ae
-   d(j3+1) = d(j3+1) + dMorse_j(1,ib)*ae
-   d(j3+2) = d(j3+2) + dMorse_j(2,ib)*ae
-   d(j3+3) = d(j3+3) + dMorse_j(3,ib)*ae
-
-end if
-end if
-end do
-end subroutine qangle
-
+!Put molecules back in box for nice visualisation.
+!Change boxcentre if rigid_box_centre is off.
+!Update cgp_centers for LRF.
 !-----------------------------------------------------------------------
+subroutine put_back_in_box
 
-subroutine qurey_bradley (istate)
-! arguments
-integer						:: istate
+TYPE(qr_vec)				::	boxc,old_boxc
+integer				::	i, j, starten, slutet
+!the borders of the periodic box
+TYPE(qr_vec)                            :: maxn,minn
+TYPE(qr_vec)                            :: cm
+integer				::  k, ig
+integer				::  pbib_start, pbib_stop
 
-
-
-! local variables
-integer						::	ia,i,j,k,ic,i3,j3,k3,im,icoupl,ib
-real(kind=prec)						::	gamma
-real(kind=prec)						::	rik(3), dik, du, ru, Eurey
-
-do ia = 1, nqangle
-        ic = qang(ia)%cod(istate)
-        !skip if angle not present (code 0)
-        if ( ic == 0  .or. qanglib(ic)%ureyfk == zero) cycle
-
-gamma = one
-icoupl = 0
-
-do im = 1, nang_coupl
-   if ( iang_coupl(1,im) .eq. ia ) then
-      icoupl = im
-      ib     = iang_coupl(2,im)
-      gamma = EMorseD(ib)
-	  !couple improper to bond breaking not making
-	  if ( iang_coupl(3,im) .eq. 1) gamma = 1 - gamma
-   end if
-end do
-
-i  = qang(ia)%i
-j  = qang(ia)%j
-k  = qang(ia)%k
-i3 = 3*i-3
-j3 = 3*j-3
-k3 = 3*k-3
-        rik(1) = x(k3+1) - x(i3+1)
-        rik(2) = x(k3+2) - x(i3+2)
-        rik(3) = x(k3+3) - x(i3+3)
-        dik = sqrt(rik(1)*rik(1) + rik(2)*rik(2) + rik(3)*rik(3))
-        ru = dik - qanglib(ic)%ureyr0
-        Eurey = qanglib(ic)%ureyfk*ru**2
-        EQ(istate)%q%angle = EQ(istate)%q%angle + Eurey*gamma
-        du = gamma*2*(qanglib(ic)%ureyfk*ru/dik)*EQ(istate)%lambda
-
-        d(k3+1) = d(k3+1) + du*rik(1)
-        d(k3+2) = d(k3+2) + du*rik(2)
-        d(k3+3) = d(k3+3) + du*rik(3)
-        d(i3+1) = d(i3+1) - du*rik(1)
-        d(i3+2) = d(i3+2) - du*rik(2)
-        d(i3+3) = d(i3+3) - du*rik(3)
-
-if ( icoupl .ne. 0 ) then
-
-   i  = qbnd(ib)%i
-   j  = qbnd(ib)%j
-   i3 = 3*i-3
-   j3 = 3*j-3
-
-   d(i3+1) = d(i3+1) + dMorse_i(1,ib)*Eurey
-   d(i3+2) = d(i3+2) + dMorse_i(2,ib)*Eurey
-   d(i3+3) = d(i3+3) + dMorse_i(3,ib)*Eurey
-
-
-   d(j3+1) = d(j3+1) + dMorse_j(1,ib)*Eurey
-   d(j3+2) = d(j3+2) + dMorse_j(2,ib)*Eurey
-   d(j3+3) = d(j3+3) + dMorse_j(3,ib)*Eurey
-
-
+!the function can be run exclusivly on node 0
+!no gain from doing it on each node
+if (nodeid.eq.0) then
+old_boxc = boxcentre
+if( .not. rigid_box_centre ) then !if the box is allowed to float around, center on solute if present, otherwise center on solvent
+        if( nat_solute > 0) then
+                slutet = nat_solute
+                !starten = ncgp_solute + 1
+                
+        else !if no solute present, centre box around solvent
+                slutet = natom
+                !starten = 1
+        end if
+        !find center
+        boxc = boxc * zero
+        do i = 1,slutet
+                boxc = boxc + x(i)
+        end do
+        boxc = boxc / real(slutet, kind=prec)
+        boxcentre = boxc !store new boxcentre
+        ! starten = ncgp_solute + 1 !solute can not move around the corner
+else
+        !use boxcenter given in topology, ie. 'moving' solute
+        boxc = boxcentre
+        !starten = 1
 end if
-end do
-end subroutine qurey_bradley
 
-!-----------------------------------------------------------------------
+!calculate the borders of the periodic box
+maxn = boxc + boxlength/2.0_prec
+minn = boxc - boxlength/2.0_prec
 
-subroutine qbond (istate)
-! arguments
-integer						::	istate
+mvd_mol(:) = 0 
 
-! local variables
-integer						::	ib,i,j,ic,i3,j3
-real(kind=prec)						::	b,db,be,dv,fexp
-real(kind=prec)						::	rij(3)
-
-do ib = 1, nqbond
-
-        ic = qbnd(ib)%cod(istate)
-        !code 0 means bond not present
-if ( ic > 0 ) then
-
-i  = qbnd(ib)%i
-j  = qbnd(ib)%j
-i3 = 3*i-3
-j3 = 3*j-3
-
-rij(1) = x(j3+1) - x(i3+1)
-rij(2) = x(j3+2) - x(i3+2)
-rij(3) = x(j3+3) - x(i3+3)
-
-b = sqrt ( rij(1)**2 + rij(2)**2 + rij(3)**2 )
-db = b - qbondlib(ic)%r0
-
-        fexp = exp ( -qbondlib(ic)%amz*db ) 
-        be = qbondlib(ic)%Dmz*(fexp*fexp-2.0_prec*fexp) + 0.5_prec*qbondlib(ic)%fk*db**2
-        EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
-EQ(istate)%q%bond = EQ(istate)%q%bond + be
-dv = (2.0_prec*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) + qbondlib(ic)%fk*db)*EQ(istate)%lambda/b
-
-d(i3+1) = d(i3+1) - dv*rij(1)
-d(i3+2) = d(i3+2) - dv*rij(2)
-d(i3+3) = d(i3+3) - dv*rij(3)
-d(j3+1) = d(j3+1) + dv*rij(1)
-d(j3+2) = d(j3+2) + dv*rij(2)
-d(j3+3) = d(j3+3) + dv*rij(3)
-
-!Force scaling factor to be 1 when distance is smaller than r0
- if ( db > 0 ) then
- 	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
- 	dMorse_i(:,ib) = +2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
- 	dMorse_j(:,ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/b*rij(:)
- else
- 	EMorseD(ib) = one
- 	dMorse_i(:,ib) = zero
- 	dMorse_j(:,ib) = zero
- end if
-
+!pbib_start and pbib_stop are the starting and stopping molecule indexes of which molecules to Put Back In Box
+pbib_start = 1
+pbib_stop  = nmol
+if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
+!we now have nsolute to keep track of this stuff, don't use this old way
+	pbib_start = nsolute + 1
 end if
-end do
-end subroutine qbond
-
-!-----------------------------------------------------------------------
-
-subroutine qimproper (istate)
-! arguments
-integer						::	istate
-
-! local variables
-integer						::	i,j,k,l,ip,ic,i3,j3,k3,l3
-integer						::	icoupl,im,ib
-real(kind=prec)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
-real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
-
-do ip = 1,nqimp
-
-ic = qimp(ip)%cod(istate)
-
-if ( ic > 0 ) then
-
-gamma = one
-icoupl = 0
-
-do im = 1, nimp_coupl
-   if ( iimp_coupl(1,im) .eq. ip ) then
-      icoupl = im
-      ib     = iimp_coupl(2,im)
-      gamma = EMorseD(ib)
-	  !couple improper to bond breaking not making
-	  if ( iimp_coupl(3,im) .eq. 1) gamma = 1 - gamma
-   end if 
-end do
+if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
+!same here, we know the molecule numbers
+	pbib_stop = nsolute
+end if          
 
 
+do i=pbib_start,pbib_stop
+        cm = cm * zero
+        do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
+                cm = cm + x(j)*mass(j)
+        end do
+        cm = cm * mol_mass(i) !centre of mass of molecule i
+!mol_mass is actually 1/mol_mass
+        !x-direction
+        if( cm%x .gt. maxn%x) then !position of centre of mass
 
-i = qimp(ip)%i
-j = qimp(ip)%j
-k = qimp(ip)%k
-l = qimp(ip)%l
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%x = x(j)%x - boxlength%x
+				        end do
+						mvd_mol(i) = 1
+		else if ( cm%x .lt. minn%x ) then
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%x = x(j)%x + boxlength%x
+				        end do
+						mvd_mol(i) = 1
+        end if
 
-i3=i*3-3
-j3=j*3-3
-k3=k*3-3
-l3=l*3-3
-rji(1) = x(i3+1) - x(j3+1)
-rji(2) = x(i3+2) - x(j3+2)
-rji(3) = x(i3+3) - x(j3+3)
-rjk(1) = x(k3+1) - x(j3+1)
-rjk(2) = x(k3+2) - x(j3+2)
-rjk(3) = x(k3+3) - x(j3+3)
-rkl(1) = x(l3+1) - x(k3+1)
-rkl(2) = x(l3+2) - x(k3+2)
-rkl(3) = x(l3+3) - x(k3+3)
-rnj(1) =  rji(2)*rjk(3) - rji(3)*rjk(2)
-rnj(2) =  rji(3)*rjk(1) - rji(1)*rjk(3)
-rnj(3) =  rji(1)*rjk(2) - rji(2)*rjk(1)
+       ! y-direction
+        if( cm%y .gt. maxn%y) then !position of centre of mass
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%y = x(j)%y - boxlength%y
+				        end do
+						mvd_mol(i) = 1
+        else if ( cm%y .lt. minn%y ) then
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%y = x(j)%y + boxlength%y
+				        end do
+						mvd_mol(i) = 1
+        end if
 
-
-rnk(1) = -rjk(2)*rkl(3) + rjk(3)*rkl(2)
-rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
-rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
-bj = sqrt ( rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
-bk = sqrt ( rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
-scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))/(bj*bk)
-if ( scp .gt.  one ) scp =  one
-if ( scp .lt. -one ) scp = -one
-phi = acos ( scp )
-sgn =  rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
-     +rjk(2)*(rnj(3)*rnk(1)-rnj(1)*rnk(3)) &
-     +rjk(3)*(rnj(1)*rnk(2)-rnj(2)*rnk(1))
-if ( sgn .lt. 0 ) phi = -phi
-
-! ---       energy
-
-arg = phi - qimplib(ic)%imp0
-arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
-dv = qimplib(ic)%fk*arg
-pe  = 0.5_prec*dv*arg
-EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
-dv = dv*gamma*EQ(istate)%lambda
-
-! ---       forces
-
-f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-f1 =  -one / f1
-di(1) = f1 * ( rnk(1)/(bj*bk) - scp*rnj(1)/bj**2 )
-di(2) = f1 * ( rnk(2)/(bj*bk) - scp*rnj(2)/bj**2 )
-di(3) = f1 * ( rnk(3)/(bj*bk) - scp*rnj(3)/bj**2 )
-dl(1) = f1 * ( rnj(1)/(bj*bk) - scp*rnk(1)/bk**2 )
-dl(2) = f1 * ( rnj(2)/(bj*bk) - scp*rnk(2)/bk**2 )
-dl(3) = f1 * ( rnj(3)/(bj*bk) - scp*rnk(3)/bk**2 )
-
-rki(1) =  rji(1) - rjk(1)
-rki(2) =  rji(2) - rjk(2)
-rki(3) =  rji(3) - rjk(3)
-rlj(1) = -rjk(1) - rkl(1)
-rlj(2) = -rjk(2) - rkl(2)
-rlj(3) = -rjk(3) - rkl(3)
-
-dp(1)  = rjk(2)*di(3) - rjk(3)*di(2)
-dp(2)  = rjk(3)*di(1) - rjk(1)*di(3)
-dp(3)  = rjk(1)*di(2) - rjk(2)*di(1)
-dp(4)  = rki(2)*di(3)-rki(3)*di(2)+rkl(2)*dl(3)-rkl(3)*dl(2)
-dp(5)  = rki(3)*di(1)-rki(1)*di(3)+rkl(3)*dl(1)-rkl(1)*dl(3)
-dp(6)  = rki(1)*di(2)-rki(2)*di(1)+rkl(1)*dl(2)-rkl(2)*dl(1)
-dp(7)  = rlj(2)*dl(3)-rlj(3)*dl(2)-rji(2)*di(3)+rji(3)*di(2)
-dp(8)  = rlj(3)*dl(1)-rlj(1)*dl(3)-rji(3)*di(1)+rji(1)*di(3)
-dp(9)  = rlj(1)*dl(2)-rlj(2)*dl(1)-rji(1)*di(2)+rji(2)*di(1)
-dp(10) = rjk(2)*dl(3) - rjk(3)*dl(2)
-dp(11) = rjk(3)*dl(1) - rjk(1)*dl(3)
-
-
-dp(12) = rjk(1)*dl(2) - rjk(2)*dl(1)
-
-d(i3+1) = d(i3+1) + dv*dp(1)
-d(i3+2) = d(i3+2) + dv*dp(2)
-d(i3+3) = d(i3+3) + dv*dp(3)
-d(j3+1) = d(j3+1) + dv*dp(4)
-d(j3+2) = d(j3+2) + dv*dp(5)
-d(j3+3) = d(j3+3) + dv*dp(6)
-d(k3+1) = d(k3+1) + dv*dp(7)
-d(k3+2) = d(k3+2) + dv*dp(8)
-d(k3+3) = d(k3+3) + dv*dp(9)
-d(l3+1) = d(l3+1) + dv*dp(10)
-d(l3+2) = d(l3+2) + dv*dp(11)
-d(l3+3) = d(l3+3) + dv*dp(12)
-
-if ( icoupl .ne. 0 ) then
-
-   i  = qbnd(ib)%i
-   j  = qbnd(ib)%j
-   i3 = 3*i-3
-   j3 = 3*j-3
-
-   d(i3+1) = d(i3+1) + dMorse_i(1,ib)*pe
-   d(i3+2) = d(i3+2) + dMorse_i(2,ib)*pe
-   d(i3+3) = d(i3+3) + dMorse_i(3,ib)*pe
-   d(j3+1) = d(j3+1) + dMorse_j(1,ib)*pe
-   d(j3+2) = d(j3+2) + dMorse_j(2,ib)*pe
-   d(j3+3) = d(j3+3) + dMorse_j(3,ib)*pe
-
+        !z-direction
+        if( cm%z .gt. maxn%z) then !position of centre of mass
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%z = x(j)%z - boxlength%z
+				        end do
+						mvd_mol(i) = 1
+        else if ( cm%z .lt. minn%z ) then
+                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
+						x(j)%z = x(j)%z + boxlength%z
+				        end do
+						mvd_mol(i) = 1
+  		end if
+end do !over molecules
+end if !if(nodeid .eq. 0)
+!now that node 0 has done the job, broadcast the changes to the slaves
+#if defined(USE_MPI)
+!only during MD, skip for first setup, mpitypes are 
+!set after this, so save to use as proxy
+if(mpitype_batch_lrf.ne.0) then
+	call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+	call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
+	call MPI_Bcast(old_boxc, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 end if
-end if
+#endif
+
+#ifdef USE_GRID
+! we now need to update the coordinates of all grid boxes
+! to shift by the amount the new box has shifted
+grid_pp(:)%x = grid_pp(:)%x - (old_boxc-boxcentre)
+grid_pp(:)%y = grid_pp(:)%y - (old_boxc-boxcentre)
+grid_pp(:)%z = grid_pp(:)%z - (old_boxc-boxcentre)
+
+grid_pp(:)%xend = grid_pp(:)%xend - (old_boxc-boxcentre)
+grid_pp(:)%yend = grid_pp(:)%yend - (old_boxc-boxcentre)
+grid_pp(:)%zend = grid_pp(:)%zend - (old_boxc-boxcentre)
+
+grid_pw(:)%x = grid_pw(:)%x - (old_boxc-boxcentre)
+grid_pw(:)%y = grid_pw(:)%y - (old_boxc-boxcentre)
+grid_pw(:)%z = grid_pw(:)%z - (old_boxc-boxcentre)
+
+grid_pw(:)%xend = grid_pw(:)%xend - (old_boxc-boxcentre)
+grid_pw(:)%yend = grid_pw(:)%yend - (old_boxc-boxcentre)
+grid_pw(:)%zend = grid_pw(:)%zend - (old_boxc-boxcentre)
+
+grid_ww(:)%x = grid_ww(:)%x - (old_boxc-boxcentre)
+grid_ww(:)%y = grid_ww(:)%y - (old_boxc-boxcentre)
+grid_ww(:)%z = grid_ww(:)%z - (old_boxc-boxcentre)
+
+grid_ww(:)%xend = grid_ww(:)%xend - (old_boxc-boxcentre)
+grid_ww(:)%yend = grid_ww(:)%yend - (old_boxc-boxcentre)
+grid_ww(:)%zend = grid_ww(:)%zend - (old_boxc-boxcentre)
+
+#endif
+!LRF: if molecule moved update all cgp_centers from first charge group to the last one
+if (use_LRF) then
+
+if (nodeid .eq.0) then
+do k=pbib_start,pbib_stop
+		if (mvd_mol(k) == 1) then  
+						do ig=iwhich_cgp(istart_mol(k)),iwhich_cgp(istart_mol(k+1)-1)
+								lrf(ig)%cgp_cent = lrf(ig)%cgp_cent * zero
+								do i  = cgp(ig)%first, cgp(ig)%last
+										lrf(ig)%cgp_cent = lrf(ig)%cgp_cent + x(cgpatom(i))
+								end do
+						lrf(ig)%cgp_cent = lrf(ig)%cgp_cent/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
+						end do
+		end if 
 end do
-end subroutine qimproper
-
-!-----------------------------------------------------------------------
-
-subroutine qtorsion (istate)
-! arguments
-integer						::	istate
-
-! local variables
-integer						::	i,j,k,l,ip,ic,i3,j3,k3,l3
-integer						::	icoupl,im,ib
-real(kind=prec)						::	bj,bk,scp,phi,sgn,pe,dv,arg,f1,gamma
-real(kind=prec)						::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(kind=prec)						::	rki(3),rlj(3),dp(12),di(3),dl(3)
-
-do ip = 1,nqtor
-
-ic = qtor(ip)%cod(istate)
-
-if ( ic > 0 ) then
-
-gamma = one
-icoupl = 0
-
-do im = 1, ntor_coupl
-   if ( itor_coupl(1,im) .eq. ip ) then
-      icoupl = im
-      ib     = itor_coupl(2,im)
-      gamma = EMorseD(ib)
-	  !couple improper to bond breaking not making
-	  if ( itor_coupl(3,im) .eq. 1) gamma = 1 - gamma
-   end if
-end do
-
-i = qtor(ip)%i
-j = qtor(ip)%j
-k = qtor(ip)%k
-l = qtor(ip)%l
-
-i3=i*3-3
-j3=j*3-3
-k3=k*3-3
-l3=l*3-3
-rji(1) = x(i3+1) - x(j3+1)
-rji(2) = x(i3+2) - x(j3+2)
-rji(3) = x(i3+3) - x(j3+3)
-rjk(1) = x(k3+1) - x(j3+1)
-rjk(2) = x(k3+2) - x(j3+2)
-rjk(3) = x(k3+3) - x(j3+3)
-rkl(1) = x(l3+1) - x(k3+1)
-rkl(2) = x(l3+2) - x(k3+2)
-rkl(3) = x(l3+3) - x(k3+3)
-rnj(1) =  rji(2)*rjk(3) - rji(3)*rjk(2)
-rnj(2) =  rji(3)*rjk(1) - rji(1)*rjk(3)
-rnj(3) =  rji(1)*rjk(2) - rji(2)*rjk(1)
-rnk(1) = -rjk(2)*rkl(3) + rjk(3)*rkl(2)
-rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
-rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
-bj = sqrt ( rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
-bk = sqrt ( rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
-scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))/(bj*bk)
-if ( scp .gt.  one ) scp =  one
-if ( scp .lt. -one ) scp = -one
-phi = acos ( scp )
-sgn =  rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
-     +rjk(2)*(rnj(3)*rnk(1)-rnj(1)*rnk(3)) &
-
-
-    +rjk(3)*(rnj(1)*rnk(2)-rnj(2)*rnk(1))
-if ( sgn .lt. 0 ) phi = -phi
-
-
-
-
-! ---       energy
-
-arg = qtorlib(ic)%rmult*phi-qtorlib(ic)%deltor
-pe = qtorlib(ic)%fk*(one+cos(arg))
-EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
-
-! ---       forces
-
-f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-f1 =  -one / f1
-di(1) = f1 * ( rnk(1)/(bj*bk) - scp*rnj(1)/bj**2 )
-di(2) = f1 * ( rnk(2)/(bj*bk) - scp*rnj(2)/bj**2 )
-di(3) = f1 * ( rnk(3)/(bj*bk) - scp*rnj(3)/bj**2 )
-dl(1) = f1 * ( rnj(1)/(bj*bk) - scp*rnk(1)/bk**2 )
-dl(2) = f1 * ( rnj(2)/(bj*bk) - scp*rnk(2)/bk**2 )
-dl(3) = f1 * ( rnj(3)/(bj*bk) - scp*rnk(3)/bk**2 )
-
-rki(1) =  rji(1) - rjk(1)
-rki(2) =  rji(2) - rjk(2)
-
-
-rki(3) =  rji(3) - rjk(3)
-rlj(1) = -rjk(1) - rkl(1)
-rlj(2) = -rjk(2) - rkl(2)
-rlj(3) = -rjk(3) - rkl(3)
-
-dp(1)  = rjk(2)*di(3) - rjk(3)*di(2)
-dp(2)  = rjk(3)*di(1) - rjk(1)*di(3)
-dp(3)  = rjk(1)*di(2) - rjk(2)*di(1)
-dp(4)  = rki(2)*di(3)-rki(3)*di(2)+rkl(2)*dl(3)-rkl(3)*dl(2)
-dp(5)  = rki(3)*di(1)-rki(1)*di(3)+rkl(3)*dl(1)-rkl(1)*dl(3)
-dp(6)  = rki(1)*di(2)-rki(2)*di(1)+rkl(1)*dl(2)-rkl(2)*dl(1)
-dp(7)  = rlj(2)*dl(3)-rlj(3)*dl(2)-rji(2)*di(3)+rji(3)*di(2)
-dp(8)  = rlj(3)*dl(1)-rlj(1)*dl(3)-rji(3)*di(1)+rji(1)*di(3)
-dp(9)  = rlj(1)*dl(2)-rlj(2)*dl(1)-rji(1)*di(2)+rji(2)*di(1)
-dp(10) = rjk(2)*dl(3) - rjk(3)*dl(2)
-dp(11) = rjk(3)*dl(1) - rjk(1)*dl(3)
-dp(12) = rjk(1)*dl(2) - rjk(2)*dl(1)
-
-d(i3+1) = d(i3+1) + dv*dp(1)
-d(i3+2) = d(i3+2) + dv*dp(2)
-d(i3+3) = d(i3+3) + dv*dp(3)
-d(j3+1) = d(j3+1) + dv*dp(4)
-d(j3+2) = d(j3+2) + dv*dp(5)
-d(j3+3) = d(j3+3) + dv*dp(6)
-d(k3+1) = d(k3+1) + dv*dp(7)
-d(k3+2) = d(k3+2) + dv*dp(8)
-d(k3+3) = d(k3+3) + dv*dp(9)
-d(l3+1) = d(l3+1) + dv*dp(10)
-d(l3+2) = d(l3+2) + dv*dp(11)
-d(l3+3) = d(l3+3) + dv*dp(12)
-
-if ( icoupl .ne. 0 ) then
-
-   i  = qbnd(ib)%i
-   j  = qbnd(ib)%j
-   i3 = 3*i-3
-   j3 = 3*j-3
-
-
-
-  d(i3+1) = d(i3+1) + dMorse_i(1,ib)*pe
-   d(i3+2) = d(i3+2) + dMorse_i(2,ib)*pe
-   d(i3+3) = d(i3+3) + dMorse_i(3,ib)*pe
-   d(j3+1) = d(j3+1) + dMorse_j(1,ib)*pe
-   d(j3+2) = d(j3+2) + dMorse_j(2,ib)*pe
-   d(j3+3) = d(j3+3) + dMorse_j(3,ib)*pe
-
+end if ! nodeid .eq. 0
+#if defined(USE_MPI)
+!for now just bcast the whole thing
+!only during MD, skip for first setup, mpitypes are 
+!set after this, so save to use as proxy
+if(mpitype_batch_lrf.ne.0) then
+	call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)
+	if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast lrf')
 end if
+! for later use of PBC update on each node
+!call lrf_gather
+#endif
 end if
-end do
-end subroutine qtorsion
+
+end subroutine put_back_in_box
 
 !-----------------------------------------------------------------------
 
@@ -5314,108 +4056,6 @@ randm = r
 ig = irand
 
 end function randm
-
-!-----------------------------------------------------------------------
-
-integer function shake(xx, x)
-!arguments
-real(kind=prec)						::	xx(:), x(:)
-!	returns no. of iterations
-
-! *** local variables
-integer						::	i,j,i3,j3,mol,ic,nits
-real(kind=prec)						::	xij2,diff,corr,scp,xxij2
-real(kind=prec)						::	xij(3),xxij(3)
-logical                                                 ::      dead_shake =.false.
-
-#if defined (PROFILING)
-real(kind=prec)                                         :: start_loop_time
-start_loop_time = rtime()
-#endif
-
-! reset niter
-shake = 0
-
-do mol=1,shake_molecules
-        ! for every molecule:
-        ! reset nits (iterations per molecule)
-        nits = 0
-        ! reset iready for every constraint
-        shake_mol(mol)%bond(:)%ready = .false.
-        do while (.not.dead_shake) !iteration loop
-                do ic=1,shake_mol(mol)%nconstraints
-                        ! for every constraint:
-
-                        if (.not. shake_mol(mol)%bond(ic)%ready) then
-                                ! repeat until done:
-
-                                i = shake_mol(mol)%bond(ic)%i
-                                j = shake_mol(mol)%bond(ic)%j
-                                i3 = i*3-3
-                                j3 = j*3-3
-                                xij(1)  = x(i3+1) - x(j3+1)
-                                xij(2)  = x(i3+2) - x(j3+2)
-                                xij(3)  = x(i3+3) - x(j3+3)
-                                xij2    = xij(1)**2+xij(2)**2+xij(3)**2
-                                diff    = shake_mol(mol)%bond(ic)%dist2 - xij2
-                                if(abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
-                                        shake_mol(mol)%bond(ic)%ready = .true. ! in range
-                                end if
-                                xxij(1) = xx(i3+1) - xx(j3+1)
-                                xxij(2) = xx(i3+2) - xx(j3+2)
-                                xxij(3) = xx(i3+3) - xx(j3+3)
-                                scp = xij(1)*xxij(1)+xij(2)*xxij(2)+xij(3)*xxij(3)
-                                corr = diff/(2.0_prec*scp*(winv(i)+winv(j)))
-
-                                x(i3+1) = x(i3+1)+xxij(1)*corr*winv(i)
-                                x(i3+2) = x(i3+2)+xxij(2)*corr*winv(i)
-                                x(i3+3) = x(i3+3)+xxij(3)*corr*winv(i)
-                                x(j3+1) = x(j3+1)-xxij(1)*corr*winv(j)
-                                x(j3+2) = x(j3+2)-xxij(2)*corr*winv(j)
-                                x(j3+3) = x(j3+3)-xxij(3)*corr*winv(j)
-                        end if
-                end do
-
-            nits = nits+1
-
-                ! see if every constraint is met
-                if(all(shake_mol(mol)%bond(1:shake_mol(mol)%nconstraints)%ready)) then
-                        exit !from iteration loop
-                elseif(nits >= SHAKE_MAX_ITER) then
-                        ! fail on too many iterations
-                        do ic=1,shake_mol(mol)%nconstraints
-                                if (.not. shake_mol(mol)%bond(ic)%ready) then
-                                        ! for every failed constraint
-
-                                        i = shake_mol(mol)%bond(ic)%i
-                                        j = shake_mol(mol)%bond(ic)%j
-                                        i3 = i*3-3
-                                        j3 = j*3-3
-                                        xxij(1) = xx(i3+1) - xx(j3+1)
-                                        xxij(2) = xx(i3+2) - xx(j3+2)
-                                        xxij(3) = xx(i3+3) - xx(j3+3)
-                                        xxij2   = xxij(1)**2+xxij(2)**2+xxij(3)**2
-                                        write (*,100) i,j,sqrt(xxij2),&
-                                                sqrt(shake_mol(mol)%bond(ic)%dist2)
-                                end if
-                        end do
-                        dead_shake = .true.
-                end if
-100         format ('>>> Shake failed, i,j,d,d0 = ',2i6,2f10.5)
-        end do
-
-        ! update niter
-        shake = shake+nits
-end do
-
-! set niter to the average number of iterations per molecule
-if (dead_shake) call die('shake failure')
-shake=shake/nmol
-#if defined (PROFILING)
-profile(7)%time = profile(7)%time + rtime() - start_loop_time
-#endif
-
-end function shake
 
 !-----------------------------------------------------------------------
 
@@ -5522,35 +4162,25 @@ end subroutine shrink_topology
 
 subroutine stop_cm_translation
 ! local variables
-integer						::	i,j,k
+integer						::	i
 real(kind=prec)						::	rmass,totmass
-real(kind=prec)						::	vcm(3)
+TYPE(qr_vec)						::	vcm
 
 ! calculate totmass and vcm
 totmass = zero
-do i=1,3
-vcm(i) = zero
-end do
+vcm = vcm * zero
 do i=1,natom
 rmass = iaclib(iac(i))%mass
 totmass=totmass+rmass
-do j=1,3
-k=(i-1)*3+j
-vcm(j)=vcm(j)+rmass*v(k)
-end do
+vcm = vcm +  (v(i) * rmass)
 end do
 
 ! scale vcm
-do j=1,3
-vcm(j)=vcm(j)/totmass
-end do
+vcm = vcm / totmass
 
 ! update v
 do i=1,natom
-do j=1,3
-k=(i-1)*3+j
-v(k)=v(k)-vcm(j)
-end do
+v(i) = v(i) - vcm
 end do
 end subroutine stop_cm_translation
 
@@ -5572,7 +4202,7 @@ real(kind=prec)					::	box_min, vtemp, vtemp1
 !  ljcod
 !  [iaclib%bvdw] (conversion)
 
-if(.not. topo_load(top_file, require_version=4.15)) then
+if(.not. topo_load(top_file, require_version=4.15_prec)) then
         call die('Failed to load topology.')
 end if
 natom = nat_pro
@@ -5614,14 +4244,14 @@ call die('Must have same boundary (sphere or box) in topology and input file')
 end if
 
 if( use_PBC ) then
-if( any(boxlength(:) == zero ) ) then
-        inv_boxl(:) = zero
+if( (boxlength%x == zero .or. boxlength%y == zero .or. boxlength%z == zero ) ) then
+        inv_boxl = inv_boxl * zero
 else
-        inv_boxl(:) = one/boxlength(:)
+        inv_boxl = one/boxlength
 end if
 
 !check cut-offs if periodic box used
-box_min = min( boxlength(1), boxlength(2), boxlength(3) )
+box_min = min( boxlength%x, boxlength%y, boxlength%z )
 
 !Solute-solute cut-off radii
 if( .not. (box_min .gt. Rcpp*2) ) then
@@ -5647,238 +4277,11 @@ end subroutine topology
 
 !-----------------------------------------------------------------------
 
-real(kind=prec) function torsion(istart, iend)
-!arguments
-integer						::	istart, iend
-
-! local variables
-integer						::	ip
-real(kind=prec)						::	scp,phi,dv,arg,f1
-real(kind=prec)						::	bjinv, bkinv, bj2inv, bk2inv
-real(kind=prec)					::	rji(3),rjk(3),rkl(3),rnj(3),rnk(3)
-real(kind=prec)					::	rki(3),rlj(3),dp(12),di(3),dl(3)
-type(TOR_TYPE), pointer		::  t
-type(TORLIB_TYPE), pointer	::	lib
-#ifdef _OPENMP
-integer :: quotient, remainder
-#endif
-
-! global variables used:
-!  tor, torlib, x, d
-
-! calculate the total energy of all torsion angles
-! updates d
-
-torsion = zero
-
-!$omp parallel default(none) shared(threads_num, istart, iend, istep, tor, torlib, x, d, torsion) private(quotient, remainder,ip,scp,phi,dv,arg,f1,bjinv,bkinv,bj2inv,bk2inv,rji,rjk,rkl,rnj,rnk,rki,rlj,dp,di,dl,t,lib)
-#ifdef _OPENMP
-threads_num = omp_get_num_threads()
-thread_id = omp_get_thread_num()
-quotient = (iend - istart + 1)/threads_num
-remainder = MOD(iend - istart + 1, threads_num)
-mp_start = thread_id * quotient + istart + MIN(thread_id, remainder)
-mp_end = mp_start + quotient - 1
-if (remainder .gt. thread_id) then
-    mp_end = mp_end + 1
-endif
-
-mp_real_tmp = zero
-
-do ip = mp_end, mp_start,-1
-
-#else
-do ip = iend, istart,-1
-#endif
-        t => tor(ip)
-        lib => torlib(t%cod)
-rji(1) = x(t%i*3-2) - x(t%j*3-2)
-rji(2) = x(t%i*3-1) - x(t%j*3-1)
-rji(3) = x(t%i*3-0) - x(t%j*3-0)
-rjk(1) = x(t%k*3-2) - x(t%j*3-2)
-rjk(2) = x(t%k*3-1) - x(t%j*3-1)
-rjk(3) = x(t%k*3-0) - x(t%j*3-0)
-rkl(1) = x(t%l*3-2) - x(t%k*3-2)
-rkl(2) = x(t%l*3-1) - x(t%k*3-1)
-rkl(3) = x(t%l*3-0) - x(t%k*3-0)
-
-rnj(1) =  rji(2)*rjk(3) - rji(3)*rjk(2)
-rnj(2) =  rji(3)*rjk(1) - rji(1)*rjk(3)
-rnj(3) =  rji(1)*rjk(2) - rji(2)*rjk(1)
-rnk(1) = -rjk(2)*rkl(3) + rjk(3)*rkl(2)
-rnk(2) = -rjk(3)*rkl(1) + rjk(1)*rkl(3)
-rnk(3) = -rjk(1)*rkl(2) + rjk(2)*rkl(1)
-
-        bj2inv = one/(rnj(1)**2 + rnj(2)**2 + rnj(3)**2 )
-bk2inv = one/(rnk(1)**2 + rnk(2)**2 + rnk(3)**2 )
-        bjinv = sqrt(bj2inv)
-        bkinv = sqrt(bk2inv)
-
-        ! calculate scp and phi
-scp = (rnj(1)*rnk(1)+rnj(2)*rnk(2)+rnj(3)*rnk(3))*(bjinv*bkinv)
-if ( scp .gt.  one ) then
-                scp =  one
-                phi = acos (one) ! const
-        else if ( scp .lt. -one ) then
-                scp = -one
-                phi = acos (-one) ! const
-        else
-    phi = acos ( scp )
-        end if
-if(rjk(1)*(rnj(2)*rnk(3)-rnj(3)*rnk(2)) &
-                +rjk(2)*(rnj(3)*rnk(1)-rnj(1)*rnk(3)) &
-    +rjk(3)*(rnj(1)*rnk(2)-rnj(2)*rnk(1)) .lt. 0) then
-                phi = -phi
-        end if
-
-! ---       energy
-
-arg = lib%rmult*phi-lib%deltor
-#ifdef _OPENMP
-    mp_real_tmp = mp_real_tmp + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
-#else    
-    torsion = torsion + lib%fk*(one+cos(arg))*lib%paths   !lib%paths is previously inverted 
-#endif
-dv = -lib%rmult*lib%fk*sin(arg)*lib%paths
-
-! ---       forces
-
-f1 = sin ( phi ) 
-if ( abs(f1) .lt. 1.e-12_prec ) f1 = 1.e-12_prec
-f1 =  -one / f1
-di(1) = f1 * ( rnk(1)*(bjinv*bkinv) - scp*rnj(1)*bj2inv )
-di(2) = f1 * ( rnk(2)*(bjinv*bkinv) - scp*rnj(2)*bj2inv )
-di(3) = f1 * ( rnk(3)*(bjinv*bkinv) - scp*rnj(3)*bj2inv )
-dl(1) = f1 * ( rnj(1)*(bjinv*bkinv) - scp*rnk(1)*bk2inv )
-dl(2) = f1 * ( rnj(2)*(bjinv*bkinv) - scp*rnk(2)*bk2inv )
-dl(3) = f1 * ( rnj(3)*(bjinv*bkinv) - scp*rnk(3)*bk2inv )
-
-rki(1) =  rji(1) - rjk(1)
-rki(2) =  rji(2) - rjk(2)
-rki(3) =  rji(3) - rjk(3)
-rlj(1) = -rjk(1) - rkl(1)
-rlj(2) = -rjk(2) - rkl(2)
-rlj(3) = -rjk(3) - rkl(3)
-
-dp(1)  = rjk(2)*di(3) - rjk(3)*di(2)
-dp(2)  = rjk(3)*di(1) - rjk(1)*di(3)
-dp(3)  = rjk(1)*di(2) - rjk(2)*di(1)
-dp(4)  = rki(2)*di(3)-rki(3)*di(2)+rkl(2)*dl(3)-rkl(3)*dl(2)
-dp(5)  = rki(3)*di(1)-rki(1)*di(3)+rkl(3)*dl(1)-rkl(1)*dl(3)
-dp(6)  = rki(1)*di(2)-rki(2)*di(1)+rkl(1)*dl(2)-rkl(2)*dl(1)
-dp(7)  = rlj(2)*dl(3)-rlj(3)*dl(2)-rji(2)*di(3)+rji(3)*di(2)
-dp(8)  = rlj(3)*dl(1)-rlj(1)*dl(3)-rji(3)*di(1)+rji(1)*di(3)
-dp(9)  = rlj(1)*dl(2)-rlj(2)*dl(1)-rji(1)*di(2)+rji(2)*di(1)
-dp(10) = rjk(2)*dl(3) - rjk(3)*dl(2)
-dp(11) = rjk(3)*dl(1) - rjk(1)*dl(3)
-dp(12) = rjk(1)*dl(2) - rjk(2)*dl(1)
-
-d(t%i*3-2) = d(t%i*3-2) + dv*dp(1)
-d(t%i*3-1) = d(t%i*3-1) + dv*dp(2)
-d(t%i*3-0) = d(t%i*3-0) + dv*dp(3)
-d(t%j*3-2) = d(t%j*3-2) + dv*dp(4)
-d(t%j*3-1) = d(t%j*3-1) + dv*dp(5)
-d(t%j*3-0) = d(t%j*3-0) + dv*dp(6)
-d(t%k*3-2) = d(t%k*3-2) + dv*dp(7)
-d(t%k*3-1) = d(t%k*3-1) + dv*dp(8)
-d(t%k*3-0) = d(t%k*3-0) + dv*dp(9)
-d(t%l*3-2) = d(t%l*3-2) + dv*dp(10)
-d(t%l*3-1) = d(t%l*3-1) + dv*dp(11)
-d(t%l*3-0) = d(t%l*3-0) + dv*dp(12)
-end do
-#ifdef _OPENMP
-!$omp atomic update
-torsion = torsion + mp_real_tmp
-#endif
-!$omp end parallel
-
-end function torsion
-
-!-----------------------------------------------------------------------
-subroutine restrain_solvent 
-! local variables
-integer						::	iw,i,i3,isolv,jsolv
-real(kind=prec)						::	b,db,erst,dv,fexp
-real(kind=prec) 					::	dr(3),dcent(3)
-real(kind=prec)						::	shift
-
-! global variables used:
-!  E, Boltz, Tfree, fk_wsphere, nwat, nat_pro, x, xwcent, rwat, Dwmz, awmz, d
-
-if(fk_wsphere .ne. zero) then
-        shift = sqrt (Boltz*Tfree/fk_wsphere)
-else
-        shift = zero
-end if
-do iw = ncgp_solute + 1, ncgp
-        i  = cgp(iw)%iswitch
-        if (excl(i)) cycle ! skip excluded topology waters
-        if(solv_atom.eq.3) then
-!use old code
-        i3 = 3*i-3
-        dr(1) = x(i3+1) - xwcent(1)
-        dr(2) = x(i3+2) - xwcent(2)
-        dr(3) = x(i3+3) - xwcent(3)
-        else
-        dcent(:)=zero
-        jsolv = iw - ncgp_solute
-        i = nat_solute + solv_atom*jsolv - (solv_atom-1)
-        do isolv = 0 , solv_atom - 1
-                i3 = 3*(i+isolv)-3
-                dcent(1) = dcent(1) + x(i3+1)
-                dcent(2) = dcent(2) + x(i3+2)
-                dcent(3) = dcent(3) + x(i3+3)
-        end do
-        dcent(:) = dcent(:)/solv_atom
-        dr(:) = dcent(:) - xwcent(:)
-        end if
-        b = sqrt ( dr(1)**2 + dr(2)**2 + dr(3)**2 )
-        db = b - (rwat - shift)
-
-        ! calculate erst and dv
-        if ( db > 0 ) then
-                erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
-                dv = fk_wsphere*db/b
-        else
-                if (b > zero) then
-                  fexp = exp ( awmz*db )
-                  erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
-                  dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
-                else
-                  dv = 0
-                  erst = 0
-                end if
-        end if
-        if (solvent_type .gt. 0) then
-                dv = dv / solv_atom
-        end if
-
-        ! update energy and forces
-        E%restraint%solvent_radial = E%restraint%solvent_radial + erst
-        if (solvent_type .gt. 0) then
-                jsolv = iw - ncgp_solute
-                i = nat_solute + solv_atom*jsolv - (solv_atom-1)
-                do isolv = 0 , solv_atom - 1
-                i3 = 3*(i+isolv)-3
-                d(i3+1) = d(i3+1) + dv*dr(1)
-                d(i3+2) = d(i3+2) + dv*dr(2)
-                d(i3+3) = d(i3+3) + dv*dr(3)
-                end do
-        else
-                d(i3+1) = d(i3+1) + dv*dr(1)
-                d(i3+2) = d(i3+2) + dv*dr(2)
-                d(i3+3) = d(i3+3) + dv*dr(3)
-        end if
-end do
-end subroutine restrain_solvent
-
-!-----------------------------------------------------------------------
 
 subroutine wat_sphere
 ! local variables
 integer					:: i,i3,kr,isort,int_wat,istate
 real(kind=prec)					:: rc,rnwat
-real(kind=prec), save				:: dr(3)
 real(kind=prec)					:: crgexcl
 
 !possibly override target sphere radius from topology
@@ -6144,1197 +4547,6 @@ call allocate_watpol_arrays
 
 end subroutine wat_shells
 
-!-----------------------------------------------------------------------
-
-subroutine watpol
-! local variables
-integer						:: iw,is,i,i3,il,jl,jw,imin,jmin,isolv,jsolv,j3
-real(kind=prec)						:: dr,rw,rshell,rm,rc,scp
-real(kind=prec)						:: tmin,arg,avtdum,dv,f0
-real(kind=prec), save					:: f1(3),f2(3),f3(3)
-real(kind=prec) 					:: rmu(3),rcu(3), rmc(3)
-
-! global variables used:
-!  E, wshell, bndw0, deg2rad, angw0, nwat, theta, theta0, nat_pro, x, xwcent,
-!  tdum, nwpolr_shell, list_sh, pi, nsort, istep, itdis_update, fkwpol, d
-
-! reset wshell%n_insh
-wshell(:)%n_insh = 0
-
-! calculate theta(:), tdum(:), wshell%n_insh
-do iw = 1, nwat
-theta(iw)  = zero
-theta0(iw) = zero
-
-i  = nat_solute + solv_atom*iw - (solv_atom-1) 
-if(excl(i)) cycle ! skip excluded topology solvent
-i3 = i*3-3
-
-! function needs to be rewritten as we no longer just have 3-point water
-! molecules, meaning that the simple geometry won't work any longer
-! we will only keep the old code for SPC/TIP3P like solvent
-
-rmu(:)=zero ! solvent vector
-rmc(:)=zero
-if (solv_atom .eq. 3) then
-!SPC/TIP3P solvent, keep old code
-do isolv = 1, solv_atom - 1
-jsolv = i + isolv
-j3 = jsolv*3-3
-rmu(1) = rmu(1) + x(j3+1)
-rmu(2) = rmu(2) + x(j3+2)
-rmu(3) = rmu(3) + x(j3+3)
-end do
-rmu(1) = rmu(1) - 2.0_prec*x(i3+1)   
-rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
-rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
-else
-! no longer 3-point solvent, create solvent vector using individual atom charges
-! of the solvent molecule
-do isolv = 0, solv_atom - 1
-jsolv = i + isolv
-j3 = jsolv*3-3
-rmc(1) = rmc(1) + x(j3+1)
-rmc(2) = rmc(2) + x(j3+2)
-rmc(3) = rmc(3) + x(j3+3)
-rmu(1) = rmu(1) + (chg_solv(isolv+1)*x(j3+1))
-rmu(2) = rmu(2) + (chg_solv(isolv+1)*x(j3+2))
-rmu(3) = rmu(3) + (chg_solv(isolv+1)*x(j3+3))
-end do
-rmc(:) = rmc(:)/solv_atom
-end if
-
-rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
-rmu(1) = rmu(1)/rm
-rmu(2) = rmu(2)/rm
-rmu(3) = rmu(3)/rm
-
-if (solv_atom .eq. 3) then
-!SPC/TIP3P solvent, keep old code
-rcu(1) = x(i3+1) - xwcent(1)    !Radial vector to center solvent atom
-rcu(2) = x(i3+2) - xwcent(2) 
-rcu(3) = x(i3+3) - xwcent(3) 
-else
-! different solvent, use new code for geometric center
-rcu(:) = rmc(:) - xwcent(:)
-end if
-rc = sqrt ( rcu(1)**2 + rcu(2)**2 + rcu(3)**2 )
-rcu(1) = rcu(1)/rc
-rcu(2) = rcu(2)/rc
-rcu(3) = rcu(3)/rc
-
-scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)   !Calculate angle between solvent vector and radial vector
-if ( scp .gt.  one ) scp =  one
-if ( scp .lt. -one ) scp = -one
-theta(iw) = acos( scp )
-tdum(iw) = theta(iw)
-
-if ( rc > wshell(nwpolr_shell)%rout-wshell(nwpolr_shell)%dr ) then
-  do is = nwpolr_shell, 2, -1
-        if(rc <= wshell(is)%rout) exit
-  end do
-  wshell(is)%n_insh = wshell(is)%n_insh + 1
-  if (wshell(is)%n_insh .ge. n_max_insh) then
-	call reallocate_watpol_arrays
-  end if
-  list_sh(wshell(is)%n_insh,is) = iw
-end if
-end do
-
-! sort the solvent molecules according to theta
-do is = 1, nwpolr_shell
-imin = 0
-do il = 1, wshell(is)%n_insh
-tmin = 2.0_prec*pi
-do jl = 1, wshell(is)%n_insh
-jw = list_sh(jl,is)
-if ( tdum(jw) .lt. tmin ) then
-  jmin = jw
-  tmin = theta(jw)
-end if
-end do
-imin = imin+1
-nsort(imin,is) = jmin
-  tdum(jmin) = 99999.0_prec
-
-end do
-
-end do
-
-! calculate energy and force
-if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0) then
-call centered_heading('Solvent polarisation restraint data', '-')
-write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
-do is = 1, nwpolr_shell
-wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update, kind=prec)
-wshell(is)%avn_insh = wshell(is)%avn_insh / real (itdis_update, kind=prec)
-wshell(is)%theta_corr = wshell(is)%theta_corr + wshell(is)%avtheta-acos(wshell(is)%cstb)
-write (*,10) is,wshell(is)%avn_insh,wshell(is)%avtheta/deg2rad, &
-     acos(wshell(is)%cstb)/deg2rad,wshell(is)%theta_corr/deg2rad
-10	  format(i5,1x,f6.1,3x,f8.3,3x,f8.3,3x,f8.3)
-wshell(is)%avtheta = zero
-wshell(is)%avn_insh = zero
-end do
-end if
-
-do is = 1, nwpolr_shell
-if(wshell(is)%n_insh == 0) cycle !skip empty shell
-avtdum = zero
-do il = 1, wshell(is)%n_insh
-iw = nsort(il,is)
-arg = one + (one - 2.0_prec*real(il, kind=prec))/real(wshell(is)%n_insh, kind=prec)
-theta0(il) = acos ( arg )
-theta0(il) = theta0(il)-3.0_prec*sin(theta0(il))*wshell(is)%cstb/2.0_prec
-if ( theta0(il) .lt. zero ) theta0(il) = zero
-if ( theta0(il) .gt. pi)   theta0(il) = pi
-
-avtdum = avtdum + theta(iw)
-
-E%restraint%water_pol = E%restraint%water_pol + 0.5_prec*fkwpol* &
-     (theta(iw)-theta0(il)+wshell(is)%theta_corr)**2
-
-dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
-
-i  = nat_solute + solv_atom*iw - (solv_atom-1)
-i3 = i*3-3
-rmu(:)=zero ! solvent vector
-rmc(:)=zero
-if (solv_atom .eq. 3) then
-!SPC/TIP3P solvent, keep old code
-do isolv = 1, solv_atom - 1
-jsolv = i + isolv
-j3 = jsolv*3-3
-rmu(1) = rmu(1) + x(j3+1)
-rmu(2) = rmu(2) + x(j3+2)
-rmu(3) = rmu(3) + x(j3+3)
-end do
-rmu(1) = rmu(1) - 2.0_prec*x(i3+1)
-rmu(2) = rmu(2) - 2.0_prec*x(i3+2)
-rmu(3) = rmu(3) - 2.0_prec*x(i3+3)
-else
-! no longer 3-point solvent, create solvent vector based on individual charges of
-! the solvent molecule
-do isolv = 0, solv_atom - 1
-jsolv = i + isolv
-j3 = jsolv*3-3
-rmc(1) = rmc(1) + x(j3+1)
-rmc(2) = rmc(2) + x(j3+2)
-rmc(3) = rmc(3) + x(j3+3)
-rmu(1) = rmu(1) + (chg_solv(isolv+1)*x(j3+1))
-rmu(2) = rmu(2) + (chg_solv(isolv+1)*x(j3+2))
-rmu(3) = rmu(3) + (chg_solv(isolv+1)*x(j3+3))
-end do
-rmc(:) = rmc(:)/solv_atom
-end if
-rm = sqrt ( rmu(1)**2 + rmu(2)**2 + rmu(3)**2 )
-rmu(1) = rmu(1)/rm
-rmu(2) = rmu(2)/rm
-rmu(3) = rmu(3)/rm
-if (solv_atom .eq. 3) then
-!SPC/TIP3P solvent, keep old code
-rcu(1) = x(i3+1) - xwcent(1)
-rcu(2) = x(i3+2) - xwcent(2)
-rcu(3) = x(i3+3) - xwcent(3)
-else
-! different solvent, use new code for geometric center
-rcu(:) = rmc(:) - xwcent(:)
-end if
-rc = sqrt ( rcu(1)**2 + rcu(2)**2 + rcu(3)**2 )
-rcu(1) = rcu(1)/rc
-rcu(2) = rcu(2)/rc
-rcu(3) = rcu(3)/rc
-
-
-
-scp = rmu(1)*rcu(1)+rmu(2)*rcu(2)+rmu(3)*rcu(3)
-if ( scp .gt.  one ) scp =  one
-if ( scp .lt. -one ) scp = -one
-f0 = sin ( acos(scp) )
-if ( abs(f0) .lt. 1.e-12_prec ) f0 = 1.e-12_prec
-f0 = -one / f0
-f0 = dv*f0
-
-f1(1) = -2.0_prec*(rcu(1)-rmu(1)*scp)/rm
-f1(2) = -2.0_prec*(rcu(2)-rmu(2)*scp)/rm
-f1(3) = -2.0_prec*(rcu(3)-rmu(3)*scp)/rm
-f3(1) = (rcu(1)-rmu(1)*scp)/rm
-f3(2) = (rcu(2)-rmu(2)*scp)/rm
-f3(3) = (rcu(3)-rmu(3)*scp)/rm
-
-f2(1) = ( rmu(1)-rcu(1)*scp)/rc
-f2(2) = ( rmu(2)-rcu(2)*scp)/rc
-f2(3) = ( rmu(3)-rcu(3)*scp)/rc
-
-d(i3+1) = d(i3+1) + f0 * ( f1(1) + f2(1) )
-d(i3+2) = d(i3+2) + f0 * ( f1(2) + f2(2) )
-d(i3+3) = d(i3+3) + f0 * ( f1(3) + f2(3) )
-do isolv = 1, solv_atom - 1
-jsolv = i + isolv
-j3 = jsolv*3-3
-d(j3+1) = d(j3+1) + f0 * ( f3(1) )
-d(j3+2) = d(j3+2) + f0 * ( f3(2) )
-d(j3+3) = d(j3+3) + f0 * ( f3(3) )
-end do
-end do
-
-wshell(is)%avtheta = wshell(is)%avtheta + avtdum/real(wshell(is)%n_insh, kind=prec)
-wshell(is)%avn_insh = wshell(is)%avn_insh + wshell(is)%n_insh
-end do
-end subroutine watpol
-
-!----------------------------------------------------------------------------
-
-subroutine write_out
-! local variables
-integer					::	i,istate
-
-! header line
-if(istep >= nsteps) then
-write(*,3) 'Energy summary'
-else
-write(*,2) 'Energy summary', istep
-end if
-2 format('======================= ',A15,' at step ',i6,' ========================')
-3 format('=========================== FINAL ',A15,' =============================')
-
-! legend line
-write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
-4 format(16X, 6A10)
-
-! row by row: solute, solvent, solute-solvent, LRF, q-atom
-write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper
-6 format(A,T17, 6F12.2)
-
-if(nwat > 0) then
-write(*,6) 'solvent', E%ww%el, E%ww%vdw, E%w%bond, E%w%angle, E%w%torsion, E%w%improper
-end if
-
-write(*,6) 'solute-solvent', E%pw%el, E%pw%vdw
-
-if(use_LRF) then
-write(*,6) 'LRF', E%LRF
-end if
-
-if(nqat .gt. 0) then
-	write(*,6) 'Q-atom', E%qx%el, E%qx%vdw, E%q%bond, E%q%angle, E%q%torsion, E%q%improper
-end if
-
-! restraints
-write(*,*)
-write(*,4) 'total', 'fix', 'slvnt_rad', 'slvnt_pol', 'shell', 'solute'
-write(*,6) 'restraints', E%restraint%total, E%restraint%fix, &
-        E%restraint%solvent_radial, E%restraint%water_pol, E%restraint%shell, &
-        E%restraint%protein
-write(*,*)
-
-! totals
-if(force_rms) then
-        grms = sqrt(dot_product(d(:), d(:))/(3*natom))
-        write(*,4) 'total', 'potential', 'kinetic', '', 'RMS force'
-        write(*,14) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic, grms
-else
-        write(*,4) 'total', 'potential', 'kinetic'
-        write(*,6) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic
-end if
-14 format(A,T17, 3F10.2, 10X, F10.2)
-
-! q-atom energies
-if(nstates > 0) then
-if(istep >= nsteps) then
-  write(*,3) 'Q-atom energies'
-else
-  write(*,2) 'Q-atom energies', istep
-end if
-
-write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
-
-do istate =1, nstates
-  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq(1)%el, EQ(istate)%qq(1)%vdw
-end do
-write(*,*)
-if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
-  do istate =1, nstates
-        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp(1)%el, EQ(istate)%qp(1)%vdw
-  end do
-  write(*,*)
-end if
-
-if(nwat > 0) then
-  do istate =1, nstates
-        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw(1)%el, EQ(istate)%qw(1)%vdw
-  end do
-  write(*,*)
-end if
-
-do istate =1, nstates
-  write (*,32) 'Q-surr.',istate, EQ(istate)%lambda, &
-                EQ(istate)%qp(1)%el + EQ(istate)%qw(1)%el, EQ(istate)%qp(1)%vdw &
-                + EQ(istate)%qw(1)%vdw
-end do
-write(*,*)
-
-do istate = 1, nstates
-  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx(1)%el,&
-                EQ(istate)%qx(1)%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
-                EQ(istate)%q%torsion, EQ(istate)%q%improper
-end do
-write(*,*)
-
-write(*,22) 'total', 'restraint'
-do istate = 1, nstates
-  write (*,32) 'Q-SUM', istate, EQ(istate)%lambda,&
-                EQ(istate)%total(1), EQ(istate)%restraint
-end do
-do i=1,noffd
-  write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &
-                offd2(i)%k, offd2(i)%l, offd(i)%rkl
-360	  format ('H(',i2,',',i2,') =',f8.2,' dist. between Q-atoms',2i4, ' =',f8.2)
-end do
-end if
-
-if(monitor_group_pairs > 0) then
-        call centered_heading('Monitoring selected groups of nonbonded interactions','=')
-        write (*,37,advance='no')
-        write (*,38) (istate,istate, istate=1,nstates)
-        do i=1,monitor_group_pairs
-                write (*,39,advance='no') i,monitor_group_pair(i)%Vwsum, &
-                        monitor_group_pair(i)%Vwel,monitor_group_pair(i)%Vwlj
-                write (*,40) (monitor_group_pair(i)%Vel(istate), &
-                        monitor_group_pair(i)%Vlj(istate), istate=1,nstates)
-        end do
-end if
-
-write(*,'(80a)') '==============================================================================='
-
-
-22	format('type   st lambda',2A10)
-26	format('type   st lambda',6a10)
-32	format (a,T8,i2,f7.4,2f10.2)
-36	format (a,T8,i2,f7.4,6f10.2)
-37  format ('pair   Vwsum    Vwel    Vwvdw')
-38  format (3(i4,':Vel',i3,':Vvdw'))
-39  format (i2,f10.2,f8.2,f9.2)
-40  format (3(2f8.2))
-
-
-if(use_PBC .and. constant_pressure .and. istep>=nsteps ) then
-        write(*,*)
-        write(*,'(a)') '=========================== VOLUME CHANGE SUMMARY ==========================='
-        write(*,45) boxlength(1)*boxlength(2)*boxlength(3)
-        write(*,*)
-        write(*,46) 'total', 'accepted', 'ratio'
-        write(*,47) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
-write(*,'(80a)') '==============================================================================='
-end if
-45 format('Final volume: ', f10.3)
-46 format(16X, 3A10)
-47 format(A,T17, 2i10, f10.3)
-
-end subroutine write_out
-
-!-----------------------------------------------------------------------
-
-subroutine write_trj
-
-if(.not. trj_write(x)) then
-        call die('failure to write to trajectory file')
-end if
-
-end subroutine write_trj
-
-!-----------------------------------------------------------------------
-
-subroutine write_xfin
-! local variables
-integer						::	i,nat3
-integer        :: canary = -1337
-nat3 = natom*3
-
-if (prec .eq. singleprecision) then
-canary = -137
-elseif (prec .eq. doubleprecision) then
-canary = -1337
-#ifndef PGI
-elseif (prec .eq. quadprecision) then
-canary = -13337
-#endif
-else
-call die('No such precision')
-end if
-rewind (3)
-!new canary on top of file
-write (3) canary
-write (3) nat3, (x(i),i=1,nat3)
-write (3) nat3, (v(i),i=1,nat3)
-!save dynamic polarisation restraint data
-	if(wpol_restr .and. allocated(wshell)) then
-        write (3) nwpolr_shell, wshell(:)%theta_corr
-end if
-
-if( use_PBC )then
-        write(3) boxlength(:)
-        write(3) boxcentre(:)
-end if
-end subroutine write_xfin
-
-!-----------------------------------------------------------------------
-!Put molecules back in box for nice visualisation.
-!Change boxcentre if rigid_box_centre is off.
-!Update cgp_centers for LRF.
-!-----------------------------------------------------------------------
-subroutine put_back_in_box
-
-real(kind=prec)				::	boxc(1:3),old_boxc(1:3)
-integer				::	i, j, starten, slutet
-!the borders of the periodic box
-real(kind=prec)				::	x_max, x_min, y_max, y_min, z_max, z_min
-real(kind=prec)				:: cm(1:3)
-integer				::  k, ig
-integer				::  pbib_start, pbib_stop
-
-!the function can be run exclusivly on node 0
-!no gain from doing it on each node
-if (nodeid.eq.0) then
-old_boxc(:)=boxcentre(:)
-if( .not. rigid_box_centre ) then !if the box is allowed to float around, center on solute if present, otherwise center on solvent
-        if( nat_solute > 0) then
-                slutet = nat_solute
-                !starten = ncgp_solute + 1
-                
-        else !if no solute present, centre box around solvent
-                slutet = natom
-                !starten = 1
-        end if
-        !find center
-        boxc(:) = zero
-        do i = 1,slutet
-                boxc(1) = boxc(1) + x( 3*i-2 )
-                boxc(2) = boxc(2) + x( 3*i-1 )
-                boxc(3) = boxc(3) + x( 3*i   )
-        end do
-        boxc(:) = boxc(:)/slutet
-        boxcentre(:) = boxc(:) !store new boxcentre
-        ! starten = ncgp_solute + 1 !solute can not move around the corner
-else
-        !use boxcenter given in topology, ie. 'moving' solute
-        boxc(:) = boxcentre(:)
-        !starten = 1
-end if
-
-!calculate the borders of the periodic box
-x_max = boxc(1) + boxlength(1)/2
-x_min = boxc(1) - boxlength(1)/2
-y_max = boxc(2) + boxlength(2)/2
-y_min = boxc(2) - boxlength(2)/2
-z_max = boxc(3) + boxlength(3)/2
-z_min = boxc(3) - boxlength(3)/2
-
-mvd_mol(:) = 0 
-
-!pbib_start and pbib_stop are the starting and stopping molecule indexes of which molecules to Put Back In Box
-pbib_start = 1
-pbib_stop  = nmol
-if ( .not. put_solute_back_in_box ) then !we're not putting solute back in box
-!we now have nsolute to keep track of this stuff, don't use this old way
-	pbib_start = nsolute + 1
-end if
-if ( .not. put_solvent_back_in_box ) then !we're not putting solvent back in box
-!same here, we know the molecule numbers
-	pbib_stop = nsolute
-end if          
-
-
-do i=pbib_start,pbib_stop
-        cm(:) =zero
-        do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
-                cm(1) = cm(1) + x(j*3-2)*mass(j)
-                cm(2) = cm(2) + x(j*3-1)*mass(j)
-                cm(3) = cm(3) + x(j*3  )*mass(j)
-        end do
-        cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
-!mol_mass is actually 1/mol_mass
-        !x-direction
-        if( cm(1) .gt. x_max) then !position of centre of mass
-
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3-2) = x(j*3-2) - boxlength(1)
-				        end do
-						mvd_mol(i) = 1
-		else if ( cm(1) .lt. x_min ) then
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3-2) = x(j*3-2) + boxlength(1)
-				        end do
-						mvd_mol(i) = 1
-        end if
-
-       ! y-direction
-        if( cm(2) .gt. y_max) then !position of centre of mass
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3-1) = x(j*3-1) - boxlength(2)
-				        end do
-						mvd_mol(i) = 1
-        else if ( cm(2) .lt. y_min ) then
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3-1) = x(j*3-1) + boxlength(2)
-				        end do
-						mvd_mol(i) = 1
-        end if
-
-        !z-direction
-        if( cm(3) .gt. z_max) then !position of centre of mass
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3  ) = x(j*3  ) - boxlength(3)
-				        end do
-						mvd_mol(i) = 1
-        else if ( cm(3) .lt. z_min ) then
-                        do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-						x(j*3  ) = x(j*3  ) + boxlength(3)
-				        end do
-						mvd_mol(i) = 1
-  		end if
-end do !over molecules
-end if !if(nodeid .eq. 0)
-!now that node 0 has done the job, broadcast the changes to the slaves
-#if defined(USE_MPI)
-!only during MD, skip for first setup, mpitypes are 
-!set after this, so save to use as proxy
-if(mpitype_batch_lrf.ne.0) then
-	call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-	call MPI_Bcast(boxcentre, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-	call MPI_Bcast(old_boxc, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-end if
-#endif
-
-#ifdef USE_GRID
-! we now need to update the coordinates of all grid boxes
-! to shift by the amount the new box has shifted
-grid_pp(:)%x = grid_pp(:)%x - (old_boxc(1)-boxcentre(1))
-grid_pp(:)%y = grid_pp(:)%y - (old_boxc(2)-boxcentre(2))
-grid_pp(:)%z = grid_pp(:)%z - (old_boxc(3)-boxcentre(3))
-
-grid_pp(:)%xend = grid_pp(:)%xend - (old_boxc(1)-boxcentre(1))
-grid_pp(:)%yend = grid_pp(:)%yend - (old_boxc(2)-boxcentre(2))
-grid_pp(:)%zend = grid_pp(:)%zend - (old_boxc(3)-boxcentre(3))
-
-grid_pw(:)%x = grid_pw(:)%x - (old_boxc(1)-boxcentre(1))
-grid_pw(:)%y = grid_pw(:)%y - (old_boxc(2)-boxcentre(2))
-grid_pw(:)%z = grid_pw(:)%z - (old_boxc(3)-boxcentre(3))
-
-grid_pw(:)%xend = grid_pw(:)%xend - (old_boxc(1)-boxcentre(1))
-grid_pw(:)%yend = grid_pw(:)%yend - (old_boxc(2)-boxcentre(2))
-grid_pw(:)%zend = grid_pw(:)%zend - (old_boxc(3)-boxcentre(3))
-
-grid_ww(:)%x = grid_ww(:)%x - (old_boxc(1)-boxcentre(1))
-grid_ww(:)%y = grid_ww(:)%y - (old_boxc(2)-boxcentre(2))
-grid_ww(:)%z = grid_ww(:)%z - (old_boxc(3)-boxcentre(3))
-
-grid_ww(:)%xend = grid_ww(:)%xend - (old_boxc(1)-boxcentre(1))
-grid_ww(:)%yend = grid_ww(:)%yend - (old_boxc(2)-boxcentre(2))
-grid_ww(:)%zend = grid_ww(:)%zend - (old_boxc(3)-boxcentre(3))
-
-#endif
-!LRF: if molecule moved update all cgp_centers from first charge group to the last one
-if (use_LRF) then
-
-!Broadcast mvd_mol(:) & x(:)
-!#if defined(USE_MPI)
-!call MPI_Bcast(mvd_mol, nmol, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!if (ierr .ne. 0) call die('put_back_in_box MPI_BCast mvd_mol')
-!!broadcast start and stop molecule so that each node can do its job
-!call MPI_Bcast(pbib_start, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_start')
-!call MPI_Bcast(pbib_stop, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
-!if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast pbib_stop')
-!#endif
-
-if (nodeid .eq.0) then
-do k=pbib_start,pbib_stop
-		if (mvd_mol(k) == 1) then  
-						do ig=iwhich_cgp(istart_mol(k)),iwhich_cgp(istart_mol(k+1)-1)
-								lrf(ig)%cgp_cent(:) = 0
-								do i  = cgp(ig)%first, cgp(ig)%last
-										lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:) + x(cgpatom(i)*3-2:cgpatom(i)*3)
-								end do
-						lrf(ig)%cgp_cent(:) = lrf(ig)%cgp_cent(:)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
-						end do
-		end if 
-end do
-end if ! nodeid .eq. 0
-#if defined(USE_MPI)
-!for now just bcast the whole thing
-!only during MD, skip for first setup, mpitypes are 
-!set after this, so save to use as proxy
-if(mpitype_batch_lrf.ne.0) then
-	call MPI_Bcast(lrf,ncgp,mpitype_batch_lrf,0,MPI_COMM_WORLD, ierr)
-	if (ierr .ne. 0) call die('put_back_in_box MPI_Bcast lrf')
-end if
-! for later use of PBC update on each node
-!call lrf_gather
-#endif
-end if
-
-end subroutine put_back_in_box
-!----------------------------------------------------------------------------
-subroutine MC_volume()
-
-real(kind=prec)									:: old_x(1:3*nat_pro), old_xx(1:3*nat_pro), x_move(1:3*nat_pro)
-real(kind=prec)									:: old_boxl(1:3), old_inv(1:3)
-real(kind=prec)									:: old_V, new_V, deltaLength
-real(kind=prec)									:: deltaV, deltaE, deltaW
-real(kind=prec)									:: box_min
-integer									:: starten, slutet, i, j, sw_no !indeces
-real(kind=prec)									:: randomno !random number
-real(kind=prec)									:: new_x, new_y, new_z
-real(kind=prec)									:: move_x, move_y, move_z
-logical									:: acc
-integer									:: longest , niter
-real(kind=prec)									:: cubr_vol_ratio
-real(kind=prec)									:: cm(1:3)
-real(kind=prec)									::	old_EMorseD(max_qat)
-real(kind=prec)									::	old_dMorse_i(3,max_qat)
-real(kind=prec)									::	old_dMorse_j(3,max_qat)
-integer									:: old_nbww_pair, old_nbpw_pair , old_nbpw_cgp_pair 
-integer									:: old_nbpp_pair , old_nbpp_cgp_pair , old_nbqp_pair , old_nbqp_cgp_pair
-integer									:: old_ww_max, old_pw_max, old_pp_max, old_qp_max
-
-if (nodeid .eq. 0) then
-write(*,8) 'Volume change', istep
-write(*,*)
-write(*,'(a)') '---------- Before move'
-8 format('======================== ',A14,' at step ',i6,' ========================')
-4 format(16X, 3A10)
-6 format(A,T17, 3F10.3)
-end if  !(nodeid .eq. 0)
-
-!save the old energies,coordinates and forces
-old_x(:) = x(:)
-previous_E = E
-old_boxl(:) = boxlength(:)
-old_inv(:) = inv_boxl(:)
-
-!qatom stuff
-if(nqat.gt.0) then
-        old_EMorseD = EMorseD
-        old_dMorse_i = dMorse_i
-        old_dMorse_j = dMorse_j
-end if
-!shake stuff
-old_xx(:) = xx(:)
-
-
-
-if (use_LRF) then
-	old_nbww_pair = nbww_pair
-	old_nbpw_pair = nbpw_pair
-	old_nbpp_pair = nbpp_pair
-	old_nbqp_pair = nbqp_pair
-
-	old_nbpw_cgp_pair = nbpw_cgp_pair
-	old_nbpp_cgp_pair = nbpp_cgp_pair
-	old_nbqp_cgp_pair = nbqp_cgp_pair
-!now only reallocate if the old size was too small
-	if(calculation_assignment%ww%max.gt.SIZE(old_nbww,1)) then
-		if (allocated(old_nbww)) deallocate(old_nbww)
-		allocate(old_nbww(calculation_assignment%ww%max))
-	endif
-        if(calculation_assignment%pw%max.gt.SIZE(old_nbpw,1)) then
-                if (allocated(old_nbpw)) deallocate(old_nbpw)
-                allocate(old_nbpw(calculation_assignment%pw%max))
-        endif
-        if(calculation_assignment%pp%max.gt.SIZE(old_nbpp,1)) then
-                if (allocated(old_nbpp)) deallocate(old_nbpp)
-                allocate(old_nbpp(calculation_assignment%pp%max))
-        endif
-        if(calculation_assignment%qp%max.gt.SIZE(old_nbqp,1)) then
-                if (allocated(old_nbqp)) deallocate(old_nbqp)
-                allocate(old_nbqp(calculation_assignment%qp%max,nstates))
-        endif
-	old_nbww = nbww
-	old_nbpw = nbpw
-	old_nbpp = nbpp
-	old_nbqp = nbqp
-	old_nbpw_cgp = nbpw_cgp
-	old_nbpp_cgp = nbpp_cgp
-	old_nbqp_cgp = nbqp_cgp
-	old_ww_max = calculation_assignment%ww%max
-	old_pw_max = calculation_assignment%pw%max
-	old_pp_max = calculation_assignment%pp%max
-	old_qp_max = calculation_assignment%qp%max
-	old_lrf(:) = lrf(:)
-end if
-
-#if defined(USE_MPI)
-!Update modified coordinates  
-call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-#endif
-
-call new_potential(previous_E)   !compute energies from previous md-step
-
-if (nodeid .eq. 0 ) then
-	old_E = E                !Update to fresh E before changing volume
-        if (nqat.gt.0)	old_EQ(1:nstates) = EQ(1:nstates)
-	old_V = old_boxl(1) * old_boxl(2) * old_boxl(3)
-
-
-	!new volume randomized
-	randomno = randm(pressure_seed) ! 0<=randomno<=1
-	randomno = randomno*2 - 1    !-1 <= randomno <= 1
-	deltaV = randomno * max_vol_displ
-	new_V = deltaV + old_V
-	cubr_vol_ratio = (new_V/old_V)**(one/3.0_prec)
-	write(*,4) 'old', 'new', 'delta'
-17	format('Volume',8x,f10.3,2x,f10.3,2x,f10.3)
-	write(*,17) old_V, new_V, deltaV
-	write(*,*)
-
-	!compute new boxlenth and inv_boxl
-	boxlength(1) = boxlength(1)*cubr_vol_ratio
-	boxlength(2) = boxlength(2)*cubr_vol_ratio
-	boxlength(3) = boxlength(3)*cubr_vol_ratio
-	inv_boxl(:) = one/boxlength(:)
-	write(*,10) old_boxl
-	write(*,2) boxlength
-	write(*,*)
-	10 format('Old boxlength', 3f10.3)
-	2 format('New boxlength ', 3f10.3)
-
-	!compare cut-offs with new boxsize
-	box_min = min( boxlength(1), boxlength(2), boxlength(3) )
-	!Solute-solute cut-off radii
-	if( .not. (box_min .gt. Rcpp*2) ) then
-		write(*,*) 'Solute-solute cut-off radii too large', Rcpp
-		call die('Solute-solute cut-off radii too large')
-	!Solvent-solvent
-	else if( .not. (box_min .gt. Rcww*2) ) then
-		write(*,*) 'Solvent-solvent cut-off radii too large', Rcww
-		call die('Solvent-solvent cut-off radii too large')
-	!Solute-solvent
-	else if( .not. (box_min .gt. Rcpw*2) ) then
-		write(*,*) 'Solute-solvent cut-off radii too large', Rcpw
-		call die('Solute-solvent cut-off radii too large')
-	!Q-atom
-	else if( .not. (box_min .gt. Rcq*2) ) then
-		write(*,*) 'Q-atom cut-off radii too large', Rcq
-		call die('Q-atom cut-off radii too large')
-	!LRF
-	else if( .not. (box_min .gt. RcLRF*2) ) then
-		write(*,*) 'LRF cut-off radii too large', Rcq
-		call die('LRF cut-off radii too large')
-	end if
-
-
-
-
-	if (.not. atom_based_scaling) then
-
-
-		!compute new coordinates after molecules and centre of mass
-		do i=1,nmol !looping over all molecules, can also do the last because of nmol +1 ...
-			cm(:) =zero
-			do j = istart_mol(i),istart_mol(i+1)-1 !loop over all atoms in molecule i
-				cm(1) = cm(1) + x(j*3-2)*mass(j)
-				cm(2) = cm(2) + x(j*3-1)*mass(j)
-				cm(3) = cm(3) + x(j*3  )*mass(j)
-			end do
-!but mol_mass is actually 1/mol_mass
-			cm(:) = cm(:) * mol_mass(i) !centre of mass of molecule i
-
-			move_x = ( ( cm(1)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - cm(1)
-			move_y = ( ( cm(2)-boxcentre(2) )*boxlength(2)/old_boxl(2) + boxcentre(2) ) - cm(2)
-			move_z = ( ( cm(3)-boxcentre(3) )*boxlength(3)/old_boxl(3) + boxcentre(3) ) - cm(3)
-
-			do j= istart_mol(i),istart_mol(i+1)-1 !move the molecule
-				x(j*3-2) = x(j*3-2) + move_x
-				x(j*3-1) = x(j*3-1) + move_y
-				x(j*3  ) = x(j*3  ) + move_z
-			end do
-
-		end do !over molecules
-
-!we have nmol+1 to be able to iterate over all molecules
-
-	else ! atom_based_scaling = .true.
-	!move xx also if shake
-		do j=1,natom
-			x_move(j*3-2) = ( ( x(j*3-2)-boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - x(j*3-2)
-			x_move(j*3-1) = ( ( x(j*3-1)-boxcentre(2) )*boxlength(1)/old_boxl(2) + boxcentre(2) ) - x(j*3-1)
-			x_move(j*3  ) = ( ( x(j*3  )-boxcentre(3) )*boxlength(1)/old_boxl(3) + boxcentre(3) ) - x(j*3  )
-		end do
-		!can be written: ?
-		! x_move (1:3*nat_pro-2:3) = ( ( x(1:3*nat_pro-2:3) - boxcentre(1) )*boxlength(1)/old_boxl(1) + boxcentre(1) ) - x(1:3*nat_pro-2:3)
-		! x_move (2:3*nat_pro-1:3) = ( ( x(2:3*nat_pro-1:3) - boxcentre(2) )*boxlength(2)/old_boxl(2) + boxcentre(2) ) - x(1:3*nat_pro-1:3)
-		! x_move (3:3*nat_pro-0:3) = ( ( x(3:3*nat_pro-0:3) - boxcentre(3) )*boxlength(3)/old_boxl(3) + boxcentre(3) ) - x(1:3*nat_pro-0:3)
-
-		x(:) = x(:) + x_move(:)
-		
-		! shake if necessary
-		if(shake_constraints > 0) then
-			xx(:) = xx(:) + x_move(:)
-			niter=shake(xx, x)
-		end if
-
-	end if
-end if
-
-#if defined(USE_MPI)
-!Update modified coordinates and boxlengths 
-call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
-call MPI_Bcast(boxlength, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-call MPI_Bcast(inv_boxl, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
-#endif
-
-!Need to update entire LRF... sigh
-if (use_LRF) then
-	call cgp_centers
-	if ( iuse_switch_atom == 1 ) then 
-		call nbpplist_box_lrf
-		call nbpwlist_box_lrf
-		call nbqplist_box
-	else
-		call nbpplis2_box_lrf
-		call nbpwlis2_box_lrf
-		call nbqplis2_box
-	endif
-	call nbwwlist_box_lrf
-	call nbqwlist_box
-! we are gathering the LRF info here
-#ifdef USE_MPI
-call lrf_gather
-#endif
-end if !use_LRF
-
-
-
-!compute the new potential, in parallel if possible
-call new_potential( previous_E ) !do we need a broadcast before this if using LRF (i.e. if the nonbond lists have been updated)
-
-if (nodeid .eq. 0) then
-	!Jamfor nya med gamla
-	deltaE = E%potential - old_E%potential
-	deltaW = deltaE + pressure * deltaV - nmol*Boltz*Temp0*log(new_V/old_V)
-	write(*,4) 'old', 'new', 'delta'
-18	format('Potential',7x,f14.3,2x,f14.3,2x,f14.3)
-	write(*,18) old_E%potential, E%potential, deltaE
-	write(*,*)
-
-	!accept or reject
-	if( deltaW<=zero ) then
-	acc = .true.
-	else
-	!slumpa tal mellan  0 coh 1
-	randomno = randm(pressure_seed)
-	if( randomno > exp(- deltaW / Boltz / Temp0) ) then
-		acc = .false.
-	else
-		acc = .true.
-	end if
-	end if
-
-	volume_try = volume_try + 1
-	write(*,'(a)') '---------- After move' 
-
-if( acc ) then
-		write(*,'(a)') 'Volume change accepted'
-		volume_acc = volume_acc + 1
-else
-		write(*,'(a)') 'Volume change rejected'
-
-        !put stuff back to what they were before
-        x(:) = old_x(:)
-        E = previous_E
-        EQ(1:nstates) = old_EQ(1:nstates)
-        boxlength(:) = old_boxl(:)
-        inv_boxl(:) = old_inv(:)
-        if(nqat.gt.0) then
-                EQ(1:nstates) = old_EQ(1:nstates)
-                EMorseD = old_EMorseD
-        	dMorse_i = old_dMorse_i
-        	dMorse_j = old_dMorse_j
-        end if
-	xx(:) = old_xx(:)
-
-	if (use_LRF) then
-		nbww_pair = old_nbww_pair
-		nbpw_pair = old_nbpw_pair
-		nbpp_pair = old_nbpp_pair
-		nbqp_pair = old_nbqp_pair
-
-		nbpw_cgp_pair = old_nbpw_cgp_pair
-		nbpp_cgp_pair = old_nbpp_cgp_pair
-		nbqp_cgp_pair = old_nbqp_cgp_pair
-		calculation_assignment%ww%max = old_ww_max
-		calculation_assignment%pw%max = old_pw_max
-		calculation_assignment%pp%max = old_pp_max
-		calculation_assignment%qp%max = old_qp_max
-        if(calculation_assignment%ww%max.gt.SIZE(nbww,1)) then
-                call reallocate_nonbondlist_ww
-        endif
-        if(calculation_assignment%pw%max.gt.SIZE(nbpw,1)) then
-                call reallocate_nonbondlist_pw
-        endif
-        if(calculation_assignment%pp%max.gt.SIZE(nbpp,1)) then
-                call reallocate_nonbondlist_pp
-        endif
-        if(calculation_assignment%qp%max.gt.SIZE(nbqp,1)) then
-                call reallocate_nonbondlist_qp
-        endif
-		nbww(1:old_ww_max) = old_nbww(1:old_ww_max)
-		nbpw(1:old_pw_max) = old_nbpw(1:old_pw_max)
-		nbpp(1:old_pp_max) = old_nbpp(1:old_pp_max)
-		nbqp(1:old_qp_max,1:nstates) = old_nbqp(1:old_qp_max,1:nstates)
-		nbpw_cgp(:) = old_nbpw_cgp(:)
-		nbpp_cgp(:) = old_nbpp_cgp(:)
-		nbqp_cgp(:) = old_nbqp_cgp(:)
-		lrf(:) = old_lrf(:)
-	end if
-end if
-
-	write(*,11) boxlength(1)*boxlength(2)*boxlength(3)
-	write(*,12) boxlength
-	write(*,13) sum(mass(:))/(boxlength(1)*boxlength(2)*boxlength(3)*1E-24_prec*6.02E23_prec)
-	11 format('Final volume: ', f10.3)
-	12 format('Final boxlength: ', 3f10.3)
-	13 format('Final density (g/cm^3): ', f10.3)
-	write(*,*)
-	write(*,4) 'total', 'accepted', 'ratio'
-	write(*,7) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
-	write(*,*)
-	7 format(A,T17, 2i10, f10.3)
-	write(*,'(80a)') '==============================================================================='
-end if !(nodeid .eq. 0)
-#if defined(USE_MPI)
-!Make slave nodes put things back if rejected
-call MPI_Bcast(acc, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
-if (.not. acc) then
-  if (nodeid .ne. 0) then
-    x(:) = old_x(:)
-    boxlength(:) = old_boxl(:)
-    inv_boxl(:) = old_inv(:)
-  end if
-end if
-#endif
-end subroutine MC_volume	
-
-!-----------------------------------------------------------------------------------------------------
-subroutine new_potential( old )
-
-type(ENERGIES), intent(in)		:: old	
-integer							:: istate,i, numrequest,ii,jj
-
-!zero all energies
-E%potential = zero
-E%pp%el  = zero
-E%pp%vdw = zero
-E%pw%el  = zero
-E%pw%vdw = zero
-E%ww%el  = zero
-E%ww%vdw = zero
-E%qx%el    = zero
-E%qx%vdw   = zero
-E%restraint%protein = zero
-E%LRF      = zero
-E%p%bond =  zero
-E%w%bond =  zero
-E%p%angle =  zero
-E%w%angle =  zero
-E%p%angle =  zero
-E%w%angle =  zero
-E%p%torsion =  zero
-E%w%torsion =  zero
-E%p%improper =  zero
-E%w%improper =  zero
-
-do istate = 1, nstates
-	EQ(istate)%qq(1:ene_header%arrays)%el = zero
-	EQ(istate)%qq(1:ene_header%arrays)%vdw = zero
-	EQ(istate)%qp(1:ene_header%arrays)%el = zero
-	EQ(istate)%qp(1:ene_header%arrays)%vdw = zero
-	EQ(istate)%qw(1:ene_header%arrays)%el = zero
-	EQ(istate)%qw(1:ene_header%arrays)%vdw = zero
-	EQ(istate)%restraint = zero
-end do
-
-!reset derivatives ---
-d(:) = zero
-
-#if defined (USE_MPI)
-!First post recieves for gathering data from slaves
-if (nodeid .eq. 0) then
-	call gather_nonbond
-end if
-#endif
-
-
-if (nodeid .eq. 0) then
-        call pot_energy_bonds
-        call p_restrain
-end if
-if(natom > nat_solute) then
-        if((ivdw_rule.eq.VDW_GEOMETRIC).and. &
-                (solvent_type == SOLVENT_SPC)) then
-                call nonbond_qw_spc_box
-                call nonbond_ww_spc_box
-        else
-                call nonbond_qw_box
-                call nonbond_ww_box
-        end if
-        if(ntors>ntors_solute) then
-                call nonbond_solvent_internal_box
-        end if
-        call nonbond_pw_box
-end if
-call nonbond_pp_box
-call nonbond_qp_box
-if (nodeid .eq. 0) then
-        call nonbond_qqp
-        call nonbond_qq
-end if
-
-if (use_LRF) then
-        call lrf_taylor
-end if
-
-#if defined(USE_MPI)
-if (nodeid .ne. 0) then  !Slave nodes
-	call gather_nonbond
-end if
-#endif
-
-if (nodeid .eq. 0) then 
-#if (USE_MPI)
-do i = 1, 3
-    call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
-end do
-
-	!Forces and energies are summarised
-	do i=1,numnodes-1
-	  d = d + d_recv(:,i)
-	  E%pp%el   = E%pp%el  + E_recv(i)%pp%el
-	  E%pp%vdw  = E%pp%vdw + E_recv(i)%pp%vdw
-	  E%pw%el   = E%pw%el  + E_recv(i)%pw%el
-	  E%pw%vdw  = E%pw%vdw + E_recv(i)%pw%vdw
-	  E%ww%el   = E%ww%el  + E_recv(i)%ww%el
-	  E%ww%vdw  = E%ww%vdw + E_recv(i)%ww%vdw
-	  E%lrf     = E%lrf    + E_recv(i)%lrf
-		do ii=1,nstates
-		do jj=1,ene_header%arrays
-	  EQ(ii)%qp(jj)%el  = EQ(ii)%qp(jj)%el  + EQ_recv(ii,jj,i)%qp%el
-	  EQ(ii)%qp(jj)%vdw = EQ(ii)%qp(jj)%vdw + EQ_recv(ii,jj,i)%qp%vdw
-	  EQ(ii)%qw(jj)%el  = EQ(ii)%qw(jj)%el  + EQ_recv(ii,jj,i)%qw%el
-	  EQ(ii)%qw(jj)%vdw = EQ(ii)%qw(jj)%vdw + EQ_recv(ii,jj,i)%qw%vdw
-		end do
-		end do
-	end do
-#endif
-
-	!summation of energies
-	do istate = 1, nstates
-			! update EQ
-		do jj=1,ene_header%arrays
-			EQ(istate)%qx(jj)%el  = EQ(istate)%qq(jj)%el &
-			+ EQ(istate)%qp(jj)%el +EQ(istate)%qw(jj)%el
-			EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw &
-			+ EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
-		end do
-		E%qx%el    = E%qx%el    + EQ(istate)%qx(1)%el   *EQ(istate)%lambda
-		E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx(1)%vdw  *EQ(istate)%lambda
-
-		! update E%restraint%protein with an average of all states
-		E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda
-	end do
-
-
-E%potential = old%p%bond + old%w%bond + old%p%angle + old%w%angle + old%p%torsion + &
-old%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
-E%ww%vdw + old%q%bond + old%q%angle + old%q%torsion + &
-old%q%improper + E%qx%el + E%qx%vdw + E%restraint%protein + E%LRF
-
-
-end if !(nodeid .eq. 0)
-end subroutine new_potential
-
-!----------------------------------------------------------------------------------------
-
-#if defined (USE_MPI)
-!***********************
-!subroutine handling summation of nonbonded energies from slave nodes.
-!***********************
-! Use the global vars
-!  request_recv, E_send,EQ_send,E_recv,EQ_Recv,d_recv
-! Allocate  - status
-
-
-subroutine gather_nonbond()
-
-integer,parameter                       :: vars=3
-integer,dimension(3,numnodes-1)         :: tag
-integer,dimension(vars)	                :: blockcnt,ftype 
-integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
-integer                                 :: mpitype_package,mpitype_send
-integer                                 :: i,j,istate,ii
-
-do i=1,numnodes-1
-tag(1,i)=numnodes*100+i
-tag(2,i)=numnodes*200+i
-tag(3,i)=numnodes*300+i
-end do
-
-if (nodeid .eq. 0) then        !master
-
-!reclength is defined in mpiglob and set in prep_sim
-!used for the now not previously known length of the EQ array
-!for sending same length distributed to nodes
-
-! Post receives for each of the d/E/EQ_recv structures
-! E/EQ_Recv should really be handled with MPI_Type_create_struct
-! and d_recv's type should be handled correctly (it's KIND=wp8)
-! should preferably use size(d_recv, 1) for count
-do i = 1,numnodes-1
-  call MPI_IRecv(d_recv(1,i), natom*3, MPI_REAL8, i, tag(1,i), MPI_COMM_WORLD, &
-       request_recv(i,1),ierr)
-  if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv d_recv')
-  call MPI_IRecv(E_recv(i), 3*2+1, MPI_REAL8, i, tag(2,i), MPI_COMM_WORLD, &
-       request_recv(i,2),ierr)
-  if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
-  call MPI_IRecv(EQ_recv(1,1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
-	request_recv(i,3),ierr)
-  if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
-end do
-
-else                  !slave nodes
-E_send%pp%el  = E%pp%el
-E_send%pp%vdw = E%pp%vdw
-E_send%pw%el  = E%pw%el
-E_send%pw%vdw = E%pw%vdw
-E_send%ww%el  = E%ww%el
-E_send%ww%vdw = E%ww%vdw
-E_send%lrf    = E%lrf
-do ii=1,nstates
-do i=1,ene_header%arrays
-EQ_send(ii,i)%qp%el  = EQ(ii)%qp(i)%el
-EQ_send(ii,i)%qp%vdw = EQ(ii)%qp(i)%vdw
-EQ_send(ii,i)%qw%el  = EQ(ii)%qw(i)%el
-EQ_send(ii,i)%qw%vdw = EQ(ii)%qw(i)%vdw
-end do
-end do
-
-! See comments above on the IRecv part
-call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 
-if (ierr .ne. 0) call die('gather_nonbond/Send d')
-call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
-if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
-call MPI_Send(EQ_send, reclength, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
-if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
-
-end if
-end subroutine gather_nonbond
-
-#endif
 !----------------------------------------------------------------------------------------
 !*******************************************************
 !Will find and return the xtop atom number from 
@@ -7383,7 +4595,7 @@ end function get_atom_from_resnum_atnum
 
 !----------------------------------------------------------------------------------------
 
-end module MD
+end module SIMPREP
 
 
 

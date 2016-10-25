@@ -8,7 +8,9 @@
 module BONDED
 
 use QMATH
+use SIZES
 
+implicit none
 ! variables used in this subroutine
 
 TYPE bond_val
@@ -50,10 +52,10 @@ TYPE(bond_val) function box_bond_calc(a,b,boxl,invb)
 TYPE(qr_vec) :: a,b,boxl,invb
 ! locals
 
-bond_calc%a_vec  = qvec_sub(a,b)
-bond_calc%a_vec  = qvec_sub(bond_calc%a_vec,q_vecscale(boxl,nint(q_vecscale(bond_calc%a_vec,invb))))
-bond_calc%b_vec  = -bond_calc%a_vec
-bond_calc%dist = q_sqrt(qvec_square(bond_calc%a_vec))
+box_bond_calc%a_vec  = a - b
+box_bond_calc%a_vec  = box_bond_calc%a_vec - (boxl*q_nint(box_bond_calc%a_vec*invb))
+box_bond_calc%b_vec  = -box_bond_calc%a_vec
+box_bond_calc%dist = q_sqrt(qvec_square(box_bond_calc%a_vec))
 
 end function box_bond_calc
 
@@ -82,10 +84,10 @@ inv_angl = q_sin(angle_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
-angle_calc%a_vec = inv_ang * ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
-               (scalar * tempab%a_vec/tempab%dist**2))
-angle_calc%b_vec = inv_ang * ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
-               (scalar * tempbc%a_vec/tempbc%dist**2))
+angle_calc%a_vec = ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
+                   ( (tempab%a_vec/tempab%dist**2) * scalar)) * inv_angl
+angle_calc%b_vec = ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
+                   ( (tempbc%a_vec/tempbc%dist**2) * scalar)) * inv_angl
 angle_calc%c_vec = -(angle_calc%a_vec + angle_calc%b_vec)
 
 end function angle_calc
@@ -113,10 +115,10 @@ inv_angl = q_sin(box_angle_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
-box_angle_calc%a_vec = inv_ang * ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
-               (scalar * tempab%a_vec/tempab%dist**2))
-box_angle_calc%b_vec = inv_ang * ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
-               (scalar * tempbc%a_vec/tempbc%dist**2))
+box_angle_calc%a_vec = ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
+                       ( (tempab%a_vec/tempab%dist**2) * scalar)) * inv_angl
+box_angle_calc%b_vec = ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
+                       ( (tempbc%a_vec/tempbc%dist**2) * scalar)) * inv_angl
 box_angle_calc%c_vec = -(box_angle_calc%a_vec + box_angle_calc%b_vec)
 
 end function box_angle_calc
@@ -143,9 +145,9 @@ TYPE(qr_vec)    :: vec1,vec2
 
 
 ! get length of the individual bond vectors
-abvec = qvec_sub(a,b)
-bcvec = qvec_sub(b,c)
-cdvec = qvec_sub(c,d)
+abvec = a - b
+bcvec = b - c
+cdvec = c - d
 
 ! get cross product between the vectors
 ! nedded for later angle calculation
@@ -190,24 +192,22 @@ inv_angl =  -one / inv_angl
 ! and then substracted by scalar time vector two divided by its
 ! own absolute value
 ! vector two is the same with inverted planes
-vec1 = inv_angl * ( (crossbcd/(abs_abc*abs_bcd)) - &
-        ( scalar *crossabc/(abs2_abc)))
-vec2 = inv_angl * ( (crossabc/(abs_abc*abs_bcd)) - &
-        ( scalar *crossbcd/(abs2_bcd)))
+vec1 =  ( (crossbcd/(abs_abc*abs_bcd)) - &
+        ( (crossabc/(abs2_abc)) * scalar )) * inv_angl
+vec2 =  ( (crossabc/(abs_abc*abs_bcd)) - &
+        ( (crossbcd/(abs2_bcd)) * scalar )) * inv_angl
 
 ! get the vector between indirect bonded atoms
 ! dbvec needs inverted orientation because it points
 ! in the other direction
-cavec = qvec_sub(bcvec,abvec)
-dbvec = qvec_sub(-bcvec,cdvec)
+cavec = bcvec  - abvec
+dbvec = -bcvec - cdvec
 
 torsion_calc%a_vec = q_crossprod(bcvec,vec1)
-torsion_calc%b_vec = qvec_add( &
-                 q_crossprod(cavec,vec1) , &
-                 q_crossprod(cdvec,vec2))
-torsion_calc%c_vec = qvec_sub( &
-                 q_crossprod(dbvec,vec2) , &
-                 q_crossprod(abvec,vec1))
+torsion_calc%b_vec = q_crossprod(cavec,vec1) + &
+                     q_crossprod(cdvec,vec2)
+torsion_calc%c_vec = q_crossprod(dbvec,vec2) - &
+                     q_crossprod(abvec,vec1)
 torsion_calc%d_vec = q_crossprod(bcvec,vec2)
 
 end function torsion_calc
@@ -228,15 +228,14 @@ real(kind=prec) :: abs_abc,abs_bcd,abs2_abc,abs2_bcd
 TYPE(qr_vec)    :: vec1,vec2
 
 ! get length of the individual bond vectors
-abvec = qvec_sub(a,b)
-bcvec = qvec_sub(c,b)
-cdvec = qvec_sub(d,c)
+abvec = a - b
+bcvec = c - b
+cdvec = d - c
 
 ! get cross product between the vectors
 ! nedded for later angle calculation
 crossabc =  q_crossprod(abvec,bcvec)
 crossbcd = -q_crossprod(bcvec,cdvec)
-
 ! absolute number of vector equals distance
 abs2_abc = qvec_square(crossabc)
 abs2_bcd = qvec_square(crossbcd)
@@ -275,27 +274,25 @@ inv_angl =  -one / inv_angl
 ! and then substracted by scalar time vector two divided by its
 ! own absolute value
 ! vector two is the same with inverted planes
-vec1 = inv_angl * ( (crossbcd/(abs_abc*abs_bcd)) - &
-        ( scalar *crossabc/(abs2_abc)))
-vec2 = inv_angl * ( (crossabc/(abs_abc*abs_bcd)) - &
-        ( scalar *crossbcd/(abs2_bcd)))
+vec1 = ( (crossbcd/(abs_abc*abs_bcd)) - &
+        ( (crossabc/(abs2_abc)) * scalar )) * inv_angl
+vec2 = ( (crossabc/(abs_abc*abs_bcd)) - &
+        ( (crossbcd/(abs2_bcd)) * scalar )) * inv_angl
 
 ! get the vector between indirect bonded atoms
 ! dbvec needs inverted orientation because it points
 ! in the other direction
-cavec = qvec_sub(bcvec,abvec)
-dbvec = qvec_sub(-bcvec,cdvec)
+cavec = bcvec - abvec
+dbvec = -bcvec - cdvec
 
 improper_calc%a_vec = q_crossprod(bcvec,vec1)
-improper_calc%b_vec = qvec_add( &
-                 q_crossprod(cavec,vec1) , &
-                 q_crossprod(cdvec,vec2))
-improper_calc%c_vec = qvec_sub( &
-                 q_crossprod(dbvec,vec2) , &
-                 q_crossprod(abvec,vec1))
+improper_calc%b_vec = q_crossprod(cavec,vec1) + &
+                      q_crossprod(cdvec,vec2)
+improper_calc%c_vec = q_crossprod(dbvec,vec2) - &
+                      q_crossprod(abvec,vec1)
 improper_calc%d_vec = q_crossprod(bcvec,vec2)
 
-end function improper
+end function improper_calc
 
 
 

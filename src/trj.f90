@@ -2,12 +2,12 @@
 !	trj.f90
 !	by John Marelius
 !	Q trajectory data, access and DCD format I/O
-!TODO: fix in accordance with best practice
 
 module TRJ
 
 use ATOM_MASK
 use MISC
+use QMATH
 implicit none
 
 	character(*), private, parameter	:: MODULE_VERSION = '5.06'
@@ -199,7 +199,9 @@ logical function trj_write(x)
 	!extract coordinates
 	call mask_get(mask, x, xmasked)
 	!now need to copy to array of smaller real kind to keep dcd format
-	xloc(1:3*ncoords:3)=xmasked(1:ncoords)
+	xloc(1:3*ncoords:3)=xmasked(1:ncoords)%x
+        xloc(2:3*ncoords:3)=xmasked(1:ncoords)%y
+        xloc(3:3*ncoords:3)=xmasked(1:ncoords)%z
 	!write x record
 	write(lun, err=900) xloc(1:3*ncoords:3)
 	!write y record
@@ -230,8 +232,9 @@ logical function trj_read(x)
         !now copy the coords to the second mask xmasked that has precision
         !kind=prec
         !copy records
-        xmasked(1:ncoords)=xloc(1:3*ncoords:3)
-
+        xmasked(1:ncoords)%x = xloc(1:3*ncoords:3)
+        xmasked(1:ncoords)%y = xloc(2:3*ncoords:3)
+        xmasked(1:ncoords)%z = xloc(3:3*ncoords:3)
 
 	!assign masked coordinates to right atom in topology
 	call mask_put(mask, x, xmasked)
@@ -262,7 +265,9 @@ logical function trj_read_masked(x)
 	!read z record
 	read(lun, err=900, end=900) xloc(3:3*ncoords:3)
 	!now copy to the full array
-	x(1:ncoords)=xloc(1:3*ncoords:3)
+	x(1:ncoords)%x=xloc(1:3*ncoords:3)
+        x(1:ncoords)%y=xloc(2:3*ncoords:3)
+        x(1:ncoords)%z=xloc(3:3*ncoords:3)
 	trj_read_masked = .true.
 
 	current_frame = current_frame + 1
@@ -387,7 +392,7 @@ logical function trj_open(filename)
 !		return
 	end if
 960	format('>>>>> ERROR: Different number of atoms in mask and trajectory',/,&
-			i6, ' atoms in trajectory,',i6,' atoms in mask.')
+i6, ' atoms in trajectory,',i6,' atoms in mask.')
 
 	!allocated masked coordinate array
 	ncoords = atoms
