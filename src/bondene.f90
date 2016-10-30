@@ -14,6 +14,7 @@ use BONDED
 use GLOBALS
 use TOPO
 use QATOM
+use QALLOC
 !$ use omp_lib
 implicit none
 
@@ -365,8 +366,9 @@ end function improper2
 
 !-----------------------------------------------------------------------
 
-subroutine qangle (istate)
+subroutine qangle (E_loc,lambda,istate)
 ! arguments
+real(kind=prec)                                 :: E_loc,lambda
 integer						:: istate
 
 ! local variables
@@ -404,9 +406,9 @@ calc = angle_calc(x(i),x(j),x(k))
 
 da = calc%angl - qanglib(ic)%ang0
 ae = 0.5_prec*qanglib(ic)%fk*da**2
-EQ(istate)%q%angle = EQ(istate)%q%angle + ae*gamma
+E_loc = E_loc + ae*gamma
 
-dv = gamma*qanglib(ic)%fk*da*EQ(istate)%lambda
+dv = gamma*qanglib(ic)%fk*da*lambda
 
 d(i) = d(i) + calc%a_vec*dv 
 d(j) = d(j) + calc%b_vec*dv
@@ -427,17 +429,18 @@ end subroutine qangle
 
 !-----------------------------------------------------------------------
 
-subroutine qurey_bradley (istate)
+subroutine qurey_bradley (E_loc,lambda,istate)
 ! arguments
-integer						:: istate
+real(kind=prec)                         :: E_loc,lambda
+integer					:: istate
 
 
 
 ! local variables
-integer						::	ia,i,j,k,ic,im,icoupl,ib
-TYPE(bond_val)					::	calc
-real(kind=prec)					::	gamma
-real(kind=prec)					::	du, ru, Eurey
+integer					:: ia,i,j,k,ic,im,icoupl,ib
+TYPE(bond_val)				:: calc
+real(kind=prec)				:: gamma
+real(kind=prec)				:: du, ru, Eurey
 
 do ia = 1, nqangle
         ic = qang(ia)%cod(istate)
@@ -462,8 +465,8 @@ do ia = 1, nqangle
 	calc = bond_calc(x(i),x(k))
         ru = calc%dist - qanglib(ic)%ureyr0
         Eurey = qanglib(ic)%ureyfk*ru**2
-        EQ(istate)%q%angle = EQ(istate)%q%angle + Eurey*gamma
-        du = gamma*2*(qanglib(ic)%ureyfk*ru/calc%dist)*EQ(istate)%lambda
+        E_loc = E_loc + Eurey*gamma
+        du = gamma*2*(qanglib(ic)%ureyfk*ru/calc%dist)*lambda
 
 	d(k) = d(k) + calc%a_vec*du
 	d(i) = d(i) + calc%b_vec*du
@@ -482,8 +485,9 @@ end subroutine qurey_bradley
 
 !-----------------------------------------------------------------------
 
-subroutine qbond (istate)
+subroutine qbond (E_loc,lambda,istate)
 ! arguments
+real(kind=prec)                                 :: E_loc,lambda
 integer						::	istate
 
 ! local variables
@@ -506,9 +510,9 @@ do ib = 1, nqbond
         fexp = exp ( -qbondlib(ic)%amz*db ) 
         be = qbondlib(ic)%Dmz*(fexp*fexp-2.0_prec*fexp) + 0.5_prec*qbondlib(ic)%fk*db**2
         EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
-	EQ(istate)%q%bond = EQ(istate)%q%bond + be
+	E_loc = E_loc + be
 	dv = (2.0_prec*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) &
-		+ qbondlib(ic)%fk*db)*EQ(istate)%lambda/calc%dist
+		+ qbondlib(ic)%fk*db)*lambda/calc%dist
 
 	d(i) = d(i) + calc%a_vec*dv
 	d(j) = d(j) + calc%b_vec*dv
@@ -530,8 +534,9 @@ end subroutine qbond
 
 !-----------------------------------------------------------------------
 
-subroutine qimproper (istate)
+subroutine qimproper (E_loc,lambda,istate)
 ! arguments
+real(kind=prec)                                 :: E_loc,lambda
 integer						::	istate
 
 ! local variables
@@ -573,10 +578,10 @@ arg = calc%angl - qimplib(ic)%imp0
 arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 dv = qimplib(ic)%fk*arg
 pe  = 0.5_prec*dv*arg
-EQ(istate)%q%improper = EQ(istate)%q%improper + pe*gamma
-dv = dv*gamma*EQ(istate)%lambda
+E_loc = E_loc + pe*gamma
+dv = dv*gamma*lambda
 
-! ---       forces
+! ---       forces      
 
 d(i) = d(i) + calc%a_vec*dv
 d(j) = d(j) + calc%b_vec*dv
@@ -598,8 +603,9 @@ end subroutine qimproper
 
 !-----------------------------------------------------------------------
 
-subroutine qtorsion (istate)
+subroutine qtorsion (E_loc,lambda,istate)
 ! arguments
+real(kind=prec)                                 :: E_loc,lambda
 integer						::	istate
 
 ! local variables
@@ -637,8 +643,8 @@ calc = torsion_calc(x(i),x(j),x(k),x(l))
 
 arg = qtorlib(ic)%rmult*calc%angl-qtorlib(ic)%deltor
 pe = qtorlib(ic)%fk*(one+cos(arg))
-EQ(istate)%q%torsion = EQ(istate)%q%torsion + pe*gamma
-dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*EQ(istate)%lambda
+E_loc = E_loc + pe*gamma
+dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*lambda
 
 ! ---       forces
 
@@ -796,7 +802,9 @@ end subroutine find_bonded
 
 !-----------------------------------------------------------------------
 
-subroutine p_restrain
+subroutine p_restrain(E_loc,EQ_rest,lambda)
+! arguments
+real(kind=prec)                         :: E_loc, EQ_rest(:),lambda(:)
 ! *** Local variables
 integer :: ir,i,j,k,istate, n_ctr
 real(kind=prec) :: fk,r2,erst,Edum,wgt,b,db,dv, totmass 
@@ -834,7 +842,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
         dr = dr / real(n_ctr,kind=prec)
         r2      = qvec_square(dr)
         erst    = 0.5_prec*fk*r2
-        E%restraint%protein  = E%restraint%protein + erst
+        E_loc  = E_loc + erst
 
         ! apply same force to all atoms
         do i = rstseq(ir)%i, rstseq(ir)%j
@@ -865,7 +873,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
         dr = dr/totmass                                  ! divide by total mass
         r2      = qvec_square(dr)
         erst    = 0.5_prec*fk*r2
-        E%restraint%protein  = E%restraint%protein + erst
+        E_loc  = E_loc + erst
 
         ! apply same force to all atoms
         do i = rstseq(ir)%i, rstseq(ir)%j
@@ -891,7 +899,7 @@ else
           r2      = qvec_square(dr)
 
           erst    = 0.5_prec*fk*r2
-          E%restraint%protein  = E%restraint%protein + erst
+          E_loc  = E_loc + erst
           d(i) = d(i) + dr*fk
         end if
   end do
@@ -906,7 +914,7 @@ i      = rstpos(ir)%i
 dr = rstpos(ir)%x - x(i)
 
 if ( istate .ne. 0 ) then
-wgt = EQ(istate)%lambda
+wgt = lambda(istate)
 else
 wgt = one
 end if
@@ -918,11 +926,11 @@ d(i) = d(i) + (rstpos(ir)%fk*dr)*wgt
 
 if ( istate .eq. 0 ) then
 do k = 1, nstates
-EQ(k)%restraint = EQ(k)%restraint + Edum
+EQ_rest(k) = EQ_rest(k) + Edum
 end do
-if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+if ( nstates .eq. 0 ) E_loc = E_loc + Edum
 else
-EQ(istate)%restraint = EQ(istate)%restraint + Edum
+EQ_rest(istate) = EQ_rest(istate) + Edum
 end if
 end do
 
@@ -941,7 +949,7 @@ else
 end if
 
 if ( istate .ne. 0 ) then
-wgt = EQ(istate)%lambda
+wgt = lambda(istate)
 else
 wgt = one
 end if
@@ -965,11 +973,11 @@ d(j) = d(i) + distres%b_vec*dv
 
 if ( istate .eq. 0 ) then
 do k = 1, nstates
-EQ(k)%restraint = EQ(k)%restraint + Edum
+EQ_rest(k) = EQ_rest(k) + Edum
 end do
-if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+if ( nstates .eq. 0 ) E_loc = E_loc + Edum
 else
-EQ(istate)%restraint = EQ(istate)%restraint + Edum
+EQ_rest(istate) = EQ_rest(istate) + Edum
 end if
 end do
 
@@ -990,7 +998,7 @@ else
 end if
 
 if ( istate .ne. 0 ) then
-wgt = EQ(istate)%lambda
+wgt = lambda(istate)
 else
 wgt = one
 end if
@@ -1009,11 +1017,11 @@ d(k) = d(k) + anglres%c_vec*dv
 
 if ( istate .eq. 0 ) then
 do k = 1, nstates
-EQ(k)%restraint = EQ(k)%restraint + Edum
+EQ_rest(k) = EQ_rest(k) + Edum
 end do
-if ( nstates .eq. 0 ) E%restraint%protein = E%restraint%protein + Edum
+if ( nstates .eq. 0 ) E_loc = E_loc + Edum
 else
-EQ(istate)%restraint = EQ(istate)%restraint + Edum
+EQ_rest(istate) = EQ_rest(istate) + Edum
 end if
 end do
 if( .not. use_PBC ) then
@@ -1034,7 +1042,7 @@ do ir = 1, nrstr_wall
                                 erst = rstwal(ir)%dMorse*(fexp*fexp-2.0_prec*fexp)
                                 dv=-2.0_prec*rstwal(ir)%dMorse*rstwal(ir)%aMorse*(fexp-fexp*fexp)/distres%dist
                         end if
-                        E%restraint%protein = E%restraint%protein + erst
+                        E_loc = E_loc + erst
 			d(i) = d(i) + distres%a_vec*dv
                 end if
         end do

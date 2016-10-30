@@ -55,11 +55,11 @@ end TYPE qr_dist5
 real(kind=prec) :: pi, deg2rad, rad2deg
 
 interface operator(+)
-        module procedure qvec_add
+        module procedure qvec_add,qarray_add
 end interface
 
 interface operator(-)
-        module procedure qvec_sub,qvec_negate
+        module procedure qvec_sub,qvec_negate,qarray_sub
 end interface
 
 interface operator(*)
@@ -83,6 +83,17 @@ qvec_add%y = a%y + b%y
 qvec_add%z = a%z + b%z
 end function qvec_add
 
+function qarray_add(a,b)
+! vector addition for arrays of vectors
+TYPE(qr_vec), INTENT(in) :: a(:),b(SIZE(a))
+TYPE(qr_vec)             :: qarray_add(SIZE(a))
+
+qarray_add(:)%x = a(:)%x + b(:)%x
+qarray_add(:)%y = a(:)%y + b(:)%y
+qarray_add(:)%z = a(:)%z + b(:)%z
+
+end function qarray_add
+
 function qvec_sub(a,b)
 ! vector substraction, std function used later
 ! args
@@ -94,6 +105,17 @@ qvec_sub%y = a%y - b%y
 qvec_sub%z = a%z - b%z
 end function qvec_sub
 
+function qarray_sub(a,b)
+! substract vector arrays
+! args
+TYPE(qr_vec),INTENT(IN) :: a(:), b(SIZE(a))
+TYPE(qr_vec)            :: qarray_sub(SIZE(a))
+
+qarray_sub(:)%x = a(:)%x - b(:)%x
+qarray_sub(:)%y = a(:)%y - b(:)%y
+qarray_sub(:)%z = a(:)%z - b(:)%z
+
+end function qarray_sub
 function qvec_negate(a)
 ! function negates current vector, for operator
 ! args
@@ -300,6 +322,17 @@ q_loagrithm = temp2
 
 end function q_logarithm
 
+real(kind=prec) function q_log2(a)
+! returns log to base two of any value
+! as correct size integer
+! args
+real(kind=prec) :: a
+! locals
+
+q_log2 = q_logarithm(a) / q_logarithm(2.0_prec)
+
+end function q_log2
+
 real(kind=prec) function q_sqrt(a)
 ! returns result of dsqrt as real of chosen precision type
 ! to make compilation independent of variable size
@@ -369,6 +402,19 @@ temp2  = dsin(temp1)
 q_sin  = temp2
 
 end function q_sin
+
+real(kind=prec) function q_exp(a)
+! returns exponent of value as correct q precision type real
+! args
+real(kind=prec) :: a
+! locals
+real(kind=doubleprecision) :: temp1,temp2
+
+temp1 = a
+temp2 = dexp(temp1)
+q_exp = temp2
+
+end function q_exp
 
 TYPE(qr_vec) function q_nint(a)
 ! returns the vector of nearest integers for a given real qr_vec structure

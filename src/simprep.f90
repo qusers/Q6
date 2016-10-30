@@ -17,6 +17,9 @@ use VERSIONS
 use GLOBALS
 use EXC
 use QMATH
+use QALLOC
+use QCP
+use NONBONDENE
 !$ use omp_lib
 implicit none
 #if defined (USE_MPI)
@@ -907,25 +910,6 @@ end subroutine create_grid_ww
 
 !-----------------------------------------------------------------------
 
-
-subroutine close_input_files
-close (1)
-if(restart) close (2)
-if ( implicit_rstr_from_file .eq. 1 ) close (12)
-close (13)
-
-end subroutine close_input_files
-
-!-----------------------------------------------------------------------
-
-subroutine close_output_files
-close (3)
-if ( itrj_cycle .gt. 0 ) close (10)
-if ( iene_cycle .gt. 0 ) close (11)
-
-end subroutine close_output_files
-
-!-----------------------------------------------------------------------
 
 subroutine open_files
 ! --> restart file (2)
@@ -2761,7 +2745,7 @@ subroutine exc_assign
 !locals
 integer                         :: ig,iq,jq,istate
 integer                         :: igc
-
+integer                         :: exc_qqlist,exc_qqplist,exc_qplist
 ! allocate all arrays
 allocate(exc_nbqq_list(ngroups_gc,nstates,maxval(exc_nbqq)),exc_nbqqp_list(ngroups_gc,nstates,maxval(exc_nbqqp)),&
         exc_nbqp_list(ngroups_gc,nstates,maxval(exc_nbqp)))
@@ -2773,11 +2757,8 @@ exc_qqplist = 1
 
 do ig = 1, nat_solute
         do igc = 1, ngroups_gc
-                if (ST_gc(igc)%%gcmask%mask(ig)) then
+                if (ST_gc(igc)%gcmask%mask(ig)) then
                         do iq = 1, nqat
-                        if (iqatom(ig) .ne. 0) then
-                        ! atom ig is a qatom, add to exc_qq list with state info
-                        ! if those two atoms are allowed to interact
                         do istate = 1, nstates
                         if (iqatom(ig) .ne. 0) then
                         ! atom ig is a qatom, add to exc_qq list with state info
@@ -2790,19 +2771,17 @@ do ig = 1, nat_solute
                                 exc_nbqq_list(igc,istate,exc_qqlist)%elec = qq_precomp(iq,jq,istate)%elec
                                 exc_nbqq_list(igc,istate,exc_qqlist)%soft = qq_precomp(iq,jq,istate)%soft
                                 exc_nbqq_list(igc,istate,exc_qqlist)%score = qq_precomp(iq,jq,istate)%score
-
                                 exc_qqlist = exc_qqlist + 1
                         else if(any(qconn(:,ig,:) <= 3)) then
                         ! it is bonded somehow to a q atom        
                                 if (.not.qp_precomp(ig,iq,istate)%set) cycle
                                 ! ! if atoms can interact, should not be needed but who knows
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%iq = iq
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%jq = ig
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%i = iq
+                                exc_nbqqp_list(igc,istate,exc_qqplist)%j = ig
                                 exc_nbqqp_list(igc,istate,exc_qqplist)%vdWA = qp_precomp(ig,iq,istate)%vdWA
                                 exc_nbqqp_list(igc,istate,exc_qqplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
                                 exc_nbqqp_list(igc,istate,exc_qqplist)%elec = qp_precomp(ig,iq,istate)%elec
                                 exc_nbqqp_list(igc,istate,exc_qqplist)%score = qp_precomp(ig,iq,istate)%score
-
                                 exc_qqplist = exc_qqplist + 1
                         else
                         ! plain old nonbonded qp
@@ -2813,10 +2792,10 @@ do ig = 1, nat_solute
                                 exc_nbqp_list(igc,istate,exc_qplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
                                 exc_nbqp_list(igc,istate,exc_qplist)%elec = qp_precomp(ig,iq,istate)%elec
                                 exc_nbqp_list(igc,istate,exc_qplist)%score = qp_precomp(ig,iq,istate)%score
-
                                 exc_qplist = exc_qplist + 1
                         end if
-                        end do
+                        end do ! nstates
+                        end do ! nqat
                 end if
         end do
 end do
@@ -2938,7 +2917,7 @@ end subroutine pw_int_comp
 
 subroutine qp_int_comp
 ! locals
-integer                         :: ig,jq,ia,a_ind,is,vdw,j
+integer                         :: ig,jq,ia,a_ind,is,vdw,j,k
 
 allocate(qp_precomp(nat_solute,nqat,nstates),stat=alloc_status)
 call check_alloc('Protein-QAtom precomputation array')
@@ -3603,9 +3582,10 @@ if (use_excluded_groups) then
 	end do
 else
 !no extra groups, write minimal info to header
-	ene_header%arrays = 1
+!only need to know if QCP is being performed
+	ene_header%arrays = 1 + QCP_N
 	ene_header%totresid = 0 ! to prevent allocation errors
-	allocate(ene_header%types(1),ene_header%numres(1),ene_header%gcnum(1))
+	allocate(ene_header%types(1+QCP_N),ene_header%numres(1+QCP_N),ene_header%gcnum(1+QCP_N))
 end if
 	ene_header%totresid = ene_header%totresid + 1
 	allocate(ene_header%resid(ene_header%totresid))
@@ -3614,34 +3594,32 @@ end if
 	ene_header%resid(1)=-1
 	ene_header%gcnum(1)=-1
 	runvar=2
-	do i=2,ene_header%arrays
+	do i=2,ene_header%arrays - QCP_N
 !give each residue its topology number
 		do j=1,ene_header%numres(i)
 			ene_header%resid(runvar)=get_from_mask(ST_gc(ene_header%gcnum(i)),j)
 			runvar = runvar + 1
 		end do
 	end do
-!now that we know how many arrays we need -> allocate them in EQ
+! set qcp_pos to last array entry
+if (use_qcp) qcp_pos = ene_header%arrays
+!now that we know how many arrays we need -> allocate them in EQ_save for file writing
+        allocate(EQ_save(nstates))
 	do i=1,nstates
-	allocate(EQ(i)%qx(ene_header%arrays),EQ(i)%qq(ene_header%arrays),&
-		EQ(i)%qp(ene_header%arrays),EQ(i)%qw(ene_header%arrays),&
-		EQ(i)%total(ene_header%arrays))
+	allocate(EQ_save(i)%qx(ene_header%arrays),EQ_save(i)%qq(ene_header%arrays),&
+		EQ_save(i)%qp(ene_header%arrays),EQ_save(i)%qw(ene_header%arrays),&
+		EQ_save(i)%total(ene_header%arrays))
 	end do
 
 !if using PBC, alredy allocate the old_EQ arrays so we don't have to do it
 !every time we update the volume
 if( use_PBC ) then
-	allocate(old_EQ(nstates))
-        do i=1,nstates
-        allocate(old_EQ(i)%qx(ene_header%arrays),old_EQ(i)%qq(ene_header%arrays),&
-                old_EQ(i)%qp(ene_header%arrays),old_EQ(i)%qw(ene_header%arrays),&
-                old_EQ(i)%total(ene_header%arrays))
-        end do
+        allocate(old_EQ(nstates))
 end if
-!and we can write the header to the energy file :)
-!write (11) canary,ene_header%arrays,ene_header%totresid,ene_header%types(1:ene_header%arrays),&
-!	ene_header%numres(1:ene_header%arrays),ene_header%resid(1:ene_header%totresid),&
-!	ene_header%gcnum(1:ene_header%arrays)
+
+if (use_qcp) call qcp_init
+
+!TODO write QCP info to header
 
 ! the last thing to prepare are the MD grids
 ! so we call them here
@@ -3664,7 +3642,9 @@ allocate(ww_igrid(nwat))
 call prep_sim_precompute_solvent
 
 #if defined (USE_MPI)
-	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
+!	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
+        reclength= nstates*(2+2)
+        !qp interactions and qw interactions give 4*nstates real
 #endif
 end subroutine prep_sim
 
@@ -3675,7 +3655,7 @@ subroutine prep_sim_precompute_solvent
 integer,allocatable		:: interaction(:,:)
 integer				:: i,j,na,nb,counter,last
 real(kind=prec)			:: tempA,tempB
-type(SOLV_INT_TYPE),allocatable	:: tmp_solv_int(:)
+type(NB_TYPE),allocatable	:: tmp_solv_int(:)
 
 if (ntors .gt. ntors_solute) then
 ! we need a way to troll the solvent interactions without having to build a list for the 1-4

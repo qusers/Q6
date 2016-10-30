@@ -291,7 +291,6 @@ type(RSTRWAL_TYPE), allocatable::	rstwal(:)
 
 ! New ! for internal interactions of solvent atoms
 ! will be precomputed in prep sim
-type(NB_TYPE),allocatable			:: nonbnd_solv_int(:)
 integer						:: num_solv_int = -1
 
 ! New ! Type for precomputing interactions between arbitrary atoms pairs
@@ -407,10 +406,14 @@ type(NBQP_TYPE), allocatable, target::old_nbqp(:,:)
 integer						::	nbqw_pair !current no of q-atom-water mol. pairs
 type(NBQP_TYPE), allocatable	::	nbqw(:,:)
 
-type(NBQ_TYPE),allocatable      :: monitor_group_int(:)
-type(NBQ_TYPE),allocatable      :: exc_nbqq_list(:.;,:)
+type(NBQ_TYPE),allocatable      :: monitor_group_int(:,:)
+type(NBQ_TYPE),allocatable      :: exc_nbqq_list(:,:,:)
 type(NBQP_TYPE),allocatable     :: exc_nbqqp_list(:,:,:)
 type(NBQP_TYPE),allocatable     :: exc_nbqp_list(:,:,:)
+
+integer,allocatable             :: exc_nbqp(:),exc_nbqqp(:),exc_nbqq(:)
+! for internal solvent stuff
+type(NB_TYPE),allocatable			:: nonbnd_solv_int(:)
 
 #ifdef USE_GRID
 ! new structures for grid 
@@ -495,16 +498,22 @@ integer						::	shake_constraints, shake_molecules
 type(SHAKE_MOL_TYPE), allocatable :: shake_mol(:)
 
 
-! variables for QCP calculations, concerning parameter read in and usuage
+! variables for QCP calculations, concerning parameter read in and usage
 integer                         :: QCP_N = QCP_OFF
 integer                         :: QCP_steps_default = 10
-integer                         :: QCP_size_default = 10
-integer                         :: QCP_size_small = 5
-integer                         :: QCP_size_large = 20
-integer                         :: qcp_enum,qcp_size,qcp_steps
-logical                         :: use_qcp
-integer,allocatable             :: QCP_atom(:)
-real(kind=prec),allocatable     :: pos_beads(:),vel_beads(:),chg_beads(:),mass_beads(:)
+integer                         :: QCP_size_default = 32
+integer                         :: QCP_size_small = 16
+integer                         :: QCP_size_large = 64
+integer                         :: qcp_enum,qcp_size
+integer                         :: qcp_level = 5
+! one for equilibration, second for sampling
+integer                         :: qcp_steps(2),qcp_atnum,qcp_pos
+logical                         :: use_qcp,qcp_veryverbose=.false.,qcp_verbose=.false.,use_qcp_mass=.false.
+integer,allocatable             :: qcp_atom(:)
+real(kind=prec),allocatable     :: qcp_mass(:)
+TYPE(ENERGIES)                  :: qcp_E
+TYPE(OQ_ENERGIES),allocatable   :: qcp_EQ(:)
+TYPE(qr_vec),allocatable        :: x_save(:),d_save(:)
 
 !-----------------------------------------------------------------------
 !	profiling vars
@@ -521,11 +530,9 @@ end type profiling_var_type
 
 type(profiling_var_type)	:: profile(num_profiling_times)
 
-#if defined (USE_MPI)
  !vectors for keeping track of node times
 real(kind=prec),allocatable				:: all_node_times(:)
 real(kind=prec),allocatable				:: node_times(:)
-#endif
 
 #endif
 

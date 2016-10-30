@@ -180,8 +180,9 @@ implicit none
 !-----------------------------------------------------------------------
 !	fep/evb energies
 !-----------------------------------------------------------------------
-	type(Q_ENERGIES), allocatable::	EQ(:)
-	type(Q_ENERGIES), allocatable:: old_EQ(:)
+	type(OQ_ENERGIES), allocatable::	EQ(:)
+	type(OQ_ENERGIES), allocatable:: old_EQ(:)
+        type(Q_ENERGIES), allocatable :: EQ_save(:)
 	real(kind=prec)						::	Hij(max_states,max_states)
 	real(kind=prec),allocatable				::	EMorseD(:)!max_qat)
         TYPE(qr_vec),allocatable				::	dMorse_i(:)!3,max_qat)
@@ -193,6 +194,25 @@ implicit none
 contains
 
 !-------------------------------------------------------------------------
+
+subroutine qatom_savetowrite(saveEQ,pos)
+! adds one set of energies to final EQ_save array in correct position
+! arguments
+TYPE(OQ_ENERGIES)               :: saveEQ(:)
+integer                         :: pos
+! locals
+integer                         :: istate
+
+do istate = 1, nstates
+
+EQ_save(istate)%qx(pos)    = saveEQ(istate)%qx
+EQ_save(istate)%qq(pos)    = saveEQ(istate)%qq
+EQ_save(istate)%qp(pos)    = saveEQ(istate)%qp
+EQ_save(istate)%qw(pos)    = saveEQ(istate)%qw
+EQ_save(istate)%total(pos) = saveEQ(istate)%total
+
+end do
+end subroutine qatom_savetowrite
 
 subroutine qatom_startup
 	! initialise used modules
@@ -209,24 +229,15 @@ end subroutine qatom_startup
 subroutine qatom_shutdown
 	integer						::	alloc_status_qat,ii
 	do ii=1,nstates
-	if (allocated(EQ(ii)%qx)) deallocate(EQ(ii)%qx,stat=alloc_status_qat)
-	if (allocated(EQ(ii)%qq)) deallocate(EQ(ii)%qq,stat=alloc_status_qat)
-	if (allocated(EQ(ii)%qp)) deallocate(EQ(ii)%qp,stat=alloc_status_qat)
-	if (allocated(EQ(ii)%qw)) deallocate(EQ(ii)%qw,stat=alloc_status_qat)
-	if (allocated(EQ(ii)%total)) deallocate(EQ(ii)%total)
+	if (allocated(EQ_save(ii)%qx))    deallocate(EQ_save(ii)%qx,stat=alloc_status_qat)
+	if (allocated(EQ_save(ii)%qq))    deallocate(EQ_save(ii)%qq,stat=alloc_status_qat)
+	if (allocated(EQ_save(ii)%qp))    deallocate(EQ_save(ii)%qp,stat=alloc_status_qat)
+	if (allocated(EQ_save(ii)%qw))    deallocate(EQ_save(ii)%qw,stat=alloc_status_qat)
+	if (allocated(EQ_save(ii)%total)) deallocate(EQ_save(ii)%total)
 	end do
-	deallocate(EQ, stat=alloc_status_qat)	
+	deallocate(EQ,EQ_save, stat=alloc_status_qat)	
 
-	if (allocated(old_EQ)) then
-        	do ii=1,nstates
-			if (allocated(old_EQ(ii)%qx)) deallocate(old_EQ(ii)%qx)
-			if (allocated(old_EQ(ii)%qq)) deallocate(old_EQ(ii)%qq)
-			if (allocated(old_EQ(ii)%qp)) deallocate(old_EQ(ii)%qp)
-			if (allocated(old_EQ(ii)%qw)) deallocate(old_EQ(ii)%qw)
-			if (allocated(old_EQ(ii)%total)) deallocate(old_EQ(ii)%total)
-		end do
-		deallocate(old_EQ, stat=alloc_status_qat)
-	end if
+	if (allocated(old_EQ)) deallocate(old_EQ, stat=alloc_status_qat)
 	deallocate(iqseq, qiac, iqexpnb, jqexpnb, qcrg, stat=alloc_status_qat)
 	deallocate(qmass, stat=alloc_status_qat)
 	deallocate(qavdw, qbvdw, stat=alloc_status_qat)
@@ -634,7 +645,7 @@ logical function qatom_load_fep(fep_file)
   type(QTORSION_TYPE),allocatable		:: tmp_qimp(:)
 !for setting vdW arrays to default
   logical					:: vdw_from_topo = .false.
-
+  integer                                       :: tmp_qcp_num
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
 	character(len=keylength)	:: qtac_tmp(max_states)
@@ -1964,7 +1975,7 @@ logical function qatom_load_fep(fep_file)
 ! information for QCP atom selection and size allocation
 ! only use if use_QCP is true at this point, otherwise skip
 ! numbering is always Q-atom numbers!!!
-	if(use_QCP) then
+	if(use_qcp) then
 	section='qcp_atoms'
 	tmp_qcp_num = prm_count(section)
 ! remember, QCP atoms will be listed as Q atoms, so use those lists later for searching
@@ -1974,51 +1985,54 @@ logical function qatom_load_fep(fep_file)
 	if (tmp_qcp_num .gt. 0) then
 ! redefined
 		write (*,'(a)') 'Defining QCP selection in FEP file, overwriting predefined selections!'
-		num_QCP = tmp_num_qcp
-		allocate(QCP_atoms(num_QCP))
+		qcp_atnum = tmp_qcp_num
+		allocate(qcp_atom(qcp_atnum))
 		do i=1,tmp_qcp_num
 			if(.not. prm_get_line(line)) goto 1000
-			read (line,*, err=1000) tmpindex, QCP_atoms(i)
-			if((QCP_atoms(i) .lt.1).or.(QCP_atoms(i).gt.nqat)) then
-				write(*,'(a,i4)') 'Invalid Q-atom number for QCP, i = ',QCP_atoms(i)
+			read (line,*, err=1000) tmpindex, qcp_atom(i)
+			if((qcp_atom(i) .lt.1).or.(qcp_atom(i).gt.nqat)) then
+				write(*,'(a,i4)') 'Invalid Q-atom number for QCP, i = ',qcp_atom(i)
 				qatom_load_fep = .false.
 			else if (i .gt. 1) then
-				if (QCP_atom(i) .eq. any(QCP_atoms(1:i-1))) then
-					write(*,'(a,i4)') 'Double definition of QCP atom, i = ',QCP_atoms(i)
+                                ! loop downwards to see if there are double descriptions
+                                do j = i - 1 , 1 ,-1
+				if (qcp_atom(i) .eq. qcp_atom(j)) then
+					write(*,'(a,i4)') 'Double definition of QCP atom, i = ',qcp_atom(i)
 					qatom_load_fep = .false.
 				end if
+                                end do
 			end if
 ! need to add write out part so we know the atoms actually assigned
 		end do
 	else 
 ! use previous definitions from MD input file
-	select case (QCP_enum)
+	select case (qcp_enum)
 		case (QCP_ALLATOM)
 ! just use all atoms
-			num_QCP = nqat
-			allocate(QCP_atoms(num_QCP))
+			qcp_atnum = nqat
+			allocate(qcp_atom(qcp_atnum))
 			do i=1, nqat
-				QCP_atoms(i) = i
+				qcp_atom(i) = i
 			end do
 		case (QCP_HYDROGEN)
 ! use only atoms that can be identified as hydrogens in FEP file
 ! selection is mass
 ! first get number of atoms, then loop again to assign them
-			num_QCP = 0
+			qcp_atnum = 0
 			do i=1, nqat
-				if (.not.isheavy(iqseq(i))) then
-					num_QCP = num_QCP + 1
+				if (.not.heavy(iqseq(i))) then
+					qcp_atnum = qcp_atnum + 1
 				end if
 			end do
-			if (num_QCP .gt. 0 ) then
+			if (qcp_atnum .gt. 0 ) then
 ! now allocate + assign :)
 ! need to loop again ot have tmp allocate ... not sure which one is better
-				allocate(QCP_atoms(num_QCP))
-				num_QCP = 0
+				allocate(qcp_atom(qcp_atnum))
+				qcp_atnum = 0
 				do i=1, nqat
-					if (.not.isheavy(iqseq(i))) then
-						num_QCP = num_QCP + 1
-						QCP_atoms(num_QCP) = i
+					if (.not.heavy(iqseq(i))) then
+						qcp_atnum = qcp_atnum + 1
+						qcp_atom(qcp_atnum) = i
 					end if
 				end do
 			else
@@ -2037,7 +2051,8 @@ logical function qatom_load_fep(fep_file)
 			write(*,'(a)') 'WARNING! No such QCP setting! Program will terminate due to expected memory corruption!'
 			qatom_load_fep = .false.
 	end select
-	end if
+	end if ! qcp_selecy
+end if ! use qcp
 	call prm_close
 	return
 

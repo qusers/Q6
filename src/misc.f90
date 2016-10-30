@@ -23,12 +23,13 @@ use SIZES
 
         ! enumerator for QCP, need number and falg at same time
         ENUM, bind(c)
-                ENUMERATOR      :: QCP_OFF,QCP_ON
+                ENUMERATOR      :: QCP_OFF,QCP_ON,QCP_ON_MASS
         END ENUM
 
         ENUM, bind(c)
                 ENUMERATOR      :: QCP_HYDROGEN,QCP_ALLATOM,QCP_FEPATOM
 
+        END ENUM
 contains
 
 subroutine centered_heading(msg, fill)

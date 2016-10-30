@@ -636,7 +636,7 @@ logical function topo_read(u, require_version, extrabonds)
 
   ! --> 3. topology coordinates    ---->     xtop
   ! ===========================    ==============
-   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(rd),rd=1,3*nat_pro)
+   if(nat_pro > 0) read (unit=u, fmt=*, err=1000) (xtop(rd),rd=1,nat_pro)
    write (*,40) 3*nat_pro
    40 format ('No. of coordinates      = ',i10)
 

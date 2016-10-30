@@ -17,7 +17,8 @@ use VERSIONS
 use QMATH
 use GLOBALS
 use SIMPREP
-use BONDENE
+use POTENE
+use QCP
 #if defined (_DF_VERSION_)
 use DFPORT
 use DFLIB
@@ -57,111 +58,6 @@ call simprep_shutdown
 call md_deallocate
 call topo_deallocate
 end subroutine md_shutdown
-
-!----------------------------------------------------------------------
-
-subroutine die(cause)
-! args
-character(*), optional		:: cause
-
-
-!
-! exit with an error message
-!
-
-
-! local vars
-integer						:: i
-! flush stuff
-integer(4), parameter			:: stdout_unit = 6
-! external flush disabled for gfortran
-! external flush
-
-if (nodeid .eq. 0) then
-write(*,*)
-call centered_heading('ABNORMAL TERMINATION', '!')
-! write final energies if run has started
-if (istep > 0) then
-        if ( mod(istep,iout_cycle) .ne. 1 ) call write_out
-end if
-        if(allocated(v)) then
-        !save restart file for diagnosing coordinate problems
-            write(*,*) 'restart file written at step', istep
-                call write_xfin
-        endif
-write (*,'(79a)') ('!',i=1,79)
-call close_output_files
-
-! apologise
-write(*,'(a)') 'ABNORMAL TERMINATION of Qdyn5'
-if (present(cause)) then
-        write(*,'(79a)') 'Terminating due to ', cause
-        endif
-write (*,'(79a)') ('!',i=1,79)
-#if defined(CRAY)
-!Cray can't flush stdout...
-#elif defined(NO_FLUSH)
-        !When you can't flush
-#else
-! flush stdout
-call flush(stdout_unit)
-#endif
-end if	
-! clean up
-call md_deallocate
-
-
-#if defined (USE_MPI)
-! abort all processes with exit code 255
-call MPI_Abort(MPI_COMM_WORLD, 255, ierr)
-#else
-! stop with a message to stderr
-stop 'Qdyn5 terminated abnormally'
-#endif
-
-end subroutine die
-
-!----------------------------------------------------------------------
-
-!Restrain all excluded atoms plus heavy solute atoms in the inner shell.
-subroutine fix_shell
-! local variables
-integer						::	i,i3
-real(kind=prec)					::	fk,r2,erst
-TYPE(qr_dist)                                   :: dist
-! global variables used:
-!  E, nat_pro, excl, shell, heavy, fk_fix, fk_pshell, x, xtop, d
-
-do i = 1, nat_pro
-if (excl(i) .or. shell(i)) then
-! decide which fk to use
-if ( excl(i) ) then 
-fk = fk_fix
-if ( freeze ) then
-v(i) = v(i) * zero
-x(i) = xtop(i)
-fk = 0
-endif
-else
-fk = fk_pshell
-end if
-
-! calculate drift from topology
-dist = q_dist(x(i),xtop(i))
-r2   = dist%r2
-erst = 0.5_prec*fk*r2
-
-! update restraint energies
-if ( excl(i) ) E%restraint%fix   = E%restraint%fix + erst
-if ( shell(i) ) E%restraint%shell = E%restraint%shell + erst 
-
-! update forces
-d(i) = d(i) + dist%vec * fk
-end if
-end do
-end subroutine fix_shell
-
-!-----------------------------------------------------------------------
 
 !-----------------------------------------------------------------------
 
@@ -1075,11 +971,11 @@ if(nstates > 0 ) then
 !chose which atoms should be treated as ring polymers
 !important later when setting up NB list, RP will be treated different from classical
 !this section can be overwritten in the FEP file
-		if(.not. prm_get_string_by_key('selection', QCP_select)) then
+		if(.not. prm_get_string_by_key('selection', qcp_select)) then
 			write(*,'(a)') 'Will default to Hydrogen atoms only treated as RP!'
 			qcp_enum = QCP_HYDROGEN
 		else
-			qcp_select = upcase(QCP_select)
+			call upcase(qcp_select)
 			 if ((qcp_select .eq. 'HYDROGEN') .or. &
 				(qcp_select .eq. 'HYD') .or. &
 				(qcp_select .eq. 'H')) then
@@ -1100,11 +996,11 @@ if(nstates > 0 ) then
 		end if
 !how large should the RP be?
 !can again be overwritten in FEP file for each atom itself
-		if(.not. prm_get_string_by_key('size',QCP_size)) then
+		if(.not. prm_get_string_by_key('size',qcp_size_name)) then
 			write(*,'(a,i6,a)') 'Will use default sizes for RP, ',QCP_SIZE_DEFAULT, ' ring beads per atom!'
 			qcp_size = QCP_SIZE_DEFAULT
 		else
-			qcp_size_name = upcase(QCP_size)
+			call upcase(qcp_size_name)
 			if(qcp_size_name .eq. 'DEFAULT') then
 				write(*,'(a,i6,a)') 'Will use default sizes for RP, ',QCP_SIZE_DEFAULT,' ring beads per atom!'
 				qcp_size = QCP_SIZE_DEFAULT
@@ -1122,17 +1018,30 @@ if(nstates > 0 ) then
 				initialize = .false.
 			end if
 		end if
+! now we know how many beads, set default for qcp_level
+! for bisection, this is 2**qcp_level .eq. qcp_size
+                write(*,'(a,i6,a)') 'Setting bisection level to default, log_2(',qcp_size,')'
+                qcp_level = int(q_log2(real(qcp_size,kind=prec)))
 !number of PI steps at each calculation
-		if(.not. prm_get_integer_by_key('steps',qcp_steps)) then
+		if(.not. prm_get_integer_by_key('equilibration_steps',qcp_steps(1))) then
 			write(*,'(a,i6)') 'Will use default number of PI steps, n = ',QCP_steps_default
-			qcp_steps = QCP_steps_default
+			qcp_steps(1) = QCP_steps_default
 		else
-			if(qcp_steps .lt. 1) then
+			if(qcp_steps(1) .lt. 1) then
 				write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'
 				initialize = .false.
 			end if
-			write(*,'(a,i4,a)') 'Will use the follwoing number of PI steps, n = ',qcp_steps,' for each calculation!'
+			write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(1),' for free particle equilibration!'
 		end if
+                if(.not.prm_get_integer_by_key('sampling_steps',qcp_steps(2))) then
+                        write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for sampling'
+                else
+                        if(qcp_steps(2) .lt.1 ) then
+                                write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'
+                                initialize = .false.
+                        end if
+                        write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(2),' for free particle sampling!'
+                end if
 	end if
 else
 	write(*,'(a)') 'No RPMD in classical MD'
@@ -1591,7 +1500,7 @@ end if
 do i=1,nrstr_pos
 ! read rstpos(i)
 read (fu,*) rstpos(i)%i,rstpos(i)%x, &
-rstpos(i)%fk rstpos(i)%ipsi
+rstpos(i)%fk, rstpos(i)%ipsi
 write (*,122) rstpos(i)%i,rstpos(i)%x, &
 rstpos(i)%fk, rstpos(i)%ipsi
 end do
@@ -1669,299 +1578,7 @@ write (*,160)
 160 format ('Ignoring water model.')
 
 end function old_initialize
-
-!-----------------------------------------------------------------------
-! function to gather lrf information from nodes and set it the values
-! gathered there
-#ifdef USE_MPI
-integer function lrf_add(lrf1,lrf2,length,MPI_Datatype)
-type(LRF_TYPE),INTENT (IN)      :: lrf1(length)
-type(LRF_TYPE)                  :: lrf2(length)
-integer                         :: length,MPI_Datatype
-
-lrf2(1:length)%cgp_cent           = lrf1(1:length)%cgp_cent
-lrf2(1:length)%phi0               = lrf1(1:length)%phi0+lrf2(1:length)%phi0
-lrf2(1:length)%phi1               = lrf1(1:length)%phi1   +lrf2(1:length)%phi1    
-lrf2(1:length)%phi2(:)            = lrf1(1:length)%phi2(:)+lrf2(1:length)%phi2(:)
-lrf2(1:length)%phi3(:)            = lrf1(1:length)%phi3(:)+lrf2(1:length)%phi3(:)
-
-lrf_add = -1
-
-end function lrf_add
-
-integer function lrf_cgp_rep(lrf1,lrf2,length,MPI_Datatype)
-type(LRF_TYPE),INTENT (IN)      :: lrf1(length)
-type(LRF_TYPE)                  :: lrf2(length)
-integer                         :: length,MPI_Datatype
-lrf2(1:length)%cgp_cent           = lrf1(1:length)%cgp_cent
-lrf_cgp_rep = -1
-
-end function lrf_cgp_rep
-#endif
-! this one gets the lrf info from all nodes and puts it on master after a lrf
-! update has been completed
-! only used with MPI
-#ifdef USE_MPI
-subroutine lrf_gather
-call MPI_Allreduce(MPI_IN_PLACE,LRF,ncgp,mpitype_batch_lrf,mpi_lrf_add,&
-MPI_COMM_WORLD,ierr)
-if (ierr .ne. 0) call die('lrf_gather reduce')
-!if (nodeid .eq.0 ) LRF = lrf_reduce
-end subroutine lrf_gather
-#endif
-
-subroutine lrf_taylor
-! *** local variables
-integer						::	i,ic
-real(kind=prec)						::	Vij, q
-TYPE(qr_vec)                                            :: dr,df,tmp
-
-! global variables used:
-!  E%LRF, natom, excl, iqatom, iwhich_cgp, lrf, x, crg, d
-! change to use the calculation_assignment%natom variable
-! to only calculate the stuff each node should do
-do i = calculation_assignment%natom%start, calculation_assignment%natom%end
-! for every atom on this node:
-
-if ( ( use_PBC .and. (iqatom(i)==0) ) .or. ( (.not. excl(i) ) .and. (iqatom(i)==0) ) ) then
-! unless excluded atom or q-atom:
-
-! find the displacement dr from the center of the charge group
-ic = iwhich_cgp(i)
-
-dr = lrf(ic)%cgp_cent - x(i)
-
-! --- Electric potential
-tmp%x = q_dotprod(dr,lrf(ic)%phi2(1))
-tmp%y = q_dotprod(dr,lrf(ic)%phi2(2))
-tmp%z = q_dotprod(dr,lrf(ic)%phi2(3))
-
-Vij=lrf(ic)%phi0 &
-+q_dotprod(dr,lrf(ic)%phi1) &
-+0.5_prec*q_dotprod(dr,tmp)
-
-E%LRF = E%LRF + 0.5_prec * crg(i) * Vij
-
-! --- Electric field
-tmp%x = q_dotprod(dr,lrf(ic)%phi3(1))
-tmp%y = q_dotprod(dr,lrf(ic)%phi3(2))
-tmp%z = q_dotprod(dr,lrf(ic)%phi3(3))
-
-df%x = lrf(ic)phi1%x &
-+ q_dotprod(dr,lrf(ic)%phi2(1)) &
-+ 0.5_prec*q_dotprod(dr,tmp)
-
-tmp%x = q_dotprod(dr,lrf(ic)%phi3(4))
-tmp%y = q_dotprod(dr,lrf(ic)%phi3(5))
-tmp%z = q_dotprod(dr,lrf(ic)%phi3(6))
-
-df%y = lrf(ic)phi1%y &
-+ q_dotprod(dr,lrf(ic)%phi(2)) &
-+ 0.5_prec*q_dotprod(dr,tmp)
-
-tmp%x = q_dotprod(dr,lrf(ic)%phi3(7))
-tmp%y = q_dotprod(dr,lrf(ic)%phi3(8))
-tmp%z = q_dotprod(dr,lrf(ic)%phi3(9))
-
-df%x = lrf(ic)phi1%z &
-+ q_dotprod(dr,lrf(ic)%phi2(3)) &
-+ 0.5_prec*q_dotprod(dr,tmp)
-
-! update d
-d(i) = d(i) - df * crg(i)
-end if
-end do
-end subroutine lrf_taylor
-
-
-!-----------------------------------------------------------------------
-!DEC$ ATTRIBUTES FORCEINLINE :: lrf_update
-subroutine lrf_update(group1,group2)
-! --- input variables
-integer				:: group1,group2
-
-! --- local variables
-integer				:: i,ia,i_sw
-real(kind=prec)			:: r2,field0,field1,field2
-TYPE(qr_vec)                    :: shift,dr,tmp(9),uvec
-! get switch atoms for PBC
-if (use_PBC) then
-i_sw = cgp(group1)%iswitch
-shift = x(i_sw) - lrf(group2)%cgp_cent
-shift = boxlength*q_nint(shift*inv_boxl)
-else
-shift = shift * zero
-end if
-! unit vector for later assignments
-  uvec%x = one
-  uvec%y = one
-  uvec%z = one
-
-
-iloop:        do ia = cgp(group1)%first, cgp(group1)%last
-  ! skip if q-atom
-  i = cgpatom(ia)
-  if ( iqatom(i)/=0 ) cycle iloop
-
-  dr = x(i) - lrf(group2)%cgp_cent - shift
-  r2 = qvec_square(dr)
-
-  field0=crg(i)/(r2*sqrt(r2))
-  field1=3.0_prec*field0/r2
-  field2=-field1/r2
-!$omp critical
-  lrf(group2)%phi0=lrf(group2)%phi0+field0*r2
-  lrf(group2)%phi1  = lrf(group2)%phi1 - dr * field0
-  tmp(1) = dr * field1
-  lrf(group2)%phi2(1) = lrf(group2)%phi2(1) + dr * tmp(1)%x 
-  lrf(group2)%phi2(2) = lrf(group2)%phi2(2) + dr * tmp(1)%y 
-  lrf(group2)%phi2(3) = lrf(group2)%phi2(3) + dr * tmp(1)%z 
-
-  lrf(group2)%phi2(1)%x = lrf(group2)%phi2(1)%x - field0
-  lrf(group2)%phi2(2)%y = lrf(group2)%phi2(2)%y - field0
-  lrf(group2)%phi2(3)%z = lrf(group2)%phi2(3)%z - field0
-!$omp end critical
-!$omp critical
-
-  tmp(1) = uvec * dr%x
-  tmp(2) = uvec * dr%y
-  tmp(3) = uvec * dr%z
-
-  lrf(group2)%phi3(1) = lrf(group2)%phi3(1) + field2*(5.0_prec*tmp(1)*tmp(1)*dr)
-  lrf(group2)%phi3(2) = lrf(group2)%phi3(2) + field2*(5.0_prec*tmp(1)*tmp(2)*dr)
-  lrf(group2)%phi3(3) = lrf(group2)%phi3(3) + field2*(5.0_prec*tmp(1)*tmp(3)*dr)
-  lrf(group2)%phi3(4) = lrf(group2)%phi3(4) + field2*(5.0_prec*tmp(2)*tmp(1)*dr)
-  lrf(group2)%phi3(5) = lrf(group2)%phi3(5) + field2*(5.0_prec*tmp(2)*tmp(2)*dr)
-  lrf(group2)%phi3(6) = lrf(group2)%phi3(6) + field2*(5.0_prec*tmp(2)*tmp(3)*dr)
-  lrf(group2)%phi3(7) = lrf(group2)%phi3(7) + field2*(5.0_prec*tmp(3)*tmp(1)*dr)
-  lrf(group2)%phi3(8) = lrf(group2)%phi3(8) + field2*(5.0_prec*tmp(3)*tmp(2)*dr)
-  lrf(group2)%phi3(9) = lrf(group2)%phi3(9) + field2*(5.0_prec*tmp(3)*tmp(3)*dr)
-  tmp(1) = dr * r2
-  lrf(group2)%phi3(1)%x = lrf(group2)%phi3(1)%x - field2*(3.0_prec*tmp(1)%x)
-  lrf(group2)%phi3(1)%y = lrf(group2)%phi3(1)%y - field2*(tmp(1)%y)
-  lrf(group2)%phi3(1)%z = lrf(group2)%phi3(1)%z - field2*(tmp(1)%z)
-  lrf(group2)%phi3(2)%x = lrf(group2)%phi3(2)%x - field2*(tmp(1)%y)
-  lrf(group2)%phi3(2)%y = lrf(group2)%phi3(2)%y - field2*(tmp(1)%x)
-
-  lrf(group2)%phi3(3)%x = lrf(group2)%phi3(3)%x - field2*(tmp(1)%z)
-
-  lrf(group2)%phi3(3)%z = lrf(group2)%phi3(3)%z - field2*(tmp(1)%x)
-  lrf(group2)%phi3(4)%x = lrf(group2)%phi3(4)%x - field2*(tmp(1)%y)
-  lrf(group2)%phi3(4)%y = lrf(group2)%phi3(4)%y - field2*(tmp(1)%x)
-
-  lrf(group2)%phi3(5)%x = lrf(group2)%phi3(5)%x - field2*(tmp(1)%x)
-  lrf(group2)%phi3(5)%y = lrf(group2)%phi3(5)%y - field2*(3.0_prec*tmp(1)%y)
-  lrf(group2)%phi3(5)%z = lrf(group2)%phi3(5)%z - field2*(tmp(1)%z)
-
-  lrf(group2)%phi3(6)%y = lrf(group2)%phi3(6)%y - field2*(tmp(1)%z)
-  lrf(group2)%phi3(6)%z = lrf(group2)%phi3(6)%z - field2*(tmp(1)%y)
-  lrf(group2)%phi3(7)%x = lrf(group2)%phi3(7)%x - field2*(tmp(1)%z)
-
-  lrf(group2)%phi3(7)%z = lrf(group2)%phi3(7)%z - field2*(tmp(1)%x)
-
-  lrf(group2)%phi3(8)%y = lrf(group2)%phi3(8)%y - field2*(tmp(1)%z)
-  lrf(group2)%phi3(8)%z = lrf(group2)%phi3(8)%z - field2*(tmp(1)%y)
-  lrf(group2)%phi3(9)%x = lrf(group2)%phi3(9)%x - field2*(tmp(1)%x)
-  lrf(group2)%phi3(9)%y = lrf(group2)%phi3(9)%y - field2*(tmp(1)%y)
-  lrf(group2)%phi3(9)%z = lrf(group2)%phi3(9)%z - field2*(3.0_prec*tmp(1)%z)
-
-
-!$omp end critical
-end do iloop
-
-end subroutine lrf_update
-
 !----------------------------------------------------------
-
-subroutine make_pair_lists
-#if defined (PROFILING)
-real(kind=prec)                                         :: start_loop_time
-start_loop_time = rtime()
-#endif
-! start with populating the grid
-! each node populates its assigned ncgp_solute
-! and nwat and then intercommunication does the rest
-
-! we make this whole thing now omp parallel
-! start opening region here so we don't have to pay the penalty
-! to do this in every function
-
-!$omp parallel default(none) shared(use_PBC,use_LRF,iuse_switch_atom) 
-
-#ifdef USE_GRID
-call populate_grids
-#endif
-if( use_PBC ) then
-if (.not. use_LRF)then
-        !cutoff
-   if(iuse_switch_atom == 1) then
-        call nbpplist_box
-        call nbpwlist_box
-        call nbqplist_box
-    else
-        call nbpplis2_box
-        call nbpwlis2_box
-        call nbqplis2_box
-    end if
-    call nbwwlist_box
-else
-    call cgp_centers
-                      if ( iuse_switch_atom == 1 ) then 
-                        call nbpplist_box_lrf
-                              call nbpwlist_box_lrf
-                              call nbqplist_box
-                      else
-                        call nbpplis2_box_lrf
-                              call nbpwlis2_box_lrf
-                              call nbqplis2_box
-    endif
-    call nbwwlist_box_lrf
-endif
-        call nbqwlist_box
-else !spherical case
-if(.not. use_LRF) then
-        ! cutoff
-        if( iuse_switch_atom .eq. 1 ) then
-                call nbpplist
-                call nbpwlist
-                call nbqplist
-        else
-                call nbpplis2
-                call nbpwlis2
-                call nbqplis2
-        end if
-        call nbwwlist
-else 
-        ! cutoff with lrf
-        call cgp_centers ! *** måste anropas av alla noder (nollställer lrf)
-        if( iuse_switch_atom .eq. 1 ) then
-                call nbpplist_lrf   
-                call nbpwlist_lrf   
-                call nbqplist       
-        else
-                call nbpplis2_lrf
-                call nbpwlis2_lrf
-                call nbqplis2
-        end if
-        call nbwwlist_lrf   
-end if
-
-call nbqwlist   
-end if
-
-!$omp end parallel
-
-! we are gathering the LRF info here
-#ifdef USE_MPI
-if (use_LRF) call lrf_gather
-#endif
-#if defined (PROFILING)
-profile(1)%time = profile(1)%time + rtime() - start_loop_time
-#endif
-
-end subroutine make_pair_lists
-
-!-----------------------------------------------------------------------
 
 subroutine temperature(Tscale_solute,Tscale_solvent,Ekinmax)
 ! calculate the temperature
@@ -1979,7 +1596,7 @@ Texcl_solute = zero
 
 !get kinetic energies for solute atoms
 do i=1,nat_solute
-Ekin = 0.5_prec*iaclib(iac(i))%mass*(q_square(v(i)))
+Ekin = 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
 Temp_solute = Temp_solute + Ekin
 
 !******PWadded if
@@ -2003,7 +1620,7 @@ Ekin = zero
 
 !get kinetic energies for solvent atoms
 do i=nat_solute+1,natom
-Ekin = 0.5_prec*iaclib(iac(i))%mass*(q_square(v(i)))
+Ekin = 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
 Temp_solvent = Temp_solvent + Ekin
 
 !******PWadded if
@@ -2135,8 +1752,6 @@ subroutine md_run
 
 ! local variables
 integer				:: i,j,k,niter,iii
-
-integer				:: i3
 real(kind=prec)                         :: Tlast
 real(kind=prec)                         ::Ekinmax
 real(kind=prec)				::Tscale_solute,Tscale_solvent
@@ -2289,7 +1904,7 @@ if ( mod(istep, NBcycle) .eq. 0 ) then
         if (nodeid .eq. 0) then
            call centered_heading('Nonbonded pair list generation', '-')
         end if
-        call make_pair_lists
+        call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 #if defined(DUMP)
                         write(*,332) 'solute-solute', 'solute-water', 'water-water', 'Q-solute', 'Q-water'
                         write(*,333) nodeid, 'count', nbpp_pair, nbpw_pair, &
@@ -2340,13 +1955,13 @@ end if ! every NBcycle steps
 
 
 ! get potential energy and derivatives from FF
-call pot_energy
+call pot_energy(E,EQ)
 ! if we have reached the ene write out, also calculate group contribution
 ! exclusions and qcp if needed
 ! exc are only done on master, while qcp is spread to nodes
 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
         if (nodeid .eq. 0 .and. use_excluded_groups) call calculate_exc
-        if (use_qcp) call calculate_qcp
+        if (use_qcp) call qcp_run(Tfree,E,EQ)
 end if
 
 
@@ -2421,7 +2036,9 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 ! energies
                 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
                 ! nrgy_put_ene(unit, e2, OFFD): print 'e2'=EQ and OFFD to unit 'unit'=11
-                        call put_ene(11, EQ, OFFD,loc_arrays,nstates)
+                ! save classical full system to EQ save, then write
+                        call qatom_savetowrite(EQ,1)
+                        call put_ene(11, EQ_save, OFFD,loc_arrays,nstates)
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
@@ -2476,8 +2093,8 @@ end if
 #endif
 
         ! write output for final step and final coords
-call make_pair_lists
-call pot_energy
+call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
+call pot_energy(E,EQ)
 if (nodeid .eq. 0) then
         write(*,*)
         call write_out
@@ -2543,200 +2160,6 @@ end subroutine md_run
 
 !-----------------------------------------------------------------------
 
-subroutine write_out
-! local variables
-integer					::	i,istate
-
-! header line
-if(istep >= nsteps) then
-write(*,3) 'Energy summary'
-else
-write(*,2) 'Energy summary', istep
-end if
-2 format('======================= ',A15,' at step ',i6,' ========================')
-3 format('=========================== FINAL ',A15,' =============================')
-
-! legend line
-write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
-4 format(16X, 6A10)
-
-! row by row: solute, solvent, solute-solvent, LRF, q-atom
-write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper
-6 format(A,T17, 6F12.2)
-
-if(nwat > 0) then
-write(*,6) 'solvent', E%ww%el, E%ww%vdw, E%w%bond, E%w%angle, E%w%torsion, E%w%improper
-end if
-
-write(*,6) 'solute-solvent', E%pw%el, E%pw%vdw
-
-if(use_LRF) then
-write(*,6) 'LRF', E%LRF
-end if
-
-if(nqat .gt. 0) then
-	write(*,6) 'Q-atom', E%qx%el, E%qx%vdw, E%q%bond, E%q%angle, E%q%torsion, E%q%improper
-end if
-
-! restraints
-write(*,*)
-write(*,4) 'total', 'fix', 'slvnt_rad', 'slvnt_pol', 'shell', 'solute'
-write(*,6) 'restraints', E%restraint%total, E%restraint%fix, &
-        E%restraint%solvent_radial, E%restraint%water_pol, E%restraint%shell, &
-        E%restraint%protein
-write(*,*)
-
-! totals
-if(force_rms) then
-        grms = sqrt(dot_product(d(:), d(:))/(3*natom))
-        write(*,4) 'total', 'potential', 'kinetic', '', 'RMS force'
-        write(*,14) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic, grms
-else
-        write(*,4) 'total', 'potential', 'kinetic'
-        write(*,6) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic
-end if
-14 format(A,T17, 3F10.2, 10X, F10.2)
-
-! q-atom energies
-if(nstates > 0) then
-if(istep >= nsteps) then
-  write(*,3) 'Q-atom energies'
-else
-  write(*,2) 'Q-atom energies', istep
-end if
-
-write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
-
-do istate =1, nstates
-  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq(1)%el, EQ(istate)%qq(1)%vdw
-end do
-write(*,*)
-if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
-  do istate =1, nstates
-        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp(1)%el, EQ(istate)%qp(1)%vdw
-  end do
-  write(*,*)
-end if
-
-if(nwat > 0) then
-  do istate =1, nstates
-        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw(1)%el, EQ(istate)%qw(1)%vdw
-  end do
-  write(*,*)
-end if
-
-do istate =1, nstates
-  write (*,32) 'Q-surr.',istate, EQ(istate)%lambda, &
-                EQ(istate)%qp(1)%el + EQ(istate)%qw(1)%el, EQ(istate)%qp(1)%vdw &
-                + EQ(istate)%qw(1)%vdw
-end do
-write(*,*)
-
-do istate = 1, nstates
-  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx(1)%el,&
-                EQ(istate)%qx(1)%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
-                EQ(istate)%q%torsion, EQ(istate)%q%improper
-end do
-write(*,*)
-
-write(*,22) 'total', 'restraint'
-do istate = 1, nstates
-  write (*,32) 'Q-SUM', istate, EQ(istate)%lambda,&
-                EQ(istate)%total(1), EQ(istate)%restraint
-end do
-do i=1,noffd
-  write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &
-                offd2(i)%k, offd2(i)%l, offd(i)%rkl
-360	  format ('H(',i2,',',i2,') =',f8.2,' dist. between Q-atoms',2i4, ' =',f8.2)
-end do
-end if
-
-if(monitor_group_pairs > 0) then
-        call centered_heading('Monitoring selected groups of nonbonded interactions','=')
-        write (*,37,advance='no')
-        write (*,38) (istate,istate, istate=1,nstates)
-        do i=1,monitor_group_pairs
-                write (*,39,advance='no') i,monitor_group_pair(i)%Vwsum, &
-                        monitor_group_pair(i)%Vwel,monitor_group_pair(i)%Vwlj
-                write (*,40) (monitor_group_pair(i)%Vel(istate), &
-                        monitor_group_pair(i)%Vlj(istate), istate=1,nstates)
-        end do
-end if
-
-write(*,'(80a)') '==============================================================================='
-
-
-22	format('type   st lambda',2A10)
-26	format('type   st lambda',6a10)
-32	format (a,T8,i2,f7.4,2f10.2)
-36	format (a,T8,i2,f7.4,6f10.2)
-37  format ('pair   Vwsum    Vwel    Vwvdw')
-38  format (3(i4,':Vel',i3,':Vvdw'))
-39  format (i2,f10.2,f8.2,f9.2)
-40  format (3(2f8.2))
-
-
-if(use_PBC .and. constant_pressure .and. istep>=nsteps ) then
-        write(*,*)
-        write(*,'(a)') '=========================== VOLUME CHANGE SUMMARY ==========================='
-        write(*,45) boxlength%x*boxlength%y*boxlength%z
-        write(*,*)
-        write(*,46) 'total', 'accepted', 'ratio'
-        write(*,47) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
-write(*,'(80a)') '==============================================================================='
-end if
-45 format('Final volume: ', f10.3)
-46 format(16X, 3A10)
-47 format(A,T17, 2i10, f10.3)
-
-end subroutine write_out
-
-!-----------------------------------------------------------------------
-
-subroutine write_trj
-
-if(.not. trj_write(x)) then
-        call die('failure to write to trajectory file')
-end if
-
-end subroutine write_trj
-
-!-----------------------------------------------------------------------
-
-subroutine write_xfin
-! local variables
-integer						::	i,nat3
-integer        :: canary = -1337
-nat3 = natom*3
-
-if (prec .eq. singleprecision) then
-canary = -137
-elseif (prec .eq. doubleprecision) then
-canary = -1337
-#ifndef PGI
-elseif (prec .eq. quadprecision) then
-canary = -13337
-#endif
-else
-call die('No such precision')
-end if
-rewind (3)
-!new canary on top of file
-write (3) canary
-write (3) nat3, (x(i),i=1,natom)
-write (3) nat3, (v(i),i=1,natom)
-!save dynamic polarisation restraint data
-	if(wpol_restr .and. allocated(wshell)) then
-        write (3) nwpolr_shell, wshell(:)%theta_corr
-end if
-
-if( use_PBC )then
-        write(3) boxlength
-        write(3) boxcentre
-end if
-end subroutine write_xfin
-
-!----------------------------------------------------------------------------
 subroutine MC_volume()
 
 TYPE(qr_vec)                    :: old_x(nat_pro), old_xx(nat_pro), x_move(nat_pro)
@@ -2934,16 +2357,16 @@ call MPI_Bcast(inv_boxl, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (use_LRF) then
 	call cgp_centers
 	if ( iuse_switch_atom == 1 ) then 
-		call nbpplist_box_lrf
-		call nbpwlist_box_lrf
-		call nbqplist_box
+		call nbpplist_box_lrf(Rcpp**2,RcLRF**2)
+		call nbpwlist_box_lrf(Rcpw**2,RcLRF**2)
+		call nbqplist_box(Rcq**2,Rcq)
 	else
-		call nbpplis2_box_lrf
-		call nbpwlis2_box_lrf
-		call nbqplis2_box
+		call nbpplis2_box_lrf(Rcpp**2,RcLRF**2)
+		call nbpwlis2_box_lrf(Rcpw**2,RcLRF**2)
+		call nbqplis2_box(Rcq**2,Rcq)
 	endif
-	call nbwwlist_box_lrf
-	call nbqwlist_box
+	call nbwwlist_box_lrf(Rcww**2,RcLRF**2)
+	call nbqwlist_box(Rcq**2,Rcq)
 ! we are gathering the LRF info here
 #ifdef USE_MPI
 call lrf_gather
@@ -3092,12 +2515,12 @@ E%p%improper =  zero
 E%w%improper =  zero
 
 do istate = 1, nstates
-	EQ(istate)%qq(1:ene_header%arrays)%el = zero
-	EQ(istate)%qq(1:ene_header%arrays)%vdw = zero
-	EQ(istate)%qp(1:ene_header%arrays)%el = zero
-	EQ(istate)%qp(1:ene_header%arrays)%vdw = zero
-	EQ(istate)%qw(1:ene_header%arrays)%el = zero
-	EQ(istate)%qw(1:ene_header%arrays)%vdw = zero
+	EQ(istate)%qq%el = zero
+	EQ(istate)%qq%vdw = zero
+	EQ(istate)%qp%el = zero
+	EQ(istate)%qp%vdw = zero
+	EQ(istate)%qw%el = zero
+	EQ(istate)%qw%vdw = zero
 	EQ(istate)%restraint = zero
 end do
 
@@ -3107,43 +2530,43 @@ d(:) = d(:) *  zero
 #if defined (USE_MPI)
 !First post recieves for gathering data from slaves
 if (nodeid .eq. 0) then
-	call gather_nonbond
+	call gather_nonbond(E,EQ)
 end if
 #endif
 
 
 if (nodeid .eq. 0) then
-        call pot_energy_bonds
-        call p_restrain
+        call pot_energy_bonds(E)
+        call p_restrain(E%restraint%protein,EQ(:)%restraint,EQ(:)%lambda)
 end if
 if(natom > nat_solute) then
         if((ivdw_rule.eq.VDW_GEOMETRIC).and. &
                 (solvent_type == SOLVENT_SPC)) then
-                call nonbond_qw_spc_box
-                call nonbond_ww_spc_box
+                call nonbond_qw_spc_box(EQ(:)%qw,EQ(:)%lambda)
+                call nonbond_ww_spc_box(E%ww)
         else
-                call nonbond_qw_box
-                call nonbond_ww_box
+                call nonbond_qw_box(EQ(:)%qw,EQ(:)%lambda)
+                call nonbond_ww_box(E%ww)
         end if
         if(ntors>ntors_solute) then
-                call nonbond_solvent_internal_box
+                call nonbond_solvent_internal_box(E%ww)
         end if
-        call nonbond_pw_box
+        call nonbond_pw_box(E%pw)
 end if
-call nonbond_pp_box
-call nonbond_qp_box
+call nonbond_pp_box(E%pp)
+call nonbond_qp_box(EQ(:)%qp,EQ(:)%lambda)
 if (nodeid .eq. 0) then
-        call nonbond_qqp
-        call nonbond_qq
+        call nonbond_qqp(EQ(:)%qp,EQ(:)%lambda)
+        call nonbond_qq(EQ(:)%qq,EQ(:)%lambda)
 end if
 
 if (use_LRF) then
-        call lrf_taylor
+        call lrf_taylor(E%lrf)
 end if
 
 #if defined(USE_MPI)
 if (nodeid .ne. 0) then  !Slave nodes
-	call gather_nonbond
+	call gather_nonbond(E,EQ(:))
 end if
 #endif
 
@@ -3164,12 +2587,10 @@ end do
 	  E%ww%vdw  = E%ww%vdw + E_recv(i)%ww%vdw
 	  E%lrf     = E%lrf    + E_recv(i)%lrf
 		do ii=1,nstates
-		do jj=1,ene_header%arrays
-	  EQ(ii)%qp(jj)%el  = EQ(ii)%qp(jj)%el  + EQ_recv(ii,jj,i)%qp%el
-	  EQ(ii)%qp(jj)%vdw = EQ(ii)%qp(jj)%vdw + EQ_recv(ii,jj,i)%qp%vdw
-	  EQ(ii)%qw(jj)%el  = EQ(ii)%qw(jj)%el  + EQ_recv(ii,jj,i)%qw%el
-	  EQ(ii)%qw(jj)%vdw = EQ(ii)%qw(jj)%vdw + EQ_recv(ii,jj,i)%qw%vdw
-		end do
+	  EQ(ii)%qp%el  = EQ(ii)%qp%el  + EQ_recv(ii,i)%qp%el
+	  EQ(ii)%qp%vdw = EQ(ii)%qp%vdw + EQ_recv(ii,i)%qp%vdw
+	  EQ(ii)%qw%el  = EQ(ii)%qw%el  + EQ_recv(ii,i)%qw%el
+	  EQ(ii)%qw%vdw = EQ(ii)%qw%vdw + EQ_recv(ii,i)%qw%vdw
 		end do
 	end do
 #endif
@@ -3177,14 +2598,12 @@ end do
 	!summation of energies
 	do istate = 1, nstates
 			! update EQ
-		do jj=1,ene_header%arrays
-			EQ(istate)%qx(jj)%el  = EQ(istate)%qq(jj)%el &
-			+ EQ(istate)%qp(jj)%el +EQ(istate)%qw(jj)%el
-			EQ(istate)%qx(jj)%vdw = EQ(istate)%qq(jj)%vdw &
-			+ EQ(istate)%qp(jj)%vdw+EQ(istate)%qw(jj)%vdw
-		end do
-		E%qx%el    = E%qx%el    + EQ(istate)%qx(1)%el   *EQ(istate)%lambda
-		E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx(1)%vdw  *EQ(istate)%lambda
+		EQ(istate)%qx%el  = EQ(istate)%qq%el &
+		+ EQ(istate)%qp%el +EQ(istate)%qw%el
+		EQ(istate)%qx%vdw = EQ(istate)%qq%vdw &
+		+ EQ(istate)%qp%vdw+EQ(istate)%qw%vdw
+		E%qx%el    = E%qx%el    + EQ(istate)%qx%el   *EQ(istate)%lambda
+		E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx%vdw  *EQ(istate)%lambda
 
 		! update E%restraint%protein with an average of all states
 		E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda

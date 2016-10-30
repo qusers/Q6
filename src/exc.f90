@@ -110,11 +110,11 @@ integer			:: i
 do i=1,nexc
         call mask_deallocate(ST_gc(i)%gcmask)
 end do
-if(allocated(exc_nbqq) then
-        deallocate(exc_nbqq,exc_nbqq_list)
+if(allocated(exc_nbqq_list)) then
+        deallocate(exc_nbqq_list)
 end if
-if(allocated(exc_nbqp) then
-        deallocate(exc_nbqp,exc_nbqp_list)
+if(allocated(exc_nbqp_list)) then
+        deallocate(exc_nbqp_list)
 end if
 
 end subroutine excluded_shutdown

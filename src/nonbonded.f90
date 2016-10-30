@@ -11,7 +11,7 @@ module NONBONDED
 use SIZES
 use GLOBALS
 use QMATH
-!$ use omp_lib
+use QATOM
 implicit none
 
 
@@ -74,7 +74,7 @@ i  = nb%i
 j  = nb%j
 
 ! calculate dx, r and r2
-distance = q_dist2((x(i)-x(j),shift))
+distance = q_dist2((x(i)-x(j)),shift)
 
 
 r2   = distance%r2
@@ -82,9 +82,9 @@ r    = distance%r
 r6   = distance%r6
 r12  = distance%r12
 
-nbe_b%Vel  = nbpp(ip)%elec * r
-nbe_b%V_a  = nbpp(ip)%vdWA *r12 
-nbe_b%V_b  = nbpp(ip)%vdWB *r6
+nbe_b%Vel  = nb%elec * r
+nbe_b%V_a  = nb%vdWA *r12 
+nbe_b%V_b  = nb%vdWB *r6
 nbe_b%dv   = r2*( -nbe_b%Vel -12.0_prec*nbe_b%V_a +6.0_prec*nbe_b%V_b )
 nbe_b%vec  = distance%vec
 end function nbe_b
@@ -144,10 +144,6 @@ real(kind=prec)                         :: r2,r,r6,r12,r6_hc
 TYPE(qr_dist3)                          :: distance
 TYPE(qr_vec)                            :: shift
 
-do ip = mp_start,mp_end
-#else
-do ip = 1, nbqq_pair(istate)
-#endif
   ! for every pair:
 iq   = nb%iq
 i    = iqseq(iq)
@@ -201,10 +197,10 @@ r6    = one/r6
 r12   = r6*r6
 
 ! calculate qi, Vel, V_a, V_b and dv
-nbe_qpb%Vel  = nb%elec *r
-nbe_qpb%V_a  = nb%vdWA *r12
-nbe_qpb%V_b  = nb%vdWB *r6
-nbe_qpb%dv   = r2*( -nbe_qpb%Vel -(12.0_prec*nbe_qpb%V_a -6.0_prec*nbe_qpb%V_b)*r6*r6_hc )*lambda
+nbe_qx%Vel  = nb%elec *r
+nbe_qx%V_a  = nb%vdWA *r12
+nbe_qx%V_b  = nb%vdWB *r6
+nbe_qx%dv   = r2*( -nbe_qx%Vel -(12.0_prec*nbe_qx%V_a -6.0_prec*nbe_qx%V_b)*r6*r6_hc )*lambda
 
 end function nbe_qx
 

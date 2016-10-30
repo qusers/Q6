@@ -14,6 +14,8 @@ use MPIGLOB
 use GLOBALS
 use QATOM
 use QMATH
+use TRJ
+implicit none
 
 contains
 
@@ -124,17 +126,17 @@ if(nodeid .eq. 0) then
          request_recv(numnodes-1,3), &
          d_recv(natom*3,numnodes-1), &
          E_recv(numnodes-1), &
-         EQ_recv(nstates,ene_header%arrays,numnodes-1), &
+         EQ_recv(nstates,numnodes-1), &
          stat=alloc_status)
  call check_alloc('MPI data arrays head node')
 else
  allocate(E_send(1), &
-          EQ_send(nstates,ene_header%arrays), &
+          EQ_send(nstates), &
           stat=alloc_status)
  call check_alloc('MPI data arrays slave nodes')
 end if
 #ifdef _OPENMP
-allocate(qomp_elec(nstates,ene_header%arrays),qomp_vdw(nstates,ene_header%arrays),stat=alloc_status)
+allocate(qomp_elec(nstates),qomp_vdw(nstates),stat=alloc_status)
 call check_alloc('OMP temporary energies')
 #endif
 end subroutine allocate_mpi
@@ -565,6 +567,293 @@ write (*,100) calculation_assignment%ww%max
 end subroutine reallocate_nonbondlist_ww
 
 !----------------------------------------------------------------------
+
+subroutine die(cause)
+! args
+character(*), optional		:: cause
+
+
+!
+! exit with an error message
+!
+
+
+! local vars
+integer						:: i
+! flush stuff
+integer(4), parameter			:: stdout_unit = 6
+! external flush disabled for gfortran
+! external flush
+
+if (nodeid .eq. 0) then
+write(*,*)
+call centered_heading('ABNORMAL TERMINATION', '!')
+! write final energies if run has started
+if (istep > 0) then
+        if ( mod(istep,iout_cycle) .ne. 1 ) call write_out
+end if
+        if(allocated(v)) then
+        !save restart file for diagnosing coordinate problems
+            write(*,*) 'restart file written at step', istep
+                call write_xfin
+        endif
+write (*,'(79a)') ('!',i=1,79)
+call close_output_files
+
+! apologise
+write(*,'(a)') 'ABNORMAL TERMINATION of Qdyn5'
+if (present(cause)) then
+        write(*,'(79a)') 'Terminating due to ', cause
+        endif
+write (*,'(79a)') ('!',i=1,79)
+#if defined(CRAY)
+!Cray can't flush stdout...
+#elif defined(NO_FLUSH)
+        !When you can't flush
+#else
+! flush stdout
+call flush(stdout_unit)
+#endif
+end if	
+! clean up
+call md_deallocate
+
+
+#if defined (USE_MPI)
+! abort all processes with exit code 255
+call MPI_Abort(MPI_COMM_WORLD, 255, ierr)
+#else
+! stop with a message to stderr
+stop 'Qdyn5 terminated abnormally'
+#endif
+
+end subroutine die
+
+!-----------------------------------------------------------------------
+! need writing out routines here because they are linked directly in die
+! TODO
+! needs to split apart and made much easier to handle
+
+subroutine write_out
+! local variables
+integer					::	i,istate,ngrms
+
+! header line
+if(istep >= nsteps) then
+write(*,3) 'Energy summary'
+else
+write(*,2) 'Energy summary', istep
+end if
+2 format('======================= ',A15,' at step ',i6,' ========================')
+3 format('=========================== FINAL ',A15,' =============================')
+
+! legend line
+write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
+4 format(16X, 6A10)
+
+! row by row: solute, solvent, solute-solvent, LRF, q-atom
+write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper
+6 format(A,T17, 6F12.2)
+
+if(nwat > 0) then
+write(*,6) 'solvent', E%ww%el, E%ww%vdw, E%w%bond, E%w%angle, E%w%torsion, E%w%improper
+end if
+
+write(*,6) 'solute-solvent', E%pw%el, E%pw%vdw
+
+if(use_LRF) then
+write(*,6) 'LRF', E%LRF
+end if
+
+if(nqat .gt. 0) then
+	write(*,6) 'Q-atom', E%qx%el, E%qx%vdw, E%q%bond, E%q%angle, E%q%torsion, E%q%improper
+end if
+
+! restraints
+write(*,*)
+write(*,4) 'total', 'fix', 'slvnt_rad', 'slvnt_pol', 'shell', 'solute'
+write(*,6) 'restraints', E%restraint%total, E%restraint%fix, &
+        E%restraint%solvent_radial, E%restraint%water_pol, E%restraint%shell, &
+        E%restraint%protein
+write(*,*)
+
+! totals
+if(force_rms) then
+        ! sum up all forces, can't do dot product as before
+        grms = zero
+        do ngrms = 1,natom
+        grms = grms + q_dotprod(d(ngrms),d(ngrms)/real(3*natom,kind=prec))
+        end do
+        grms = q_sqrt(grms)
+!        grms = sqrt(dot_product(d(:), d(:))/(3*natom))
+        write(*,4) 'total', 'potential', 'kinetic', '', 'RMS force'
+        write(*,14) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic, grms
+else
+        write(*,4) 'total', 'potential', 'kinetic'
+        write(*,6) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic
+end if
+14 format(A,T17, 3F10.2, 10X, F10.2)
+
+! q-atom energies
+if(nstates > 0) then
+if(istep >= nsteps) then
+  write(*,3) 'Q-atom energies'
+else
+  write(*,2) 'Q-atom energies', istep
+end if
+
+write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
+
+do istate =1, nstates
+  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq%el, EQ(istate)%qq%vdw
+end do
+write(*,*)
+if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
+  do istate =1, nstates
+        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp%el, EQ(istate)%qp%vdw
+  end do
+  write(*,*)
+end if
+
+if(nwat > 0) then
+  do istate =1, nstates
+        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw%el, EQ(istate)%qw%vdw
+  end do
+  write(*,*)
+end if
+
+do istate =1, nstates
+  write (*,32) 'Q-surr.',istate, EQ(istate)%lambda, &
+                EQ(istate)%qp%el + EQ(istate)%qw%el, EQ(istate)%qp%vdw &
+                + EQ(istate)%qw%vdw
+end do
+write(*,*)
+
+do istate = 1, nstates
+  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx%el,&
+                EQ(istate)%qx%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
+                EQ(istate)%q%torsion, EQ(istate)%q%improper
+end do
+write(*,*)
+
+write(*,22) 'total', 'restraint'
+do istate = 1, nstates
+  write (*,32) 'Q-SUM', istate, EQ(istate)%lambda,&
+                EQ(istate)%total, EQ(istate)%restraint
+end do
+do i=1,noffd
+  write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &
+                offd2(i)%k, offd2(i)%l, offd(i)%rkl
+360	  format ('H(',i2,',',i2,') =',f8.2,' dist. between Q-atoms',2i4, ' =',f8.2)
+end do
+end if
+
+if(monitor_group_pairs > 0) then
+        call centered_heading('Monitoring selected groups of nonbonded interactions','=')
+        write (*,37,advance='no')
+        write (*,38) (istate,istate, istate=1,nstates)
+        do i=1,monitor_group_pairs
+                write (*,39,advance='no') i,monitor_group_pair(i)%Vwsum, &
+                        monitor_group_pair(i)%Vwel,monitor_group_pair(i)%Vwlj
+                write (*,40) (monitor_group_pair(i)%Vel(istate), &
+                        monitor_group_pair(i)%Vlj(istate), istate=1,nstates)
+        end do
+end if
+
+write(*,'(80a)') '==============================================================================='
+
+
+22	format('type   st lambda',2A10)
+26	format('type   st lambda',6a10)
+32	format (a,T8,i2,f7.4,2f10.2)
+36	format (a,T8,i2,f7.4,6f10.2)
+37  format ('pair   Vwsum    Vwel    Vwvdw')
+38  format (3(i4,':Vel',i3,':Vvdw'))
+39  format (i2,f10.2,f8.2,f9.2)
+40  format (3(2f8.2))
+
+
+if(use_PBC .and. constant_pressure .and. istep>=nsteps ) then
+        write(*,*)
+        write(*,'(a)') '=========================== VOLUME CHANGE SUMMARY ==========================='
+        write(*,45) boxlength%x*boxlength%y*boxlength%z
+        write(*,*)
+        write(*,46) 'total', 'accepted', 'ratio'
+        write(*,47) 'Attempts', volume_try, volume_acc, real(volume_acc, kind=prec)/volume_try
+write(*,'(80a)') '==============================================================================='
+end if
+45 format('Final volume: ', f10.3)
+46 format(16X, 3A10)
+47 format(A,T17, 2i10, f10.3)
+
+end subroutine write_out
+
+!-----------------------------------------------------------------------
+
+subroutine write_trj
+
+if(.not. trj_write(x)) then
+        call die('failure to write to trajectory file')
+end if
+
+end subroutine write_trj
+
+!-----------------------------------------------------------------------
+
+subroutine write_xfin
+! local variables
+integer						::	i,nat3
+integer        :: canary = -1337
+nat3 = natom*3
+
+if (prec .eq. singleprecision) then
+canary = -137
+elseif (prec .eq. doubleprecision) then
+canary = -1337
+#ifndef PGI
+elseif (prec .eq. quadprecision) then
+canary = -13337
+#endif
+else
+stop 'No such precision'
+end if
+rewind (3)
+!new canary on top of file
+write (3) canary
+write (3) nat3, (x(i),i=1,natom)
+write (3) nat3, (v(i),i=1,natom)
+!save dynamic polarisation restraint data
+	if(wpol_restr .and. allocated(wshell)) then
+        write (3) nwpolr_shell, wshell(:)%theta_corr
+end if
+
+if( use_PBC )then
+        write(3) boxlength
+        write(3) boxcentre
+end if
+end subroutine write_xfin
+
+!----------------------------------------------------------------------------
+
+subroutine close_input_files
+close (1)
+if(restart) close (2)
+if ( implicit_rstr_from_file .eq. 1 ) close (12)
+close (13)
+
+end subroutine close_input_files
+
+!-----------------------------------------------------------------------
+
+subroutine close_output_files
+close (3)
+if ( itrj_cycle .gt. 0 ) close (10)
+if ( iene_cycle .gt. 0 ) close (11)
+
+end subroutine close_output_files
+
+!-----------------------------------------------------------------------
+
 
 end module QALLOC
 

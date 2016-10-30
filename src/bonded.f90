@@ -38,7 +38,7 @@ TYPE(bond_val) function bond_calc(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 
-bond_calc%a_vec  = qvec_sub(a,b)
+bond_calc%a_vec  = b - a
 bond_calc%b_vec  = -bond_calc%a_vec
 bond_calc%dist = q_sqrt(qvec_square(bond_calc%a_vec))
 
@@ -52,7 +52,7 @@ TYPE(bond_val) function box_bond_calc(a,b,boxl,invb)
 TYPE(qr_vec) :: a,b,boxl,invb
 ! locals
 
-box_bond_calc%a_vec  = a - b
+box_bond_calc%a_vec  = b - a
 box_bond_calc%a_vec  = box_bond_calc%a_vec - (boxl*q_nint(box_bond_calc%a_vec*invb))
 box_bond_calc%b_vec  = -box_bond_calc%a_vec
 box_bond_calc%dist = q_sqrt(qvec_square(box_bond_calc%a_vec))
@@ -70,8 +70,8 @@ TYPE(qr_vec) :: a,b,c
 TYPE(bond_val)  :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
 
-tempab = bond_calc(a,b)
-tempbc = bond_calc(b,c)
+tempab = bond_calc(b,a)
+tempbc = bond_calc(c,b)
 
 scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
 scalar = scalar/(tempab%dist*tempbc%dist)
@@ -101,8 +101,8 @@ TYPE(qr_vec) :: a,b,c,boxl,invb
 TYPE(bond_val)  :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
 
-tempab = box_bond_calc(a,b,boxl,invb)
-tempbc = box_bond_calc(b,c,boxl,invb)
+tempab = box_bond_calc(b,a,boxl,invb)
+tempbc = box_bond_calc(c,b,boxl,invb)
 
 scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
 scalar = scalar/(tempab%dist*tempbc%dist)
@@ -146,8 +146,8 @@ TYPE(qr_vec)    :: vec1,vec2
 
 ! get length of the individual bond vectors
 abvec = a - b
-bcvec = b - c
-cdvec = c - d
+bcvec = c - b
+cdvec = d - c
 
 ! get cross product between the vectors
 ! nedded for later angle calculation

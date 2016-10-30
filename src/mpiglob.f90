@@ -34,11 +34,6 @@ use NRGY
      type(NB_ENERGIES)    :: qp,qw
   end type MPI_NBQ_ENERGIES
 
-  type OMPI_NBQ_ENERGIES
-	sequence
-	type(NB_ENERGIES)	:: qp,qw
-  end type OMPI_NBQ_ENERGIES
-
   ! global MPI data
   integer                  :: nodeid, numnodes,ierr
   integer,allocatable      :: mpi_status(:,:)
@@ -48,7 +43,7 @@ use NRGY
   real(kind=prec),allocatable     :: d_recv(:,:)
   type(MPI_NB_ENERGIES),allocatable  :: E_recv(:),E_send(:)
 !additional dimension for new structure of EQ arrays
-  type(MPI_NBQ_ENERGIES),allocatable :: EQ_recv(:,:,:),EQ_send(:,:)
+  type(MPI_NBQ_ENERGIES),allocatable :: EQ_recv(:,:),EQ_send(:)
   integer,allocatable            ::request_recv(:,:)
 
  !Book keeping of nb-pairs
@@ -71,7 +66,7 @@ use NRGY
  !for omp use
  integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter
  real(kind=prec)  :: mp_real_tmp
- real(kind=prec),allocatable  :: qomp_elec(:,:),qomp_vdw(:,:)
+ real(kind=prec),allocatable  :: qomp_elec(:),qomp_vdw(:)
 
  !$omp threadprivate(thread_id, mp_real_tmp, mp_start, mp_end, mp_counter)
 #endif
