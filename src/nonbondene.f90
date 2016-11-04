@@ -5369,7 +5369,10 @@ dist = q_dist3(x(i),x(j))
 do istate = 1, nstates
 
 nb_ene = nbe_qx(nbqw(jp,istate),lambda(istate),dist)
-
+Vel = nb_ene%Vel
+V_a = nb_ene%V_a
+V_b = nb_ene%V_b
+dv  = nb_ene%dv
 ! update forces
 d(i) = d(i) - dist%vec*dv
 d(j) = d(j) + dist%vec*dv
@@ -5690,9 +5693,9 @@ dv = zero
 do istate = 1, nstates
 nb_ene = nbe_qx(nbqw(iw,istate),lambda(istate),dist)
 ! calculate qi, Vel, V_a, V_b and dv
-V_a    = nb_ene%Vel 
-V_b    = nb_ene%V_a 
-Vel    = nb_ene%V_b 
+V_a    = nb_ene%V_a 
+V_b    = nb_ene%V_b 
+Vel    = nb_ene%Vel 
 dv     = dv + nb_ene%dv 
 ! update q-water energies
 #ifdef _OPENMP
@@ -5804,9 +5807,9 @@ do istate = 1, nstates
 nb_ene = nbe_qx(nbqw(iw,istate),lambda(istate),dist)
 
 ! calculate qi, Vel, V_a, V_b and dv
-V_a = nb_ene%Vel 
-V_b = nb_ene%V_a 
-Vel = nb_ene%V_b 
+V_a = nb_ene%V_a 
+V_b = nb_ene%V_b 
+Vel = nb_ene%Vel 
 dv  = dv + nb_ene%dv 
 !softcore r6*r6_hc is (r^6/(r^6+alpha))
 ! update q-water energies
@@ -5907,9 +5910,9 @@ i    = nbww(iw)%i
 j    = nbww(iw)%j
 
 nb_ene = nbe(nbww(iw))
-V_a = nb_ene%Vel 
-V_b = nb_ene%V_a 
-Vel = nb_ene%V_b 
+V_a = nb_ene%V_a 
+V_b = nb_ene%V_b 
+Vel = nb_ene%Vel 
 
 #ifdef _OPENMP
 Vvdw_omp = Vvdw_omp + V_a - V_b
@@ -6011,9 +6014,9 @@ shift = boxlength*q_nint(shift*inv_boxl)
 
 nb_ene = nbe_b(nbww(iw),shift)
 
-V_a = nb_ene%Vel
-V_b = nb_ene%V_a 
-Vel = nb_ene%V_b 
+V_a = nb_ene%V_a
+V_b = nb_ene%V_b 
+Vel = nb_ene%Vel 
 
 #ifdef _OPENMP
 Vvdw_omp = Vvdw_omp + V_a - V_b

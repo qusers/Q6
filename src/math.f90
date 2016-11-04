@@ -6,6 +6,9 @@
 module  QMATH
 
 use SIZES
+
+implicit none
+
 ! this is now the default vector type for all operations
 TYPE qr_vec
 real(kind=prec) :: x,y,z
@@ -141,7 +144,7 @@ TYPE(qr_dist) function q_dist(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 TYPE(qr_vec) :: temp
-temp = qvec_sub(b,a)
+temp = b - a
 q_dist%r2  = one/qvec_square(temp)
 q_dist%r   = q_sqrt(q_dist%r2)
 q_dist%vec = temp
@@ -153,7 +156,7 @@ TYPE(qr_dist2) function q_dist2(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 TYPE(qr_vec) :: temp
-temp = qvec_sub(b,a)
+temp = b - a
 q_dist2%r2  = one/qvec_square(temp)
 q_dist2%r   = q_sqrt(q_dist2%r2)
 q_dist2%r6  = q_dist2%r2 * q_dist2%r2 * q_dist2%r2
@@ -168,7 +171,7 @@ TYPE(qr_dist3) function q_dist3(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 TYPE(qr_vec) :: temp
-temp = qvec_sub(b,a)
+temp = b - a
 q_dist3%r2  = one/qvec_square(temp)
 q_dist3%r   = q_sqrt(q_dist3%r2)
 q_dist3%r6  = q_dist3%r2 * q_dist3%r2 * q_dist3%r2
@@ -181,7 +184,7 @@ real(kind=prec) function q_dist4(a,b)
 TYPE(qr_vec) :: a,b
 ! locals
 TYPE(qr_vec) :: temp
-temp = qvec_sub(b,a)
+temp = b - a
 q_dist4 = qvec_square(temp)
 end function q_dist4
 
@@ -191,7 +194,7 @@ TYPE(qr_dist5) function q_dist5(a,b)
 ! args
 TYPE(qr_vec) :: a,b
 ! locals
-q_dist5%vec = qvec_sub(b,a)
+q_dist5%vec = b - a
 q_dist5%r2  = qvec_square(q_dist5%vec)
 end function q_dist5
 
@@ -236,10 +239,10 @@ function q_realscale2(b,a)
 ! args
 TYPE(qr_vec), INTENT(IN) :: a
 real(kind=prec), INTENT(IN) :: b
-TYPE(qr_vec) :: q_realscale
-q_realscale%x = a%x * b
-q_realscale%y = a%y * b
-q_realscale%z = a%z * b
+TYPE(qr_vec) :: q_realscale2
+q_realscale2%x = a%x * b
+q_realscale2%y = a%y * b
+q_realscale2%z = a%z * b
 end function q_realscale2
 
 function q_realdiv(a,b)
@@ -318,7 +321,7 @@ real(kind=doubleprecision) :: temp1,temp2
 
 temp1       = a
 temp2       = dlog(temp1)
-q_loagrithm = temp2
+q_logarithm = temp2
 
 end function q_logarithm
 

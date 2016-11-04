@@ -71,7 +71,7 @@ TYPE(bond_val)  :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
 
 tempab = bond_calc(b,a)
-tempbc = bond_calc(c,b)
+tempbc = bond_calc(b,c)
 
 scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
 scalar = scalar/(tempab%dist*tempbc%dist)
@@ -102,7 +102,7 @@ TYPE(bond_val)  :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
 
 tempab = box_bond_calc(b,a,boxl,invb)
-tempbc = box_bond_calc(c,b,boxl,invb)
+tempbc = box_bond_calc(b,c,boxl,invb)
 
 scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
 scalar = scalar/(tempab%dist*tempbc%dist)
@@ -152,7 +152,7 @@ cdvec = d - c
 ! get cross product between the vectors
 ! nedded for later angle calculation
 crossabc =  q_crossprod(abvec,bcvec)
-crossbcd = -q_crossprod(bcvec,cdvec)
+crossbcd =  q_crossprod(-bcvec,cdvec)
 
 ! absolute number of vector equals distance
 abs2_abc = qvec_square(crossabc)
@@ -235,7 +235,7 @@ cdvec = d - c
 ! get cross product between the vectors
 ! nedded for later angle calculation
 crossabc =  q_crossprod(abvec,bcvec)
-crossbcd = -q_crossprod(bcvec,cdvec)
+crossbcd =  q_crossprod(-bcvec,cdvec)
 ! absolute number of vector equals distance
 abs2_abc = qvec_square(crossabc)
 abs2_bcd = qvec_square(crossbcd)

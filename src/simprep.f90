@@ -3517,9 +3517,10 @@ end if
 if (use_excluded_groups) then
 !start writing the energy file header with the needed information
 !one array for each group + 1 for the default environment
+! needs to be higher if QCP also on
 	write(*,*)
 	write(*,*) 'Preparing residue groups for group contribution calculation'
-	ene_header%arrays = ngroups_gc + 1
+	ene_header%arrays = ngroups_gc + 1 + QCP_N
 	allocate(ene_header%types(ngroups_gc+1),ene_header%numres(ngroups_gc+1),&
 			ene_header%gcnum(ngroups_gc+1))
 	runvar = 2

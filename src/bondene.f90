@@ -273,7 +273,7 @@ do ip = iend, istart,-1
 
 ! ---       energy
 
-	arg = phi - imp_lib(ic)%imp0
+	arg = calc%angl - imp_lib(ic)%imp0
 	arg = arg - 2.0_prec*pi*nint(arg/(2.0_prec*pi))
 	dv  = imp_lib(ic)%fk*arg
 #ifdef _OPENMP
@@ -343,13 +343,13 @@ do ip = iend, istart,-1
 	ic = impropers(ip)%cod
 	calc = improper_calc(x(i),x(j),x(k),x(l))
 
-	arg = 2*phi - imp_lib(ic)%imp0
+	arg = 2*calc%angl - imp_lib(ic)%imp0
 #ifdef _OPENMP
-	mp_real_tmp = mp_real_tmp + imp_lib(ic)%fk * (1 + cos(arg))
+	mp_real_tmp = mp_real_tmp + imp_lib(ic)%fk * (1 + q_cos(arg))
 #else
-	improper2 = improper2 + imp_lib(ic)%fk * (1 + cos(arg))
+	improper2 = improper2 + imp_lib(ic)%fk * (1 + q_cos(arg))
 #endif
-	dv  = -2*imp_lib(ic)%fk * sin(arg)
+	dv  = -2*imp_lib(ic)%fk * q_sin(arg)
 
 ! ---       forces
 	d(i) = d(i) + calc%a_vec*dv
@@ -1089,7 +1089,7 @@ do mol=1,shake_molecules
 
                                 i = shake_mol(mol)%bond(ic)%i
                                 j = shake_mol(mol)%bond(ic)%j
-                                xij     = q_dist5(x(i),x(j))
+                                xij     = q_dist5(x(j),x(i))
                                 diff    = shake_mol(mol)%bond(ic)%dist2 - xij%r2
                                 if(abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
                                         shake_mol(mol)%bond(ic)%ready = .true. ! in range
@@ -1098,7 +1098,7 @@ do mol=1,shake_molecules
                                 scp  = q_dotprod(xij%vec,xxij)
                                 corr = diff/(2.0_prec*scp*(winv(i)+winv(j)))
                                 x(i) = x(i) + ( xxij*corr*winv(i))
-                                x(j) = x(j) + (-xxij*corr*winv(i))
+                                x(j) = x(j) + (-xxij*corr*winv(j))
                         end if
                 end do
 

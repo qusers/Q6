@@ -180,7 +180,7 @@ function qcp_bisect(qcpvec,wavelength,level)
 ! arguments
 ! all the coordinates for the beads of a given PI atom
 TYPE(qr_vec)                    :: qcpvec(:)
-TYPE(qr_vec)                    :: qcp_bisect(sizeof(qcpvec))
+TYPE(qr_vec)                    :: qcp_bisect(size(qcpvec))
 ! wavelength, used for step
 real(kind=prec)                 :: wavelength
 ! bisection level, I guess
@@ -221,7 +221,7 @@ function qcp_center(qcpvec)
 ! centers all beads of a qcp atom on the middle
 ! arguments
 TYPE(qr_vec)                    :: qcpvec(:)
-TYPE(qr_vec)                    :: qcp_center(sizeof(qcpvec))
+TYPE(qr_vec)                    :: qcp_center(size(qcpvec))
 ! locals
 integer                         :: i
 real(kind=prec)                 :: inv_beads
@@ -425,7 +425,7 @@ deltaH = zero
 bfactor = q_exp(-deltaH*beta)
 
 ! get some random number?
-irand = qcp_randm
+irand = qcp_randm()
 
 ! this is the monte carlo part
 if (bfactor .ge. irand) then

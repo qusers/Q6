@@ -187,7 +187,6 @@ EQ_loc(istate)%qx%vdw = EQ_loc(istate)%qq%vdw+EQ_loc(istate)%qp%vdw+EQ_loc(istat
 EQ_loc(istate)%total =  EQ_loc(istate)%q%bond + EQ_loc(istate)%q%angle   &
   + EQ_loc(istate)%q%torsion  + EQ_loc(istate)%q%improper + EQ_loc(istate)%qx%el &
   + EQ_loc(istate)%qx%vdw  + EQ_loc(istate)%restraint
-end do
 
 ! update E with an average of all states
 E_loc%q%bond     = E_loc%q%bond     + EQ_loc(istate)%q%bond     * EQ_loc(istate)%lambda
@@ -199,7 +198,7 @@ E_loc%qx%vdw   = E_loc%qx%vdw   + EQ_loc(istate)%qx%vdw  *EQ_loc(istate)%lambda
 
 ! update E%restraint%protein with an average of all states
 E_loc%restraint%protein = E_loc%restraint%protein + EQ_loc(istate)%restraint*EQ_loc(istate)%lambda
-
+end do
 ! total energy summary
 E_loc%restraint%total = E_loc%restraint%fix + E_loc%restraint%shell + &
 E_loc%restraint%protein + E_loc%restraint%solvent_radial + E_loc%restraint%water_pol
