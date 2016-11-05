@@ -67,14 +67,15 @@ TYPE(angl_val) function angle_calc(a,b,c)
 ! args
 TYPE(qr_vec) :: a,b,c
 ! locals
-TYPE(bond_val)  :: tempab,tempbc
+TYPE(qr_dist)   :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar
+TYPE(qr_vec)    :: tmp
 
-tempab = bond_calc(b,a)
-tempbc = bond_calc(b,c)
+tempab = q_dist(b,a)
+tempbc = q_dist(b,c)
 
-scalar = q_dotprod(tempab%a_vec,tempbc%a_vec)
-scalar = scalar/(tempab%dist*tempbc%dist)
+scalar = q_dotprod(tempab%vec,tempbc%vec)
+scalar = scalar*(tempab%r*tempbc%r)
 
 if ( scalar .gt.  one ) scalar =  one
 if ( scalar .lt. -one ) scalar = -one
@@ -84,11 +85,20 @@ inv_angl = q_sin(angle_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
-angle_calc%a_vec = ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
-                   ( (tempab%a_vec/tempab%dist**2) * scalar)) * inv_angl
-angle_calc%b_vec = ( (tempab%a_vec/(tempab%dist*tempbc%dist)) - &
-                   ( (tempbc%a_vec/tempbc%dist**2) * scalar)) * inv_angl
-angle_calc%c_vec = -(angle_calc%a_vec + angle_calc%b_vec)
+tmp = tempbc%vec*(tempab%r*tempbc%r) - &
+        tempab%vec * scalar * tempab%r2
+tmp = tmp * inv_angl
+
+angle_calc%a_vec = tmp
+
+tmp = tempab%vec*(tempab%r*tempbc%r) - &
+        tempbc%vec * scalar * tempbc%r2
+
+tmp = tmp * inv_angl
+
+angle_calc%b_vec = tmp
+
+angle_calc%c_vec = angle_calc%a_vec + angle_calc%b_vec
 
 end function angle_calc
 

@@ -82,7 +82,7 @@ do ia=istart,iend
 ! and update force array
 d(i) = d(i) + calc%a_vec*dv
 d(j) = d(j) + calc%b_vec*dv
-d(k) = d(k) + calc%c_vec*dv
+d(k) = d(k) - calc%c_vec*dv
 
 end do
 #ifdef _OPENMP
@@ -214,8 +214,8 @@ do ib=istart,iend
 
         ! calculate dv and update d
         dv = bnd_lib(ic)%fk*db/calc%dist
-	d(i) = d(i) + calc%a_vec*dv
-	d(j) = d(j) + calc%b_vec*dv
+	d(i) = d(i) - calc%a_vec*dv
+	d(j) = d(j) - calc%b_vec*dv
 end do
 #ifdef _OPENMP
 !$omp atomic update
@@ -412,7 +412,7 @@ dv = gamma*qanglib(ic)%fk*da*lambda
 
 d(i) = d(i) + calc%a_vec*dv 
 d(j) = d(j) + calc%b_vec*dv
-d(k) = d(k) + calc%c_vec*dv
+d(k) = d(k) - calc%c_vec*dv
 
 if ( icoupl .ne. 0 ) then
 
@@ -514,8 +514,8 @@ do ib = 1, nqbond
 	dv = (2.0_prec*qbondlib(ic)%Dmz*qbondlib(ic)%amz*(fexp-fexp*fexp) &
 		+ qbondlib(ic)%fk*db)*lambda/calc%dist
 
-	d(i) = d(i) + calc%a_vec*dv
-	d(j) = d(j) + calc%b_vec*dv
+	d(i) = d(i) - calc%a_vec*dv
+	d(j) = d(j) - calc%b_vec*dv
 
 !Force scaling factor to be 1 when distance is smaller than r0
  if ( db > 0 ) then

@@ -1035,6 +1035,7 @@ if(nstates > 0 ) then
 		end if
                 if(.not.prm_get_integer_by_key('sampling_steps',qcp_steps(2))) then
                         write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for sampling'
+                        qcp_steps(2) = QCP_steps_default
                 else
                         if(qcp_steps(2) .lt.1 ) then
                                 write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'

@@ -56,7 +56,7 @@ subroutine qcp_init
 ! TODO set constants in MISC
 integer :: i
 
-convert    = one / 4.184_prec
+convert    = (one / 4.184_prec) * 6.022E23_prec
 cboltz     = 1.38064852E-23_prec
 cboltz     = cboltz * convert
 !beta       = one / (temp * cboltz)
@@ -80,11 +80,13 @@ allocate(qcp_Ebeta(maxval(qcp_steps)))
 allocate(qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
         EQpot_ave(nstates),EQtmp(nstates))
 
-allocate(qcp_EQbead_old(maxval(qcp_steps),nstates),qcp_EQbead_new(maxval(qcp_steps),nstates))
+allocate(qcp_EQbead_old(qcp_size,nstates),qcp_EQbead_new(qcp_size,nstates))
 
 allocate(qcp_EQ_tot(nstates))
 
 allocate(x_save(natom),d_save(natom))
+
+allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size))
 
 ! will need this later
 qcp_EQ(1:nstates)%lambda = EQ(1:nstates)%lambda
@@ -112,61 +114,63 @@ TYPE(qr_vec)                    :: qcpvec(:)
 real(kind=prec)                 :: angle,percent,displ_l,displ_h,displ,dangl
 integer                         :: i, irand,jrand,krand
 
-irand = int(3.0_prec * qcp_randm()) + 1
-jrand = int(3.0_prec * qcp_randm()) + 1
-if (irand .eq. jrand) then
-        jrand = irand + 1
-        if (jrand .gt. 3) jrand = irand - 1
-end if
-if (irand+jrand .eq. 3) krand = 3
-if (irand+jrand .eq. 4) krand = 2
-if (irand+jrand .eq. 5) krand = 1
-angle = zero
-dangl = 2.0_prec * pi / real(qcp_size,kind=prec)
-! heavy atom displacement
-displ_l = 0.05_prec
-! light atom displacement
-displ_h = 0.03_prec
-percent = 0.15_prec
+!irand = int(3.0_prec * qcp_randm()) + 1
+!jrand = int(3.0_prec * qcp_randm()) + 1
+!if (irand .eq. jrand) then
+!        jrand = irand + 1
+!        if (jrand .gt. 3) jrand = irand - 1
+!end if
+!if (irand+jrand .eq. 3) krand = 3
+!if (irand+jrand .eq. 4) krand = 2
+!if (irand+jrand .eq. 5) krand = 1
+!angle = zero
+!dangl = 2.0_prec * pi / real(qcp_size,kind=prec)
+!! heavy atom displacement
+!displ_l = 0.05_prec
+!! light atom displacement
+!displ_h = 0.03_prec
+!percent = 0.15_prec
+!
+!if (heavy(atom)) then
+!        displ = displ_h
+!else
+!        displ = displ_l
+!end if
+!
+!do i = 1, qcp_size
+!qcpvec(i) = qcpvec(i) * zero
+!select case(irand)
+!case(1)
+!        qcpvec(i)%x = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!case(2)
+!        qcpvec(i)%y = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!case(3)
+!        qcpvec(i)%z = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!end select
+!
+!select case(jrand)
+!case(1)
+!        qcpvec(i)%x = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!case(2)
+!        qcpvec(i)%y = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!case(3)
+!        qcpvec(i)%z = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
+!end select
+!
+!select case(krand)
+!case(1)
+!        qcpvec(i)%x = zero
+!case(2)
+!        qcpvec(i)%y = zero
+!case(3)
+!        qcpvec(i)%z = zero
+!end select
+!angle = angle + dangl
+!end do
+!
+!qcpvec =  qcp_center(qcpvec)
 
-if (heavy(atom)) then
-        displ = displ_h
-else
-        displ = displ_l
-end if
-
-do i = 1, qcp_size
-qcpvec(i) = qcpvec(i) * zero
-select case(irand)
-case(1)
-        qcpvec(i)%x = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-case(2)
-        qcpvec(i)%y = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-case(3)
-        qcpvec(i)%z = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-end select
-
-select case(jrand)
-case(1)
-        qcpvec(i)%x = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-case(2)
-        qcpvec(i)%y = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-case(3)
-        qcpvec(i)%z = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-end select
-
-select case(krand)
-case(1)
-        qcpvec(i)%x = zero
-case(2)
-        qcpvec(i)%y = zero
-case(3)
-        qcpvec(i)%z = zero
-end select
-angle = angle + dangl
-end do
-
-qcpvec =  qcp_center(qcpvec)
+qcpvec = qcpvec * zero
 
 end subroutine qcp_init_beads
 
@@ -196,6 +200,7 @@ real(kind=prec)                 :: lbsect
 ! perform number of steps depending on bisection level
 ! starting at highest and working down
         do i = level, 1, -1
+        lbsect   = q_sqrt(real(2**(i-1),kind=prec))
 ! set number of bisection steps
         nbsect   = 2**(level-i)
 ! current bisection size
@@ -257,10 +262,11 @@ do i = 1, 3
 
 if (gauss_set.eq.0) then
 
-        do while((rval.lt.zero).or.(rval.gt.one))
+        do 
         val1 = 2.0_prec * qcp_randm() - one
         val2 = 2.0_prec * qcp_randm() - one
         rval = val1**2 + val2**2
+        if (rval.gt.zero .and. rval .lt.one) exit
         end do
 
         fac  = q_sqrt(-two*q_logarithm(rval)/rval)
@@ -305,25 +311,31 @@ d_save = d
 ! set temperature dependent variables
 if (nodeid .eq. 0) then
 beta       = one / (temp * cboltz)
-tmp_wl_lam = cboltz * temp / hbar
-pi_fac     = 0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2
-tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec))
+tmp_wl_lam = 1E-10_prec * cboltz * temp / hbar
+pi_fac     = 0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2 
+tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec) ) 
 
 ! set wl values for every atom
 do i = 1, qcp_atnum
-	wl_lam0(i) = tmp_wl_lam / mass(iqseq(qcp_atom(i)))
-	if(use_qcp_mass) sqmass = sqrt(mass(iqseq(qcp_atom(i)))/QCP_mass(i))
+	wl_lam0(i) = tmp_wl_lam * winv(iqseq(qcp_atom(i)))
+	if(use_qcp_mass) sqmass = sqrt(one/winv(iqseq(qcp_atom(i)))/QCP_mass(i))
 	wl_lam1(i) = sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
 end do
 
 end if
 
+do i = 1, qcp_atnum
+call qcp_init_beads(qcp_atom(i),qcp_coord(i,:))
+end do
+
 
 qcp_EQ_tot = qcp_EQ_tot * zero
 qcp_Ebead_old = zero
 qcp_Ebead_new = zero
 qcp_Ebead     = zero
+Etmp = zero
+EQtmp = EQtmp * zero
 do i = 1, maxval(qcp_steps)
 qcp_EQbead_old(i,:) = qcp_EQbead_old(i,:) * zero
 qcp_EQbead_new(i,:) = qcp_EQbead_new(i,:) * zero
@@ -456,25 +468,31 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 
 
                 ! sum up some stuff
-                qcp_Ebeta(step) = q_exp(-beta*(Esave-E_init%potential))
-                do istate = 1, nstates
-                qcp_EQbeta(step,istate) = q_exp(-beta*(EQsave(istate)%total-EQ_init(istate)%total))
-                end do
-                total_EPI = total_EPI + MCrepeat * qcp_Ebeta(step)
-                total_EQPI(:) = total_EQPI(:) + MCrepeat * qcp_EQbeta(step,:)
-                Epot_ave  = Epot_ave  + MCrepeat * Etmp
-                EQpot_ave(:) = EQpot_ave(:) + (EQtmp(:) * MCrepeat)
-                Etmp = Esave
-                EQtmp = EQsave
+                if (nodeid .eq.0) then
+                        qcp_Ebeta(step) = q_exp(-beta*(Esave-E_init%potential))
+                        do istate = 1, nstates
+                        qcp_EQbeta(step,istate) = q_exp(-beta*(EQsave(istate)%total-EQ_init(istate)%total))
+                        end do
+                        total_EPI = total_EPI + MCrepeat * qcp_Ebeta(step)
+                        total_EQPI(:) = total_EQPI(:) + MCrepeat * qcp_EQbeta(step,:)
+                        Epot_ave  = Epot_ave  + MCrepeat * Etmp
+                        EQpot_ave(:) = EQpot_ave(:) + (EQtmp(:) * MCrepeat)
+                        Etmp = Esave
+                        EQtmp = EQsave
+                end if
         end if ! qcp_loop .eq. 2
-        MCaccept = MCaccept + MCrepeat
-        qcp_Ering_ave = qcp_Ering_ave + MCrepeat * qcp_Ering_new
-        qcp_Ering_old = qcp_Ering_new 
-        MCrepeat = one
+        if (nodeid .eq.0) then
+                MCaccept = MCaccept + MCrepeat
+                qcp_Ering_ave = qcp_Ering_ave + MCrepeat * qcp_Ering_new
+                qcp_Ering_old = qcp_Ering_new 
+                MCrepeat = one
+        end if
 else ! failed to accept step
-        qcp_coord = qcp_coord_old
-        MCreject = MCreject + one
-        MCrepeat = MCrepeat + one
+        if (nodeid.eq.0) then
+                qcp_coord = qcp_coord_old
+                MCreject = MCreject + one
+                MCrepeat = MCrepeat + one
+        end if
 end if ! bfactor .ge. irand
 
 ! write info about qcp steps if desired -> flag is qcp_veryverbose
@@ -552,7 +570,7 @@ integer                         :: i
 
 qcp_energy = zero
 ! will need adapting for different QCP types
-fk = wavelength*mass(atom)
+fk = wavelength/winv(atom)
 
 do i = 1, qcp_size - 1
 qcp_energy = qcp_energy + q_dist4(coord(i),coord(i+1))

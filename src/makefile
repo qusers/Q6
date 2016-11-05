@@ -37,8 +37,8 @@ ifeq ($(COMP),ifort)
 	MPI=		${MPI_FCFLAGS}
 	MPFLAG=		-openmp ${MPI}
 
-	DEBUG=          -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
-	DEBUGMPI=       -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUG=          -debug -traceback -g   ${FFLAGS}
+	DEBUGMPI=       -debug -traceback -g   ${FFLAGS}
 	DEBUGMP=        -openmp -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 
 
