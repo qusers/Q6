@@ -564,7 +564,7 @@ tmp%x = q_dotprod(dr,lrf(ic)%phi3(7))
 tmp%y = q_dotprod(dr,lrf(ic)%phi3(8))
 tmp%z = q_dotprod(dr,lrf(ic)%phi3(9))
 
-df%x = lrf(ic)%phi1%z + &
+df%z = lrf(ic)%phi1%z + &
         q_dotprod(dr,lrf(ic)%phi2(3)) + &
         0.5_prec*q_dotprod(dr,tmp)
 
