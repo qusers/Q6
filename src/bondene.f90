@@ -468,8 +468,8 @@ do ia = 1, nqangle
         E_loc = E_loc + Eurey*gamma
         du = gamma*2*(qanglib(ic)%ureyfk*ru/calc%dist)*lambda
 
+	d(i) = d(i) - calc%a_vec*du
 	d(k) = d(k) + calc%a_vec*du
-	d(i) = d(i) + calc%b_vec*du
 
 if ( icoupl .ne. 0 ) then
 
@@ -515,13 +515,13 @@ do ib = 1, nqbond
 		+ qbondlib(ic)%fk*db)*lambda/calc%dist
 
 	d(i) = d(i) - calc%a_vec*dv
-	d(j) = d(j) - calc%b_vec*dv
+	d(j) = d(j) + calc%a_vec*dv
 
 !Force scaling factor to be 1 when distance is smaller than r0
  if ( db > 0 ) then
  	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
         dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
- 	dMorse_j(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%b_vec*calc%dist)
+ 	dMorse_j(ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
  else
  	EMorseD(ib) = one
  	dMorse_i(ib) = dMorse_i(ib) * zero

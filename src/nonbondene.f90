@@ -572,6 +572,7 @@ df%z = lrf(ic)%phi1%z + &
 d(i) = d(i) - df * crg(i)
 end if
 end do
+
 end subroutine lrf_taylor
 
 !-----------------------------------------------------------------------
@@ -622,7 +623,7 @@ subroutine lrf_update(group1,group2)
 integer				:: group1,group2
 
 ! --- local variables
-integer				:: i,ia,i_sw,j,k,l,m
+integer				:: i,ia,i_sw,j,k,l,m,n
 real(kind=prec)			:: r2,field0,field1,field2
 TYPE(qr_vec)                    :: shift,dr,tmp(9),uvec
 ! get switch atoms for PBC
@@ -647,12 +648,12 @@ iloop:        do ia = cgp(group1)%first, cgp(group1)%last
   dr = x(i) - lrf(group2)%cgp_cent - shift
   r2 = qvec_square(dr)
 
-  field0=crg(i)/(r2*sqrt(r2))
+  field0=crg(i)/(r2*q_sqrt(r2))
   field1=3.0_prec*field0/r2
   field2=-field1/r2
 !$omp critical
-  lrf(group2)%phi0=lrf(group2)%phi0+field0*r2
-  lrf(group2)%phi1  = lrf(group2)%phi1 - dr * field0
+  lrf(group2)%phi0    = lrf(group2)%phi0+field0*r2
+  lrf(group2)%phi1    = lrf(group2)%phi1 - dr * field0
   tmp(1) = dr * field1
   lrf(group2)%phi2(1) = lrf(group2)%phi2(1) + dr * tmp(1)%x 
   lrf(group2)%phi2(2) = lrf(group2)%phi2(2) + dr * tmp(1)%y 
@@ -668,42 +669,21 @@ iloop:        do ia = cgp(group1)%first, cgp(group1)%last
   tmp(2) = uvec * dr%y
   tmp(3) = uvec * dr%z
 
-  tmp(4) = tmp(1) * tmp(1)
-  tmp(5) = tmp(1) * tmp(2)
-  tmp(6) = tmp(1) * tmp(3)
+  do n = 1,3
 
   do j = 1,3
   k = j+3
   l = k+3
-  m = j
-  tmp(k) = tmp(1) * tmp(j)
-  tmp(l) = tmp(k) * dr
-  tmp(l) = tmp(k) * 5.0_prec
-  tmp(l) = tmp(k) * field2
-  lrf(group2)%phi3(m) = lrf(group2)%phi3(m) + tmp(l)
-  end do
-  
-  do j = 1,3
-  k = j+3
-  l = k+3
-  m = j+3
-  tmp(k) = tmp(2) * tmp(j)
+  m = j + (n-1)*3
+  tmp(k) = tmp(n) * tmp(j)
   tmp(l) = tmp(k) * dr
   tmp(l) = tmp(l) * 5.0_prec
   tmp(l) = tmp(l) * field2
   lrf(group2)%phi3(m) = lrf(group2)%phi3(m) + tmp(l)
   end do
 
-  do j = 1,3
-  k = j+3
-  l = k+3
-  m = j+6
-  tmp(k) = tmp(3) * tmp(j)
-  tmp(l) = tmp(k) * dr
-  tmp(l) = tmp(l) * 5.0_prec
-  tmp(l) = tmp(l) * field2
-  lrf(group2)%phi3(m) = lrf(group2)%phi3(m) + tmp(l)
   end do
+
   tmp(1) = dr * r2
   lrf(group2)%phi3(1)%x = lrf(group2)%phi3(1)%x - field2*(3.0_prec*tmp(1)%x)
   lrf(group2)%phi3(1)%y = lrf(group2)%phi3(1)%y - field2*(tmp(1)%y)

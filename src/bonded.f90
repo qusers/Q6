@@ -15,7 +15,7 @@ implicit none
 
 TYPE bond_val
 real(kind=prec) :: dist
-TYPE(qr_vec)    :: a_vec,b_vec
+TYPE(qr_vec)    :: a_vec
 end TYPE bond_val
 
 TYPE angl_val
@@ -39,7 +39,6 @@ TYPE(qr_vec) :: a,b
 ! locals
 
 bond_calc%a_vec  = b - a
-bond_calc%b_vec  = -bond_calc%a_vec
 bond_calc%dist = q_sqrt(qvec_square(bond_calc%a_vec))
 
 end function bond_calc
@@ -54,7 +53,6 @@ TYPE(qr_vec) :: a,b,boxl,invb
 
 box_bond_calc%a_vec  = b - a
 box_bond_calc%a_vec  = box_bond_calc%a_vec - (boxl*q_nint(box_bond_calc%a_vec*invb))
-box_bond_calc%b_vec  = -box_bond_calc%a_vec
 box_bond_calc%dist = q_sqrt(qvec_square(box_bond_calc%a_vec))
 
 end function box_bond_calc
@@ -68,14 +66,22 @@ TYPE(angl_val) function angle_calc(a,b,c)
 TYPE(qr_vec) :: a,b,c
 ! locals
 TYPE(qr_dist)   :: tempab,tempbc
-real(kind=prec) :: inv_angl,scalar
-TYPE(qr_vec)    :: tmp
+real(kind=prec) :: inv_angl,scalar,abdist,bcdist,ab2dist,bc2dist
+TYPE(qr_vec)    :: abvec,bcvec,afvec,cfvec
 
-tempab = q_dist(b,a)
-tempbc = q_dist(b,c)
+abvec = a - b
+bcvec = c - b
 
-scalar = q_dotprod(tempab%vec,tempbc%vec)
-scalar = scalar*(tempab%r*tempbc%r)
+ab2dist = qvec_square(abvec)
+ab2dist = one/ab2dist
+bc2dist = qvec_square(bcvec)
+bc2dist = one/bc2dist
+
+abdist = q_sqrt(ab2dist)
+bcdist = q_sqrt(bc2dist)
+
+scalar = q_dotprod(abvec,bcvec)
+scalar = scalar*abdist*bcdist
 
 if ( scalar .gt.  one ) scalar =  one
 if ( scalar .lt. -one ) scalar = -one
@@ -85,20 +91,12 @@ inv_angl = q_sin(angle_calc%angl)
 if ( abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
 inv_angl =  -one / inv_angl
 
-tmp = tempbc%vec*(tempab%r*tempbc%r) - &
-        tempab%vec * scalar * tempab%r2
-tmp = tmp * inv_angl
+afvec = inv_angl * ((bcvec * abdist*bcdist) - (ab2dist*scalar*abvec))
+cfvec = inv_angl * ((abvec * abdist*bcdist) - (bc2dist*scalar*bcvec))
 
-angle_calc%a_vec = tmp
-
-tmp = tempab%vec*(tempab%r*tempbc%r) - &
-        tempbc%vec * scalar * tempbc%r2
-
-tmp = tmp * inv_angl
-
-angle_calc%c_vec = tmp
-
-angle_calc%b_vec = angle_calc%a_vec + angle_calc%b_vec
+angle_calc%a_vec = afvec
+angle_calc%b_vec = afvec + cfvec
+angle_calc%c_vec = cfvec
 
 end function angle_calc
 
