@@ -120,7 +120,7 @@ profile(8)%time = profile(8)%time + rtime() - start_loop_time1
 
 ! various restraints
 if( .not. use_PBC ) then
-   call fix_shell     !Restrain all excluded atoms plus heavy solute atoms in the inner shell.
+   call fix_shell(E_loc%restraint)     !Restrain all excluded atoms plus heavy solute atoms in the inner shell.
 end if
 
 call p_restrain(E_loc%restraint%protein,EQ_loc(:)%restraint,EQ(:)%lambda)
@@ -310,7 +310,9 @@ end subroutine pot_energy_nonbonds
 
 
 !Restrain all excluded atoms plus heavy solute atoms in the inner shell.
-subroutine fix_shell
+subroutine fix_shell(E_loc)
+! arguments
+TYPE(RESTRAINT_ENERGIES)                        :: E_loc
 ! local variables
 integer						::	i,i3
 real(kind=prec)					::	fk,r2,erst
@@ -338,8 +340,8 @@ r2   = dist%r2
 erst = 0.5_prec*fk*r2
 
 ! update restraint energies
-if ( excl(i) ) E%restraint%fix   = E%restraint%fix + erst
-if ( shell(i) ) E%restraint%shell = E%restraint%shell + erst 
+if ( excl(i) )  E_loc%fix   = E_loc%fix + erst
+if ( shell(i) ) E_loc%shell = E_loc%shell + erst 
 
 ! update forces
 d(i) = d(i) + dist%vec * fk

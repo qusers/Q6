@@ -1,7 +1,7 @@
 ! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
 ! bonded.f90
 ! based on md.f90
-! by Johan Åqvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlöf
+! by Johan qvist, John Marelius, Anders Kaplan, Isabella Feierberg, Martin Nervall & Martin Almlf
 ! calculation of all bonded interactions
 
 module BONDENE
@@ -411,8 +411,8 @@ E_loc = E_loc + ae*gamma
 dv = gamma*qanglib(ic)%fk*da*lambda
 
 d(i) = d(i) + calc%a_vec*dv 
-d(j) = d(j) + calc%b_vec*dv
-d(k) = d(k) - calc%c_vec*dv
+d(j) = d(j) - calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
 
 if ( icoupl .ne. 0 ) then
 

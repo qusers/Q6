@@ -210,7 +210,7 @@ vec2 =  ( (crossabc/(abs_abc*abs_bcd)) - &
 ! get the vector between indirect bonded atoms
 ! dbvec needs inverted orientation because it points
 ! in the other direction
-cavec = bcvec  - abvec
+cavec = abvec  - bcvec
 dbvec = -bcvec - cdvec
 
 torsion_calc%a_vec = q_crossprod(bcvec,vec1)
@@ -292,7 +292,7 @@ vec2 = ( (crossabc/(abs_abc*abs_bcd)) - &
 ! get the vector between indirect bonded atoms
 ! dbvec needs inverted orientation because it points
 ! in the other direction
-cavec = bcvec - abvec
+cavec = abvec - bcvec
 dbvec = -bcvec - cdvec
 
 improper_calc%a_vec = q_crossprod(bcvec,vec1)
