@@ -831,7 +831,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
   do i = rstseq(ir)%i, rstseq(ir)%j
         if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
           n_ctr = n_ctr + 1
-          dr = dr + (xtop(i) - x(i))
+          dr = dr + x(i) - xtop(i)
         end if
   end do
 
@@ -862,7 +862,7 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
   do i = rstseq(ir)%i, rstseq(ir)%j
         if ( heavy(i) .or. rstseq(ir)%ih .eq. 1 .and.(.not.(excl(i).and.freeze))) then
           totmass = totmass + iaclib(iac(i))%mass                              ! Add masses
-          dr = dr + ((xtop(i)-x(i))*iaclib(iac(i))%mass)
+          dr = dr + ((x(i)-xtop(i))*iaclib(iac(i))%mass)
 		end if
   end do
 
@@ -890,7 +890,7 @@ else
 
 
 
-          dr = xtop(i)-x(i)
+          dr = x(i)-xtop(i)
 
        !use the periodically minimal distance:
        if( use_PBC ) then
@@ -911,7 +911,7 @@ do ir = 1, nrstr_pos
 istate = rstpos(ir)%ipsi
 i      = rstpos(ir)%i
 
-dr = rstpos(ir)%x - x(i)
+dr = x(i) - rstpos(ir)%x
 
 if ( istate .ne. 0 ) then
 wgt = lambda(istate)
@@ -942,7 +942,7 @@ j      = rstdis(ir)%j
 
 ! if PBC then adjust lengths according to periodicity - MA
 if( use_PBC ) then
-	dr = x(i) - x(j)
+	dr = x(j) - x(i)
 	distres = bond_calc(dr,boxlength*q_nint(dr*inv_boxl))
 else
 	distres = bond_calc(x(i),x(j))
@@ -968,8 +968,8 @@ endif
 Edum   = 0.5_prec*rstdis(ir)%fk*db**2
 dv     = wgt*rstdis(ir)%fk*db/distres%dist
 
-d(i) = d(i) + distres%a_vec*dv
-d(j) = d(i) + distres%b_vec*dv
+d(i) = d(i) - distres%a_vec*dv
+d(j) = d(j) + distres%a_vec*dv
 
 if ( istate .eq. 0 ) then
 do k = 1, nstates
@@ -1012,7 +1012,7 @@ dv     = wgt*rstang(ir)%fk*db
 
         ! update d
 d(i) = d(i) + anglres%a_vec*dv
-d(j) = d(j) + anglres%b_vec*dv
+d(j) = d(j) - anglres%b_vec*dv
 d(k) = d(k) + anglres%c_vec*dv
 
 if ( istate .eq. 0 ) then
@@ -1031,7 +1031,7 @@ do ir = 1, nrstr_wall
         do i = rstwal(ir)%i, rstwal(ir)%j
                 if ( heavy(i) .or. rstwal(ir)%ih .eq. 1 ) then
 
-			distres = bond_calc(x(i),xwcent)
+			distres = bond_calc(xwcent,x(i))
                         db = distres%dist - rstwal(ir)%d
 
                         if(db > zero) then

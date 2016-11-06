@@ -6479,8 +6479,8 @@ if(solv_atom.eq.3) then
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
         if (excl(i)) cycle ! skip excluded topology waters
-        distance = q_dist5(x(i),xwcent)
-        b  = q_sqrt(distance%r2) 
+        distance = q_dist5(xwcent,x(i))
+        b  = q_sqrt(distance%r2)
         db = b - (rwat - shift)
         ! calculate erst and dv
         if ( db > 0 ) then
@@ -6510,7 +6510,7 @@ do iw = ncgp_solute + 1, ncgp
                 dcent = dcent + x(i+isolv)
         end do
         dcent = dcent/real(solv_atom,kind=prec)
-        distance = q_dist5(dcent,xwcent)
+        distance = q_dist5(xwcent,dcent)
         b = q_sqrt(distance%r2)
         db = b - (rwat - shift)
 

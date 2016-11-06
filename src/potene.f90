@@ -333,7 +333,7 @@ fk = fk_pshell
 end if
 
 ! calculate drift from topology
-dist = q_dist(x(i),xtop(i))
+dist = q_dist(xtop(i),x(i))
 r2   = dist%r2
 erst = 0.5_prec*fk*r2
 
