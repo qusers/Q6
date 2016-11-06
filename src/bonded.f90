@@ -96,9 +96,9 @@ tmp = tempab%vec*(tempab%r*tempbc%r) - &
 
 tmp = tmp * inv_angl
 
-angle_calc%b_vec = tmp
+angle_calc%c_vec = tmp
 
-angle_calc%c_vec = angle_calc%a_vec + angle_calc%b_vec
+angle_calc%b_vec = angle_calc%a_vec + angle_calc%b_vec
 
 end function angle_calc
 

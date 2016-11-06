@@ -81,8 +81,8 @@ do ia=istart,iend
 ! calculate forces from function vectors
 ! and update force array
 d(i) = d(i) + calc%a_vec*dv
-d(j) = d(j) + calc%b_vec*dv
-d(k) = d(k) - calc%c_vec*dv
+d(j) = d(j) - calc%b_vec*dv
+d(k) = d(k) + calc%c_vec*dv
 
 end do
 #ifdef _OPENMP
@@ -147,8 +147,8 @@ do ia=istart,iend
                 urey_bradley = urey_bradley + ang_lib(ic)%ureyfk*ru**2
 #endif
                 du = 2*ang_lib(ic)%ureyfk*ru/calc%dist
-		d(k) = d(k) + calc%a_vec*du
-		d(i) = d(i) + calc%b_vec*du
+		d(k) = d(k) - calc%a_vec*du
+		d(i) = d(i) + calc%a_vec*du
         end if
 end do
 #ifdef _OPENMP
@@ -215,7 +215,7 @@ do ib=istart,iend
         ! calculate dv and update d
         dv = bnd_lib(ic)%fk*db/calc%dist
 	d(i) = d(i) - calc%a_vec*dv
-	d(j) = d(j) - calc%b_vec*dv
+	d(j) = d(j) + calc%a_vec*dv
 end do
 #ifdef _OPENMP
 !$omp atomic update
