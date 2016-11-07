@@ -170,19 +170,23 @@ clean:
 nuke:
 	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5h qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5: version.o misc.o mpiglob.o math.o
+qcalc5 qprep5 qfep5: mpiglob.o
+
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5: version.o misc.o math.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
 qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5: nrgy.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o qalloc.o globals.o
+qcalc5: qatom.o
 
 qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
 qdyn5 qdum5: qdyn.o
+
+qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o globals.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -195,9 +199,11 @@ qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5 qdum5 qdyn5p qdyn5h : simprep.o qcp.o potene.o nonbondene.o nonbonded.o \
-	bonded.o bondene.o
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
+qdyn5 qdum5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
+	bonded.o bondene.o mpiglob.o 
+
+qdyn5p qdyn5h: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
+	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o
 
 qdyn5 : md.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -205,7 +211,7 @@ qdyn5 : md.o
 qdum5 : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5p : md_mpi.o qdyn_mpi.o
+qdyn5p : md_mpi.o qdyn_mpi.o 
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5h : md_mpi.o qdyn_mpi.o
@@ -222,6 +228,9 @@ bonded.o: bonded.f90 math.o sizes.o
 
 bondene.o: bondene.f90 math.o sizes.o bonded.o globals.o topo.o qatom.o qalloc.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c $<
+
+bondene_mpi.o: bondene.f90 math.o sizes.o bonded.o globals.o topo.o qatom.o qalloc_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  -c bondene.f90 -o bondene_mpi.o
 
 calc_base.o:calc_base.f90 topo.o prmfile.o qatom.o
 	${FC} ${FFLAGS} -c $<
@@ -292,7 +301,7 @@ md_dum.o:md.f90 mpiglob.o qatom.o sizes.o topo.o exc.o version.o \
 	math.o globals.o simprep.o potene.o qcp.o
 	${FC} ${FFLAGS} ${FPP_FLG} -DDUM -c md.f90 -o md_dum.o
 
-md_mpi.o: md.f90 mpiglob.o qatom.o sizes.o topo.o trj.o exc.o version.o \
+md_mpi.o: md.f90 mpiglob_mpi.o qatom.o sizes.o topo.o trj.o exc.o version.o \
 	math.o globals.o simprep_mpi.o potene_mpi.o qcp_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c md.f90 -o md_mpi.o
@@ -303,13 +312,17 @@ misc.o: misc.f90 sizes.o
 mpiglob.o: mpiglob.f90 sizes.o nrgy.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c $<
 
+mpiglob_mpi.o: mpiglob.f90 sizes.o nrgy.o
+	${MPIFC} ${MPIFLAGS} ${FPP_FLG} ${FFLAGS} -DUSE_MPI \
+	-c mpiglob.f90 -o mpiglob_mpi.o
+
 nonbonded.o : nonbonded.f90 sizes.o globals.o math.o qatom.o
 	${FC} ${FFLAGS} -c $<
 
-nonbondene.o: nonbondene.f90 sizes.o qatom.o qalloc.o globals.o math.o nonbonded.o exc.o
+nonbondene.o: nonbondene.f90 sizes.o qatom.o qalloc.o globals.o math.o nonbonded.o exc.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c nonbondene.f90
 
-nonbondene_mpi.o: nonbondene.f90 sizes.o qatom.o qalloc_mpi.o globals.o math.o nonbonded.o exc.o
+nonbondene_mpi.o: nonbondene.f90 sizes.o qatom.o qalloc_mpi.o globals.o math.o nonbonded.o exc.o mpiglob_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c nonbondene.f90 -o nonbondene_mpi.o
 
@@ -319,10 +332,10 @@ nrgy.o: nrgy.f90 sizes.o
 parse.o: parse.f90 misc.o
 	${FC} ${FFLAGS} -c $<
 
-potene.o: potene.f90 sizes.o globals.o nonbondene.o bondene.o
+potene.o: potene.f90 sizes.o globals.o nonbondene.o bondene.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c potene.f90
 
-potene_mpi.o: potene.f90 sizes.o globals.o bondene.o nonbondene_mpi.o
+potene_mpi.o: potene.f90 sizes.o globals.o bondene_mpi.o nonbondene_mpi.o mpiglob_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c potene.f90 -o potene_mpi.o
 
@@ -338,8 +351,8 @@ prmfile.o: prmfile.f90 misc.o mpiglob.o
 qalloc.o: qalloc.f90 sizes.o mpiglob.o globals.o qatom.o math.o trj.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qalloc.f90
 
-qalloc_mpi.o: qalloc.f90 sizes.o mpiglob.o globals.o qatom.o math.o trj.o
-	${MPIFC} ${MPIFLAGS} ${FPP_FLG} -DUSE_MPI \
+qalloc_mpi.o: qalloc.f90 sizes.o mpiglob_mpi.o globals.o qatom.o math.o trj.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c qalloc.f90 -o qalloc_mpi.o
 
 q_prep.o: q_prep.f90 prep.o avetr.o version.o
@@ -351,12 +364,12 @@ qatom.o: qatom.f90 misc.o nrgy.o prmfile.o sizes.o index.o topo.o globals.o
 qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
-qcp.o: 	qcp.f90 topo.o qatom.o sizes.o nrgy.o potene.o globals.o math.o
+qcp.o: 	qcp.f90 topo.o qatom.o sizes.o nrgy.o potene.o globals.o math.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcp.f90
 
-qcp_mpi.o: qcp.f90 topo.o qatom.o sizes.o nrgy.o potene_mpi.o globals.o math.o
+qcp_mpi.o: qcp.f90 topo.o qatom.o sizes.o nrgy.o potene_mpi.o globals.o math.o mpiglob_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
-	-c qcp.f90 -i qcp_mpi.o
+	-c qcp.f90 -o qcp_mpi.o
 
 qdyn.o: qdyn.f90 md.o mpiglob.o version.o simprep.o 
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qdyn.f90
@@ -364,7 +377,7 @@ qdyn.o: qdyn.f90 md.o mpiglob.o version.o simprep.o
 qdyn_dum.o: qdyn.f90 md.o mpiglob.o version.o simprep.o
 	${FC} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DDUM -c qdyn.f90 -o qdyn_dum.o
 
-qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob.o version.o simprep_mpi.o
+qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob_mpi.o version.o simprep_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
         -c qdyn.f90 -o qdyn_mpi.o
 
@@ -372,11 +385,11 @@ qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
 simprep.o: simprep.f90 sizes.o trj.o mpiglob.o qatom.o version.o globals.o exc.o math.o qalloc.o qcp.o \
-	nonbondene.o
+	nonbondene.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c simprep.f90
 
 simprep_mpi.o: simprep.f90 sizes.o trj.o mpiglob.o qatom.o version.o globals.o exc.o math.o qalloc_mpi.o qcp_mpi.o \
-	nonbondene_mpi.o
+	nonbondene_mpi.o mpiglob_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c simprep.f90 -o simprep_mpi.o
 

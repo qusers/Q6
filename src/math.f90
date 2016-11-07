@@ -9,11 +9,6 @@ use SIZES
 
 implicit none
 
-! this is now the default vector type for all operations
-TYPE qr_vec
-real(kind=prec) :: x,y,z
-end type qr_vec
-
 ! special vector types for reading topologies of different precision
 TYPE qr_vecs
 real(kind=singleprecision) :: x,y,z

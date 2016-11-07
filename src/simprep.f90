@@ -20,11 +20,9 @@ use QMATH
 use QALLOC
 use QCP
 use NONBONDENE
+use MPIGLOB
 !$ use omp_lib
 implicit none
-#if defined (USE_MPI)
-include "mpif.h"
-#endif
 
 
 
@@ -1223,9 +1221,9 @@ integer,allocatable                     :: shakebondi(:)
 integer,allocatable                     :: shakebondj(:)
 integer                                 :: shakenumconst
 real(kind=prec),allocatable             :: shakedist(:)
-real(kind=wp8), allocatable		:: temp_lambda(:)
-integer, parameter                      ::maxint=2147483647
-real(kind=wp8), parameter                        ::maxreal=1E35_prec
+real(kind=prec), allocatable		:: temp_lambda(:)
+integer, parameter                      :: maxint=2147483647
+real(kind=prec), parameter              :: maxreal=1E35_prec
 integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 
 !external MPI_Address
@@ -1920,22 +1918,6 @@ call MPI_Bcast(ene_header%gcnum,ene_header%arrays,MPI_INTEGER,0,MPI_COMM_WORLD, 
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
 call MPI_Bcast(ene_header%resid,ene_header%totresid,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
-
-!Now make sure the nodes have all the EQ arrays allocated, too
-if (nodeid .ne. 0) then
-do jj=1,nstates
-allocate(EQ(jj)%qx(ene_header%arrays),EQ(jj)%qq(ene_header%arrays),&
-	EQ(jj)%qp(ene_header%arrays),EQ(jj)%qw(ene_header%arrays),&
-	EQ(jj)%total(ene_header%arrays),stat=alloc_status)
-!same as above, storage for old arrays is allocated here
-if( use_PBC ) then
-allocate(old_EQ(jj)%qx(ene_header%arrays),old_EQ(jj)%qq(ene_header%arrays),&
-        old_EQ(jj)%qp(ene_header%arrays),old_EQ(jj)%qw(ene_header%arrays),&
-        old_EQ(jj)%total(ene_header%arrays),stat=alloc_status)
-end if
-call check_alloc('Group contrib EQ arrays slave nodes')
-end do
-end if
 
 
 !send the shake data here now, deleted old reference to this above

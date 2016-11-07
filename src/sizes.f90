@@ -68,5 +68,9 @@ module	SIZES
 	! handled with later versions of MPI, but is not supported in the 
 	! current version.
 
+        TYPE qr_vec
+                real(kind=prec) :: x,y,z
+        end TYPE qr_vec
+
 end module SIZES
 

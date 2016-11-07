@@ -15,10 +15,9 @@ use GLOBALS
 use QMATH
 use NONBONDED
 use EXC
-!use QCP
+use MPIGLOB
 !$ use omp_lib
 implicit none
-
 
 
 contains
@@ -587,8 +586,18 @@ integer                         :: length,MPI_Datatype
 lrf2(1:length)%cgp_cent           = lrf1(1:length)%cgp_cent
 lrf2(1:length)%phi0               = lrf1(1:length)%phi0+lrf2(1:length)%phi0
 lrf2(1:length)%phi1               = lrf1(1:length)%phi1   +lrf2(1:length)%phi1    
-lrf2(1:length)%phi2(:)            = lrf1(1:length)%phi2(:)+lrf2(1:length)%phi2(:)
-lrf2(1:length)%phi3(:)            = lrf1(1:length)%phi3(:)+lrf2(1:length)%phi3(:)
+lrf2(1:length)%phi2(1)            = lrf1(1:length)%phi2(1)+lrf2(1:length)%phi2(1)
+lrf2(1:length)%phi2(2)            = lrf1(1:length)%phi2(2)+lrf2(1:length)%phi2(2)
+lrf2(1:length)%phi2(3)            = lrf1(1:length)%phi2(3)+lrf2(1:length)%phi2(3)
+lrf2(1:length)%phi3(1)            = lrf1(1:length)%phi3(1)+lrf2(1:length)%phi3(1)
+lrf2(1:length)%phi3(2)            = lrf1(1:length)%phi3(2)+lrf2(1:length)%phi3(2)
+lrf2(1:length)%phi3(3)            = lrf1(1:length)%phi3(3)+lrf2(1:length)%phi3(3)
+lrf2(1:length)%phi3(4)            = lrf1(1:length)%phi3(4)+lrf2(1:length)%phi3(4)
+lrf2(1:length)%phi3(5)            = lrf1(1:length)%phi3(5)+lrf2(1:length)%phi3(5)
+lrf2(1:length)%phi3(6)            = lrf1(1:length)%phi3(6)+lrf2(1:length)%phi3(6)
+lrf2(1:length)%phi3(7)            = lrf1(1:length)%phi3(7)+lrf2(1:length)%phi3(7)
+lrf2(1:length)%phi3(8)            = lrf1(1:length)%phi3(8)+lrf2(1:length)%phi3(8)
+lrf2(1:length)%phi3(9)            = lrf1(1:length)%phi3(9)+lrf2(1:length)%phi3(9)
 
 lrf_add = -1
 
@@ -6729,8 +6738,10 @@ end subroutine watpol
 ! Allocate  - status
 
 
-subroutine gather_nonbond()
-
+subroutine gather_nonbond(E_loc,EQ_loc)
+! arguments
+TYPE(ENERGIES)                          :: E_loc
+TYPE(OQ_ENERGIES)                       :: EQ_loc(:)
 integer,parameter                       :: vars=3
 integer,dimension(3,numnodes-1)         :: tag
 integer,dimension(vars)	                :: blockcnt,ftype 
@@ -6761,24 +6772,24 @@ do i = 1,numnodes-1
   call MPI_IRecv(E_recv(i), 3*2+1, MPI_REAL8, i, tag(2,i), MPI_COMM_WORLD, &
        request_recv(i,2),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
-  call MPI_IRecv(EQ_recv(1,1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
+  call MPI_IRecv(EQ_recv(1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
 	request_recv(i,3),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
 
 else                  !slave nodes
-E_send%pp%el  = E%pp%el
-E_send%pp%vdw = E%pp%vdw
-E_send%pw%el  = E%pw%el
-E_send%pw%vdw = E%pw%vdw
-E_send%ww%el  = E%ww%el
-E_send%ww%vdw = E%ww%vdw
-E_send%lrf    = E%lrf
+E_send%pp%el  = E_loc%pp%el
+E_send%pp%vdw = E_loc%pp%vdw
+E_send%pw%el  = E_loc%pw%el
+E_send%pw%vdw = E_loc%pw%vdw
+E_send%ww%el  = E_loc%ww%el
+E_send%ww%vdw = E_loc%ww%vdw
+E_send%lrf    = E_loc%lrf
 do i=1,nstates
-EQ_send(i)%qp%el  = EQ(i)%qp%el
-EQ_send(i)%qp%vdw = EQ(i)%qp%vdw
-EQ_send(i)%qw%el  = EQ(i)%qw%el
-EQ_send(i)%qw%vdw = EQ(i)%qw%vdw
+EQ_send(i)%qp%el  = EQ_loc(i)%qp%el
+EQ_send(i)%qp%vdw = EQ_loc(i)%qp%vdw
+EQ_send(i)%qw%el  = EQ_loc(i)%qw%el
+EQ_send(i)%qw%vdw = EQ_loc(i)%qw%vdw
 end do
 
 ! See comments above on the IRecv part

@@ -25,9 +25,6 @@ use DFLIB
 #endif
 !$ use omp_lib
 implicit none
-#if defined (USE_MPI)
-include "mpif.h"
-#endif
 
 
 
@@ -2192,6 +2189,7 @@ end if  !(nodeid .eq. 0)
 !save the old energies,coordinates and forces
 old_x(:) = x(:)
 previous_E = E
+old_EQ = EQ
 old_boxl = boxlength
 old_inv = inv_boxl
 
@@ -2252,7 +2250,7 @@ call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 #endif
 
-call new_potential(previous_E)   !compute energies from previous md-step
+call pot_energy(E,EQ)
 
 if (nodeid .eq. 0 ) then
 	old_E = E                !Update to fresh E before changing volume
@@ -2356,28 +2354,13 @@ call MPI_Bcast(inv_boxl, 3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 
 !Need to update entire LRF... sigh
 if (use_LRF) then
-	call cgp_centers
-	if ( iuse_switch_atom == 1 ) then 
-		call nbpplist_box_lrf(Rcpp**2,RcLRF**2)
-		call nbpwlist_box_lrf(Rcpw**2,RcLRF**2)
-		call nbqplist_box(Rcq**2,Rcq)
-	else
-		call nbpplis2_box_lrf(Rcpp**2,RcLRF**2)
-		call nbpwlis2_box_lrf(Rcpw**2,RcLRF**2)
-		call nbqplis2_box(Rcq**2,Rcq)
-	endif
-	call nbwwlist_box_lrf(Rcww**2,RcLRF**2)
-	call nbqwlist_box(Rcq**2,Rcq)
-! we are gathering the LRF info here
-#ifdef USE_MPI
-call lrf_gather
-#endif
+        call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp*2,Rcpw**2,Rcww**2)
 end if !use_LRF
 
 
 
 !compute the new potential, in parallel if possible
-call new_potential( previous_E ) !do we need a broadcast before this if using LRF (i.e. if the nonbond lists have been updated)
+call pot_energy(E,EQ)
 
 if (nodeid .eq. 0) then
 	!Jamfor nya med gamla
@@ -2485,140 +2468,6 @@ if (.not. acc) then
 end if
 #endif
 end subroutine MC_volume	
-
-!-----------------------------------------------------------------------------------------------------
-subroutine new_potential( old )
-
-type(ENERGIES), intent(in)		:: old	
-integer							:: istate,i, numrequest,ii,jj
-
-!zero all energies
-E%potential = zero
-E%pp%el  = zero
-E%pp%vdw = zero
-E%pw%el  = zero
-E%pw%vdw = zero
-E%ww%el  = zero
-E%ww%vdw = zero
-E%qx%el    = zero
-E%qx%vdw   = zero
-E%restraint%protein = zero
-E%LRF      = zero
-E%p%bond =  zero
-E%w%bond =  zero
-E%p%angle =  zero
-E%w%angle =  zero
-E%p%angle =  zero
-E%w%angle =  zero
-E%p%torsion =  zero
-E%w%torsion =  zero
-E%p%improper =  zero
-E%w%improper =  zero
-
-do istate = 1, nstates
-	EQ(istate)%qq%el = zero
-	EQ(istate)%qq%vdw = zero
-	EQ(istate)%qp%el = zero
-	EQ(istate)%qp%vdw = zero
-	EQ(istate)%qw%el = zero
-	EQ(istate)%qw%vdw = zero
-	EQ(istate)%restraint = zero
-end do
-
-!reset derivatives ---
-d(:) = d(:) *  zero
-
-#if defined (USE_MPI)
-!First post recieves for gathering data from slaves
-if (nodeid .eq. 0) then
-	call gather_nonbond(E,EQ)
-end if
-#endif
-
-
-if (nodeid .eq. 0) then
-        call pot_energy_bonds(E)
-        call p_restrain(E%restraint%protein,EQ(:)%restraint,EQ(:)%lambda)
-end if
-if(natom > nat_solute) then
-        if((ivdw_rule.eq.VDW_GEOMETRIC).and. &
-                (solvent_type == SOLVENT_SPC)) then
-                call nonbond_qw_spc_box(EQ(:)%qw,EQ(:)%lambda)
-                call nonbond_ww_spc_box(E%ww)
-        else
-                call nonbond_qw_box(EQ(:)%qw,EQ(:)%lambda)
-                call nonbond_ww_box(E%ww)
-        end if
-        if(ntors>ntors_solute) then
-                call nonbond_solvent_internal_box(E%ww)
-        end if
-        call nonbond_pw_box(E%pw)
-end if
-call nonbond_pp_box(E%pp)
-call nonbond_qp_box(EQ(:)%qp,EQ(:)%lambda)
-if (nodeid .eq. 0) then
-        call nonbond_qqp(EQ(:)%qp,EQ(:)%lambda)
-        call nonbond_qq(EQ(:)%qq,EQ(:)%lambda)
-end if
-
-if (use_LRF) then
-        call lrf_taylor(E%lrf)
-end if
-
-#if defined(USE_MPI)
-if (nodeid .ne. 0) then  !Slave nodes
-	call gather_nonbond(E,EQ(:))
-end if
-#endif
-
-if (nodeid .eq. 0) then 
-#if (USE_MPI)
-do i = 1, 3
-    call MPI_WaitAll((numnodes-1),request_recv(1,i),mpi_status,ierr)
-end do
-
-	!Forces and energies are summarised
-	do i=1,numnodes-1
-	  d = d + d_recv(:,i)
-	  E%pp%el   = E%pp%el  + E_recv(i)%pp%el
-	  E%pp%vdw  = E%pp%vdw + E_recv(i)%pp%vdw
-	  E%pw%el   = E%pw%el  + E_recv(i)%pw%el
-	  E%pw%vdw  = E%pw%vdw + E_recv(i)%pw%vdw
-	  E%ww%el   = E%ww%el  + E_recv(i)%ww%el
-	  E%ww%vdw  = E%ww%vdw + E_recv(i)%ww%vdw
-	  E%lrf     = E%lrf    + E_recv(i)%lrf
-		do ii=1,nstates
-	  EQ(ii)%qp%el  = EQ(ii)%qp%el  + EQ_recv(ii,i)%qp%el
-	  EQ(ii)%qp%vdw = EQ(ii)%qp%vdw + EQ_recv(ii,i)%qp%vdw
-	  EQ(ii)%qw%el  = EQ(ii)%qw%el  + EQ_recv(ii,i)%qw%el
-	  EQ(ii)%qw%vdw = EQ(ii)%qw%vdw + EQ_recv(ii,i)%qw%vdw
-		end do
-	end do
-#endif
-
-	!summation of energies
-	do istate = 1, nstates
-			! update EQ
-		EQ(istate)%qx%el  = EQ(istate)%qq%el &
-		+ EQ(istate)%qp%el +EQ(istate)%qw%el
-		EQ(istate)%qx%vdw = EQ(istate)%qq%vdw &
-		+ EQ(istate)%qp%vdw+EQ(istate)%qw%vdw
-		E%qx%el    = E%qx%el    + EQ(istate)%qx%el   *EQ(istate)%lambda
-		E%qx%vdw   = E%qx%vdw   + EQ(istate)%qx%vdw  *EQ(istate)%lambda
-
-		! update E%restraint%protein with an average of all states
-		E%restraint%protein = E%restraint%protein + EQ(istate)%restraint*EQ(istate)%lambda
-	end do
-
-
-E%potential = old%p%bond + old%w%bond + old%p%angle + old%w%angle + old%p%torsion + &
-old%p%improper + E%pp%el + E%pp%vdw + E%pw%el + E%pw%vdw + E%ww%el + &
-E%ww%vdw + old%q%bond + old%q%angle + old%q%torsion + &
-old%q%improper + E%qx%el + E%qx%vdw + E%restraint%protein + E%LRF
-
-
-end if !(nodeid .eq. 0)
-end subroutine new_potential
 
 !----------------------------------------------------------------------------------------
 

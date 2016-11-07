@@ -16,7 +16,9 @@ use QATOM
 use QMATH
 use TRJ
 implicit none
-
+#ifdef USE_MPI
+include "mpif.h"
+#endif
 contains
 
 

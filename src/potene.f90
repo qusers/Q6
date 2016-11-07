@@ -12,6 +12,7 @@ use NONBONDENE
 use BONDENE
 use SIZES
 use GLOBALS
+use MPIGLOB
 !$ use omp_lib
 implicit none
 

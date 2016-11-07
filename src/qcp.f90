@@ -13,18 +13,12 @@ use NRGY
 use POTENE
 use GLOBALS
 use QMATH
-
+use MPIGLOB
 ! this module does the actual path integral calculations and metropolis sampling of the bead configurations
 ! code is directly based on the paper, with more bugs than I can count
 
 implicit none
-
 ! global QCP values
-!! most important: De Brogie Wavelenght, controls step size
-!real(kind=prec) :: DeB_WL
-! other constants, beta, wavelength lambda (wl_lam) and its temp value, boltzmann constant (cboltz), reduced planck constant (hbar)
-! conversion of joule <-> calorie (convert)
-! path integral factor (FPIFAC???)
 real(kind=prec) :: beta, wl_lam, tmp_wl_lam, cboltz, hbar, convert, pi_fac
 ! array of wavelengths for every atom 
 real(kind=prec),allocatable :: wl_lam0(:), wl_lam1(:), wl_lam2(:)
@@ -59,12 +53,8 @@ integer :: i
 convert    = (one / 4.184_prec) * 6.022E23_prec
 cboltz     = 1.38064852E-23_prec
 cboltz     = cboltz * convert
-!beta       = one / (temp * cboltz)
 hbar       = 1.054571800E-34_prec
 hbar       = hbar * convert
-!tmp_wl_lam = cboltz * temp / hbar
-!pi_fac     = 0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2
-!tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec))
 
 !all temp dependent variables set with current instantanious temperature
 !during actual QCP calc
@@ -366,7 +356,7 @@ end if
 
 ! MPI BCast new coordinates to nodes
 #ifdef USE_MPI
-MPI_BCast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_BCast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
@@ -452,7 +442,7 @@ if (bfactor .ge. irand) then
                         end do ! qcp_atnum
                 end if
 #ifdef USE_MPI
-MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
