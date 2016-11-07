@@ -1514,6 +1514,9 @@ if (use_excluded_groups) then
 	if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib calc types')
 end if
 
+call MPI_Bcast(use_qcp,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne.0) call die('init_nodes/MPI_BCast use_qcp')
+
 call MPI_Bcast(xwcent,3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast wxcent')
 
