@@ -50,12 +50,14 @@ end subroutine simprep_startup
 
 subroutine simprep_shutdown
 ! call used modules' shutdown subroutines
+if (nodeid .eq. 0) then
 if (use_excluded_groups) then
 call excluded_shutdown(ngroups_gc)
 end if
 call qatom_shutdown
 call index_shutdown
 call trj_shutdown
+endif
 end subroutine simprep_shutdown
 
 !----------------------------------------------------------------------
@@ -1277,7 +1279,8 @@ call MPI_Bcast(use_LRF, 1, MPI_LOGICAL, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast use_LRF')
 call MPI_Bcast(NBcycle, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast NBcycle')
-
+call MPI_Bcast(iene_cycle,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iene_cycle')
 !some more new stuff for the thermostats/integrators
 !now done in parallel
 call MPI_Bcast(friction,1,MPI_REAL8,0, MPI_COMM_WORLD, ierr)
@@ -1516,6 +1519,23 @@ end if
 
 call MPI_Bcast(use_qcp,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne.0) call die('init_nodes/MPI_BCast use_qcp')
+! send all qcp stuff we might be needing
+if (use_qcp) then
+call MPI_Bcast(qcp_size,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_size')
+call MPI_Bcast(qcp_level,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_level')
+call MPI_Bcast(qcp_steps,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_steps')
+call MPI_Bcast(qcp_atnum,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_atnum')
+if (nodeid .ne. 0) then
+allocate(qcp_atom(qcp_atnum))
+end if
+call MPI_Bcast(qcp_atom,qcp_atnum,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_atom')
+end if
+
 
 call MPI_Bcast(xwcent,3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast wxcent')
@@ -1922,7 +1942,10 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
 call MPI_Bcast(ene_header%resid,ene_header%totresid,MPI_INTEGER,0,MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast group contrib arrays')
 
-
+if (use_qcp .and. nodeid .ne. 0) then
+allocate(qcp_EQ(nstates),stat=alloc_status)
+call check_alloc('QCP node EQ arrays')
+end if
 !send the shake data here now, deleted old reference to this above
 !shake now done on each node for own set of atoms
 !PB 2015

@@ -181,7 +181,7 @@ real(kind=prec)                 :: wavelength
 integer                         :: level
 
 ! locals
-real(kind=prec),parameter       :: two=2.0_prec
+real(kind=prec),parameter       :: half=0.5_prec
 integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead
 TYPE(qr_vec)                    :: midpoint
 real(kind=prec)                 :: lbsect
@@ -202,7 +202,7 @@ real(kind=prec)                 :: lbsect
         if (thisbead.gt.qcp_size) thisbead = thisbead - qcp_size
         if (nextbead.gt.qcp_size) nextbead = nextbead - qcp_size
         if (medbead .gt.qcp_size) medbead  = medbead  - qcp_size
-        midpoint = (qcpvec(thisbead) + qcpvec(nextbead)) * two
+        midpoint = (qcpvec(thisbead) + qcpvec(nextbead)) * half
         qcp_bisect(medbead) = qcp_gauss(wavelength*lbsect,midpoint)
         thisbead = thisbead + bbsect
         nextbead = nextbead + bbsect
@@ -324,7 +324,8 @@ qcp_EQ_tot = qcp_EQ_tot * zero
 qcp_Ebead_old = zero
 qcp_Ebead_new = zero
 qcp_Ebead     = zero
-Etmp = zero
+Etmp  = zero
+Esave = zero
 EQtmp = EQtmp * zero
 do i = 1, maxval(qcp_steps)
 qcp_EQbead_old(i,:) = qcp_EQbead_old(i,:) * zero
