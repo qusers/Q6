@@ -965,6 +965,22 @@ if(nstates > 0 ) then
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
 		use_qcp = .true.
                QCP_N = QCP_ON
+! decide on printout level
+               if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
+                       qcp_verbose = .false.
+               else
+                       if(qcp_verbose) then
+                               write(*,'(a)') 'Printing more QCP information'
+                       end if
+               end if
+               if(.not.prm_get_logical_by_key('veryverbose',qcp_veryverbose)) then
+                       qcp_veryverbose = .false.
+               else
+                       if(qcp_veryverbose) then
+                               qcp_verbose = .true.
+                               write(*,'(a)') 'Printing all QCP information I can find'
+                       end if
+               end if
 !chose which atoms should be treated as ring polymers
 !important later when setting up NB list, RP will be treated different from classical
 !this section can be overwritten in the FEP file
@@ -1021,7 +1037,7 @@ if(nstates > 0 ) then
                 qcp_level = int(q_log2(real(qcp_size,kind=prec)))
 !number of PI steps at each calculation
 		if(.not. prm_get_integer_by_key('equilibration_steps',qcp_steps(1))) then
-			write(*,'(a,i6)') 'Will use default number of PI steps, n = ',QCP_steps_default
+			write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for equilibration'
 			qcp_steps(1) = QCP_steps_default
 		else
 			if(qcp_steps(1) .lt. 1) then
@@ -1953,7 +1969,7 @@ end if ! every NBcycle steps
 
 
 ! get potential energy and derivatives from FF
-call pot_energy(E,EQ)
+call pot_energy(E,EQ,.true.)
 ! if we have reached the ene write out, also calculate group contribution
 ! exclusions and qcp if needed
 ! exc are only done on master, while qcp is spread to nodes
@@ -2092,7 +2108,7 @@ end if
 
         ! write output for final step and final coords
 call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
-call pot_energy(E,EQ)
+call pot_energy(E,EQ,.true.)
 if (nodeid .eq. 0) then
         write(*,*)
         call write_out
@@ -2250,7 +2266,7 @@ call MPI_Bcast(x, natom*3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast x')
 #endif
 
-call pot_energy(E,EQ)
+call pot_energy(E,EQ,.true.)
 
 if (nodeid .eq. 0 ) then
 	old_E = E                !Update to fresh E before changing volume
@@ -2360,7 +2376,7 @@ end if !use_LRF
 
 
 !compute the new potential, in parallel if possible
-call pot_energy(E,EQ)
+call pot_energy(E,EQ,.true.)
 
 if (nodeid .eq. 0) then
 	!Jamfor nya med gamla

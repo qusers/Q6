@@ -50,11 +50,9 @@ subroutine qcp_init
 ! TODO set constants in MISC
 integer :: i
 
-convert    = (one / 4.184_prec) * 6.022E23_prec
+convert    = 4.184_prec / 6.022E23_prec
 cboltz     = 1.38064852E-23_prec
-cboltz     = cboltz * convert
 hbar       = 1.054571800E-34_prec
-hbar       = hbar * convert
 
 !all temp dependent variables set with current instantanious temperature
 !during actual QCP calc
@@ -103,62 +101,6 @@ TYPE(qr_vec)                    :: qcpvec(:)
 ! displ -> displacment, dependent on heavy atom or not
 real(kind=prec)                 :: angle,percent,displ_l,displ_h,displ,dangl
 integer                         :: i, irand,jrand,krand
-
-!irand = int(3.0_prec * qcp_randm()) + 1
-!jrand = int(3.0_prec * qcp_randm()) + 1
-!if (irand .eq. jrand) then
-!        jrand = irand + 1
-!        if (jrand .gt. 3) jrand = irand - 1
-!end if
-!if (irand+jrand .eq. 3) krand = 3
-!if (irand+jrand .eq. 4) krand = 2
-!if (irand+jrand .eq. 5) krand = 1
-!angle = zero
-!dangl = 2.0_prec * pi / real(qcp_size,kind=prec)
-!! heavy atom displacement
-!displ_l = 0.05_prec
-!! light atom displacement
-!displ_h = 0.03_prec
-!percent = 0.15_prec
-!
-!if (heavy(atom)) then
-!        displ = displ_h
-!else
-!        displ = displ_l
-!end if
-!
-!do i = 1, qcp_size
-!qcpvec(i) = qcpvec(i) * zero
-!select case(irand)
-!case(1)
-!        qcpvec(i)%x = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!case(2)
-!        qcpvec(i)%y = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!case(3)
-!        qcpvec(i)%z = displ*q_cos(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!end select
-!
-!select case(jrand)
-!case(1)
-!        qcpvec(i)%x = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!case(2)
-!        qcpvec(i)%y = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!case(3)
-!        qcpvec(i)%z = displ*q_sin(angle) * (one + (2.0_prec*qcp_randm() - one)*percent)
-!end select
-!
-!select case(krand)
-!case(1)
-!        qcpvec(i)%x = zero
-!case(2)
-!        qcpvec(i)%y = zero
-!case(3)
-!        qcpvec(i)%z = zero
-!end select
-!angle = angle + dangl
-!end do
-!
-!qcpvec =  qcp_center(qcpvec)
 
 qcpvec = qcpvec * zero
 
@@ -300,10 +242,10 @@ d_save = d
 
 ! set temperature dependent variables
 if (nodeid .eq. 0) then
-beta       = one / (temp * cboltz)
-tmp_wl_lam = 1E-10_prec * cboltz * temp / hbar
-pi_fac     = 0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2 
-tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec) ) 
+beta       = convert / (temp * cboltz)
+tmp_wl_lam = angstrom * cboltz * temp / hbar
+pi_fac     = (0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2 * amu) / convert
+tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec) * amu ) 
 
 ! set wl values for every atom
 do i = 1, qcp_atnum
@@ -363,7 +305,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 
 ! all atoms at first perturbed position -> get energy
 ! E and EQ and set to zero in pot_ene, don't need to do this manually
-call pot_energy(qcp_E,qcp_EQ)
+call pot_energy(qcp_E,qcp_EQ,.false.)
 ! rest set to zero
 if (nodeid.eq.0) then
 Etmp = Etmp + qcp_E%potential
@@ -376,8 +318,15 @@ end if
 end do ! qcp_size
 
 ! what is factor? CHFACN is one for not using strange CHIN method stuff
-if (nodeid.eq.0) Esave = Etmp / real(qcp_size,kind=prec)
-if (nodeid.eq.0) EQsave(:) = EQtmp(:) / real(qcp_size,kind=prec)
+if (nodeid.eq.0) then
+        Esave = Etmp / real(qcp_size,kind=prec)
+        Etmp = Esave
+end if
+
+if (nodeid.eq.0) then
+        EQsave(:) = EQtmp(:) / real(qcp_size,kind=prec)
+        EQtmp = EQsave
+end if
 end if ! qcp_loop .eq.2
 
 if (nodeid .eq.0) then
@@ -434,7 +383,16 @@ irand = qcp_randm()
 if (bfactor .ge. irand) then
 ! energy only calculated for sampling, not for equilibration? weird!
         if(qcp_loop .eq. 2) then
-                Esave = Etmp
+                Esave  = Etmp
+                EQsave = EQtmp
+                if(qcp_veryverbose) then
+                write(*,'(a,i4,a,f12.6,a,f12.6)') 'Values at step ',step,' for Esave = ',Esave,' , and Etmp = ',Etmp
+                        do istate = 1 ,nstates
+                        write(*,'(a,i4,a,i4)') 'Values at step ',step,' state = ',istate
+                        write(*,'(a,f12.6,a,f12.6)') 'EQsave = ',EQsave(istate)%total,&
+                                ' , EQtmp = ',EQtmp(istate)%total
+                        end do
+                end if
                 do i = 1, qcp_size
                 if (nodeid.eq.0) then
                         do j = 1, qcp_atnum
@@ -447,22 +405,37 @@ call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
-                call pot_energy(qcp_E,qcp_EQ)
+                call pot_energy(qcp_E,qcp_EQ,.false.)
                 if (nodeid.eq.0) then
                         qcp_Ebead_new(i) = qcp_E%potential
                         qcp_EQbead_new(i,:) = qcp_EQ(:)
-                        Esave = Esave + ((qcp_Ebead_old(i)-qcp_Ebead_new(i))/real(qcp_size,kind=prec))
-                        EQsave(:) = EQsave(:) + ((qcp_EQbead_old(i,:) - qcp_EQbead_new(i,:)) &
+                        Esave = Esave + ((qcp_Ebead_new(i)-qcp_Ebead_old(i))/real(qcp_size,kind=prec))
+                        EQsave(:) = EQsave(:) + ((qcp_EQbead_new(i,:) - qcp_EQbead_old(i,:)) &
                                 /real(qcp_size,kind=prec))
+                        qcp_Ebead_old(i) = qcp_Ebead_new(i)
+                        qcp_EQbead_old(i,:) = qcp_EQbead_new(i,:)
                 end if
                 end do ! qcp_size
 
 
                 ! sum up some stuff
                 if (nodeid .eq.0) then
-                        qcp_Ebeta(step) = q_exp(-beta*(Esave-E_init%potential))
+                        qcp_Ebeta(step) = q_exp(-beta*(Etmp-E_init%potential))
+                        if(qcp_veryverbose) then
+                                write(*,'(a,i4,a,f12.6)') 'Current beta for step ',step,' = ',qcp_Ebeta(step)
+                                write(*,'(a,f12.6)') 'Etmp = ',Etmp
+                                write(*,'(a,f12.6)') 'E_init = ',E_init%potential
+                        end if
                         do istate = 1, nstates
-                        qcp_EQbeta(step,istate) = q_exp(-beta*(EQsave(istate)%total-EQ_init(istate)%total))
+                        qcp_EQbeta(step,istate) = q_exp(-beta*(EQtmp(istate)%total-EQ_init(istate)%total))
+                        if(qcp_veryverbose) then
+                                write(*,'(a,i4)') 'Current step = ',step
+                                write(*,'(a,i4)') 'Current state = ',istate
+                                write(*,'(a,f12.6)') 'Current beta = ',qcp_EQbeta(step,istate)
+                                write(*,'(a,f12.6)') 'EQtmp = ',EQtmp(istate)%total
+                                write(*,'(a,f12.6)') 'EQ_init = ',EQ_init(istate)%total
+                        end if
+
                         end do
                         total_EPI = total_EPI + MCrepeat * qcp_Ebeta(step)
                         total_EQPI(:) = total_EQPI(:) + MCrepeat * qcp_EQbeta(step,:)
@@ -491,9 +464,9 @@ if (nodeid.eq.0 .and. qcp_veryverbose .and. qcp_loop .eq. 2) then
         write(*,'(a)') 'Information for individual step of QCP PI'
         write(*,'(a)') 'Current status is free particle sampling'
         write(*,'(a,i4)') 'Current conformation = ',step
-        write(*,'(a,f8.4)') 'Current total particle energy = ',Esave
-        write(*,'(a,10f8.4)') 'Current Q particle energy, for each state = ',EQsave(:)%total
-        write(*,'(a,f8.4)') 'Current ring polymer energy = ',qcp_Ering_new
+        write(*,'(a,f12.6)') 'Current total particle energy = ',Esave
+        write(*,'(a,10f12.6)') 'Current Q particle energy, for each state = ',EQsave(:)%total
+        write(*,'(a,f12.6)') 'Current ring polymer energy = ',qcp_Ering_new
 end if
 
 end do ! step
@@ -525,6 +498,19 @@ total_EPI = total_EPI / MCaccept
 Epot_ave  = Epot_ave  / MCaccept
 total_EQPI(:) = total_EQPI(:) / MCaccept
 EQpot_ave(:) = EQpot_ave(:) / MCaccept
+
+if(qcp_verbose) then
+        write(*,'(a,f12.6)') 'Total PI energy = ',total_EPI
+        write(*,'(a,f12.6)') 'Final PI potential energy = ',Epot_ave
+        do i = 1 , nstates
+        write(*,'(a,i4)') 'Total QPI energy for state ',i
+        write(*,'(f12.6)') total_EQPI(i)
+        end do
+        do i = 1 , nstates
+        write(*,'(a,i4)') 'istate = ',i
+        write(*,'(a,f12.6)') 'Final PI Q potential energy = ',EQpot_ave(i)%total
+        end do
+end if
 
 ! now we have all the energies for the PI sampling, can print info for user and write to global EQ_save 
 ! qcp_pos is set during loading, need this later for mass perturbation with two arrays
@@ -564,11 +550,11 @@ qcp_energy = zero
 fk = wavelength/winv(atom)
 
 do i = 1, qcp_size - 1
-qcp_energy = qcp_energy + q_dist4(coord(i),coord(i+1))
+qcp_energy = qcp_energy + (fk * q_dist4(coord(i),coord(i+1)))
 end do
 
 ! this only later for closed chain chain polymer
-qcp_energy = qcp_energy + q_dist4(coord(1),coord(qcp_size))
+qcp_energy = qcp_energy + (fk * q_dist4(coord(1),coord(qcp_size)))
 
 
 end function qcp_energy

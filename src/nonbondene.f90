@@ -6532,9 +6532,10 @@ end subroutine restrain_solvent
 
 !-----------------------------------------------------------------------
 
-subroutine watpol(E_loc)
+subroutine watpol(E_loc,md)
 ! arguments
 TYPE(RESTRAINT_ENERGIES)                :: E_loc
+logical                                 :: md
 ! local variables
 integer					:: iw,is,i,il,jl,jw,imin,jmin,isolv,jsolv,j3
 real(kind=prec)				:: dr,rw,rshell,rm,rc,scp
@@ -6546,10 +6547,12 @@ TYPE(qr_vec)                            :: f1,f2,f3,rmu,rcu,rmc
 !  tdum, nwpolr_shell, list_sh, pi, nsort, istep, itdis_update, fkwpol, d
 
 ! reset wshell%n_insh
-wshell(:)%n_insh = 0
+if (md) then
+ wshell(:)%n_insh = 0
 
 ! calculate theta(:), tdum(:), wshell%n_insh
 do iw = 1, nwat
+
 theta(iw)  = zero
 theta0(iw) = zero
 
@@ -6631,8 +6634,10 @@ end do
 
 end do
 
+end if ! if md
+
 ! calculate energy and force
-if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0) then
+if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0 .and. md) then
 call centered_heading('Solvent polarisation restraint data', '-')
 write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
@@ -6720,9 +6725,10 @@ d(jsolv) = d(jsolv) + (f3*f0)
 
 end do
 end do
-
+if (md) then
 wshell(is)%avtheta = wshell(is)%avtheta + avtdum/real(wshell(is)%n_insh, kind=prec)
 wshell(is)%avn_insh = wshell(is)%avn_insh + wshell(is)%n_insh
+end if
 end do
 end subroutine watpol
 

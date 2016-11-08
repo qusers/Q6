@@ -20,10 +20,11 @@ implicit none
 
 contains
 
-subroutine pot_energy(E_loc,EQ_loc)
+subroutine pot_energy(E_loc,EQ_loc,in_md)
 ! arguments
 TYPE(ENERGIES)                          :: E_loc
 TYPE(OQ_ENERGIES)                       :: EQ_loc(:)
+logical                                 :: in_md
 ! local variables
 
 
@@ -130,7 +131,7 @@ call p_restrain(E_loc%restraint%protein,EQ_loc(:)%restraint,EQ(:)%lambda)
 if( .not. use_PBC ) then
         if(nwat > 0) then
           call restrain_solvent(E_loc%restraint)
-        if (wpol_restr) call watpol(E_loc%restraint)
+        if (wpol_restr) call watpol(E_loc%restraint,in_md)
         end if
 end if
 

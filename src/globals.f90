@@ -514,6 +514,9 @@ real(kind=prec),allocatable     :: qcp_mass(:)
 TYPE(ENERGIES)                  :: qcp_E
 TYPE(OQ_ENERGIES),allocatable   :: qcp_EQ(:)
 TYPE(qr_vec),allocatable        :: x_save(:),d_save(:)
+real(kind=prec),parameter       :: angstrom = 1E-10_prec
+real(kind=prec),parameter       :: amu = 1.6605655E-27_prec
+
 
 !-----------------------------------------------------------------------
 !	profiling vars
