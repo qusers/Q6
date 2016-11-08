@@ -124,20 +124,21 @@ integer                         :: level
 
 ! locals
 real(kind=prec),parameter       :: half=0.5_prec
-integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead
+integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead,bead
 TYPE(qr_vec)                    :: midpoint
 real(kind=prec)                 :: lbsect
 
 ! for a given particle, go through all beads
 ! perform number of steps depending on bisection level
 ! starting at highest and working down
+        do bead = 1, qcp_size
         do i = level, 1, -1
         lbsect   = q_sqrt(real(2**(i-1),kind=prec))
 ! set number of bisection steps
         nbsect   = 2**(level-i)
 ! current bisection size
         bbsect   = 2**i
-        thisbead = 1
+        thisbead = bead
         nextbead = thisbead + bbsect
         medbead  = int(thisbead+nextbead)/2
         do j = 1, nbsect
@@ -151,6 +152,7 @@ real(kind=prec)                 :: lbsect
         medbead  = medbead  + bbsect
         end do ! nbsect
         end do ! level
+        end do ! bead
 
 end function qcp_bisect
 
@@ -245,7 +247,7 @@ if (nodeid .eq. 0) then
 beta       = convert / (temp * cboltz)
 tmp_wl_lam = angstrom * cboltz * temp / hbar
 pi_fac     = (0.5_prec * real(qcp_size, kind=prec) * tmp_wl_lam**2 * amu) / convert
-tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam * real(qcp_size,kind=prec) * amu ) 
+tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam *  angstrom * real(qcp_size,kind=prec) * amu ) 
 
 ! set wl values for every atom
 do i = 1, qcp_atnum
