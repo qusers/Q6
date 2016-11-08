@@ -21,11 +21,14 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	FC=			ifort 
-	FC_OPT=		-O3 -ip -ipo -unroll -xHost -inline-forceinline \
-				-unroll-aggressive -finline-limit=1000 \
-				-no-inline-max-size -no-prec-div
-	FFLAGS=		-fp-model precise -fp-model except
-	FFLAGS_R8=	-r8
+	FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline \
+				-unroll-aggressive -finline-limit=1000000000\
+				-no-prec-div -no-inline-max-per-compile \
+				-no-inline-max-per-routine -no-inline-max-size \
+				-no-inline-max-total-size -no-inline-min-size \
+				-auto
+	FFLAGS=		
+	FFLAGS_R8=	
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp -DINTEL
 
@@ -91,7 +94,7 @@ else ifeq ($(COMP),ibm)
 ################################################################################
 else ifeq ($(COMP),gcc)
 	FC=		gfortran
-	FC_OPT=		-O3 -unroll
+	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto
 	FPP_FLG=	-cpp -DGCC
 
 	MPIFC=		mpif90

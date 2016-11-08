@@ -4923,7 +4923,7 @@ gb = nbpw_cgp(group)%j  !atom index for the solvent switching atom
 
 !the distance between the two switching atoms
 shift = x(ga) - x(gb)
-nbpp_cgp(group)%shift = boxlength*q_nint(shift*inv_boxl)
+nbpw_cgp(group)%shift = boxlength*q_nint(shift*inv_boxl)
 
 end do
 !$omp barrier
