@@ -1762,7 +1762,7 @@ integer function genH(j, residue)
 			xH%z = randm() - 0.5_prec
 			!normalise to unit length and scale by bond length from lib.
 			bond_length = q_sqrt(q_dotprod(xH,xH))
-			xH = xH / bond_length * bnd0
+			xH = (xH / bond_length) * bnd0
 			!place near atom j
 			xH = xH + xj
 			!conjugate gradient minimisation
@@ -1824,7 +1824,7 @@ integer function genH(j, residue)
 
 !				write(*,*) lineiter
 
-				rjH = qvec_sub(xH,xj)
+				rjH = xH - xj 
 				bond_length = qr_dist(xH,xj)%dist
 				rjH = rjH / bond_length * bnd0      !adjust bond length
 				xH  = xj + rjH
@@ -1851,7 +1851,7 @@ integer function genH(j, residue)
 					if(Vtot > local_min) then
 						!it's a local min - flip 180 deg.
 						dVlast = -dVlast
-						xH = qvec_sub(xj,rjH)
+						xH = xj - rjH 
 					else
 					exit
 					end if
@@ -1880,11 +1880,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 	type(MISSING_BOND_TYPE),intent(in) 	::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),intent(in)	::	missing_angles(:)
 !locals
-	real(kind=prec)						::	xj(3), xk(3)
+        TYPE(qr_vec)						::	xj, xk,old_xH,xH,dV,dvLast,dVtot,dx
 	integer						::	ligand, H, kt, lt
-	real(kind=prec)						::	old_xH(3), xH(3), V, Vtot, dV(3), dvLast(3), gamma, dVtot(3)
+	real(kind=prec)						::	V, Vtot, gamma
 	real(kind=prec)						::	VtotLast
-	real(kind=prec)						::	dx(3), dx_line, rms_dV
+	real(kind=prec)						::	dx_line, rms_dV
 	real(kind=prec),parameter			::	convergence_criterum = 0.1_prec
 	real(8),parameter			::	dV_scale = 0.025_prec
 	real(8),parameter			::	max_dx = 1.0_prec !max_dx is max distance of line search step in first CG iteration (Å)
@@ -1902,12 +1902,12 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
 	integer						::	a, b, axis
+        TYPE(qr_vec)                                    :: rjH,rjk,xkt,xlt,rjkt,rktlt,rnj,rnk,dH
 	real(kind=prec)						::	bond_length, db
-	real(kind=prec)						::	rjH(3), rjk(3), bjHinv, bjkinv
+	real(kind=prec)						::	bjHinv, bjkinv
 	real(kind=prec)						::	scp, angle, angle_deg, dVangle, da, f1
-	real(kind=prec)						::	xkt(3), xlt(3), rjkt(3), rktlt(3)
-	real(kind=prec)						::	rnj(3), rnk(3), bj, bk
-	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg, dH(3)
+	real(kind=prec)						::	bj, bk
+	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg
 	logical						::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
@@ -2015,7 +2015,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 		bond_length = q_sqrt(q_dotprod(xH,xH))
 		xH = xH / bond_length * bnd0
 		!place near atom j
-		xH = qvec_add(xH,xj)
+		xH = xH + xj
 		!conjugate gradient minimisation
 		do setH = 1,nsetH
 		do cgiter = 1, max_cg_iterations
@@ -2029,7 +2029,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 				dVtot = zero
 				!calc. potential & gradient
 				!angles
-				rjH = qvec_sub(xH,xj)
+				rjH = xH - xj 
 				do a = 1, nHang
 					xk = waterarray(Hang_atom(a))
 					angle     = angle_calc(xH,xj,xk)
@@ -2069,13 +2069,13 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 					dx_line = -dx_line !next step back
 					flipped = .true.
 				endif
-				rms_dV = sqrt(abs(dot_product(dVtot, dVLast)))
+				rms_dV = q_sqrt(abs(q_dot_product(dVtot, dVLast)))
 				if(rms_dV < convergence_criterum / 10) then
 					exit !reached a potential minimum along the search line
 				endif
 
 				!update position in line search
-				dx(:) = -dVLast(:) / sqrt(dot_product(dVlast, dVLast)) * dx_line
+				dx = -dVLast / q_sqrt(q_dot_product(dVlast, dVLast)) * dx_line
 				if(flipped) dx_line = 0.5_prec * dx_line !reduce step size only after first change of direction
 				VtotLast = Vtot
 				xH(:) = xH(:) + dx(:)
@@ -2083,34 +2083,34 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 
 !				write(*,*) lineiter
 
-			rjH(:) = xH(:) - xj(:)
-			bond_length = sqrt(dot_product(rjH, rjH))
-			rjH(:) = rjH(:) / bond_length * bnd0      !adjust bond length
-			xH(:) = xj(:) + rjH(:)
-			rms_dV = sqrt(dot_product(dVtot,dVtot))
+			rjH = xH - xj
+			bond_length = q_sqrt(q_dot_product(rjH, rjH))
+			rjH = rjH / bond_length * bnd0      !adjust bond length
+			xH = xj + rjH
+			rms_dV = q_sqrt(q_dot_product(dVtot,dVtot))
 			if(rms_dV <  convergence_criterum) then
 				if(Vtot < local_min) then
 					!found global min
 					exit
 				else
 					!it's a local min - flip 180 deg.
-					dVlast(:) = -dVlast(:)
-					xH(:) = xj(:) - rjH(:)
+					dVlast = -dVlast
+					xH = xj - rjH
 				end if
 			end if
 
 			!get new gradient search direction
-			gamma = dot_product(dVtot, dVlast) / dot_product(dVlast, dVlast)
+			gamma = q_dot_product(dVtot, dVlast) / q_dot_product(dVlast, dVlast)
 			!use conjugate gradient
-			dVlast(:) = dVtot(:) - gamma*dVlast(:)
+			dVlast = dVtot - gamma*dVlast
 
 		end do  !cgiter
 
 			!Check if local min -> restart iteration ; problem with conversion
 				if(Vtot > local_min) then
 					!it's a local min - flip 180 deg.
-					dVlast(:) = -dVlast(:)
-					xH(:) = xj(:) - rjH(:)
+					dVlast = -dVlast
+					xH = xj - rjH
 				else
 				exit
 				end if
@@ -2124,7 +2124,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 				'Potential is ',f8.3,' kcal/mol.')
 		end if
 		!copy coordinates to topology
-		waterarray(1:3,H) = xH(:)
+		waterarray(H) = xH
 		!clear makeH flag
 		genHeavy = genHeavy + 1
                 missing_local(H)%atom_missing = .false.
@@ -3992,7 +3992,7 @@ subroutine readpdb()
 	CHARACTER(len=4)		:: atnam_tmp , resnam_tmp , resnam_tmp2
 	character(len=80)			::	line
 	integer resnum_tmp, oldnum, irec, i, atom_id(max_atlib), j , oldnum2 , resnum_tmp2
-	real(kind=prec)				:: xtmp(3)
+        TYPE(qr_vec)				:: xtmp
 	LOGICAL res_found, at_found
 	integer						::	first_res_of_mol, solvent
 	logical						::	last_line_was_gap, solvent_found
@@ -4076,7 +4076,7 @@ subroutine readpdb()
 			resnum_tmp2 = resnum_tmp
 			resnam_tmp2 = resnam_tmp
 			READ(line, 10, end = 100, err = 200) atnam_tmp, resnam_tmp, &
-				resnum_tmp, xtmp(1:3)
+				resnum_tmp, xtmp
 
 		! ---	New residue ?
 			if(resnum_tmp/=oldnum) then
@@ -4188,9 +4188,7 @@ subroutine readpdb()
 					at_found = .true.
 					atom_id(i) = 1
 					j = res(nres)%start - 1 + i
-					xtop(j * 3 - 2) = xtmp(1)
-					xtop(j * 3 - 1) = xtmp(2)
-					xtop(j * 3) = xtmp(3)
+                                        xtop(j) = xtmp
 					exit
 				endif
 			enddo !i
@@ -4298,10 +4296,7 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 			dhead = res(thisres)%start - 1 + dhead
 			dtail = (dtail*3)-3
 			dhead = (dhead*3)-3
-			xdist = (xtop(dtail+1)-xtop(dhead+1))
-			ydist = (xtop(dtail+2)-xtop(dhead+2))
-			zdist = (xtop(dtail+3)-xtop(dhead+3))
-			dist  = sqrt(xdist**2 + ydist**2 + zdist**2)
+                        dist  = q_sqrt(q_dist5(xtop(dtail),xtop(dhead)))
 		end if
 	end if
         if(gap .or. &
@@ -4444,7 +4439,7 @@ subroutine readx
 		return
 	endif
         if (.not.old_restart) read(u) canary
-	READ(u) nat3,xtop(1:nat3)
+	READ(u) nat3,xtop(1:natom)
 
 	write( * , '(a,/)') 'Coordinate file successfully read.'
 	close(u)
@@ -4557,7 +4552,7 @@ subroutine set_cgp
 	integer ires, igp, i, ntot, ntot_solute, i3
 	integer						::	switchatom, ia, ncgp_skipped = 0
 	real(kind=prec)						::	r2
-	real(kind=prec)						::	cgp_cent(3)
+        TYPE(qr_vec)						::	cgp_cent
 	integer						::	nheavy
 
 	ntot = 0
@@ -4584,20 +4579,16 @@ subroutine set_cgp
 900	format('>>>>> ERROR: Switching atom of charged group',i2,' of residue type ',a4,' is not a heavy atom.')
 					cycle !continue looping, do not exclude
 				endif
-				i3 = 3*switchatom-3
-				r2 = ( xtop(i3+1) - xpcent(1) )**2 &
-					+( xtop(i3+2) - xpcent(2) )**2 &
-					+( xtop(i3+3) - xpcent(3) )**2
+				r2 = q_dist5(xtop(switchatom),xpcent)
 			else
 				!exclude by charge group centre
-          cgp_cent(:) = 0
+          cgp_cent = cgp_cent * zero
 				  do i = 1, lib(res(ires)%irc)%natcgp(igp)
 			    	ia = res(ires)%start - 1 + lib(res(ires)%irc)%atcgp(i, igp)
-					  i3 = ia*3
-					  cgp_cent(:) = cgp_cent(:) + xtop(i3-2:i3)
+					  cgp_cent = cgp_cent + xtop(ia)
 				  end do
-          cgp_cent(:) = cgp_cent(:)/real(lib(res(ires)%irc)%natcgp(igp))
-          r2 = dot_product(cgp_cent(:)-xpcent(:),cgp_cent(:)-xpcent(:))
+          cgp_cent = cgp_cent/real(lib(res(ires)%irc)%natcgp(igp))
+          r2 = q_dist5(cgp_cent,xpcent)
 			endif
 
 			if( (r2 < rexcl_o**2) .or. &
@@ -4912,21 +4903,21 @@ logical function set_simulation_sphere()
 900			format('>>>>> ERROR: Could not find centre atom ',a)
 			return
 		end if
-		xpcent(:) = xtop(3*centre_atom-2:3*centre_atom)
+		xpcent = xtop(centre_atom)
 	elseif(scan(line, 'mass') > 0) then   !define center by center of mass
-		if (.not. get_centre_by_mass(xpcent(:))) then
+		if (.not. get_centre_by_mass(xpcent)) then
 			write(*,*) ('>>>>> ERROR: Could not create centre ')
 			return
 		end if
 	else !got x
-		read(line, *, iostat=filestat) xpcent(1)
+		read(line, *, iostat=filestat) xpcent%x
 		if(filestat > 0) then !invalid x coordinate
 			return
 		end if
 		xwat_in=get_real_arg('-----> Sphere centre y: ')
-		xpcent(2) = xwat_in
+		xpcent%y = xwat_in
 		xwat_in=get_real_arg('-----> Sphere centre z: ')
-		xpcent(3) = xwat_in
+		xpcent%z = xwat_in
 	end if
 
 	rwat_in = get_real_arg('-----> Simulation sphere radius: ')
@@ -4938,7 +4929,7 @@ logical function set_simulation_sphere()
 	end if
 
     write(*,*)
-	write(*,100) xpcent(:)
+	write(*,100) xpcent
     write(*,110) rexcl_o
 100	format('Simulation sphere centre                   :   ',3f8.3)
 110 format('Simulation radius                          :   ',f8.3)
@@ -4973,44 +4964,50 @@ logical function set_solvent_box()
 900			format('>>>>> ERROR: Could not find centre atom ',a)
 			return
 		end if
-		boxcentre(:) = xtop(3*centre_atom-2:3*centre_atom)
+		boxcentre = xtop(centre_atom)
 	elseif(line == 'MASS') then   !define center by center of mass
-		if (.not. get_centre_by_mass(boxcentre(:))) then
+		if (.not. get_centre_by_mass(boxcentre)) then
 			write(*,*) ('>>>>> ERROR: Could not create centre ')
 			return
 		end if
 	else !got x
-		read(line, *, iostat=filestat) boxcentre(1)
+		read(line, *, iostat=filestat) boxcentre%x
 		if(filestat > 0) then !invalid x coordinate
 			return
 		end if
 		xwat_in=get_real_arg('-----> Box centre y: ')
-		boxcentre(2) = xwat_in
+		boxcentre%y = xwat_in
 		xwat_in=get_real_arg('-----> Box centre z: ')
-		boxcentre(3) = xwat_in
+		boxcentre%z = xwat_in
 	end if
 
 
 	!read the size of the box
 	coord_in = get_real_arg('-----> Boxlength x-direction: ')
-	boxlength(1) = coord_in
+	boxlength%x = coord_in
 	coord_in = get_real_arg('-----> Boxlength y-direction: ')
-	boxlength(2) = coord_in
+	boxlength%y = coord_in
 	coord_in = get_real_arg('-----> Boxlength z-direction: ')
-	boxlength(3) = coord_in
+	boxlength%z = coord_in
 
-	if( any(boxlength(:) == zero) ) then
-		inv_boxl(:) = zero
+	if( (boxlength%x .eq. zero .or. boxlength%y .eq. zero .or. boxlength%z .eq. zero) ) then
+		inv_boxl = inv_boxl * zero
 	else
-		inv_boxl(:) = one/boxlength(:)
+		inv_boxl = one/boxlength
 	end if
 
-	do i=1,3
-		if( boxlength(i) < zero ) then
-			write(*, '(a)') '>>>>> WARNING: Boxlength with negative sign. Converting to positive.'
-			boxlength(i) = -boxlength(i)
-		end if
-	end do
+        if( boxlength%x < zero ) then
+	write(*, '(a)') '>>>>> WARNING: Boxlength with negative sign. Converting to positive.'
+	boxlength%x = -boxlength%x
+        end if
+        if( boxlength%y < zero ) then
+	write(*, '(a)') '>>>>> WARNING: Boxlength with negative sign. Converting to positive.'
+	boxlength%y = -boxlength%y
+        end if
+        if( boxlength%z < zero ) then
+	write(*, '(a)') '>>>>> WARNING: Boxlength with negative sign. Converting to positive.'
+	boxlength%z = -boxlength%z
+        end if
 
 	have_solvent_boundary = .true.
 	set_solvent_box = .true.
@@ -5076,9 +5073,7 @@ subroutine solvate_box_grid
 !solvate sphere using grid
 
 	!locals
-
-	real(kind=prec)						::	xmin, xmax, ymin, ymax, zmin, zmax
-	real(kind=prec)						::	xgrid, ygrid, zgrid
+        TYPE(qr_vec)                                            :: minc,maxc,grid
 	integer						::	max_wat !max number of molecules
 	integer						::	waters_in_box
 	real(kind=prec)						::	radius2, solvent_grid
@@ -5103,48 +5098,39 @@ subroutine solvate_box_grid
 
  	!Make sure boxsize is consistent with the periodic boundary condition
  	!changed to nearest integer (nint) from truncation (int)  /M.A.
-    boxlength(1) = nint(boxlength(1)/solvent_grid)*solvent_grid
-    boxlength(2) = nint(boxlength(2)/solvent_grid)*solvent_grid
-    boxlength(3) = nint(boxlength(3)/solvent_grid)*solvent_grid
+        boxlength = q_nint(boxlength/solvent_grid)*solvent_grid
 
 !Calculate max number of waters possible
-	max_wat = lib(irc_solvent)%density * boxlength(1) * boxlength(2) * boxlength(3)
+	max_wat = lib(irc_solvent)%density * boxlength%x * boxlength%y * boxlength%z
 
-	allocate(xw(3,lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
+	allocate(xw(lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
 	call check_alloc('water sphere co-ordinate array')
 
+        minc = boxcentre - boxlength/2.0_prec + solvent_grid/2.0_prec
+        maxc = boxcentre + boxlength/2.0_prec - solvent_grid/2.0_prec
 
-	xmin = boxcentre(1) - boxlength(1)/2.0_prec + solvent_grid/2.0_prec
-	xmax = boxcentre(1) + boxlength(1)/2.0_prec - solvent_grid/2.0_prec
-	ymin = boxcentre(2) - boxlength(2)/2.0_prec + solvent_grid/2.0_prec
-	ymax = boxcentre(2) + boxlength(2)/2.0_prec - solvent_grid/2.0_prec
-	zmin = boxcentre(3) - boxlength(3)/2.0_prec + solvent_grid/2.0_prec
-	zmax = boxcentre(3) + boxlength(3)/2.0_prec - solvent_grid/2.0_prec
-
-	write(*,100) boxlength(1), boxlength(2), boxlength(3), solvent_grid
+	write(*,100) boxlength, solvent_grid
 100	format('New boxlength                     = ',3f8.2,' A',/ &
 		   'Grid spacing                      = ',f10.2,' A ')
 
 	!Fill box with water
  	!xmax+0.1 is needed for intel/windows. Otherwise the last loop step is skipped
 	waters_in_box = 0
-	xgrid = xmin
-	do while (xgrid <= xmax + 0.1)
-		ygrid = ymin
-		do while (ygrid <= ymax + 0.1)
-			zgrid = zmin
-			do while (zgrid <= zmax + 0.1)
+	grid%x = minc%x
+	do while (grid%x <= maxc%x + 0.1_prec)
+		grid%y = minc%y
+		do while (grid%y <= maxc%y + 0.1_prec)
+			grid%z = minc%z
+			do while (grid%z <= maxc%z + 0.1_prec)
 				waters_in_box = waters_in_box + 1
-				xw(1,1,waters_in_box) = xgrid
-				xw(2,1,waters_in_box) = ygrid
-				xw(3,1,waters_in_box) = zgrid
+                                xw(1,waters_in_box) = grid
 				!all the molecules inside are inside
 				keep(waters_in_box) = .true.
-				zgrid = zgrid + solvent_grid
+				grid%z = grid%z + solvent_grid
 			end do
-			ygrid = ygrid + solvent_grid
+			grid%y = grid%y + solvent_grid
 		end do
-		xgrid = xgrid + solvent_grid
+		grid%x = grid%x + solvent_grid
 	end do
 
 	call add_solvent_to_topology(waters_in_sphere=waters_in_box, &
@@ -5160,23 +5146,23 @@ subroutine solvate_box_file
 	character(len=80)		::	xwat_file
 	integer 				::	fstat
 	character(len=80)		::	line
-	real(kind=prec) 				::	boxl, waterbox_v, waterbox(1:3)
+	real(kind=prec) 				::	boxl, waterbox_v
+        TYPE(qr_vec)                    :: waterbox
+        TYPE(qr_vec),allocatable        :: ext(:)
 	character(len=6)		::	sphere
 	logical					::	replicate
-	integer					::	extension(1:3)
-	real(kind=prec)					::	extensionbox_v, ext(3,3)
+	integer 			::	extension(3)
+	real(kind=prec)					::	extensionbox_v
 	integer					::	nw, nnw !water molecule counters
 	integer					::	i, j, k !loop indecis
 	integer					::	filestat !error variable
 	character(len=3)		::	atomnames
-	character(len=4)		::	resnam(3)
-	integer					::	resno(3)
+	character(len=4),allocatable    ::	resnam(:)
+	integer,allocatable		::	resno(:)
 	integer					::	nbox !number of replicated boxes
 	integer					::	nwat_allocate
-	real(kind=prec)					::	xcm(3) !center of the waterbox
-	real(kind=prec)					::	wshift(3) !distanse to move waters
+        TYPE(qr_vec)                            :: xcm,wshift,temp
 	integer					::	nwat_keep !how many waters to keep
-	real(kind=prec)					::	temp(3) !temporary coordinate
 
 !get the name of the file and open the file in unit 13
 	call get_string_arg(xwat_file, '-----> Solvent file name: ')
@@ -5213,9 +5199,11 @@ subroutine solvate_box_file
 	end if
 
 !Compute waterbox volume and display the waterbox sidelength
-	waterbox(:) = boxl
+	waterbox%x = boxl
+        waterbox%y = boxl
+        waterbox%z = boxl
 	waterbox_v = boxl**3
-	write(*, '(a, f10.3)') 'Boxlength of solvent file 		=', waterbox(1)
+	write(*, '(a, f10.3)') 'Boxlength of solvent file 		=', waterbox%x
 
 !Determine residue name to use for solvent molecule
 	read(13,1) atomnames(1:1), solvent_name
@@ -5230,9 +5218,12 @@ subroutine solvate_box_file
 		call parse_reset
 		return
 	end if
+        ! we know the solvent, allocate all solv_atom dependent stuff
+        allocate(resnam(solv_atom),resno(solv_atom))
 
 !Estimate amount of memory to allocate for temporary waters
-	if( all(boxlength(:)<waterbox(1)) ) then ! don't need to replicate. 5% margin
+	if( (boxlength%x.lt.waterbox%x).and.(boxlength%y.lt.waterbox%y) .and. &
+               (boxlength%z .lt. waterbox%z) ) then ! don't need to replicate. 5% margin
 		replicate = .false.
 		nwat_allocate = int( lib(irc_solvent)%density*1.05_prec*waterbox_v )
 
@@ -5244,7 +5235,7 @@ subroutine solvate_box_file
 		nwat_allocate = int( lib(irc_solvent)%density*1.05_prec*extensionbox_v )
 	end if
 
-	allocate( xw(3, lib(irc_solvent)%nat, nwat_allocate), keep(nwat_allocate), stat=alloc_status )
+	allocate( xw(lib(irc_solvent)%nat, nwat_allocate), keep(nwat_allocate), stat=alloc_status )
 	call check_alloc('temporary solvent coord. arrays')
 
 !The reading of the coordinates

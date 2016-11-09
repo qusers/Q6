@@ -2332,13 +2332,13 @@ vnh(numchain)=vnh(numchain)+Gnh(numchain)*dt4
 xnh(numchain)=xnh(numchain)+vnh(numchain)*dt2
 
 do i=numchain-1,1,-1
-	expf=exp(-dt8*vnh(i+1))
+	expf=q_exp(-dt8*vnh(i+1))
 	vnh(i)=(vnh(i)*expf+Gnh(i)*dt4)*expf
 	xnh(i)=xnh(i)+vnh(i)*dt2
 end do
 
-s=exp(-vnh(1)*dt2)
-do i=1,natom*3
+s=q_exp(-vnh(1)*dt2)
+do i=1,natom
 	v(i)=v(i)*s
 end do
 
@@ -2346,7 +2346,7 @@ Gnh(1) = Ndegf*Boltz*(s*s*Temp - Temp0)/qnh(1)
 vnh(1) = (vnh(1)*expf+Gnh(1)*dt4)*expf
 
 do i=2,numchain-1
-        expf=exp(-dt8*vnh(i+1))
+        expf=q_exp(-dt8*vnh(i+1))
         Gnh(i)=(qnh(i-1)*vnh(i-1)**2 - kbT)/qnh(i)
         vnh(i)=(vnh(i)*expf+Gnh(i)*dt4)*expf
 end do
