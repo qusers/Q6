@@ -855,7 +855,52 @@ if ( iene_cycle .gt. 0 ) close (11)
 end subroutine close_output_files
 
 !-----------------------------------------------------------------------
+!*******************************************************
+!Will find and return the xtop atom number from 
+!  residue number and atom number in residue from
+!  library sequence.
+! Uses global variables: xtop,nres,res
+!*******************************************************
 
+integer function get_atom_from_resnum_atnum(aid)
+!arguments
+character(*), intent(in)	::	aid	!string=residue:atom
+	
+!locals
+integer						::	separator_pos
+character(len=20)			::	res_str
+character(len=5)			::	atom_str
+integer						::	filestat
+integer						::	resnum, atnum
+
+get_atom_from_resnum_atnum = 0
+
+separator_pos = scan(aid, ':')
+if(separator_pos < 2 .or. separator_pos == len_trim(aid)) return !no valid colon found
+res_str = aid(1:separator_pos-1)
+atom_str = aid(separator_pos+1:len_trim(aid))
+read(res_str, *, iostat=filestat) resnum
+read(atom_str, *, iostat=filestat) atnum
+if(filestat > 0) return
+
+!Residue must be in topology
+if(resnum < 1 .or. resnum > nres) then                     
+  return                                                 
+end if
+
+if(atnum .le. (res(resnum+1)%start - res(resnum)%start)) then
+  get_atom_from_resnum_atnum = res(resnum)%start + atnum - 1
+return
+end if
+
+!we have an error: 
+write(*, 120) atnum, resnum
+call die('error in finding atom number from resnum:atnum.')
+
+120	format('>>>>> ERROR: There is no atom number ',i4,' in residue ',i4,'.')
+end function get_atom_from_resnum_atnum
+
+!----------------------------------------------------------------------
 
 end module QALLOC
 

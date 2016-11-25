@@ -2478,9 +2478,9 @@ if (.not. use_PBC) then
 	    rexcl_i = rexcl_i * rexcl_o  !translate to Angstrom
 	  end if 
 	  if(iuse_switch_atom == 1) then
-	     call make_shell
+	     call make_shell(nwat)
 	  else
-	     call make_shell2
+	     call make_shell2(nwat)
 	  end if
 	else
 	  write (*,'(/,a,/)') 'Restrained shell not defined!'
@@ -2640,74 +2640,6 @@ return
 
 end subroutine prep_coord
 
-!-----------------------------------------------------------------------
-
-!Sort out heavy atoms in restrained shell. Use protein center to calculate distance.
-!Uses coordinates from topology unless 'implicit_rstr_from_file' is specified.
-subroutine make_shell
-! *** Local variables
-	integer						::	i,ig,i3
-	real(kind=prec)						::	rin2,r2
-
-	nshellats = 0
-	rin2  = rexcl_i**2
-
-	shell(:) = .false.
-
-	do ig=1,ncgp_solute
-       if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then 
-                r2 = q_dist4(xtop(cgp(ig)%iswitch),xpcent)
-		if(r2 > rin2) then
-			do i=cgp(ig)%first, cgp(ig)%last
-        nshellats = nshellats + 1 
-				shell(cgpatom(i)) = .true.
-			end do
-		end if
-   end if
-	end do
-	write(*,105) nshellats, rexcl_i, rexcl_o
-105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,')')
-end subroutine make_shell
-
-!------------------------------------------------------------------------
-
-!Sort out heavy atoms in restrained shell. Use protein center to calculate distance.
-!Use coordinates from topology unless 'implicit_rstr_from_file' is specified
-subroutine make_shell2
-! *** Local variables
-	integer						::	i,ig,k
-	real(kind=prec)						::	rout2,rin2,r2
-        TYPE(qr_vec), allocatable		::	cgp_cent(:)
-	nshellats = 0
-	rin2  = rexcl_i**2
-
-	shell(:) = .false.
-
-	allocate(cgp_cent(ncgp+nwat))
-
-	cgp_cent = cgp_cent * zero
-
-	do ig=1,ncgp_solute
-    if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then
-                do i = cgp(ig)%first,cgp(ig)%last
-			cgp_cent(ig) = cgp_cent(ig) + xtop(cgpatom(i))
-		end do
-        cgp_cent(ig) = cgp_cent(ig)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
-		r2 = q_dist4(cgp_cent(ig),xpcent)
-
-		if ( r2 .gt. rin2 ) then
-			do i=cgp(ig)%first, cgp(ig)%last
-				nshellats = nshellats + 1
-				shell(cgpatom(i)) = .true.
-			end do
-		end if
-   end if
-	end do
-
-	deallocate(cgp_cent) 
-	write(*,105) nshellats, rexcl_i, rexcl_o
-105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,'Å)')
-end subroutine make_shell2
 
 !-----------------------------------------------------------------------
 
@@ -4535,52 +4467,6 @@ n_max_insh = n_max_insh * 1.5_prec !take largest and add some extra
 call allocate_watpol_arrays
 
 end subroutine wat_shells
-
-!----------------------------------------------------------------------------------------
-!*******************************************************
-!Will find and return the xtop atom number from 
-!  residue number and atom number in residue from
-!  library sequence.
-! Uses global variables: xtop,nres,res
-!*******************************************************
-
-integer function get_atom_from_resnum_atnum(aid)
-!arguments
-character(*), intent(in)	::	aid	!string=residue:atom
-	
-!locals
-integer						::	separator_pos
-character(len=20)			::	res_str
-character(len=5)			::	atom_str
-integer						::	filestat
-integer						::	resnum, atnum
-
-get_atom_from_resnum_atnum = 0
-
-separator_pos = scan(aid, ':')
-if(separator_pos < 2 .or. separator_pos == len_trim(aid)) return !no valid colon found
-res_str = aid(1:separator_pos-1)
-atom_str = aid(separator_pos+1:len_trim(aid))
-read(res_str, *, iostat=filestat) resnum
-read(atom_str, *, iostat=filestat) atnum
-if(filestat > 0) return
-
-!Residue must be in topology
-if(resnum < 1 .or. resnum > nres) then                     
-  return                                                 
-end if
-
-if(atnum .le. (res(resnum+1)%start - res(resnum)%start)) then
-  get_atom_from_resnum_atnum = res(resnum)%start + atnum - 1
-return
-end if
-
-!we have an error: 
-write(*, 120) atnum, resnum
-call die('error in finding atom number from resnum:atnum.')
-
-120	format('>>>>> ERROR: There is no atom number ',i4,' in residue ',i4,'.')
-end function get_atom_from_resnum_atnum
 
 !----------------------------------------------------------------------------------------
 

@@ -147,7 +147,8 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qdyn5 qpi5 move1 moveqdyn move5
+	qpi5 move1 move5
+#	qdyn5 qpi5 move1 moveqdyn move5
 
 prof:
 	@make FFLAGS="${PROF}" \
@@ -188,8 +189,9 @@ qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
+qdyn5 qdum5: qdyn.o
 
-qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o globals.o qpi5 qpi5p
+qdyn5 qdum5 qdyn5p qdyn5h qpi5 qpi5p: qatom.o exc.o globals.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -203,7 +205,7 @@ qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5 qdum5 qpi5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
-	bonded.o bondene.o mpiglob.o qdyn.o
+	bonded.o bondene.o mpiglob.o 
 
 qdyn5p qdyn5h qpi5p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
 	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o

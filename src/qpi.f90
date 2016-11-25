@@ -8,8 +8,7 @@
 ! this will look like a copy of qdyn,f90, because it needs to do a large part of the same work  done there
 ! so we also initialize the same variables and stuff, but exclude everything only needed during the actual md
 
-program QPI
-  use POTENE
+program QPI5
   use QCP
   use VERSIONS
   use MPIGLOB ! use MPI global data
@@ -139,7 +138,7 @@ program QPI
   end if
 
   ! deallocate memory etc.
-  call qcp_shutdown
+!  call qcp_shutdown
 
 #if defined (USE_MPI)
   ! shut down MPI
@@ -159,7 +158,7 @@ subroutine startup
   end if
 
   ! initialise used modules
-  call qcp_startup
+!  call qcp_startup
 
 end subroutine startup
 
@@ -186,12 +185,12 @@ INTEGER(4) FUNCTION qsignal( signum, proc, sigflag )
        qsignal = 1
 END FUNCTION qsignal
 
-end program Qdyn5
+end program Qpi5
 
 ! signal handlers
 
 INTEGER(4) FUNCTION sigint_handler(sig_num)
-  use MD
+  use QCP
   implicit none
   INTEGER(4)					:: sig_num
 
@@ -200,7 +199,7 @@ INTEGER(4) FUNCTION sigint_handler(sig_num)
 END FUNCTION sigint_handler
 
 INTEGER(4) FUNCTION sigkill_handler(sig_num)
-  use MD
+  use QCP
   implicit none
   INTEGER(4)					:: sig_num
 
@@ -209,7 +208,7 @@ INTEGER(4) FUNCTION sigkill_handler(sig_num)
 END FUNCTION sigkill_handler
 
 INTEGER(4) FUNCTION sigabrt_handler(sig_num)
-  use MD
+  use QCP
   implicit none
   INTEGER(4)					:: sig_num
 

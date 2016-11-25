@@ -1391,6 +1391,81 @@ subroutine topo_save(name)
 100	write(*,*) 'ERROR: Failed to open topology file ', trim(name)
 end subroutine topo_save
 
-!----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+
+!Sort out heavy atoms in restrained shell. Use protein center to calculate distance.
+!Uses coordinates from topology unless 'implicit_rstr_from_file' is specified.
+subroutine make_shell(nwat)
+! arguments
+        integer                                         :: nwat
+! *** Local variables
+	integer						::	i,ig,i3
+	real(kind=prec)						::	rin2,r2
+
+	nshellats = 0
+	rin2  = rexcl_i**2
+
+	shell(:) = .false.
+
+	do ig=1,ncgp_solute
+       if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then 
+                r2 = q_dist4(xtop(cgp(ig)%iswitch),xpcent)
+		if(r2 > rin2) then
+			do i=cgp(ig)%first, cgp(ig)%last
+        nshellats = nshellats + 1 
+				shell(cgpatom(i)) = .true.
+			end do
+		end if
+   end if
+	end do
+	write(*,105) nshellats, rexcl_i, rexcl_o
+105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,')')
+end subroutine make_shell
+
+!------------------------------------------------------------------------
+
+!Sort out heavy atoms in restrained shell. Use protein center to calculate distance.
+!Use coordinates from topology unless 'implicit_rstr_from_file' is specified
+subroutine make_shell2(nwat)
+! arguments
+        integer                                         :: nwat
+! *** Local variables
+	integer						::	i,ig,k
+	real(kind=prec)						::	rout2,rin2,r2
+        TYPE(qr_vec), allocatable		::	cgp_cent(:)
+	nshellats = 0
+	rin2  = rexcl_i**2
+
+	shell(:) = .false.
+
+	allocate(cgp_cent(ncgp+nwat))
+
+	cgp_cent = cgp_cent * zero
+
+	do ig=1,ncgp_solute
+    if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then
+                do i = cgp(ig)%first,cgp(ig)%last
+			cgp_cent(ig) = cgp_cent(ig) + xtop(cgpatom(i))
+		end do
+        cgp_cent(ig) = cgp_cent(ig)/real(cgp(ig)%last - cgp(ig)%first +1, kind=prec)
+		r2 = q_dist4(cgp_cent(ig),xpcent)
+
+		if ( r2 .gt. rin2 ) then
+			do i=cgp(ig)%first, cgp(ig)%last
+				nshellats = nshellats + 1
+				shell(cgpatom(i)) = .true.
+			end do
+		end if
+   end if
+	end do
+
+	deallocate(cgp_cent) 
+	write(*,105) nshellats, rexcl_i, rexcl_o
+105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,'Å)')
+end subroutine make_shell2
+
+
+!----------------------------------------------------------------------------------------
+
 
 end module TOPO

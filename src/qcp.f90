@@ -659,7 +659,7 @@ integer						::	ijunk
 integer						:: num_args
 character(200)				:: infilename
 logical						::	yes
-logical						::	need_restart
+logical						::	need_restart,temp_defined
 character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
@@ -700,7 +700,7 @@ call prm_close
 fu = freefile()
 open(unit=fu, file=infilename, action='read', form='formatted', status='old', iostat=fstat)
 if (fstat .ne. 0) call die('error opening input file '//infilename)
-        initialize = old_initialize(fu)
+        qcp_initialize = .false.
         close(fu)
 return
 end if
@@ -719,32 +719,32 @@ need_restart = .true.
 temp_defined = .false.
 else
 write(*,'(a,f8.3)') 'Temperature set to ',Temp0
-temp_definded = .true.
+temp_defined = .true.
 end if
 ! read in temperature here, if not defined will have to use info from restart
 
 ! --- shake, LRF
 if(.not. prm_get_logical_by_key('shake_solvent', shake_solvent, .true.)) then
 write(*,'(a)') '>>> Error: shake_solvent must be on or off.'
-initialize = .false.
+qcp_initialize = .false.
 end if
 !write(*,17) 'all solvent bonds', onoff(shake_solvent)
 17	format('Shake constraints on ',a,' to ',a,' : ',a3)
 
 if(.not. prm_get_logical_by_key('shake_solute', shake_solute, .false.)) then
 write(*,'(a)') '>>> Error: shake_solute must be on or off.'
-initialize = .false.
+qcp_initialize = .false.
 end if 
 !write(*,17) 'all solute bonds', onoff(shake_solute)
 
 if(.not. prm_get_logical_by_key('shake_hydrogens', shake_hydrogens, .true.)) then
 write(*,'(a)') '>>> Error: shake_hydrogens must be on or off.'
-initialize = .false.
+qcp_initialize = .false.
 end if 
 
 if(.not. prm_get_logical_by_key('shake_heavy', shake_heavy, .false.) ) then
 write(*,'(a)') '>>> Error: shake_heavy must be on or off.'
-initialize = .false.
+qcp_initialize = .false.
 end if
 
 
@@ -870,7 +870,7 @@ if(use_LRF) then
                 else
                       write(*,'(a)') &
                         '>>> ERROR; LRF cut-off must not be smaller than solute or solvent cut-offs!'
-                      initialize = .false.
+                      qcp_initialize = .false.
                 end if
         end if
 end if
@@ -978,7 +978,7 @@ else
   yes=prm_get_logical_by_key('charge_correction', wpol_born, wpol_restr)
   if(wpol_born .and. .not. wpol_restr) then
         write(*,'(a)') '>>> ERROR: charge_correction on requires polarisation on (section solvent)'
-        initialize = .false.
+        qcp_initialize = .false.
   end if
   if(.not. prm_get_real8_by_key('polarisation_force', fkwpol)) then
         write(*,'(a)') 'Solvent polarisation force constant set to default'
@@ -1022,7 +1022,6 @@ end if
 if(.not. prm_get_string_by_key('traj_input', trj_file)) then
         write(*,'(a)') '>>> ERROR: Need trajectory file with coordinates to work on'
         qcp_initialize = .false.
-        end if
 else
         write (*,90) trim(trj_file)
 end if
@@ -1102,7 +1101,7 @@ ngroups_gc = 0
 if(nstates > 0 ) then
 	if(.not. prm_open_section('QCP')) then
 		write(*,'(a)') '>>> ERROR: No QCP section found'
-		qcp_initialze = .false.
+		qcp_initialize = .false.
                 use_qcp = .false.
                 QCP_N = QCP_OFF
 	else
@@ -1148,7 +1147,7 @@ if(nstates > 0 ) then
 				write(*,'(a)') 'Will use information in FEP file to select QCP atoms'
 			else
 				write(*,'(a)') ' >>> ERROR: No such QCP atom selection!'
-				initialize = .false.
+				qcp_initialize = .false.
 			end if
 		end if
 !how large should the RP be?
@@ -1172,7 +1171,7 @@ if(nstates > 0 ) then
                                write(*,'(a,i6,a)') 'Will use RP with ',qcp_size,' beads per atom!'
 			else
 				write(*,'(a)') ' >>> ERROR: No such QCP size selection!'
-				initialize = .false.
+				qcp_initialize = .false.
 			end if
 		end if
 ! now we know how many beads, set default for qcp_level
@@ -1186,7 +1185,7 @@ if(nstates > 0 ) then
 		else
 			if(qcp_steps(1) .lt. 1) then
 				write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'
-				initialize = .false.
+				qcp_initialize = .false.
 			end if
 			write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(1),' for free particle equilibration!'
 		end if
@@ -1196,7 +1195,7 @@ if(nstates > 0 ) then
                 else
                         if(qcp_steps(2) .lt.1 ) then
                                 write(*,'(a)') ' >>> ERROR: Can not use less than 1 PI step per classical step!'
-                                initialize = .false.
+                                qcp_initialize = .false.
                         end if
                         write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(2),' for free particle sampling!'
                 end if
@@ -1243,7 +1242,7 @@ do i=1,nrstr_pos ! read rstpos(i)
                 rstpos(i)%fk, rstpos(i)%ipsi
         if(fstat /= 0) then
                 write(*,'(a)') '>>> ERROR: Invalid atom restraint data.'
-                initialize = .false.
+                qcp_initialize = .false.
                 exit
         end if
         write (*,122) rstpos(i)%i,rstpos(i)%x, &
@@ -1277,7 +1276,7 @@ do i=1,nrstr_dist
         end if
         if(fstat /= 0) then
           write(*,'(a)') '>>> ERROR: Invalid distance restraint data.'
-          initialize = .false.
+          qcp_initialize = .false.
           exit
         end if
         write (*,132) rstdis(i)%i,rstdis(i)%j,rstdis(i)%d1,rstdis(i)%d2,rstdis(i)%fk, &
@@ -1313,7 +1312,7 @@ do i=1,nrstr_angl
         !end if
         if(fstat /= 0) then
           write(*,'(a)') '>>> ERROR: Invalid angle restraint data.'
-          initialize = .false.
+          qcp_initialize = .false.
           exit
         end if
         write (*,142) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang,rstang(i)%fk, &
@@ -1341,7 +1340,7 @@ do i=1,nrstr_wall
                 rstwal(i)%aMorse, rstwal(i)%dMorse, rstwal(i)%ih
         if(fstat /= 0) then
                 write(*,'(a)') '>>> ERROR: Invalid wall restraint data.'
-                initialize = .false.
+                qcp_initialize = .false.
                 exit
         end if
         write (*,152) rstwal(i)     
@@ -1352,7 +1351,7 @@ end if
 
 ! final thing to get all atoms from trj
 yes = trj_store_mask('all')
-trj_atoms = trj_commit_mask()
+number = trj_commit_mask()
 
 
 call prm_close
@@ -1481,9 +1480,9 @@ if (.not. use_PBC) then
 	    rexcl_i = rexcl_i * rexcl_o  !translate to Angstrom
 	  end if 
 	  if(iuse_switch_atom == 1) then
-	     call make_shell
+	     call make_shell(nwat)
 	  else
-	     call make_shell2
+	     call make_shell2(nwat)
 	  end if
 	else
 	  write (*,'(/,a,/)') 'Restrained shell not defined!'
@@ -1655,11 +1654,12 @@ do i = 1, nat_solute
 if (use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)))) then
 qcp_T = qcp_T + 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
 end if
+end do
 do i = nat_solute+1,natom
 if (use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)))) then
 qcp_T = qcp_T + 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
 end if
-
+end do
 
 qcp_T = 2.0_prec*qcp_T/Boltz/real(Ndegfree,kind=prec)
 
