@@ -138,7 +138,8 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qfep5 qprep5 qdum5 qcalc5 move1 move2
+	qpi5 move1 move5
+#	qfep5 qprep5 qdum5 qcalc5 move1 move2
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
@@ -146,7 +147,7 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qdyn5 move1 moveqdyn 
+	qdyn5 qpi5 move1 moveqdyn move5
 
 prof:
 	@make FFLAGS="${PROF}" \
@@ -154,11 +155,11 @@ prof:
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	qdyn5p move1 move3
+	qdyn5p qpi5p move1 move3 move6
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	qdyn5p move1 move3
+	qdyn5p qpi5p move1 move3 move6
 hybrid:
 	@make FFLAGS="${MPFLAG}" \
 	qdyn5h move1 move4
@@ -175,11 +176,11 @@ nuke:
 
 qcalc5 qprep5 qfep5: mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5: version.o misc.o math.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5 qpi5 qpi5p: version.o misc.o math.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5: mask.o prmfile.o sizes.o topo.o trj.o index.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qpi5 qpi5p: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5: nrgy.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5 qpi5 qpi5p: nrgy.o
 
 qcalc5: qatom.o
 
@@ -187,9 +188,8 @@ qcalc5 qprep5 qfep5: parse.o
 
 qcalc5 qprep5: maskmanip.o
 
-qdyn5 qdum5: qdyn.o
 
-qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o globals.o
+qdyn5 qdum5 qdyn5p qdyn5h: qatom.o exc.o globals.o qpi5 qpi5p
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -202,10 +202,10 @@ qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5 qdum5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
-	bonded.o bondene.o mpiglob.o 
+qdyn5 qdum5 qpi5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
+	bonded.o bondene.o mpiglob.o qdyn.o
 
-qdyn5p qdyn5h: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
+qdyn5p qdyn5h qpi5p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
 	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o
 
 qdyn5 : md.o 
@@ -218,6 +218,12 @@ qdyn5p : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5h : md_mpi.o qdyn_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
+
+qpi5   : qpi.o
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
+
+qpi5p  : qpi_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
@@ -387,6 +393,13 @@ qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob_mpi.o version.o simprep_mpi.o
 qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
+qpi.o: qpi.f90 qcp.o version.o simprep.o mpiglob.o
+	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qpi.f90
+
+qpi_mpi.o: qpi.f90 qcp_mpi.o version.o simprep_mpi.o mpiglob_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
+	-c qpi.f90 -o qpi_mpi.o
+
 simprep.o: simprep.f90 sizes.o trj.o mpiglob.o qatom.o version.o globals.o exc.o math.o qalloc.o qcp.o \
 	nonbondene.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c simprep.f90
@@ -423,6 +436,12 @@ move3:
 
 move4:
 	mkdir -p ../bin ; mv qdyn5h ../bin/
+
+move5:  
+	mkdir -p ../bin ; mv qpi5 ../bin/
+
+move6:
+	mkdir -p ../bin ; mv qpi5p ../bin/
 
 
 include buildnumber.mak

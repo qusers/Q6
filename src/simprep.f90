@@ -2473,8 +2473,8 @@ if (.not. use_PBC) then
 	  call die('inner radius of restrained shell must be < exclusion radius')
 	end if
 	!first find atoms in shell 
-	if (rexcl_i >= 0) then      !if rexcl_i is defined...
-	  if (rexcl_i <= 1.00) then   !if rexcl_i is defined as fraction of rexcl_o
+	if (rexcl_i >= zero) then      !if rexcl_i is defined...
+	  if (rexcl_i <= one) then   !if rexcl_i is defined as fraction of rexcl_o
 	    rexcl_i = rexcl_i * rexcl_o  !translate to Angstrom
 	  end if 
 	  if(iuse_switch_atom == 1) then
