@@ -906,15 +906,18 @@ end subroutine create_grid_ww
 !-----------------------------------------------------------------------
 
 
-subroutine open_files
+subroutine open_files(md)
+! arguments
+logical :: md
 ! --> restart file (2)
 if(restart) then
 open (unit=2, file=restart_file, status='old', form='unformatted', action='read', err=2)
 end if
 
+if (md) then
 ! --> final coords (3)
 open (unit=3, file=xfin_file, status='unknown', form='unformatted', action='write', err=3)
-
+end if
 ! --> energy output file (11)
 if ( iene_cycle .gt. 0 ) then
 open (unit=11, file=ene_file, status='unknown', form='unformatted', action='write', err=11)

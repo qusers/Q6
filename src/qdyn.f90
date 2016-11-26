@@ -92,7 +92,7 @@ program Qdyn5
 	! master node: read input and initialise
 
 	if(.not. initialize()) call die('Invalid data in input file')						! read input data
-	call open_files						! open necessary files
+	call open_files(md=.true.)		! open necessary files
 	call topology				! read topology
 	call prep_coord						! read coords, solvates etc
 	if ( nstates > 0 ) call get_fep	! read fep/evb strategy

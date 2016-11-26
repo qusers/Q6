@@ -96,7 +96,7 @@ program QPI5
 	! master node: read input and initialise
 
 	if(.not. qcp_initialize()) call die('Invalid data in input file')						! read input data
-	call open_files				! open necessary files
+	call open_files(md=.false.)		! open necessary files
 	call topology				! read topology
 	call qcp_prep_coord				! read coords, get number of configurations
 	call get_fep	! read fep/evb strategy
