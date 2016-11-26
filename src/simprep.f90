@@ -37,11 +37,8 @@ subroutine simprep_startup
 ! initialise used modules
 call qatom_startup
 call trj_startup
+call math_initialize
 
-
-! initialise constants
-pi = 4.0_prec*atan(one)
-deg2rad = pi/180.0_prec
 
 end subroutine simprep_startup
 
@@ -87,8 +84,8 @@ if(use_PBC) then
 ! also, the coordinates of each grid need to be corrected after a box movement
 
 ! number of one dimensional spacings cubed
-pp_gridnum=int(ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)**3)
-ndim=ceiling(((boxlength(1)+boxlength(2)+boxlength(3))/3)/gridRc)
+pp_gridnum=int(ceiling(((boxlength%x+boxlength%y+boxlength%z)/3)/gridRc)**3)
+ndim=ceiling(((boxlength%x+boxlength%y+boxlength%z)/3)/gridRc)
 pp_ndim=ndim
 if (ncgp_solute .gt. 500) then
 gridstor_pp = (ncgp_solute*8/pp_gridnum)+100
@@ -98,15 +95,13 @@ endif
 call allocate_grid_pp
 
 ! set starting coordinates for first grid
-xtmp=boxcentre(1)-boxlength(1)/2
-ytmp=boxcentre(2)-boxlength(2)/2
-ztmp=boxcentre(3)-boxlength(3)/2
+tmp=boxcentre-boxlength/2
 
 num=0
 do i=1,ndim
- ytmp=boxcentre(2)-boxlength(2)/2
+ tmp%y=boxcentre%y-boxlength%y/2
  do j=1,ndim
-  ztmp=boxcentre(3)-boxlength(3)/2
+  tmp%z=boxcentre%z-boxlength%z/2
   do k=1,ndim
    num=num+1
 

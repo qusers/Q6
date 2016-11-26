@@ -138,7 +138,7 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qpi5 move1 move5
+	qpi5 qfep5 qprep5 qdum5 move1 move2 move5
 #	qfep5 qprep5 qdum5 qcalc5 move1 move2
 
 serial:	
@@ -147,7 +147,7 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qpi5 move1 move5
+	qpi5 qdyn5 qfep5 qprep5 qdum5 move1 move5 moveqdyn
 #	qdyn5 qpi5 move1 moveqdyn move5
 
 prof:
@@ -193,7 +193,7 @@ qdyn5 qdum5: qdyn.o
 
 qdyn5 qdum5 qdyn5p qdyn5h qpi5 qpi5p: qatom.o exc.o globals.o
 
-qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o
+qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qfep5: qfep.o 
@@ -431,7 +431,7 @@ move1:
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 ../bin/
 
 move3:
 	mkdir -p ../bin ; mv qdyn5p ../bin/

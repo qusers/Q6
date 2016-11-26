@@ -158,8 +158,8 @@ subroutine startup
   end if
 
   ! initialise used modules
-!  call qcp_startup
-
+  call qcp_startup
+  call simprep_startup
 end subroutine startup
 
 !-----------------------------------------------------------------------

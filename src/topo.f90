@@ -1130,7 +1130,7 @@ subroutine topo_save(name)
 	write(*, 10, advance='no') 'co-ordinates'
 	write(u, '(4i8,a)') nat_pro, nat_solute, solv_atom, dielectric, &
 		' = Total no. of atoms, no. of solute atoms, atoms per solvent molecule, solvent dielectric as eps*1000. Coordinates: (2*3 per line)'
-	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop(1:si:3), si = 1,nat_pro )
+	if(nat_pro > 0) write(u, '(2(3(f9.3,1x),1x))') ( xtop )
 	write(*, 20) 3*nat_pro
 
 ! --- INTEGER ATOM CODES

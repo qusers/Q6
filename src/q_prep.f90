@@ -148,7 +148,7 @@ character(*), intent(IN)  ::  command
 		case('readx', 'rx')
 			CALL readx
 		case('makeshell', 'ms')
-			CALL make_shell2
+			CALL make_shell2_wrap
 		case('mask', 'ma')
 			CALL modify_mask
 		case('trajectory', 'trj', 'tr')

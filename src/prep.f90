@@ -6,6 +6,7 @@
 
 MODULE PREP
 	use BONDED
+        use QMATH
 	use TRJ
 	use PARSE
 	use PRMFILE
@@ -166,7 +167,7 @@ MODULE PREP
 
 !	real(kind=prec)						::	pi, deg2rad
 	!temporary storage for solvent coordinates
-	TYPE(qr_vec) allocatable		::	xw(:,:) !solvent coordinates atom,molecule
+	TYPE(qr_vec),allocatable		::	xw(:,:) !solvent coordinates atom,molecule
 	!flag for solvent molecules not clashing with any solute heavy atom
 	logical, allocatable		::	keep(:)
 	!residue code for solvent
@@ -192,16 +193,19 @@ MODULE PREP
 
 ! --- Types for creation of larger solvent molecules
 	TYPE MISSING_TYPE
-		integer                                 ::      bonds(4), angles(12)
-		logical                                 ::      bond_notset(4), angle_notset(12)
+		integer                                 ::      bonds(4), angles(12), torsions(12)
+		logical                                 ::      bond_notset(4), angle_notset(12),torsion_notset(12)
                 logical                                 ::      atom_missing
 	end TYPE MISSING_TYPE
 	TYPE MISSING_BOND_TYPE
-		integer					::	i,j,cod
+		integer					::	i,j
 	end TYPE MISSING_BOND_TYPE
 	TYPE MISSING_ANGLE_TYPE
-		integer                                 ::      i,j,k,cod
+		integer                                 ::      i,j,k
 	end TYPE MISSING_ANGLE_TYPE
+        TYPE MISSING_TOR_TYPE
+                integer                                 ::      i,j,k,l
+        end TYPE MISSING_TOR_TYPE
 
 
 contains
@@ -215,6 +219,7 @@ subroutine prep_startup
 	call prmfile_startup		! empty
 	call parse_startup			! some code
 	call index_startup			! empty
+        call math_initialize
 
 	!initialize preference module & add user-settable variables
 	call pref_initialize() !	! allocates mem for p(:)
@@ -1086,9 +1091,8 @@ end function impcode
 subroutine impr_ene(emax, nlarge, av_ene, mode)
 ! *** local variables
 	integer		:: i, j, k, l, ip, ic, nlarge, mode
-	TYPE(tors_val)	:: improper
-	real(kind=prec)	:: pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
-	dl(3)
+	TYPE(tors_val)	:: calc
+	real(kind=prec)	:: pe, dv, arg, f1
 	real(kind=prec) emax, av_ene
 
 !.......................................................................
@@ -1107,16 +1111,16 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 			write(*, '(5i5,1x,a)') ip, i, j, k, l, 'MISSING PARAMETERS'
 			cycle
 		end if
-		improper = improper_calc(xtop(i),xtop(j),xtop(k),xtop(l))
+		calc = improper_calc(xtop(i),xtop(j),xtop(k),xtop(l))
 
 ! ---	energy
 		if(imp_type == 1) then !harmonic
-			arg = improper_calc%angl - implib(ic)%imp0 * deg2rad
+			arg = calc%angl - implib(ic)%imp0 * deg2rad
 			arg = arg - 2.0_prec * pi * nint(arg /(2.0_prec * pi) )
 			dv = implib(ic)%fk * arg
 			pe = 0.5_prec * dv * arg
 		else !periodic
-			arg = 2.0_prec*improper_calc%angl - implib(ic)%imp0 * deg2rad
+			arg = 2.0_prec*calc%angl - implib(ic)%imp0 * deg2rad
 			pe = implib(ic)%fk * (1 + q_cos(arg))
 			dv = -2.0_prec*implib(ic)%fk * q_sin(arg)
 		end if
@@ -1126,7 +1130,7 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 		if(pe>emax) then
 			nlarge = nlarge+1
 			if(mode==0) write( * , '(6i5,5f8.2)') ip, i, j, k, l, ic, &
-			implib(ic)%fk , implib(ic)%imp0 , improper_calc%angl * rad2deg, pe
+			implib(ic)%fk , implib(ic)%imp0 , calc%angl * rad2deg, pe
 			if(mode==1) then
 				imp(ip)%i = i
 				imp(ip)%j = j
@@ -1669,7 +1673,6 @@ integer function genH(j, residue)
 	integer, intent(in)			::	j, residue
 !locals
 	TYPE(qr_vec)			:: xj, xk, old_xH, xH, dV, dvLast, dx, dVtot
-	TYPE(qr_dist			:: bond_length
 	real(kind=prec)			:: V, Vtot, gamma, VtotLast, dx_line, rms_dV
 	integer				::	ligand, H, kt, lt
 	real(kind=prec),parameter	::	convergence_criterum = 0.1_prec
@@ -1685,12 +1688,13 @@ integer function genH(j, residue)
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
 	integer					::	a, b, axis
-	real(kind=prec)				::	bond_length, db
-	real(kind=prec)				::	rjH(3), rjk(3), bjHinv, bjkinv
-	real(kind=prec)				::	scp, angle, angle_deg, dVangle, da, f1
-	TYPE(qr_vec)				::	xkt, xlt, rjkt, rktlt, rnj, rnk
+	real(kind=prec)				::	db, bond_length
+	real(kind=prec)				::	scp, angle_deg, dVangle, da, f1
+        TYPE(angl_val)                          :: angle
+        TYPE(tors_val)                          :: torsion
+	TYPE(qr_vec)				::	xkt, xlt, rjkt, rktlt, rnj, rnk,rjH
 	real(kind=prec)				::	bj, bk
-	real(kind=prec)				::	phi, phi_deg, sgn, dVtors, arg, dH(3)
+	real(kind=prec)				::	phi, phi_deg, sgn, dVtors, arg
 	logical					::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
@@ -1775,7 +1779,7 @@ integer function genH(j, residue)
 				flipped = .false.
 				do lineiter = 1, max_line_iterations
 					Vtot  = zero
-					dVtot = zero
+					dVtot = dVtot * zero
 					!calc. potential & gradient
 					!angles
 					do a = 1, nHang
@@ -1794,13 +1798,13 @@ integer function genH(j, residue)
 					!torsion
 					if(rule > 0) then
 						torsion = torsion_calc(xH,xj,xkt,xlt)
-						arg = torsion_calc%angl-lp%rules(rule)%value*deg2rad
+						arg = torsion%angl-lp%rules(rule)%value*deg2rad
 						V = tors_fk*(one+q_cos(arg))
 						!note changed sign of dVtors to get min (not max) at rule value
 						dVtors = +tors_fk*q_sin(arg)
 
 						! ---       forces
-						dV    = torsion_calc%a_vec * dVtors
+						dV    = torsion%a_vec * dVtors
 						dVtot = dVtot + dV
 					end if
 					if(cgiter == 1 .and. lineiter == 1) then
@@ -1825,7 +1829,7 @@ integer function genH(j, residue)
 !				write(*,*) lineiter
 
 				rjH = xH - xj 
-				bond_length = qr_dist(xH,xj)%dist
+				bond_length = q_sqrt(q_dist4(xH,xj))
 				rjH = rjH / bond_length * bnd0      !adjust bond length
 				xH  = xj + rjH
 				rms_dV = q_sqrt(q_dotprod(dVtot,dVtot))
@@ -1873,12 +1877,13 @@ integer function genH(j, residue)
 	end do !hydrogens to make
 end function genh
 
-integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
+integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,missing_torsions)
 !arguments
 	TYPE(qr_vec)			::	waterarray(:)
 	type(MISSING_TYPE),intent(in)		::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),intent(in) 	::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),intent(in)	::	missing_angles(:)
+        type(MISSING_TOR_TYPE),intent(in)       ::      missing_torsions(:)
 !locals
         TYPE(qr_vec)						::	xj, xk,old_xH,xH,dV,dvLast,dVtot,dx
 	integer						::	ligand, H, kt, lt
@@ -1896,16 +1901,27 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
         type TMP_ANGLE_TYPE
              real(kind=prec)                                    ::      ang0,fk
         end type TMP_ANGLE_TYPE
-        type(TMP_ANGLE_TYPE)                            ::      ang(max_conn)
-	integer						::	nHang, Hang_atom(max_conn)
-	integer						::	Hang_code(max_conn)
+        type TMP_TOR_TYPE
+                real(kind=prec)                                 ::      fk(10),mult(10),delt(10),path(10),ntor
+        end type TMP_TOR_TYPE
+        TYPE(TOR_CODES)                                         ::      tmp_tor_codes
+        integer                                                 ::      tmp_bnd_code,tmp_ang_code
+        type(TMP_ANGLE_TYPE)                            ::      tmp_ang(max_conn)
+        type(TMP_TOR_TYPE)                              ::      tmp_tor(max_conn*3)
+	integer						::	nHang, Hang_atom(max_conn), ator
+	integer						::	Hang_code(max_conn),mtor,nHtor
+        integer                                         ::      iaci,iacj,iack,iacl,icod
+        integer                                         ::      Htor_latom(max_conn*4),Htor_katom(max_conn*4)
+        logical                                         ::      opt_only
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
 	integer						::	a, b, axis
-        TYPE(qr_vec)                                    :: rjH,rjk,xkt,xlt,rjkt,rktlt,rnj,rnk,dH
+        TYPE(qr_vec)                                    :: rjH,rjk,xkt,xlt,rjkt,rktlt,rnj,rnk,dH,xl
+        TYPE(angl_val)                                  :: angle
+        TYPE(tors_val)                                  :: torsion
 	real(kind=prec)						::	bond_length, db
 	real(kind=prec)						::	bjHinv, bjkinv
-	real(kind=prec)						::	scp, angle, angle_deg, dVangle, da, f1
+	real(kind=prec)						::	scp, angle_deg, dVangle, da, f1
 	real(kind=prec)						::	bj, bk
 	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg
 	logical						::	flipped
@@ -1942,8 +1958,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 				missing_local(addatom)%bond_notset(mbond) = .false.
 				opt_only = .true.
 			end if
-			if (missing_bonds(miss)%cod .gt. 0) then
-				bnd0 = bnd_prm(missing_bonds(miss)%cod)%prm%bnd0
+                        iaci = iac(missing_bonds(miss)%i)
+                        iacj = iac(missing_bonds(miss)%j)
+                        tmp_bnd_code = bondcode(tac(iaci),tac(iacj))
+			if (tmp_bnd_code .gt. 0) then
+				bnd0 = bnd_prm(tmp_bnd_code)%prm%bnd0
 			else
 				bnd0 = 1.0_prec !default when missing parameters
 			end if
@@ -1958,17 +1977,23 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 						(.not.(missing_local(missing_angles(miss)%k)%atom_missing))) then
 						nHang = nHang + 1
 						Hang_atom(nHang) = missing_angles(miss)%k
-!						Hang_code(nHang) = missing_angles(miss)%cod
-						ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
-						ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+                                                iaci = iac(missing_angles(miss)%i)
+                                                iacj = iac(missing_angles(miss)%j)
+                                                iack = iac(missing_angles(miss)%k)
+                                                tmp_ang_code = anglecode(tac(iaci),tac(iacj),tac(iack))
+						tmp_ang(nHang)%ang0  = ang_prm(tmp_ang_code)%ang0
+						tmp_ang(nHang)%fk    = ang_prm(tmp_ang_code)%fk
 					elseif((missing_angles(miss)%k .eq. H).and. &
 						(.not.(missing_local(missing_angles(miss)%j)%atom_missing)).and.&
 						(.not.(missing_local(missing_angles(miss)%i)%atom_missing))) then
 						nHang = nHang + 1
 						Hang_atom(nHang) = missing_angles(miss)%i
-!						Hang_code(nHang) = missing_angles(miss)%cod
-						ang(nHang)%ang0  = ang_prm(missing_angles(miss)%cod)%ang0
-						ang(nHang)%fk    = ang_prm(missing_angles(miss)%cod)%fk
+                                                iaci = iac(missing_angles(miss)%k)
+                                                iacj = iac(missing_angles(miss)%j)
+                                                iack = iac(missing_angles(miss)%i)
+                                                tmp_ang_code = anglecode(tac(iaci),tac(iacj),tac(iack))
+						tmp_ang(nHang)%ang0  = ang_prm(tmp_ang_code)%ang0
+						tmp_ang(nHang)%fk    = ang_prm(tmp_ang_code)%fk
 					end if
 				end if
 			end do
@@ -1985,12 +2010,19 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 						nHtor = nHtor + 1
 						Htor_latom(nHtor) = missing_torsions(miss)%l
 						Htor_katom(nHtor) = missing_torsions(miss)%k
-!						Htor_code(nHtor)  = missing_torsions(miss)%cod 
-! remember here that tor% structures are a special data structure with 3 fields
-! maybe need to reconsider this later if we want to support more torsions
-						tor(nHtor)%mult = tor_prm(missing_torsions(miss)%cod)%mult
-						tor(nHtor)%delt = tor_prm(missing_torsions(miss)%cod)%delt
-						tor(nHtor)%path = tor_prm(missing_torsions(miss)%cod)%path
+                                                iaci = iac(missing_torsions(miss)%i)
+                                                iacj = iac(missing_torsions(miss)%j)
+                                                iack = iac(missing_torsions(miss)%k)
+                                                iacl = iac(missing_torsions(miss)%k)
+                                                tmp_tor_codes = torcode(tac(iaci),tac(iacj),tac(iack),tac(iacl))
+! remember here that tor% structures are a special data structure with n fields
+                                                tmp_tor(nHtor)%ntor = tmp_tor_codes%ncod
+                                                do icod = 1, tmp_tor_codes%ncod
+                                                tmp_tor(nHtor)%fk(icod)   = tor_prm(tmp_tor_codes%cod(icod))%fk
+						tmp_tor(nHtor)%mult(icod) = tor_prm(tmp_tor_codes%cod(icod))%rmult
+						tmp_tor(nHtor)%delt(icod) = tor_prm(tmp_tor_codes%cod(icod))%deltor
+						tmp_tor(nHtor)%path(icod) = tor_prm(tmp_tor_codes%cod(icod))%paths
+                                                end do
 					elseif((missing_torsions(miss)%l .eq. H ).and. &
 						(.not.(missing_local(missing_torsions(miss)%k)%atom_missing)).and.&
 						(.not.(missing_local(missing_torsions(miss)%j)%atom_missing)).and.&
@@ -1998,10 +2030,19 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 						nHtor = nHtor + 1
 						Htor_latom(nHtor) = missing_torsions(miss)%j
 						Htor_katom(nHtor) = missing_torsions(miss)%i
-						tor(nHtor)%mult = tor_prm(missing_torsions(miss)%cod)%mult
-						tor(nHtor)%delt = tor_prm(missing_torsions(miss)%cod)%delt
-						tor(nHtor)%path = tor_prm(missing_torsions(miss)%cod)%path
-						tor(nHtor)%fk   = tor_prm(missing_torsions(miss)%cod)%fk
+                                                iaci = iac(missing_torsions(miss)%k)
+                                                iacj = iac(missing_torsions(miss)%l)
+                                                iacl = iac(missing_torsions(miss)%j)
+                                                iack = iac(missing_torsions(miss)%i)
+                                                tmp_tor_codes = torcode(tac(iaci),tac(iacj),tac(iack),tac(iacl))
+! remember here that tor% structures are a special data structure with n fields
+                                                tmp_tor(nHtor)%ntor = tmp_tor_codes%ncod
+                                                do icod = 1, tmp_tor_codes%ncod
+                                                tmp_tor(nHtor)%fk(icod)   = tor_prm(tmp_tor_codes%cod(icod))%fk
+						tmp_tor(nHtor)%mult(icod) = tor_prm(tmp_tor_codes%cod(icod))%rmult
+						tmp_tor(nHtor)%delt(icod) = tor_prm(tmp_tor_codes%cod(icod))%deltor
+						tmp_tor(nHtor)%path(icod) = tor_prm(tmp_tor_codes%cod(icod))%paths
+                                                end do
 					end if
 				end if
 			end do
@@ -2026,7 +2067,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 			flipped = .false.
 			do lineiter = 1, max_line_iterations
 				Vtot  = zero
-				dVtot = zero
+				dVtot = dVtot * zero
 				!calc. potential & gradient
 				!angles
 				rjH = xH - xj 
@@ -2035,59 +2076,59 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 					angle     = angle_calc(xH,xj,xk)
 					angle_deg = angle%angl *rad2deg
 					! calculate da and dv
-					da = angle%angl - ang(nHang)%ang0*deg2rad
-					V = 0.5_prec*ang(nHang)%fk*da**2
+					da = angle%angl - tmp_ang(nHang)%ang0*deg2rad
+					V = 0.5_prec*tmp_ang(nHang)%fk*da**2
 					Vtot = Vtot + V
-					dVangle = ang(nHang)%fk*da
-					dV    = dVangle * angle%vec_a
+					dVangle = tmp_ang(nHang)%fk*da
+					dV    = dVangle * angle%a_vec
 					dVtot = dVtot + dV
 				end do
 
 				!torsion
 				do a = 1, nHtor
-					xk = waterarray(Htor_atomk(a))
-					xl = waterarray(Htor_atoml(a))
+					xk = waterarray(Htor_katom(a))
+					xl = waterarray(Htor_latom(a))
 					torsion = torsion_calc(xH,xj,xk,xl)
 					V       = zero
 					dVtors  = zero
-					do ator = 1, 3
-! for all three possible torsion terms
-						arg = tor(nHtor)%mult(ator)*torsion%angl - tor(nHtor)%delt(ator)
-						V = V + tor(nHtor)%fk(ator)*(one+q_cos(arg))*tor(nHtor)%path(ator)
-						dVtors = tor(nHtor)%mult(ator)*tor(nHtor)%fk(ator) &
-							*q_sin(arg)*tor(nHtor)%path(ator)
+					do ator = 1, tmp_tor(nHtor)%ntor
+! for all possible torsion terms
+						arg = tmp_tor(nHtor)%mult(ator)*torsion%angl - tmp_tor(nHtor)%delt(ator)
+						V = V + tmp_tor(nHtor)%fk(ator)*(one+q_cos(arg))*tmp_tor(nHtor)%path(ator)
+						dVtors = tmp_tor(nHtor)%mult(ator)*tmp_tor(nHtor)%fk(ator) &
+							*q_sin(arg)*tmp_tor(nHtor)%path(ator)
 					end do
 					!note changed sign of dVtors to get min (not max) at rule value
 					! ---       forces
-					dV    = dVtors*torsion%vec_a
+					dV    = dVtors*torsion%a_vec
 					dVtot = dVtot + dV
 				end do
 				if(cgiter == 1 .and. lineiter == 1) then
 					!its the start of the search, use the gradient vector
-					dvLast(:) = dVtot(:)
+					dvLast = dVtot
 				elseif(VtotLast < Vtot) then
 					dx_line = -dx_line !next step back
 					flipped = .true.
 				endif
-				rms_dV = q_sqrt(abs(q_dot_product(dVtot, dVLast)))
+				rms_dV = q_sqrt(abs(q_dotprod(dVtot, dVLast)))
 				if(rms_dV < convergence_criterum / 10) then
 					exit !reached a potential minimum along the search line
 				endif
 
 				!update position in line search
-				dx = -dVLast / q_sqrt(q_dot_product(dVlast, dVLast)) * dx_line
+				dx = -dVLast / q_sqrt(q_dotprod(dVlast, dVLast)) * dx_line
 				if(flipped) dx_line = 0.5_prec * dx_line !reduce step size only after first change of direction
 				VtotLast = Vtot
-				xH(:) = xH(:) + dx(:)
+				xH = xH + dx
 			end do !lineiter
 
 !				write(*,*) lineiter
 
 			rjH = xH - xj
-			bond_length = q_sqrt(q_dot_product(rjH, rjH))
+			bond_length = q_sqrt(q_dotprod(rjH, rjH))
 			rjH = rjH / bond_length * bnd0      !adjust bond length
 			xH = xj + rjH
-			rms_dV = q_sqrt(q_dot_product(dVtot,dVtot))
+			rms_dV = q_sqrt(q_dotprod(dVtot,dVtot))
 			if(rms_dV <  convergence_criterum) then
 				if(Vtot < local_min) then
 					!found global min
@@ -2100,7 +2141,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles)
 			end if
 
 			!get new gradient search direction
-			gamma = q_dot_product(dVtot, dVlast) / q_dot_product(dVlast, dVlast)
+			gamma = q_dotprod(dVtot, dVlast) / q_dotprod(dVlast, dVlast)
 			!use conjugate gradient
 			dVlast = dVtot - gamma*dVlast
 
@@ -2322,7 +2363,7 @@ subroutine maketop
 	end if
 
 	if( .not. have_solvent_boundary) then
-        xwcent(:) = xpcent(:)
+        xwcent = xpcent
 		write(*,911)
 		write(*,912)
 911		format('>>>>> WARNING: System has not been solvated.')
@@ -4246,9 +4287,7 @@ subroutine readpdb()
                 nwat = 0
         end if
 	write(*,110) nmol,nres, nres_solute, nat_pro, nat_solute
-110	format(/,'Successfully read PDB file with', i5,' molecules,',/,&
-		i5,' residues totally (',i5,' in solute).',/,&
-		i5,' atoms totally (',i5,' in solute).')
+110	format(/,'Successfully read PDB file with', i5,' molecules,',/,i5,' residues totally (',i5,' in solute).',/,i5,' atoms totally (',i5,' in solute).')
 
 	write( * , '(/,a,/)') 'Sequence listing:'
 	write( * , '(16(a4,1x))') res(1:nres)%name
@@ -4259,8 +4298,7 @@ subroutine readpdb()
 !	error handling
   200 write( * , '(/,a,i5,/)') '>>> Read error on line ', irec
   210 write( * , '(a)') 'Correct the PDB file and try readpdb again!'
-	write( * , '(a)') 'If the problem is in the library you need to correct it and do',&
-		'clearlib and readlib before trying readpdb again.'
+	write( * , '(a)') 'If the problem is in the library you need to correct it and do clearlib and readlib before trying readpdb again.'
 	close(3)
 	CALL clearpdb
 	pdb_file = ''
@@ -4296,7 +4334,7 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 			dhead = res(thisres)%start - 1 + dhead
 			dtail = (dtail*3)-3
 			dhead = (dhead*3)-3
-                        dist  = q_sqrt(q_dist5(xtop(dtail),xtop(dhead)))
+                        dist  = q_sqrt(q_dist4(xtop(dtail),xtop(dhead)))
 		end if
 	end if
         if(gap .or. &
@@ -4341,7 +4379,7 @@ subroutine readtop
 	CALL get_string_arg(filnam, '-----> Give name of(old) topology file: ')
 	if(openit(10, filnam, 'old', 'formatted', 'read') /= 0) return
 	!tell topo_read to allocate some extra space for bonds
-	topo_ok = topo_read(u=10, require_version=2.0, extrabonds=max_extrabnd)
+	topo_ok = topo_read(u=10, require_version=2.0_prec, extrabonds=max_extrabnd)
 	close(10)
 	if(.not. topo_ok) return
 
@@ -4579,7 +4617,7 @@ subroutine set_cgp
 900	format('>>>>> ERROR: Switching atom of charged group',i2,' of residue type ',a4,' is not a heavy atom.')
 					cycle !continue looping, do not exclude
 				endif
-				r2 = q_dist5(xtop(switchatom),xpcent)
+				r2 = q_dist4(xtop(switchatom),xpcent)
 			else
 				!exclude by charge group centre
           cgp_cent = cgp_cent * zero
@@ -4587,12 +4625,12 @@ subroutine set_cgp
 			    	ia = res(ires)%start - 1 + lib(res(ires)%irc)%atcgp(i, igp)
 					  cgp_cent = cgp_cent + xtop(ia)
 				  end do
-          cgp_cent = cgp_cent/real(lib(res(ires)%irc)%natcgp(igp))
-          r2 = q_dist5(cgp_cent,xpcent)
+          cgp_cent = cgp_cent/real(lib(res(ires)%irc)%natcgp(igp),kind=prec)
+          r2 = q_dist4(cgp_cent,xpcent)
 			endif
 
 			if( (r2 < rexcl_o**2) .or. &
-				(ires > nres_solute .and. r2 < (rexcl_o + 2.)**2)) then
+				(ires > nres_solute .and. r2 < (rexcl_o + 2.0_prec)**2)) then
 				!is it inside? For solvent include up to 2Å outside rexcl_o too
 				ncgp = ncgp + 1
 				if(ires <= nres_solute) then
@@ -5154,7 +5192,7 @@ subroutine solvate_box_file
 	integer 			::	extension(3)
 	real(kind=prec)					::	extensionbox_v
 	integer					::	nw, nnw !water molecule counters
-	integer					::	i, j, k !loop indecis
+	integer					::	i, j, k, l !loop indecis
 	integer					::	filestat !error variable
 	character(len=3)		::	atomnames
 	character(len=4),allocatable    ::	resnam(:)
@@ -5230,8 +5268,8 @@ subroutine solvate_box_file
 	else !the waterbox is not big enough
 		replicate = .true.
 		!find out in wich direction replication is needed
-		extension(:) = ceiling( boxlength(:)/boxl )
-		extensionbox_v = extension(1)*extension(2)*extension(3)*waterbox_v
+		extension = q_ceiling( boxlength/boxl )
+		extensionbox_v = real(extension(1),kind=prec)*real(extension(2),kind=prec)*real(extension(3),kind=prec)*waterbox_v
 		nwat_allocate = int( lib(irc_solvent)%density*1.05_prec*extensionbox_v )
 	end if
 
@@ -5244,10 +5282,9 @@ subroutine solvate_box_file
 	nw = 0
 
 	do i = 1, nwat_allocate-1
-		read(13, 1, iostat=filestat, end=10) &
-			atomnames(1:1), resnam(1), resno(1), xw(:, 1, nw+1), &
-			& atomnames(2:2), resnam(2), resno(2), xw(:, 2, nw+1), &
-			& atomnames(3:3),	resnam(3), resno(3), xw(:, 3, nw+1)
+                do j=1,lib(irc_solvent)%nat
+		read(13, 1, iostat=filestat, end=10) atomnames(1:1), resnam(j), resno(j), xw(j, nw+1)
+                end do
 		!checking the read info
 		if(filestat > 0) then
 			write(*, 7) nw
@@ -5282,10 +5319,15 @@ subroutine solvate_box_file
 !Replicate if necessary
 	if(replicate) then
 		write(*, '(a)') 'Replicating box of water...'
-		ext(:,1) = (/boxl, 0.0_prec, 0.0_prec/)
-		ext(:,2) = (/0.0_prec, boxl, 0.0_prec/)
-		ext(:,3) = (/0.0_prec, 0.0_prec, boxl/)
-
+                ext(1)%x = boxl
+                ext(1)%y = zero
+                ext(1)%z = zero
+                ext(2)%x = zero
+                ext(2)%y = zero
+                ext(2)%z = zero
+                ext(3)%x = zero
+                ext(3)%y = zero
+                ext(3)%z = boxl
 		nbox = 0
 		do k=1,3 !the three coordinates
 			if( .not. extension(k) > 1) cycle
@@ -5293,12 +5335,14 @@ subroutine solvate_box_file
 			do i = 1,extension(k)-1
 				nbox = nbox + 1
 				do j = 1,nw
+                                do l = 1,lib(irc_solvent)%nat
 					nnw = nnw + 1
-					xw(:,1,nnw) = xw(:,1,j) + i*ext(k,:)
-					xw(:,2,nnw) = xw(:,2,j) + i*ext(k,:)
-					xw(:,3,nnw) = xw(:,3,j) + i*ext(k,:)
+					xw(l,nnw) = xw(l,j) + real(i,kind=prec)*ext(k)
+                                end do
 				end do
-				waterbox(k) = waterbox(k) + boxl
+                                if(k.eq.1) waterbox%x = waterbox%x + boxl
+                                if(k.eq.2) waterbox%y = waterbox%y + boxl
+                                if(k.eq.3) waterbox%z = waterbox%z + boxl
 				end do
             nw = nnw
 		end do
@@ -5311,23 +5355,32 @@ subroutine solvate_box_file
 
 
 !Compute the centre coordinates for the waterbox
-	xcm(:) = sum( sum(xw, dim=3), dim=2) / (nw*lib(irc_solvent)%nat)
-	wshift(:) = boxcentre(:) - xcm(:)
+        do i=1,nw
+        do j=1,lib(irc_solvent)%nat
+	xcm = xcm + xw(j,i)
+        end do
+        end do
+        xcm = xcm / real(nw*lib(irc_solvent)%nat,kind=prec)
+	wshift = boxcentre - xcm
 
 !Remove water molecules outside of periodic box
 	nwat_keep = 0
 
 	do i = 1,nw
-		temp = xw(:,1,i)
+		temp = xw(1,i)
 
-		if(all(temp(:)<xcm(:)+0.5_prec*boxlength(:)) &
-			.and. all(temp(:)>xcm(:)-0.5_prec*boxlength(:))) then
+		if( (temp%x<xcm%x+0.5_prec*boxlength%x) .and. &
+                        (temp%y<xcm%y+0.5_prec*boxlength%y) .and. &
+                        (temp%z<xcm%z+0.5_prec*boxlength%z) .and. &
+			(temp%x>xcm%x-0.5_prec*boxlength%x) .and. &
+                        (temp%y>xcm%y-0.5_prec*boxlength%y) .and. &
+                        (temp%z>xcm%z-0.5_prec*boxlength%z)) then
 			!keep this molecule
 			nwat_keep = nwat_keep + 1
 			keep(i) = .true.
 			!shift to periodic box centre
 			do j = 1, lib(irc_solvent)%nat
-				xw(:, j, i) = xw(:, j, i) + wshift(:)
+				xw(j,i) = xw(j,i) + wshift
 			end do
 
 		else !do not keep this molecule
@@ -5397,7 +5450,7 @@ logical function set_solvent_sphere()
 	have_solvent_boundary = .false.
 
 	if (have_title) then !Print old centre if available
-		write(*,'(a,3f8.3)') 'Previous solvent centre:', xwcent(1), xwcent(2), xwcent(3)
+		write(*,'(a,3f8.3)') 'Previous solvent centre:', xwcent
 	end if
 	call get_string_arg(line, '-----> Sphere centre (<x y z> or <residue:atom_name> or <"mass"> or <"boundary">): ')
 	call upcase(line)
@@ -5409,23 +5462,23 @@ logical function set_solvent_sphere()
 900			format('>>>>> ERROR: Could not find centre atom ',a)
 			return
 		end if
-		xwcent(:) = xtop(3*centre_atom-2:3*centre_atom)
+		xwcent = xtop(centre_atom)
 	elseif(line == 'MASS') then   !define center by center of mass
-		if (.not. get_centre_by_mass(xwcent(:))) then
+		if (.not. get_centre_by_mass(xwcent)) then
 			write(*,*) ('>>>>> ERROR: Could not create centre ')
 			return
 		end if
 	elseif(line == 'BOUNDARY') then   !define center same as boundary center
 		xwcent = xpcent
 	else !got x
-		read(line, *, iostat=filestat) xwcent(1)
+		read(line, *, iostat=filestat) xwcent%x
 		if(filestat > 0) then !invalid x coordinate
 			return
 		end if
 		xwat_in=get_real_arg('-----> Sphere centre y: ')
-		xwcent(2) = xwat_in
+		xwcent%y = xwat_in
 		xwat_in=get_real_arg('-----> Sphere centre z: ')
-		xwcent(3) = xwat_in
+		xwcent%z = xwat_in
 	end if
 
 	if (have_title) then !Print old radius if available
@@ -5440,7 +5493,7 @@ logical function set_solvent_sphere()
 	end if
 
     write(*,*)
-	write(*,100) xwcent(:)
+	write(*,100) xwcent
 100	format('Solvation sphere centre                   :   ',3f8.3)
 
 	set_solvent_sphere = .true.
@@ -5455,12 +5508,10 @@ subroutine solvate_sphere_grid
 !solvate sphere using grid
 
 	!locals
-
-	real(kind=prec)						::	xmin, xmax, ymin, ymax, zmin, zmax
-	real(kind=prec)						::	xgrid, ygrid, zgrid
-	integer						::	max_wat !max number of molecules
-	integer						::	waters_in_sphere
-	real(kind=prec)						::	radius2, solvent_grid
+        TYPE(qr_vec)                            :: minc,maxc,grid
+	integer					::	max_wat !max number of molecules
+	integer					::	waters_in_sphere,i
+	real(kind=prec)				::	radius2, solvent_grid
 	character(len=200)			::	solvent
 
 	!set water residue name
@@ -5472,7 +5523,7 @@ subroutine solvate_sphere_grid
 
 	!calc cubic grid spacing from density
 	if(lib(irc_solvent)%density > 0.) then
-		solvent_grid = lib(irc_solvent)%density**(-1/3.)
+		solvent_grid = lib(irc_solvent)%density**(-one/3.0_prec)
 	else
 		write(*,900) lib(irc_solvent)%nam
 900		format('>>>>> ERROR: Density not set in library entry ',a)
@@ -5482,16 +5533,14 @@ subroutine solvate_sphere_grid
 	max_wat = (2.0_prec*rwat+solvent_grid)**3 / solvent_grid**3
 	radius2 = rwat**2
 
-	allocate(xw(3,lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
-	xw = zero
+	allocate(xw(lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
+        do i=1,lib(irc_solvent)%nat
+	xw(i,:) = xw(i,:) * zero
+        end do
 	call check_alloc('water sphere co-ordinate array')
 
-	xmin = xwcent(1) - int(rwat/solvent_grid)*solvent_grid
-	xmax = xwcent(1) + int(rwat/solvent_grid)*solvent_grid
-	ymin = xwcent(2) - int(rwat/solvent_grid)*solvent_grid
-	ymax = xwcent(2) + int(rwat/solvent_grid)*solvent_grid
-	zmin = xwcent(3) - int(rwat/solvent_grid)*solvent_grid
-	zmax = xwcent(3) + int(rwat/solvent_grid)*solvent_grid
+        minc = xwcent - (int(rwat/solvent_grid))*solvent_grid
+        maxc = xwcent + int(rwat/solvent_grid)*solvent_grid
 
 	write(*,100) rwat, solvent_grid
 100	format('Radius of solvent sphere                = ',f10.2,' A',/ &
@@ -5500,27 +5549,24 @@ subroutine solvate_sphere_grid
 	!constuct water-only sphere
  	!xmax+0.1 is needed for intel/windows. Otherwise the last loop step is skipped
 	waters_in_sphere = 0
-	xgrid = xmin
-	do while (xgrid <= xmax + 0.1)
-		ygrid = ymin
-		do while (ygrid <= ymax + 0.1)
-			zgrid = zmin
-			do while (zgrid <= zmax + 0.1)
-				if( .not. ((xgrid-xwcent(1))**2 + (ygrid-xwcent(2))**2 &
-					+ (zgrid-xwcent(3))**2 > radius2) ) then
+	grid%x = minc%x
+	do while (grid%x <= maxc%x + 0.1_prec)
+		grid%y = minc%y
+		do while (grid%y <= maxc%y + 0.1_prec)
+			grid%z = minc%z
+			do while (grid%z <= maxc%x + 0.1_prec)
+				if( .not. q_dist4(grid,xwcent) > radius2) then
 				waters_in_sphere = waters_in_sphere + 1
 				!if not outside keep these coordinates
-				xw(1,1,waters_in_sphere) = xgrid
-				xw(2,1,waters_in_sphere) = ygrid
-				xw(3,1,waters_in_sphere) = zgrid
+				xw(1,waters_in_sphere) = grid
 				!all the molecules inside are inside
 				keep(waters_in_sphere) = .true.
 				endif
-				zgrid = zgrid + solvent_grid
+				grid%z = grid%z + solvent_grid
 			end do
-			ygrid = ygrid + solvent_grid
+			grid%y = grid%y + solvent_grid
 		end do
-		xgrid = xgrid + solvent_grid
+		grid%x = grid%x + solvent_grid
 	end do
 
 	call add_solvent_to_topology(waters_in_sphere=waters_in_sphere, &
@@ -5536,27 +5582,27 @@ subroutine solvate_sphere_file(shift)
 	logical, intent(in), optional::	shift
 
 ! local variables
-	integer						::	i,j,nw,nnw
-	integer						::	nwat_allocate, nwat_keep
-	real(kind=prec)						::	rmax2,dx2,boxl, newboxl
-	real(kind=prec), save				::	xcm(3),wshift(3)
-	integer						::	fstat
-	logical						::	is_box
+	integer					::	i,j,nw,nnw
+	integer					::	nwat_allocate, nwat_keep
+	real(kind=prec)				::	rmax2,dx2,boxl, newboxl
+        TYPE(qr_vec), save			::	xcm,wshift
+	integer					::	fstat
+	logical					::	is_box
 	character(len=6)			::	sphere
 	character(len=80)			::	line
-	real(kind=prec)						::	volume
-	real						::	r4dum
+	real(kind=prec)				::	volume
+	real(kind=prec)				::	r4dum
 	character(len=80)			::	xwat_file
-	real(kind=prec)						::	xwshift(3,7)
-	integer						::	box
-	character(len=3)			::	atomnames
-	integer						::	filestat
+        TYPE(qr_vec)				::	xwshift(7)
+	integer					::	box
+	character(len=1)			::	atomnames
+	integer					::	filestat
 	character(len=10)			::	filepos
-	integer						::	resno(3)
-	character(len=4)			::	resnam(3)
+	integer,allocatable			::	resno(:)
+	character(len=4),allocatable		::	resnam(:)
 
-	real(kind=prec)						::	xwtmp(3, max_atlib)
-	integer						::	at_id(max_atlib)
+        TYPE(qr_vec)				::	xwtmp(max_atlib)
+	integer					::	at_id(max_atlib)
 
 	call get_string_arg(xwat_file, '-----> Solvent file name: ')
 	open (unit=13, file=xwat_file, status='old', form='formatted', &
@@ -5604,33 +5650,33 @@ subroutine solvate_sphere_file(shift)
 	end if
 
   ! estimate amount of memory to allocate for temporary water coordinates
-	if((is_box .and. abs(rwat) <= boxl/2.)) then
+	if((is_box .and. abs(rwat) <= boxl/2.0_prec)) then
 		!don't need to replicate
 		!5% safety margin
-		nwat_allocate = int(lib(irc_solvent)%density*1.05*volume)
+		nwat_allocate = int(lib(irc_solvent)%density*1.05_prec*volume)
 	elseif(is_box) then
-		newboxl = boxl*2**(int(log(abs(rwat)*2/boxl)/log(2.)+0.9999))
-		nwat_allocate = int(lib(irc_solvent)%density*1.05*newboxl**3)
+		newboxl = boxl*2**(int(q_logarithm(abs(rwat)*2.0_prec/boxl)/q_logarithm(2.0_prec)+0.9999_prec))
+		nwat_allocate = int(lib(irc_solvent)%density*1.05_prec*newboxl**3)
 	elseif(abs(rwat) > boxl) then !it's a sphere and it's too small
 		write(*,'(a)') '>>>>> ERROR: Water sphere in the file is too small.'
 		call parse_reset
 		close(13)
 		return
 	else !its a sufficiently big sphere
-		nwat_allocate = int(lib(irc_solvent)%density*1.05*volume)
+		nwat_allocate = int(lib(irc_solvent)%density*1.05_prec*volume)
 	endif
-	allocate(xw(3,lib(irc_solvent)%nat,nwat_allocate), keep(nwat_allocate), &
+	allocate(xw(lib(irc_solvent)%nat,nwat_allocate), keep(nwat_allocate), &
        stat=alloc_status)
 	call check_alloc('temporary solvent coord. arrays')
 
 	rmax2 = rwat**2
 	nw = 0
 1	format(13x,a1,3x,a4,i5,4x,3f8.3)
+        allocate(resnam(lib(irc_solvent)%nat),resno(lib(irc_solvent)%nat))
 	do i=1,nwat_allocate-1
-		read (13,1,iostat=filestat, end=10) &
-			atomnames(1:1), resnam(1), resno(1), xw(:, 1,nw+1), &
-			atomnames(2:2), resnam(2), resno(2), xw(:, 2,nw+1), &
-			atomnames(3:3), resnam(3), resno(3), xw(:, 3,nw+1)
+                do j=1,lib(irc_solvent)%nat
+                read (13,1,iostat=filestat, end=10) atomnames(1:1),resnam(j),resno(j),xw(j,nw+1)
+                end do
 		if(filestat > 0) then
 			write(*,8) nw
 			goto 999
@@ -5644,6 +5690,7 @@ subroutine solvate_sphere_file(shift)
 			nw = nw+1
 		end if
 	end do
+        deallocate(resnam,resno)
 7	format('>>>>> ERROR: Inconsistent residue numbering at molecule',i6)
 8	format('>>>>> ERROR: Read failure at molecule',i6)
 9	format('>>>>> ERROR: Residue name other than ',a4,&
@@ -5657,24 +5704,37 @@ subroutine solvate_sphere_file(shift)
   if (is_box .and.  abs(rwat) .gt. boxl/2. ) then
      do while ( abs(rwat) .gt. boxl/2. )
         write (*,'(a)') 'Replicating periodic box...'
-
-		xwshift(:,1) = (/boxl, 0.0_prec, 0.0_prec/)
-		xwshift(:,2) = (/0.0_prec, boxl, 0.0_prec/)
-		xwshift(:,3) = (/0.0_prec, 0.0_prec, boxl/)
-		xwshift(:,4) = (/boxl, boxl, 0.0_prec/)
-		xwshift(:,5) = (/boxl, 0.0_prec, boxl/)
-		xwshift(:,6) = (/0.0_prec, boxl, boxl/)
-		xwshift(:,7) = (/boxl, boxl, boxl/)
+        xwshift(1)%x = boxl
+        xwshift(1)%y = zero
+        xwshift(1)%z = zero
+        xwshift(2)%x = zero
+        xwshift(2)%y = boxl
+        xwshift(2)%z = zero
+        xwshift(3)%x = zero
+        xwshift(3)%y = zero
+        xwshift(3)%z = boxl
+        xwshift(4)%x = boxl
+        xwshift(4)%y = boxl
+        xwshift(4)%z = zero
+        xwshift(5)%x = boxl
+        xwshift(5)%y = zero
+        xwshift(5)%z = boxl
+        xwshift(6)%x = zero
+        xwshift(6)%y = boxl
+        xwshift(6)%z = boxl
+        xwshift(7)%x = boxl
+        xwshift(7)%y = boxl
+        xwshift(7)%z = boxl
 
         do i=1,nw
 			do box = 1,7
-				nnw = nnw+1
-				xw(:,1,nnw) = xw(:,1,i) + xwshift(:,box)
-				xw(:,2,nnw) = xw(:,2,i) + xwshift(:,box)
-				xw(:,3,nnw) = xw(:,3,i) + xwshift(:,box)
+			nnw = nnw+1
+                        do j=1,lib(irc_solvent)%nat
+				xw(j,nnw) = xw(j,i) + xwshift(box)
+                        end do
 			end do
 		end do
-        boxl = 2.*boxl
+        boxl = 2.0_prec*boxl
         nw = nnw
         write (*,28) nw
 28      format ('Number of molecules after replication      = ',i10)
@@ -5689,18 +5749,24 @@ subroutine solvate_sphere_file(shift)
 	! do not shift for "dedicated water file"
 	if(shift) then ! shift == TRUE => normal water file equilibrated without solute
 		!xcm = center of mass for solvent atoms
-		xcm(:) = sum(sum(xw, dim=3), dim=2)/(nw*lib(irc_solvent)%nat)
-		wshift(:) = xwcent(:) -xcm(:) + epsilon(r4dum)
+                do i=1,nw
+                do j=1,lib(irc_solvent)%nat
+		xcm = xcm + xw(j,i)  
+                end do
+                end do
+                xcm = xcm /real(nw*lib(irc_solvent)%nat,kind=prec)
+                xcm = xcm + q_epsilon(r4dum)
+		wshift = xwcent - xcm 
 
 		nnw = 0
 		nwat_keep = 0
 		do i=1,nw
-			dx2 = dot_product(xw(:,1,i)-xcm(:),xw(:,1,i)-xcm(:))
+			dx2 = q_dist4(xw(1,i),xcm)
 			if(dx2 <= rmax2) then
 				nwat_keep = nwat_keep+1
 				!shift to xwcent
 				do j = 1, lib(irc_solvent)%nat
-					xw(:,j,i) = xw(:,j,i) + wshift(:)
+					xw(j,i) = xw(j,i) + wshift
 				end do
 				keep(i) = .true. ! water i is in sphere
 			else
@@ -5709,7 +5775,7 @@ subroutine solvate_sphere_file(shift)
 		end do
 	else ! shift == FALSE => water file equilibrated with solute
 	    do i=1,nw
-			dx2 = dot_product(xw(:,1,i)-xwcent(:),xw(:,1,i)-xwcent(:))
+			dx2 = q_dist4(xw(1,i),xwcent)
 			if(dx2 <= rmax2) then
 				nwat_keep = nwat_keep+1
 				keep(i) = .true. ! water i is in sphere
@@ -5737,14 +5803,14 @@ subroutine solvate_restart
 	integer(4)					::	natom, nat3, waters_added
 	character(len=80)			::	xfile
 	integer						::	u, fstat
-	real(kind=prec),allocatable			::	xtmp(:)
+        TYPE(qr_vec),allocatable			::	xtmp(:)
 	character(len=200)			::	solvent
 	integer					::	headercheck,i,j,l,cindex
 	logical					::	old_restart
-	real(kind=singleprecision),allocatable	::	xtmp_single(:)
-	real(kind=doubleprecision),allocatable	::	xtmp_double(:)
+        TYPE(qr_vecs),allocatable	::	xtmp_single(:)
+        TYPE(qr_vecd),allocatable	::	xtmp_double(:)
 #ifndef PGI
-	real(kind=quadprecision),allocatable	::	xtmp_quad(:)
+        TYPE(qr_vecq),allocatable	::	xtmp_quad(:)
 #endif
 	u=freefile()
 
@@ -5788,33 +5854,39 @@ subroutine solvate_restart
 
 	waters_added = (natom-nat_pro)/solv_atom
 	call grow_arrays_for_solvent(waters_added, solv_atom)
-	allocate(xtmp(nat3))
+	allocate(xtmp(natom))
 	backspace(u)
 	if ((old_restart .eqv. .true. ) .or. (headercheck .eq. -1337)) then
 !allocate temp array as doubleprecision
-		allocate(xtmp_double(nat3))
+		allocate(xtmp_double(natom))
 		if (.not.old_restart) then
 			read(u) headercheck
-			read(u) nat3, xtmp_double(1:nat3)
+			read(u) nat3, xtmp_double(1:natom)
 		else
-			read(u) nat3, xtmp_double(1:nat3)
+			read(u) nat3, xtmp_double(1:natom)
 		end if
-		xtmp(1:nat3) = xtmp_double(1:nat3)
+		xtmp(1:natom)%x = xtmp_double(1:natom)%x
+                xtmp(1:natom)%y = xtmp_double(1:natom)%y
+                xtmp(1:natom)%z = xtmp_double(1:natom)%z
 		deallocate(xtmp_double)
 	else if (headercheck .eq. -137) then
 !allocate as singleprecision
-		allocate(xtmp_single(nat3))
+		allocate(xtmp_single(natom))
 		read(u) headercheck
-		read(u) nat3, xtmp_single(1:nat3)
-		xtmp(1:nat3) = xtmp_single(1:nat3)
+		read(u) nat3, xtmp_single(1:natom)
+		xtmp(1:natom)%x = xtmp_single(1:natom)%x
+                xtmp(1:natom)%y = xtmp_single(1:natom)%y
+                xtmp(1:natom)%z = xtmp_single(1:natom)%z
 		deallocate(xtmp_single)
 	else if (headercheck .eq. -13337) then
 #ifndef PGI
 !quadruple precision
-		allocate(xtmp_quad(nat3))
+		allocate(xtmp_quad(natom))
 		read(u) headercheck
-		read(u) nat3, xtmp_quad(1:nat3)
-		xtmp(1:nat3) = xtmp_quad(1:nat3)
+		read(u) nat3, xtmp_quad(1:natom)
+		xtmp(1:natom)%x = xtmp_quad(1:natom)%x
+                xtmp(1:natom)%y = xtmp_quad(1:natom)%y
+                xtmp(1:natom)%z = xtmp_quad(1:natom)%z
 		deallocate(xtmp_quad)
 #else
 	write(*,*) 'Quadruple precision not supported in PGI'
@@ -5822,19 +5894,16 @@ subroutine solvate_restart
 #endif
 	endif
 	close(u)
-	allocate(xw(3,solv_atom,waters_added), keep(waters_added))
+	allocate(xw(solv_atom,waters_added), keep(waters_added))
 !needs rewrite, array reshape only worked for 3-atom solvent
 	do l = 1, waters_added
 		do j = 1, solv_atom
-			do i = 1, 3
-				cindex = l*solv_atom - (solv_atom - j)
-				cindex = cindex*3-3
-				cindex = cindex + i
-				xw(i,j,l) = xtmp(cindex)
-			end do
+                        cindex = l*solv_atom - (solv_atom - j)
+                        xw(j,l)%x = xtmp(cindex)%x
+                        xw(j,l)%y = xtmp(cindex)%y
+                        xw(j,l)%z = xtmp(cindex)%z
 		end do
 	end do
-!	xw(:,:,:) = reshape(xtmp(3*nat_pro+1:nat3),(/3,solv_atom,waters_added/))
 	keep(:) = .true.
 
 	!allow very tight packing of waters to solute - this is a restart file!
@@ -5857,13 +5926,16 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	real(kind=prec)						::	rpack2
 	integer						::	w_at, w_mol, p_atom
 	logical						::	wheavy(max_atlib), restart
-	real(kind=prec)						::	dx, dy, dz, r2
+	real(kind=prec)					::	r2
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
-	integer						::	heavy_bonds, heavy_angles, added, i, j, k
+	integer						::	heavy_bonds, heavy_angles, added, i, j, k, l, h
+        integer                                         ::      heavy_torsions
 	type(MISSING_TYPE),allocatable			::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),allocatable		::	missing_bonds(:)
 	type(MISSING_ANGLE_TYPE),allocatable		::	missing_angles(:)
-        real(kind=prec),allocatable                     ::      wat_temp(:,:)
+        type(MISSING_TOR_TYPE),allocatable              ::      missing_torsions(:)
+        TYPE(qr_vec),allocatable                        ::      wat_temp(:)
+        TYPE(qr_vec)                                    ::      shift
 
 	if(.not.(present(rest))) then
 		 restart = .false.
@@ -5906,40 +5978,99 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
                         heavy_bonds = heavy_bonds + 1
 			missing_bonds(heavy_bonds)%i=lib(irc_solvent)%bnd(i)%i
 			missing_bonds(heavy_bonds)%j=lib(irc_solvent)%bnd(i)%j
-                        missing_bonds(heavy_bonds)%cod = bondcode(lib(irc_solvent)%tac_lib(missing_bonds(heavy_bonds)%i),lib(irc_solvent)%tac_lib(missing_bonds(heavy_bonds)%j))
 		end do
 		allocate(missing_angles(heavy_bonds*4))
 		heavy_angles = 0
 		do i = 1, heavy_bonds - 1
 			do j = i + 1, heavy_bonds
-				if(missing_bonds(i)%i == missing_bonds(j)%i ) then
+				if(missing_bonds(i)%i .eq. missing_bonds(j)%i ) then
 					heavy_angles = heavy_angles + 1
 					missing_angles(heavy_angles)%i = missing_bonds(i)%j
 					missing_angles(heavy_angles)%j = missing_bonds(i)%i
 					missing_angles(heavy_angles)%k = missing_bonds(j)%j
-				elseif(missing_bonds(i)%i == missing_bonds(j)%j ) then
+				elseif(missing_bonds(i)%i .eq. missing_bonds(j)%j ) then
 					heavy_angles = heavy_angles + 1
 					missing_angles(heavy_angles)%i = missing_bonds(i)%j
 					missing_angles(heavy_angles)%j = missing_bonds(i)%i
 					missing_angles(heavy_angles)%k = missing_bonds(j)%i
-				elseif(missing_bonds(i)%j == missing_bonds(j)%i ) then
+				elseif(missing_bonds(i)%j .eq. missing_bonds(j)%i ) then
 					heavy_angles = heavy_angles + 1
 					missing_angles(heavy_angles)%i = missing_bonds(i)%i
 					missing_angles(heavy_angles)%j = missing_bonds(i)%j
 					missing_angles(heavy_angles)%k = missing_bonds(j)%j
-				elseif(missing_bonds(i)%j == missing_bonds(j)%j ) then
+				elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j ) then
 					heavy_angles = heavy_angles + 1
 					missing_angles(heavy_angles)%i = missing_bonds(i)%i
 					missing_angles(heavy_angles)%j = missing_bonds(i)%j
 					missing_angles(heavy_angles)%k = missing_bonds(j)%i
 				endif
-                                if (heavy_angles .gt. 0) then
-                                        missing_angles(heavy_angles)%cod = anglecode(lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%i), &
-                                                lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%j), &
-                                                lib(irc_solvent)%tac_lib(missing_angles(heavy_angles)%k))
-                                end if
 			end do
 		end do
+                allocate(missing_torsions(heavy_bonds*4))
+                heavy_torsions = 0
+                do i = 2, heavy_bonds - 1
+                        do j = i + 1, heavy_bonds
+                                h = i - 1
+                                if (missing_bonds(i)%i .eq. missing_bonds(h)%j) then
+                                        if (missing_bonds(i)%j .eq. missing_bonds(j)%i) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%j
+                                        endif
+                                elseif(missing_bonds(i)%i .eq. missing_bonds(h)%i) then
+                                        if (missing_bonds(i)%j .eq. missing_bonds(j)%i) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%j
+                                        end if
+
+                                elseif (missing_bonds(i)%j .eq. missing_bonds(h)%j) then
+                                        if (missing_bonds(i)%i .eq. missing_bonds(j)%i) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%i
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
+                                        endif
+                                elseif(missing_bonds(i)%j .eq. missing_bonds(h)%i) then
+                                        if (missing_bonds(i)%i .eq. missing_bonds(j)%i) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%i
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%i
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
+                                        end if
+                                end if
+                end do
+        end do
 ! now make data structure that has the information dependent on the individual atoms that are missing
 ! remember, first atom is the one generated before
 		allocate(missing_heavy(lib(irc_solvent)%nat))
@@ -5947,6 +6078,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 			missing_heavy(i)%atom_missing = .true.
 			missing_heavy(i)%bond_notset(:)=.false.
 			missing_heavy(i)%angle_notset(:)=.false.
+                        missing_heavy(i)%torsion_notset(:)=.false.
                         if(lib(irc_solvent)%atnam(i)(1:1) == 'H') then
                                 missing_heavy(i)%atom_missing = .false.
                         end if
@@ -5966,10 +6098,19 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 					missing_heavy(i)%angle_notset(added) = .true.
 				end if
 			end do
+                                added = 0
+                        do j = 1, heavy_torsions
+                                if(i.eq.missing_torsions(j)%i.or.(i.eq.missing_torsions(j)%j).or. &
+                                        (i.eq.missing_torsions(j)%k).or.(i.eq.missing_torsions(j)%l)) then
+                                        added = added + 1
+                                        missing_heavy(i)%torsions(added) = j
+                                        missing_heavy(i)%torsion_notset(added) = .true.
+                                end if
+                        end do
 		end do
 		missing_heavy(1)%atom_missing = .false.
 
-                allocate(wat_temp(3,lib(irc_solvent)%nat))
+                allocate(wat_temp(lib(irc_solvent)%nat))
 
 		added_heavy = 0
 		do w_mol = 1, max_waters
@@ -5977,17 +6118,17 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 ! means first atom has to be heavy center atom
 ! we stole the genH function for that
 ! make temporary array to store info for the water atoms of the current molecule
-                        wat_temp(1,:) = xw(1,:,w_mol)
-                        wat_temp(2,:) = xw(2,:,w_mol)
-                        wat_temp(3,:) = xw(3,:,w_mol)
-			added_heavy = added_heavy + genHeavy(wat_temp,missing_heavy,missing_bonds,missing_angles)
-                        xw(1,:,w_mol) = wat_temp(1,:)
-                        xw(2,:,w_mol) = wat_temp(2,:)
-                        xw(3,:,w_mol) = wat_temp(3,:)
+                        wat_temp(:) = xw(:,w_mol)
+                        wat_temp(:) = xw(:,w_mol)
+                        wat_temp(:) = xw(:,w_mol)
+			added_heavy = added_heavy + genHeavy(wat_temp,missing_heavy,missing_bonds,missing_angles,missing_torsions)
+                        xw(:,w_mol) = wat_temp(:)
+                        xw(:,w_mol) = wat_temp(:)
+                        xw(:,w_mol) = wat_temp(:)
 		end do
 166	format('Number of heavy solvent atoms added:',i6)
 		write(*,166) added_heavy
-		deallocate(missing_bonds,missing_angles,missing_heavy,wat_temp)
+		deallocate(missing_bonds,missing_angles,missing_torsions,missing_heavy,wat_temp)
 	end if
 
 
@@ -6005,21 +6146,13 @@ ploop:		do p_atom = 1, nat_pro !for each water check all other atoms
 				if(heavy(p_atom)) then
 				!clash with a heavy atom?
 				!*****PWchanged way of computing packing
-					dx = xtop(3*p_atom-2) - xw(1,w_at,w_mol)
-					dy = xtop(3*p_atom-1) - xw(2,w_at,w_mol)
-					dz = xtop(3*p_atom  ) - xw(3,w_at,w_mol)
 					if( use_PBC ) then
-						dx = dx - boxlength(1)*nint( dx*inv_boxl(1) )
-						dy = dy - boxlength(2)*nint( dy*inv_boxl(2) )
-						dz = dz - boxlength(3)*nint( dz*inv_boxl(3) )
+                                                shift = xtop(p_atom) - xw(w_at,w_mol)
+                                                r2 = q_dist4(shift,boxlength*q_nint(shift*inv_boxl))
+                                        else
+                                                r2 = q_dist4(xtop(p_atom),xw(w_at,w_mol))
 					end if
-					r2 = dx**2 + dy**2 + dz**2
 					if( r2<rpack2 ) then
-
-					!if(dot_product(xtop(3*p_atom-2:3*p_atom) &
-					!	-xw(:,w_at,w_mol), &
-					!	xtop(3*p_atom-2:3*p_atom)-xw(:,w_at,w_mol)) &
-					!	< rpack2) then
 						keep(w_mol) = .false.
 						cycle wloop
 					end if
@@ -6032,15 +6165,12 @@ ploop:		do p_atom = 1, nat_pro !for each water check all other atoms
 				if(.not. keep(next_wat) ) cycle
 				do next_atom = 1,lib(irc_solvent)%nat
 					if(.not. wheavy(next_atom) ) cycle
-					dx = xw(1, w_at, w_mol) - xw(1, next_atom, next_wat)
-					dy = xw(2, w_at, w_mol) - xw(2, next_atom, next_wat)
-					dz = xw(3, w_at, w_mol) - xw(3, next_atom, next_wat)
                                         if (use_PBC) then
-					dx = dx - boxlength(1)*nint( dx*inv_boxl(1) )
-					dy = dy - boxlength(2)*nint( dy*inv_boxl(2) )
-					dz = dz - boxlength(3)*nint( dz*inv_boxl(3) )
+                                        shift = xw(w_at,w_mol) - xw(next_atom,next_wat)
+                                        r2 = q_dist4(shift,boxlength*q_nint(shift*inv_boxl))
+                                        else
+                                        r2 = q_dist4(xw(w_at,w_mol),xw(next_atom,next_wat))
                                         end if
-					r2 = dx**2 + dy**2 + dz**2
 					if( r2<rpack2 ) then
 						keep(w_mol) = .false.
 						cycle wloop
@@ -6073,7 +6203,7 @@ ploop:		do p_atom = 1, nat_pro !for each water check all other atoms
 		do w_at = 1, lib(irc_solvent)%nat
 			nat_pro = nat_pro + 1
 			!copy coordinates for each atom
-			xtop(3*nat_pro-2:3*nat_pro) = xw(:,w_at,w_mol)
+			xtop(nat_pro) = xw(w_at,w_mol)
 			heavy(nat_pro) = wheavy(w_at)
 			if(wheavy(w_at)) then
 				makeH(nat_pro) = .false.
@@ -6091,27 +6221,27 @@ subroutine grow_arrays_for_solvent(nmore, atoms_per_molecule)
 !arguments
 	integer, intent(in)			::	nmore, atoms_per_molecule
 !locals
-	real(kind=prec), allocatable		::	r8temp(:)
+        TYPE(qr_vec), allocatable	::	r8temp(:)
 	logical, allocatable		::	ltemp(:)
 	integer, allocatable		::	itemp(:)
-	integer						::	new_nat, nat3old
+	integer				::	new_nat, nat3old
 	type(residue_type), allocatable	:: restemp(:)
 
 	if(nmore == 0) return
 
 	new_nat = nat_pro + nmore*atoms_per_molecule
-	nat3old = nat_pro*3
+	nat3old = nat_pro
 	if(allocated(xtop)) then
 		allocate(r8temp(nat3old), stat=alloc_status)
 		call check_alloc('reallocating topology atom array')
 		r8temp(1:nat3old) = xtop(1:nat3old)
 		deallocate(xtop)
-		allocate(xtop(new_nat*3),  stat=alloc_status)
+		allocate(xtop(new_nat),  stat=alloc_status)
 		call check_alloc('reallocating topology atom array')
 		xtop(1:nat3old) = r8temp(1:nat3old)
 		deallocate(r8temp)
 	else
-		allocate(xtop(new_nat*3),  stat=alloc_status)
+		allocate(xtop(new_nat),  stat=alloc_status)
 		call check_alloc('reallocating topology atom array')
 	end if
 
@@ -6187,9 +6317,10 @@ real(kind=prec) function rwat_eff()
 
 	npro_of_r(:) = 0
 	do i = 1, nat_solute
-		rc    = sqrt(dot_product(xtop(3*i-2:3*i)-xwcent(:),&
-			xtop(3*i-2:3*i)-xwcent(:)))
-		isort = int ( 100.0_prec * rc )
+                rc    = q_dotprod(xtop(i)-xwcent,xtop(i)-xwcent)
+                rc    = q_sqrt(rc)
+!		rc    = q_sqrt(q_dist4(xtop(i),xwcent))
+                isort = int ( 100.0_prec * rc )
 		if ( isort .eq. 0 ) isort = 1
 		if ( isort .le. bins ) then
 			if(heavy(i) .and. (.not. excl(i)))  &
@@ -6198,10 +6329,10 @@ real(kind=prec) function rwat_eff()
 	end do
 
 	!calc solvent density
-	solvent_volume = 0.
+	solvent_volume = zero
 	do i = nres_solute + 1, nres
 		if(lib(res(i)%irc)%density .gt. zero) then
-			solvent_volume = solvent_volume + 1./lib(res(i)%irc)%density
+			solvent_volume = solvent_volume + one/lib(res(i)%irc)%density
 		end if
 	end do
 	rho_solvent = nwat/solvent_volume
@@ -6321,11 +6452,10 @@ end function torcode
 
 subroutine tors_ene(emax, nlarge, av_ene)
 ! *** local variables
-	integer i, j, k, l, ip, ic, i3, j3, k3, l3, nlarge
-	real(kind=prec) rji(3), rjk(3), rkl(3), rnj(3), rnk(3), bj, bk, scp,	&
-	phi, sgn, pe, dv, rki(3), rlj(3), dp(12), arg, f1, di(3),	 &
-	dl(3)
-	real(kind=prec) emax, av_ene
+	integer                 :: i, j, k, l, ip, ic, nlarge
+        TYPE(tors_val)          :: calc
+	real(kind=prec) pe,arg
+        real(kind=prec) emax, av_ene
 
 !.......................................................................
 
@@ -6333,7 +6463,6 @@ subroutine tors_ene(emax, nlarge, av_ene)
 	av_ene = zero
 
 	do ip = 1, ntors
-
 	i = tor(ip)%i
 	j = tor(ip)%j
 	k = tor(ip)%k
@@ -6343,40 +6472,10 @@ subroutine tors_ene(emax, nlarge, av_ene)
 		write(*, '(5i5,1x,a)') ip, i, j, k, l, 'MISSING PARAMETERS'
 		cycle
 	end if
-	i3 = i * 3 - 3
-	j3 = j * 3 - 3
-	k3 = k * 3 - 3
-	l3 = l * 3 - 3
-	rji(1) = xtop(i3 + 1) - xtop(j3 + 1)
-	rji(2) = xtop(i3 + 2) - xtop(j3 + 2)
-	rji(3) = xtop(i3 + 3) - xtop(j3 + 3)
-	rjk(1) = xtop(k3 + 1) - xtop(j3 + 1)
-	rjk(2) = xtop(k3 + 2) - xtop(j3 + 2)
-	rjk(3) = xtop(k3 + 3) - xtop(j3 + 3)
-	rkl(1) = xtop(l3 + 1) - xtop(k3 + 1)
-	rkl(2) = xtop(l3 + 2) - xtop(k3 + 2)
-	rkl(3) = xtop(l3 + 3) - xtop(k3 + 3)
-	rnj(1) = rji(2) * rjk(3) - rji(3) * rjk(2)
-	rnj(2) = rji(3) * rjk(1) - rji(1) * rjk(3)
-	rnj(3) = rji(1) * rjk(2) - rji(2) * rjk(1)
-	rnk(1) = - rjk(2) * rkl(3) + rjk(3) * rkl(2)
-	rnk(2) = - rjk(3) * rkl(1) + rjk(1) * rkl(3)
-	rnk(3) = - rjk(1) * rkl(2) + rjk(2) * rkl(1)
-	bj = sqrt(rnj(1) **2 + rnj(2) **2 + rnj(3) **2)
-	bk = sqrt(rnk(1) **2 + rnk(2) **2 + rnk(3) **2)
-	scp =(rnj(1) * rnk(1) + rnj(2) * rnk(2) + rnj(3) * rnk(3) )&
-	/(bj * bk)
-	if(scp>one) scp = one
-	if(scp< -one) scp = -one
-	phi = acos(scp)
-	sgn = rjk(1) *(rnj(2) * rnk(3) - rnj(3) * rnk(2) ) + rjk(2)&
-	*(rnj(3) * rnk(1) - rnj(1) * rnk(3) ) + rjk(3) *(rnj(1)   &
-	* rnk(2) - rnj(2) * rnk(1) )
-	if(sgn<zero) phi = - phi
-
+        calc = torsion_calc(xtop(i),xtop(j),xtop(k),xtop(l))
 ! ---	energy
 
-	arg = torlib(ic)%rmult * phi - torlib(ic)%deltor * pi / 180.0_prec
+	arg = torlib(ic)%rmult * calc%angl - (torlib(ic)%deltor * deg2rad)
 	pe = torlib(ic)%fk *(one + cos(arg) ) / real(torlib(ic)%paths )
 
 	av_ene = av_ene+pe
@@ -6384,7 +6483,7 @@ subroutine tors_ene(emax, nlarge, av_ene)
 	if(pe>emax) then
 		nlarge = nlarge+1
 		write( * , '(6i5,5f8.2)') ip, i, j, k, l, ic, torlib(ic)%fk ,   &
-		torlib(ic)%rmult , torlib(ic)%deltor , phi * 180. / pi, pe
+		torlib(ic)%rmult , torlib(ic)%deltor , calc%angl * rad2deg, pe
 	endif
 
 	enddo
@@ -6486,7 +6585,7 @@ subroutine writepdb
 			!write only atoms in mask
 			if(mask%mask(iat)) then
 				write(3, 10) PDBtype, iat, lib(res(i)%irc )%atnam(j), res(i)%name,&
-					i,xtop(iat*3-2:iat*3)
+					i,xtop(iat)
 				wrote_atom_in_molecule = .true.
 			end if
 		enddo
@@ -6636,7 +6735,7 @@ subroutine writemol2
 			iat = iat + 1
 			if(mask%mask(iat)) then
 				write(u, 10) new_num(iat), lib(res(i)%irc )%atnam(j), &
-					xtop(iat*3-2:iat*3), SYBYL_atom_type(iac(iat)), &
+					xtop(iat), SYBYL_atom_type(iac(iat)), &
 					new_resnum(i), res(i)%name, crg(iat)
 			end if
 		enddo
@@ -6731,62 +6830,23 @@ subroutine set
 	l = pref_set(name, value)
 end subroutine set
 
-!*************************************************************************
-!*Sort out atoms in restrained shell. Use protein center to calculate distance.
-!*Use coordinates from topology unless 'implicit_rstr_from_file' is specified
-!*Swiped from md.f90, needed when using atom masks "not restrained"
-!*************************************************************************
-subroutine make_shell2
-! *** Local variables
-	integer						::	i,ig,i3,k
-	real(kind=prec)						::	rout2,rin2,r2
-	real(kind=prec), allocatable		::	cgp_cent(:,:)
-	nshellats = 0
+subroutine make_shell2_wrap
 
-	rexcl_i = get_real_arg('-----> Inner radius of restrained shell ')
+call make_shell2(nwat)
 
-	rin2  = rexcl_i**2
-
-	shell(:) = .false.
-
-	allocate(cgp_cent(3,ncgp+nwat))
-
-	cgp_cent(:,:) = zero
-
-	do ig=1,ncgp_solute
-    if (.not. excl(cgp(ig)%iswitch)) then
-                do i = cgp(ig)%first,cgp(ig)%last
-			i3 = cgpatom(i)*3
-			cgp_cent(:,ig) = cgp_cent(:,ig) + xtop(i3-2:i3)
-		end do
-        cgp_cent(:,ig) = cgp_cent(:,ig)/real(cgp(ig)%last - cgp(ig)%first +1)
-		r2 = dot_product(cgp_cent(:,ig)-xpcent(:),cgp_cent(:,ig)-xpcent(:))
-
-		if ( r2 .gt. rin2 ) then
-			do i=cgp(ig)%first, cgp(ig)%last
-				nshellats = nshellats + 1
-				shell(cgpatom(i)) = .true.
-			end do
-		end if
-   end if
-	end do
-
-	deallocate(cgp_cent)
-	write(*,105) nshellats, rexcl_i, rexcl_o
-105	format('Found   ',i6,' solute atoms in the restrained shell region (',f6.2,' to ',f6.2,')')
-end subroutine make_shell2
+end subroutine make_shell2_wrap
 
 !*************************************************************************
 !* Returns true if centre of mass can be assigned
 !*  and returns centre of mass for a mask of atoms in the vector 'centre'
 !*************************************************************************
 logical function get_centre_by_mass(centre)
-real(kind=prec), intent(OUT)   :: centre(3)
+type(qr_vec), intent(OUT)   :: centre
 type(MASK_TYPE)        :: mask
 integer                :: ats, imaskat, iat
 real(kind=prec)                :: totmass, mass
 get_centre_by_mass = .false.
-centre = zero
+centre = centre * zero
 totmass=zero
 call mask_initialize(mask)
 ats = maskmanip_make_pretop(mask)
@@ -6797,7 +6857,7 @@ do iat = 1,nat_pro
     if(heavy(iat)) then !skip hydrogens
       mass=iaclib(iac(iat))%mass
       totmass=totmass+mass
-	  centre = centre + mass*xtop(iat*3-2:iat*3)
+	  centre = centre + mass*xtop(iat)
     end if
   end if
 end do

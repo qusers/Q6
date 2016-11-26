@@ -66,7 +66,7 @@ end subroutine avetr_calc
 !******************************************************
 subroutine add_coordinates
 	x_sum = x_sum + x_in
-	x2_sum = x2_sum + x_in**2
+	x2_sum = x2_sum + (x_in*x_in)
 	N_sets = N_sets +1
 end subroutine add_coordinates
 
@@ -74,9 +74,16 @@ end subroutine add_coordinates
 !Make average and rmsd
 !******************************************************
 subroutine average
-	x_sum = x_sum / N_sets
-	x2_sum = x2_sum / N_sets
-	rmsd = sqrt(sum(x2_sum - x_sum**2)/ncoords)
+TYPE(qr_vec)    :: temp
+integer         :: i
+	x_sum = x_sum / real(N_sets,kind=prec)
+	x2_sum = x2_sum / real(N_sets,kind=prec)
+        temp = temp * zero
+        do i=1, ncoords/3
+        temp = x2_sum(i) - (x_sum(i)*x_sum(i))
+        end do
+        temp = temp / real(ncoords,kind=prec)
+        rmsd = q_sqrt(temp%x+temp%y+temp%z)
 end subroutine average
 
 !******************************************************
@@ -89,8 +96,8 @@ subroutine write_average
 	call mask_put(mask, xtop, x_sum)
     call writepdb
 	write(*,'(a,f6.3,a)') 'Root mean square co-ordinate deviation ', rmsd, ' A'
-	x_sum  = zero
-	x2_sum = zero
+	x_sum  = x_sum * zero
+	x2_sum = x2_sum * zero
 end subroutine write_average
 
 end module AVETR

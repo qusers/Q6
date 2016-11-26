@@ -1733,4 +1733,9 @@ if (nodeid.eq.0) call trj_close
 
 end subroutine qcp_work
 
+subroutine qcp_startup
+! here we go again
+
+end subroutine qcp_startup
+
 end module QCP

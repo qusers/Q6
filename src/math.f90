@@ -53,15 +53,15 @@ end TYPE qr_dist5
 real(kind=prec) :: pi, deg2rad, rad2deg
 
 interface operator(+)
-        module procedure qvec_add,qarray_add
+        module procedure qvec_add,qarray_add,qvec_realadd
 end interface
 
 interface operator(-)
-        module procedure qvec_sub,qvec_negate,qarray_sub
+        module procedure qvec_sub,qvec_negate,qarray_sub,qvec_realsub
 end interface
 
 interface operator(*)
-        module procedure q_realscale,q_arrayscale,q_vecscale,q_realscale2
+        module procedure q_realscale,q_arrayscale,q_vecscale,q_realscale2,q_arrayvecscale
 end interface
 
 interface operator(/)
@@ -80,6 +80,18 @@ qvec_add%x = a%x + b%x
 qvec_add%y = a%y + b%y
 qvec_add%z = a%z + b%z
 end function qvec_add
+
+function qvec_realadd(a,b)
+! vector scaling by constant number, operator
+! args
+TYPE(qr_vec),INTENT (IN)        :: a
+real(kind=prec), INTENT(IN)     :: b
+TYPE(qr_vec) :: qvec_realadd
+qvec_realadd%x = a%x + b
+qvec_realadd%y = a%y + b
+qvec_realadd%z = a%z + b
+
+end function qvec_realadd
 
 function qarray_add(a,b)
 ! vector addition for arrays of vectors
@@ -102,6 +114,19 @@ qvec_sub%x = a%x - b%x
 qvec_sub%y = a%y - b%y
 qvec_sub%z = a%z - b%z
 end function qvec_sub
+
+function qvec_realsub(a,b)
+! vector scaling by constant number, operator
+! args
+TYPE(qr_vec),INTENT(IN)         :: a
+real(kind=prec),INTENT(IN)      :: b
+TYPE(qr_vec)    :: qvec_realsub
+! locals
+qvec_realsub%x = a%x - b
+qvec_realsub%y = a%y - b
+qvec_realsub%z = a%z - b
+
+end function qvec_realsub
 
 function qarray_sub(a,b)
 ! substract vector arrays
@@ -296,6 +321,17 @@ q_vecscale%y = a%y * b%y
 q_vecscale%z = a%z * b%z
 end function q_vecscale
 
+function q_arrayvecscale(a,b)
+! and the same function as above for arrays of qr_vec objects ...
+! args
+TYPE(qr_vec),INTENT(IN)         :: a(:),b(SIZE(a))
+TYPE(qr_vec)                    :: q_arrayvecscale(SIZE(a))
+q_arrayvecscale%x = a(:)%x * b(:)%x
+q_arrayvecscale%y = a(:)%y * b(:)%y
+q_arrayvecscale%z = a(:)%z * b(:)%z
+
+end function q_arrayvecscale
+
 function q_vecdiv(a,b)
 ! divides components of one vector by those of another
 ! for operator
@@ -414,6 +450,19 @@ q_exp = temp2
 
 end function q_exp
 
+real(kind=prec) function q_epsilon(a)
+! from gcc documentation
+! returns the smallest number E of the same kind as X such that 1 + E > 1. 
+! args
+real(kind=prec) :: a
+! locals
+real(kind=doubleprecision) :: temp1,temp2
+
+temp1 = a
+temp2 = epsilon(temp1)
+q_epsilon = temp2
+end function q_epsilon
+
 TYPE(qr_vec) function q_nint(a)
 ! returns the vector of nearest integers for a given real qr_vec structure
 ! used when calculating PBC stuff
@@ -423,6 +472,35 @@ q_nint%x = nint(a%x)
 q_nint%y = nint(a%y)
 q_nint%z = nint(a%z)
 end function q_nint
+
+function q_ceiling(a)
+! returns next highest integer for all components of a qr_vec object
+! args
+TYPE(qr_vec) :: a
+! locals
+integer,dimension(3) :: q_ceiling
+q_ceiling(1) = ceiling(a%x)
+q_ceiling(2) = ceiling(a%y)
+q_ceiling(3) = ceiling(a%z)
+
+end function q_ceiling
+
+function qvec_sum(a)
+! returns sum of all elements of qr_vec object a
+! needs to be an array
+! arguments
+TYPE(qr_vec),INTENT(IN) :: a(:)
+! locals
+TYPE(qr_vec)            :: qvec_sum
+integer                 :: i
+
+qvec_sum = qvec_sum * zero
+do i=1,sizeof(a)
+qvec_sum = qvec_sum + a(i)
+end do
+
+end function qvec_sum
+
 
 subroutine math_initialize
         pi = 4.0_prec*q_atan(one)
