@@ -503,6 +503,7 @@ integer                         :: QCP_N = QCP_OFF
 integer                         :: QCP_steps_default = 10
 integer                         :: QCP_size_default = 32
 integer                         :: QCP_size_small = 16
+integer                         :: QCP_size_verysmall = 4
 integer                         :: QCP_size_large = 64
 integer                         :: qcp_enum,qcp_size
 integer                         :: qcp_level = 5
@@ -516,6 +517,10 @@ TYPE(OQ_ENERGIES),allocatable   :: qcp_EQ(:)
 TYPE(qr_vec),allocatable        :: x_save(:),d_save(:)
 real(kind=prec),parameter       :: angstrom = 1E-10_prec
 real(kind=prec),parameter       :: amu = 1.6605655E-27_prec
+real(kind=prec),parameter       :: avogadro = 6.022E23_prec
+real(kind=prec),parameter       :: convert = 4186.05_prec / avogadro
+real(kind=prec),parameter       :: cboltz = 1.380662E-23_prec
+real(kind=prec),parameter       :: planck = 6.626176E-34_prec
 
 
 !-----------------------------------------------------------------------

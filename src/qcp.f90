@@ -19,7 +19,7 @@ use MPIGLOB
 
 implicit none
 ! global QCP values
-real(kind=prec) :: beta, wl_lam, tmp_wl_lam, cboltz, hbar, convert, pi_fac
+real(kind=prec) :: beta, wl_lam, tmp_wl_lam, hbar, pi_fac
 ! array of wavelengths for every atom 
 real(kind=prec),allocatable :: wl_lam0(:), wl_lam1(:), wl_lam2(:)
 ! array of square root of mass ratios for every atom, for mass perturbed QCP (I guess)
@@ -50,9 +50,7 @@ subroutine qcp_init
 ! TODO set constants in MISC
 integer :: i
 
-convert    = 4.184_prec / 6.022E23_prec
-cboltz     = 1.38064852E-23_prec
-hbar       = 1.054571800E-34_prec
+hbar       = planck/(2*pi)
 
 !all temp dependent variables set with current instantanious temperature
 !during actual QCP calc
@@ -106,7 +104,7 @@ qcpvec = qcpvec * zero
 
 end subroutine qcp_init_beads
 
-function qcp_bisect(qcpvec,wavelength,level)
+function qcp_bisect(qcpvec,wavelength,level,nmove)
 ! this one takes care of the actual bisection step to generate the bead positions
 ! shamelessly stolen from original code by D.T. Major and J. Gao
 ! based on following reference for the crazy
@@ -120,7 +118,7 @@ TYPE(qr_vec)                    :: qcp_bisect(size(qcpvec))
 ! wavelength, used for step
 real(kind=prec)                 :: wavelength
 ! bisection level, I guess
-integer                         :: level
+integer                         :: level,nmove
 
 ! locals
 real(kind=prec),parameter       :: half=0.5_prec
@@ -128,10 +126,12 @@ integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead
 TYPE(qr_vec)                    :: midpoint
 real(kind=prec)                 :: lbsect
 
+        qcp_bisect = qcp_bisect * zero
+
 ! for a given particle, go through all beads
 ! perform number of steps depending on bisection level
 ! starting at highest and working down
-        do bead = 1, qcp_size
+        do bead = 1, nmove
         do i = level, 1, -1
         lbsect   = q_sqrt(real(2**(i-1),kind=prec))
 ! set number of bisection steps
@@ -140,7 +140,7 @@ real(kind=prec)                 :: lbsect
         bbsect   = 2**i
         thisbead = bead
         nextbead = thisbead + bbsect
-        medbead  = int(thisbead+nextbead)/2
+        medbead  = (thisbead+nextbead)/2
         do j = 1, nbsect
         if (thisbead.gt.qcp_size) thisbead = thisbead - qcp_size
         if (nextbead.gt.qcp_size) nextbead = nextbead - qcp_size
@@ -197,8 +197,8 @@ do i = 1, 3
 if (gauss_set.eq.0) then
 
         do 
-        val1 = 2.0_prec * qcp_randm() - one
-        val2 = 2.0_prec * qcp_randm() - one
+        val1 = two * qcp_randm() - one
+        val2 = two * qcp_randm() - one
         rval = val1**2 + val2**2
         if (rval.gt.zero .and. rval .lt.one) exit
         end do
@@ -252,17 +252,15 @@ tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam *  angstrom * real(qcp_size,kind=prec
 ! set wl values for every atom
 do i = 1, qcp_atnum
 	wl_lam0(i) = tmp_wl_lam * winv(iqseq(qcp_atom(i)))
-	if(use_qcp_mass) sqmass = sqrt(one/winv(iqseq(qcp_atom(i)))/QCP_mass(i))
-	wl_lam1(i) = sqrt(wl_lam0(i))
+	if(use_qcp_mass) sqmass = q_sqrt(one/winv(iqseq(qcp_atom(i)))/QCP_mass(i))
+	wl_lam1(i) = q_sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
 end do
 
-end if
-
 do i = 1, qcp_atnum
-call qcp_init_beads(qcp_atom(i),qcp_coord(i,:))
+call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
 end do
-
+end if
 
 qcp_EQ_tot = qcp_EQ_tot * zero
 qcp_Ebead_old = zero
@@ -271,7 +269,7 @@ qcp_Ebead     = zero
 Etmp  = zero
 Esave = zero
 EQtmp = EQtmp * zero
-do i = 1, maxval(qcp_steps)
+do i = 1, qcp_size
 qcp_EQbead_old(i,:) = qcp_EQbead_old(i,:) * zero
 qcp_EQbead_new(i,:) = qcp_EQbead_new(i,:) * zero
 end do
@@ -294,7 +292,7 @@ if (qcp_loop .eq. 2) then
 do i = 1, qcp_size
 if (nodeid.eq.0) then
 do j = 1, qcp_atnum
-ia = qcp_atom(j)
+ia = iqseq(qcp_atom(j))
 x(ia) = x_save(ia) + qcp_coord(j,i)
 end do ! qcp_atnum
 end if
@@ -334,7 +332,7 @@ end if ! qcp_loop .eq.2
 if (nodeid .eq.0) then
 qcp_Ering = zero
 do i = 1, qcp_atnum
-qcp_Ering = qcp_Ering + qcp_energy(qcp_atom(i),qcp_coord(i,:),pi_fac)
+qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac)
 end do
 
 qcp_Ering_old = qcp_Ering
@@ -364,9 +362,9 @@ qcp_coord_old = qcp_coord
 ! for each ring
 qcp_Ering = zero
 do i = 1, qcp_atnum
-qcp_coord(i,:) = qcp_bisect(qcp_coord(i,:),wl_lam1(i),qcp_level)
+qcp_coord(i,:) = qcp_bisect(qcp_coord(i,:),wl_lam1(i),qcp_level,nmove)
 qcp_coord(i,:) = qcp_center(qcp_coord(i,:))
-qcp_Ering = qcp_Ering + qcp_energy(qcp_atom(i),qcp_coord(i,:),pi_fac)
+qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac)
 end do
 qcp_Ering_new = qcp_Ering
 
@@ -399,7 +397,7 @@ if (bfactor .ge. irand) then
                 if (nodeid.eq.0) then
                         do j = 1, qcp_atnum
                         ! only atoms with qcp_coords need update, saved in x_save
-                        x(qcp_atom(j)) = x_save(qcp_atom(j)) + qcp_coord(j,i)
+                        x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord(j,i)
                         end do ! qcp_atnum
                 end if
 #ifdef USE_MPI
@@ -1152,7 +1150,7 @@ if(nstates > 0 ) then
 		end if
 !how large should the RP be?
 !can again be overwritten in FEP file for each atom itself
-		if(.not. prm_get_string_by_key('size',qcp_size_name)) then
+		if(.not. prm_get_string_by_key('qcp_size',qcp_size_name)) then
 			write(*,'(a,i6,a)') 'Will use default sizes for RP, ',QCP_SIZE_DEFAULT, ' ring beads per atom!'
 			qcp_size = QCP_SIZE_DEFAULT
 		else
@@ -1166,9 +1164,15 @@ if(nstates > 0 ) then
 			else if (qcp_size_name .eq. 'LARGE') then
 				write(*,'(a,i6,a)') 'Will use large RP, ',QCP_SIZE_LARGE,' beads per atom!'
 				qcp_size = QCP_SIZE_LARGE
-                       else if (qcp_size_name .eq. 'DEFINE') then
-                               yes = prm_get_integer_by_key('DEFINE',qcp_size)
-                               write(*,'(a,i6,a)') 'Will use RP with ',qcp_size,' beads per atom!'
+                       else if (qcp_size_name .eq. 'USERDEFINE') then
+                                yes = prm_get_integer_by_key('qcp_size_user',qcp_size,QCP_SIZE_DEFAULT)
+                                if (qcp_size .lt. 4) then
+                                        write(*,'(a,i6)') 'Can not use size of ',qcp_size
+                                        write(*,'(a,i6)') 'Resorting to smallest default value of ',QCP_SIZE_VERYSMALL
+                                else
+                                        
+                                        write(*,'(a,i6,a)') 'Will use RP with ',qcp_size,' beads per atom!'
+                                end if
 			else
 				write(*,'(a)') ' >>> ERROR: No such QCP size selection!'
 				qcp_initialize = .false.
@@ -1178,6 +1182,11 @@ if(nstates > 0 ) then
 ! for bisection, this is 2**qcp_level .eq. qcp_size
                 write(*,'(a,i6,a)') 'Setting bisection level to default, log_2(',qcp_size,')'
                 qcp_level = int(q_log2(real(qcp_size,kind=prec)))
+                if (real(qcp_level,kind=prec) .ne. q_log2(real(qcp_size,kind=prec))) then
+! whoops, the bead size does not work for bisection
+                        write(*,'(a)') 'Bead size is not the result of 2**n. Does not work with bisection strategy'
+                        qcp_initialize = .false.
+                end if
 !number of PI steps at each calculation
 		if(.not. prm_get_integer_by_key('equilibration_steps',qcp_steps(1))) then
 			write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for equilibration'
