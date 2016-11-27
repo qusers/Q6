@@ -23,7 +23,7 @@ use SIZES
 
         ! enumerator for QCP, need number and falg at same time
         ENUM, bind(c)
-                ENUMERATOR      :: QCP_OFF,QCP_ON,QCP_ON_MASS
+                ENUMERATOR      :: QCP_OFF,QCP_ON,QCP_ON_KIE
         END ENUM
 
         ENUM, bind(c)

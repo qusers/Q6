@@ -964,23 +964,34 @@ if(nstates > 0 ) then
 	else
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
 		use_qcp = .true.
-               QCP_N = QCP_ON
+! find out if we use mass perturbation for KIE
+                yes = prm_get_logical_by_key('qcp_kie',use_qcp_mass,.false.)
+                if(use_qcp_mass) then
+                        write(*,'(a)') 'Will perform calculation with mass perturbation for KIE'
+                        QCP_N = QCP_ON_KIE
+                else
+                        write(*,'(a)') 'No mass perturbation'
+                        QCP_N = QCP_ON
+                end if
+! section for methods goes here later
+! TODO !
+! implement other sampling methods (staging, simple MC, ...)
 ! decide on printout level
-               if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
+                if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
                        qcp_verbose = .false.
-               else
+                else
                        if(qcp_verbose) then
                                write(*,'(a)') 'Printing more QCP information'
                        end if
-               end if
-               if(.not.prm_get_logical_by_key('veryverbose',qcp_veryverbose)) then
+                end if
+                if(.not.prm_get_logical_by_key('veryverbose',qcp_veryverbose)) then
                        qcp_veryverbose = .false.
-               else
+                else
                        if(qcp_veryverbose) then
                                qcp_verbose = .true.
                                write(*,'(a)') 'Printing all QCP information I can find'
                        end if
-               end if
+                end if
 !chose which atoms should be treated as ring polymers
 !important later when setting up NB list, RP will be treated different from classical
 !this section can be overwritten in the FEP file

@@ -3541,7 +3541,15 @@ end if
 		end do
 	end do
 ! set qcp_pos to last array entry
-if (use_qcp) qcp_pos = ene_header%arrays
+if (use_qcp) then
+        if (use_qcp_mass) then
+                qcp_pos = ene_header%arrays-1
+                qcp_pos2 = qcp_pos + 1
+        else
+                qcp_pos = ene_header%arrays
+        end if
+end if
+
 !now that we know how many arrays we need -> allocate them in EQ_save for file writing
         allocate(EQ_save(nstates))
 	do i=1,nstates

@@ -508,7 +508,7 @@ integer                         :: QCP_size_large = 64
 integer                         :: qcp_enum,qcp_size
 integer                         :: qcp_level = 5
 ! one for equilibration, second for sampling
-integer                         :: qcp_steps(2),qcp_atnum,qcp_pos
+integer                         :: qcp_steps(2),qcp_atnum,qcp_pos,qcp_pos2
 logical                         :: use_qcp,qcp_veryverbose=.false.,qcp_verbose=.false.,use_qcp_mass=.false.
 integer,allocatable             :: qcp_atom(:)
 real(kind=prec),allocatable     :: qcp_mass(:)

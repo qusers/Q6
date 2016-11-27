@@ -24,7 +24,7 @@ real(kind=prec) :: beta, wl_lam, tmp_wl_lam, hbar, pi_fac
 real(kind=prec),allocatable :: wl_lam0(:), wl_lam1(:), wl_lam2(:)
 ! array of square root of mass ratios for every atom, for mass perturbed QCP (I guess)
 ! only used if user has set masses with qcp_mass
-real(kind=prec),allocatable :: sqmass(:)
+real(kind=prec),allocatable :: qcp_sqmass(:)
 ! energy storage for beads and particles
 ! one Q energy array for every FEP lambda?
 ! added in the end to global EQ as last entry in ene_header%array
@@ -35,11 +35,22 @@ TYPE(OQ_ENERGIES),allocatable           :: qcp_EQ_tot(:)
 real(kind=prec)                         :: total_EPI,Epot_ave,qcp_Ering_ave,Esave,Etmp,qcp_Ebead
 real(kind=prec)                         :: qcp_Ering_new,qcp_Ering_old,qcp_Ering
 real(kind=prec),allocatable             :: qcp_Ebead_old(:),qcp_Ebead_new(:)
+
+! second set for mass perturbation
+TYPE(OQ_ENERGIES),allocatable   :: EQtmp2(:),EQsave2(:),EQpot_ave2(:),qcp_EQbead_old2(:,:),qcp_EQbead_new2(:,:)
+real(kind=prec),allocatable     :: qcp_Ebeta2(:),qcp_EQbeta2(:,:),total_EQPI2(:)
+TYPE(ENERGIES)                          :: qcp_E_tot2
+TYPE(OQ_ENERGIES),allocatable           :: qcp_EQ_tot2(:)
+real(kind=prec)                         :: total_EPI2,Epot_ave2,qcp_Ering_ave2,Esave2,Etmp2,qcp_Ebead2
+real(kind=prec)                         :: qcp_Ering_new2,qcp_Ering_old2,qcp_Ering2
+real(kind=prec),allocatable             :: qcp_Ebead_old2(:),qcp_Ebead_new2(:)
+
+
 ! for gaussian deviation algorithm
 integer                         :: gauss_set = 0
 real(kind=prec)                 :: gval = zero
 ! coordinates for ring
-TYPE(qr_vec),allocatable        :: qcp_coord(:,:),qcp_coord_old(:,:)
+TYPE(qr_vec),allocatable        :: qcp_coord(:,:),qcp_coord_old(:,:), qcp_coord2(:,:)
 
 contains
 
@@ -74,11 +85,17 @@ allocate(x_save(natom),d_save(natom))
 
 allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size))
 
-! will need this later
-qcp_EQ(1:nstates)%lambda = EQ(1:nstates)%lambda
 
 if (use_qcp_mass) then
-	allocate(sqmass(qcp_atnum))
+        allocate(qcp_sqmass(qcp_atnum))
+! allocate bead coordinate array
+        allocate(qcp_coord2(qcp_atnum,qcp_size))
+        allocate(qcp_Ebeta2(maxval(qcp_steps)))
+        allocate(qcp_EQbeta2(maxval(qcp_steps),nstates),EQsave2(nstates),total_EQPI2(nstates),&
+                EQpot_ave2(nstates),EQtmp2(nstates))
+        allocate(qcp_EQbead_old2(qcp_size,nstates),qcp_EQbead_new2(qcp_size,nstates))
+        allocate(qcp_EQ_tot2(nstates))
+        allocate(qcp_Ebead_old2(qcp_size),qcp_Ebead_new2(qcp_size))
 end if
 
 ! set wl values for every atom
@@ -252,14 +269,18 @@ tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam *  angstrom * real(qcp_size,kind=prec
 ! set wl values for every atom
 do i = 1, qcp_atnum
 	wl_lam0(i) = tmp_wl_lam * winv(iqseq(qcp_atom(i)))
-	if(use_qcp_mass) sqmass = q_sqrt(one/winv(iqseq(qcp_atom(i)))/QCP_mass(i))
+	if(use_qcp_mass) qcp_sqmass(i) = q_sqrt(one/winv(iqseq(qcp_atom(i)))/qcp_mass(i))
 	wl_lam1(i) = q_sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
 end do
 
 do i = 1, qcp_atnum
 call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
+if(use_qcp_mass) call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
 end do
+
+
+
 end if
 
 qcp_EQ_tot = qcp_EQ_tot * zero
@@ -273,6 +294,20 @@ do i = 1, qcp_size
 qcp_EQbead_old(i,:) = qcp_EQbead_old(i,:) * zero
 qcp_EQbead_new(i,:) = qcp_EQbead_new(i,:) * zero
 end do
+if (use_qcp_mass) then
+qcp_EQ_tot2 = qcp_EQ_tot2 * zero
+qcp_Ebead_old2 = zero
+qcp_Ebead_new2 = zero
+qcp_Ebead2     = zero
+Etmp2  = zero
+Esave2 = zero
+EQtmp2 = EQtmp2 * zero
+do i = 1, qcp_size
+qcp_EQbead_old2(i,:) = qcp_EQbead_old2(i,:) * zero
+qcp_EQbead_new2(i,:) = qcp_EQbead_new2(i,:) * zero
+end do
+end if
+
 if (nodeid.eq.0) then
 ! set number of beads to move, 1 bead for bisection, center all
 ncent = qcp_size
@@ -290,11 +325,12 @@ if (qcp_loop .eq. 2) then
 ! first, each bead for each atom
 ! only on node 0 for mpi
 do i = 1, qcp_size
+
 if (nodeid.eq.0) then
-do j = 1, qcp_atnum
-ia = iqseq(qcp_atom(j))
-x(ia) = x_save(ia) + qcp_coord(j,i)
-end do ! qcp_atnum
+        do j = 1, qcp_atnum
+                ia = iqseq(qcp_atom(j))
+                x(ia) = x_save(ia) + qcp_coord(j,i)
+        end do ! qcp_atnum
 end if
 
 ! MPI BCast new coordinates to nodes
@@ -308,42 +344,84 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 call pot_energy(qcp_E,qcp_EQ,.false.)
 ! rest set to zero
 if (nodeid.eq.0) then
-Etmp = Etmp + qcp_E%potential
-EQtmp(:) = EQtmp(:) + qcp_EQ(:)
-qcp_Ebead_old(i) = qcp_E%potential
-do  istate = 1, nstates
-qcp_EQbead_old(i,istate) = qcp_EQ(istate)
-end do
+        Etmp = Etmp + qcp_E%potential
+        EQtmp(:) = EQtmp(:) + qcp_EQ(:)
+        qcp_Ebead_old(i) = qcp_E%potential
+        do  istate = 1, nstates
+                qcp_EQbead_old(i,istate) = qcp_EQ(istate)
+        end do
 end if
+if (use_qcp_mass) then
+! all of this again using the other coordinates
+if (nodeid.eq.0) then
+        do j = 1, qcp_atnum
+                ia = iqseq(qcp_atom(j))
+                x(ia) = x_save(ia) + qcp_coord2(j,i)
+        end do ! qcp_atnum
+end if
+
+! MPI BCast new coordinates to nodes
+#ifdef USE_MPI
+call MPI_BCast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('QCP Bcast x')
+#endif
+
+! all atoms at first perturbed position -> get energy
+! E and EQ and set to zero in pot_ene, don't need to do this manually
+call pot_energy(qcp_E,qcp_EQ,.false.)
+! rest set to zero
+if (nodeid.eq.0) then
+        Etmp2 = Etmp2 + qcp_E%potential
+        EQtmp2(:) = EQtmp2(:) + qcp_EQ(:)
+        qcp_Ebead_old2(i) = qcp_E%potential
+        do  istate = 1, nstates
+                qcp_EQbead_old2(i,istate) = qcp_EQ(istate)
+        end do
+end if
+
+end if !use_qcp_mass
+
 end do ! qcp_size
 
 ! what is factor? CHFACN is one for not using strange CHIN method stuff
 if (nodeid.eq.0) then
         Esave = Etmp / real(qcp_size,kind=prec)
-        Etmp = Esave
-end if
-
-if (nodeid.eq.0) then
+        Etmp  = Esave
         EQsave(:) = EQtmp(:) / real(qcp_size,kind=prec)
-        EQtmp = EQsave
+        EQtmp     = EQsave
+        if(use_qcp_mass) then
+                Esave2 = Etmp2 / real(qcp_size,kind=prec)
+                Etmp2  = Esave2
+                EQsave2(:) = EQtmp2(:) / real(qcp_size,kind=prec)
+                EQtmp2     = EQsave2
+        end if
 end if
 end if ! qcp_loop .eq.2
 
 if (nodeid .eq.0) then
-qcp_Ering = zero
+qcp_Ering  = zero
+if (use_qcp_mass) qcp_Ering2 = zero
 do i = 1, qcp_atnum
-qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac)
+qcp_Ering  = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
+if (use_qcp_mass) qcp_Ering2 = qcp_Ering2 + qcp_energy(iqseq(qcp_atom(i)),qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
 end do
 
 qcp_Ering_old = qcp_Ering
-
+if (use_qcp_mass) qcp_Ering_old2 = qcp_Ering2
 ! set some average values
 ! why another one of those
-total_EPI = zero
+total_EPI     = zero
 qcp_Ering_ave = zero
-Epot_ave  = zero
-EQpot_ave = EQpot_ave * zero
-total_EQPI = zero
+Epot_ave      = zero
+EQpot_ave     = EQpot_ave * zero
+total_EQPI    = zero
+if (use_qcp_mass) then
+        total_EPI2     = zero
+        qcp_Ering_ave2 = zero
+        Epot_ave2      = zero
+        EQpot_ave2     = EQpot_ave2 * zero
+        total_EQPI2    = zero
+end if
 ! MC stuff
 MCrepeat = one
 MCaccept = zero
@@ -361,13 +439,18 @@ qcp_coord_old = qcp_coord
 ! and recenter ring
 ! for each ring
 qcp_Ering = zero
+if(use_qcp_mass) qcp_Ering2 = zero
 do i = 1, qcp_atnum
 qcp_coord(i,:) = qcp_bisect(qcp_coord(i,:),wl_lam1(i),qcp_level,nmove)
 qcp_coord(i,:) = qcp_center(qcp_coord(i,:))
-qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac)
+qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
+if(use_qcp_mass) then
+        call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
+        qcp_Ering2 = qcp_Ering2 + qcp_energy(iqseq(qcp_atom(i)),qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
+end if
 end do
 qcp_Ering_new = qcp_Ering
-
+if (use_qcp_mass) qcp_Ering_new2 = qcp_Ering2
 end if
 
 ! needed for selection, different for other algorithms
@@ -385,6 +468,10 @@ if (bfactor .ge. irand) then
         if(qcp_loop .eq. 2) then
                 Esave  = Etmp
                 EQsave = EQtmp
+                if (use_qcp_mass) then
+                        Esave2  = Etmp2
+                        EQsave2 = EQtmp2
+                end if
                 if(qcp_veryverbose) then
                 write(*,'(a,i4,a,f12.6,a,f12.6)') 'Values at step ',step,' for Esave = ',Esave,' , and Etmp = ',Etmp
                         do istate = 1 ,nstates
@@ -415,12 +502,36 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                         qcp_Ebead_old(i) = qcp_Ebead_new(i)
                         qcp_EQbead_old(i,:) = qcp_EQbead_new(i,:)
                 end if
+                if (use_qcp_mass) then
+                if (nodeid.eq.0) then
+                        do j = 1, qcp_atnum
+                        ! only atoms with qcp_coords need update, saved in x_save
+                        x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
+                        end do ! qcp_atnum
+                end if
+#ifdef USE_MPI
+call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('QCP Bcast x')
+#endif
+
+                call pot_energy(qcp_E,qcp_EQ,.false.)
+                if (nodeid.eq.0) then
+                        qcp_Ebead_new2(i) = qcp_E%potential
+                        qcp_EQbead_new2(i,:) = qcp_EQ(:)
+                        Esave2 = Esave2 + ((qcp_Ebead_new2(i)-qcp_Ebead_old2(i))/real(qcp_size,kind=prec))
+                        EQsave2(:) = EQsave2(:) + ((qcp_EQbead_new2(i,:) - qcp_EQbead_old2(i,:)) &
+                                /real(qcp_size,kind=prec))
+                        qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
+                        qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
+                end if
+                end if
                 end do ! qcp_size
 
 
                 ! sum up some stuff
                 if (nodeid .eq.0) then
                         qcp_Ebeta(step) = q_exp(-beta*(Etmp-E_init%potential))
+                        if(use_qcp_mass) qcp_Ebeta2(step) = q_exp(-beta*(Etmp2-E_init%potential))
                         if(qcp_veryverbose) then
                                 write(*,'(a,i4,a,f12.6)') 'Current beta for step ',step,' = ',qcp_Ebeta(step)
                                 write(*,'(a,f12.6)') 'Etmp = ',Etmp
@@ -428,6 +539,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                         end if
                         do istate = 1, nstates
                         qcp_EQbeta(step,istate) = q_exp(-beta*(EQtmp(istate)%total-EQ_init(istate)%total))
+                        if(use_qcp_mass) qcp_EQbeta2(step,istate) = q_exp(-beta*(EQtmp2(istate)%total-EQ_init(istate)%total))
                         if(qcp_veryverbose) then
                                 write(*,'(a,i4)') 'Current step = ',step
                                 write(*,'(a,i4)') 'Current state = ',istate
@@ -443,12 +555,25 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                         EQpot_ave(:) = EQpot_ave(:) + (EQtmp(:) * MCrepeat)
                         Etmp = Esave
                         EQtmp = EQsave
+                        if(use_qcp_mass) then
+                                total_EPI2     = total_EPI2 + MCrepeat * qcp_Ebeta2(step)
+                                total_EQPI2(:) = total_EQPI2(:) + MCrepeat * qcp_EQbeta2(step,:)
+                                Epot_ave2      = Epot_ave2  + MCrepeat * Etmp2
+                                EQpot_ave2(:)  = EQpot_ave2(:) + (EQtmp2(:) * MCrepeat)
+                                Etmp2          = Esave2
+                                EQtmp2         = EQsave2
+                        end if
+
                 end if
         end if ! qcp_loop .eq. 2
         if (nodeid .eq.0) then
                 MCaccept = MCaccept + MCrepeat
                 qcp_Ering_ave = qcp_Ering_ave + MCrepeat * qcp_Ering_new
-                qcp_Ering_old = qcp_Ering_new 
+                qcp_Ering_old = qcp_Ering_new
+                if(use_qcp_mass) then
+                       qcp_Ering_ave2 = qcp_Ering_ave2 + MCrepeat * qcp_Ering_new2
+                       qcp_Ering_old2 = qcp_Ering_new2
+                end if
                 MCrepeat = one
         end if
 else ! failed to accept step
@@ -488,16 +613,23 @@ if (nodeid.eq.0 )then
         if (MCaccept .eq. zero) then
                 MCaccept = real(qcp_steps(qcp_loop),kind=prec)
                 qcp_Ering_ave = qcp_Ering_ave/MCaccept
+                if(use_qcp_mass) qcp_Ering_ave2 = qcp_Ering_ave2/MCaccept
         end if
 end if
 end do ! qcp_loop
 
 if (nodeid .eq.0) then
 
-total_EPI = total_EPI / MCaccept
-Epot_ave  = Epot_ave  / MCaccept
+total_EPI     = total_EPI     / MCaccept
+Epot_ave      = Epot_ave      / MCaccept
 total_EQPI(:) = total_EQPI(:) / MCaccept
-EQpot_ave(:) = EQpot_ave(:) / MCaccept
+EQpot_ave(:)  = EQpot_ave(:)  / MCaccept
+if (use_qcp_mass) then
+        total_EPI2     = total_EPI2     / MCaccept
+        Epot_ave2      = Epot_ave2      / MCaccept
+        total_EQPI2(:) = total_EQPI2(:) / MCaccept
+        EQpot_ave2(:)  = EQpot_ave2(:)  / MCaccept
+end if
 
 if(qcp_verbose) then
         write(*,'(a,f12.6)') 'Total PI energy = ',total_EPI
@@ -514,7 +646,11 @@ end if
 
 ! now we have all the energies for the PI sampling, can print info for user and write to global EQ_save 
 ! qcp_pos is set during loading, need this later for mass perturbation with two arrays
+! first only the non perturbed atoms
 call qatom_savetowrite(EQpot_ave,qcp_pos)
+! then second set
+if(use_qcp_mass) call qatom_savetowrite(EQpot_ave2,qcp_pos2)
+
 
 ! set everything back to how we found it 
 x = x_save
@@ -534,20 +670,21 @@ if (ierr .ne. 0) call die('QCP Bcast d')
 end subroutine qcp_run
 
 
-real(kind=prec) function qcp_energy(atom,coord,wavelength)
+real(kind=prec) function qcp_energy(atom,coord,wavelength,mass)
 ! calculates the ring energies of the particles
 ! call this for each ring
 ! arguments
 TYPE(qr_vec)                    :: coord(:)
 integer                         :: atom
 real(kind=prec)                 :: wavelength
+real(kind=prec)                 :: mass
 ! locals
 real(kind=prec)                 :: fk
 integer                         :: i
 
 qcp_energy = zero
 ! will need adapting for different QCP types
-fk = wavelength/winv(atom)
+fk = wavelength/mass
 
 do i = 1, qcp_size - 1
 qcp_energy = qcp_energy + (fk * q_dist4(coord(i),coord(i+1)))
@@ -1104,8 +1241,19 @@ if(nstates > 0 ) then
                 QCP_N = QCP_OFF
 	else
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
-	        use_qcp = .true.
-                QCP_N = QCP_ON
+		use_qcp = .true.
+! find out if we use mass perturbation for KIE
+                yes = prm_get_logical_by_key('qcp_kie',use_qcp_mass,.false.)
+                if(use_qcp_mass) then
+                        write(*,'(a)') 'Will perform calculation with mass perturbation for KIE'
+                        QCP_N = QCP_ON_KIE
+                else
+                        write(*,'(a)') 'No mass perturbation'
+                        QCP_N = QCP_ON
+                end if
+! section for methods goes here later
+! TODO !
+! implement other sampling methods (staging, simple MC, ...)
 ! decide on printout level
                if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
                        qcp_verbose = .false.
@@ -1741,6 +1889,16 @@ if (nodeid.eq.0) call trj_close
 
 
 end subroutine qcp_work
+
+subroutine qcp_massper(ratio,coord1,coord2)
+! this function does the coordinate scaling for the different masses
+! arguments
+real(kind=prec)         :: ratio
+TYPE(qr_vec)            :: coord1(:),coord2(size(coord1))
+
+coord2(:) = coord1(:) * ratio
+
+end subroutine qcp_massper
 
 subroutine qcp_startup
 ! here we go again

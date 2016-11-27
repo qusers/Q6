@@ -2048,12 +2048,31 @@ logical function qatom_load_fep(fep_file)
 		case default
 ! whoops memory must be trashed, because we don't know this value
 ! better kill program before something bad happens
-			write(*,'(a)') 'WARNING! No such QCP setting! Program will terminate due to expected memory corruption!'
+			write(*,'(a)') '>>> ERROR: No such QCP setting! Program will terminate due to expected memory corruption!'
 			qatom_load_fep = .false.
 	end select
-	end if ! qcp_selecy
+	end if ! qcp_select
 end if ! use qcp
-	call prm_close
+! if qcp is still on and the user wanted mass perturbation, now it is time looking for this info in the fep file
+        if(use_qcp.and.use_qcp_mass) then
+        section='qcp_mass'
+        tmp_qcp_num = prm_count(section)
+! needs to be same size as qcp_atnum, and will assign masses in order of appearance
+        if (tmp_qcp_num .ne. qcp_atnum) then
+                write(*,'(a)') '>>> ERROR: Mass perturbation values need to be defined for all atoms in QCP region. Aborting program'
+                qatom_load_fep = .false.
+        end if
+        allocate(qcp_mass(qcp_atnum))
+        do i=1,tmp_qcp_num
+        if(.not. prm_get_line(line)) goto 1000
+                read (line,*, err=1000) tmpindex, qcp_mass(i)
+                if((qcp_mass(i) .lt. zero)) then
+                        write(*,'(a,i4)') 'No negative mass allowed by physics for atom i = ',i
+                        qatom_load_fep = .false.
+                end if
+        end do
+        end if
+        call prm_close
 	return
 
 	!error handling code
