@@ -72,17 +72,12 @@ allocate(wl_lam0(qcp_atnum),wl_lam1(qcp_atnum),wl_lam2(qcp_atnum))
 allocate(qcp_EQ(nstates))
 ! allocate bead coordinate array
 allocate(qcp_coord(qcp_atnum,qcp_size),qcp_coord_old(qcp_atnum,qcp_size))
-
 allocate(qcp_Ebeta(maxval(qcp_steps)))
 allocate(qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
         EQpot_ave(nstates),EQtmp(nstates))
-
 allocate(qcp_EQbead_old(qcp_size,nstates),qcp_EQbead_new(qcp_size,nstates))
-
 allocate(qcp_EQ_tot(nstates))
-
 allocate(x_save(natom),d_save(natom))
-
 allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size))
 
 
@@ -499,6 +494,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                         x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
                                 end do ! qcp_atnum
                 end if
+                if (use_qcp_mass) then
 #ifdef USE_MPI
 call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
@@ -513,6 +509,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                 /real(qcp_size,kind=prec))
                         qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
                         qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
+                end if
                 end if
                 end if
                 end do ! qcp_size
