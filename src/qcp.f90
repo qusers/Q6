@@ -1871,7 +1871,7 @@ if(ierr.ne.0) call die ('QPI Bcast x')
 #endif
 call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 ! first call to pot_energy to get classical energies of the given configuration
-call pot_energy(E,EQ,.false.)
+call pot_energy(E,EQ,.true.)
 ! and call qcp_run now for qcp_energies
 call qcp_run(Tfree,E,EQ)
 ! write stuff to nice data structure
