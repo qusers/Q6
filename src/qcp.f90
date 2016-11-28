@@ -299,6 +299,10 @@ ncent = qcp_size
 nmove = 1
 end if
 
+do i = 1 , nstates
+qcp_EQ(i)%lambda = EQ_init(i)%lambda
+end do
+
 ! main loop, first equil, then sampling
 ! set steps according to qcp_steps
 do qcp_loop = 1, 2
@@ -446,7 +450,10 @@ bfactor = q_exp(-deltaH*beta)
 
 ! get some random number?
 irand = qcp_randm()
-
+#ifdef USE_MPI
+call MPI_Bcast(irand,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+if( ierr .ne. 0) call die('QCP Bcast irand')
+#endif
 ! this is the monte carlo part
 if (bfactor .ge. irand) then
 ! energy only calculated for sampling, not for equilibration? weird!
@@ -493,6 +500,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                 ! only atoms with qcp_coords need update, saved in x_save
                                         x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
                                 end do ! qcp_atnum
+                        end if
                 end if
                 if (use_qcp_mass) then
 #ifdef USE_MPI
@@ -509,7 +517,6 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                 /real(qcp_size,kind=prec))
                         qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
                         qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
-                end if
                 end if
                 end if
                 end do ! qcp_size
@@ -580,7 +587,9 @@ if (nodeid.eq.0 .and. qcp_veryverbose .and. qcp_loop .eq. 2) then
         write(*,'(a,10f12.6)') 'Current Q particle energy, for each state = ',EQsave(:)%total
         write(*,'(a,f12.6)') 'Current ring polymer energy = ',qcp_Ering_new
 end if
-
+#ifdef USE_MPI
+call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+#endif
 end do ! step
 
 if (nodeid.eq.0) then
