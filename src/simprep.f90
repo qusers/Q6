@@ -4302,17 +4302,17 @@ integer						::	nwpolr_shell_restart, filestat
 integer						::	bndcodw, angcodw
 
 logical :: old_restart = .false.
-real(8),allocatable :: x_old(:), v_old(:)
-real(kind=singleprecision),allocatable :: x_1(:), v_1(:)
-real(kind=doubleprecision),allocatable :: x_2(:), v_2(:)
+TYPE(qr_vec),allocatable :: x_old(:), v_old(:)
+TYPE(qr_vecs),allocatable :: x_1(:), v_1(:)
+TYPE(qr_vecd),allocatable :: x_2(:), v_2(:)
 #ifndef PGI
-real(kind=quadprecision),allocatable :: x_3(:), v_3(:)
+type(qr_vecq),allocatable :: x_3(:), v_3(:)
 #endif
-real(8) :: old_boxlength(3),old_boxcentre(3)
-real(kind=singleprecision) :: boxlength_1(3),boxcentre_1(3)
-real(kind=doubleprecision) :: boxlength_2(3),boxcentre_2(3)
+TYPE(qr_vec)  :: old_boxlength,old_boxcentre
+TYPE(qr_vecs) :: boxlength_1,boxcentre_1
+TYPE(qr_vecd) :: boxlength_2,boxcentre_2
 #ifndef PGI
-real(kind=quadprecision) :: boxlength_3(3),boxcentre_3(3)
+TYPE(qr_vecq) :: boxlength_3,boxcentre_3
 #endif
 integer :: headercheck,i,myprec,dummy
 
@@ -4340,7 +4340,7 @@ mu_w = -chg_solv(1)*bondlib(bndcodw)%bnd0*cos(anglib(angcodw)%ang0/2)
 drs = wpolr_layer / drout !number of drouts 
 
 ! calc number of shells based on arithmetic series sum formula
-nwpolr_shell = int(-0.5_prec + sqrt(2*drs + 0.25_prec)) 
+nwpolr_shell = int(-0.5_prec + q_sqrt(2.0_prec*drs + 0.25_prec)) 
 allocate(wshell(nwpolr_shell), stat=alloc_status)
 call check_alloc('water polarisation shell array')
 
@@ -4354,40 +4354,40 @@ if(restart) then !try to load theta_corr from restart file
    if ((headercheck .ne. -137).and.(headercheck .ne. -1337).and.(headercheck .ne. -13337)) then
      old_restart = .true.
      rewind(2)
-     allocate(x_old(3*natom),v_old(3*natom))
-     read(2) dummy,(x_old(i),i=1,nat3)
-     read(2) dummy,(v_old(i),i=1,nat3)
+     allocate(x_old(natom),v_old(natom))
+     read(2) dummy,(x_old(i),i=1,natom)
+     read(2) dummy,(v_old(i),i=1,natom)
      if( use_PBC) then
-       read(2) old_boxlength(:)
-       read(2) old_boxcentre(:)
+       read(2) old_boxlength
+       read(2) old_boxcentre
      end if
      deallocate(x_old,v_old)
    else if (headercheck .eq. -137) then
-     allocate(x_1(3*natom),v_1(3*natom))
-     read(2) dummy,(x_1(i),i=1,nat3)
-     read(2) dummy,(v_1(i),i=1,nat3)
+     allocate(x_1(natom),v_1(natom))
+     read(2) dummy,(x_1(i),i=1,natom)
+     read(2) dummy,(v_1(i),i=1,natom)
      if( use_PBC) then
-       read(2) boxlength_1(:)
-       read(2) boxcentre_1(:)
+       read(2) boxlength_1
+       read(2) boxcentre_1
      end if
      deallocate(x_1,v_1)
    else if (headercheck .eq. -1337) then
-     allocate(x_2(3*natom),v_2(3*natom))
-     read(2) dummy,(x_2(i),i=1,nat3)
-     read(2) dummy,(v_2(i),i=1,nat3)
+     allocate(x_2(natom),v_2(natom))
+     read(2) dummy,(x_2(i),i=1,natom)
+     read(2) dummy,(v_2(i),i=1,natom)
      if( use_PBC) then
-       read(2) boxlength_2(:)
-       read(2) boxcentre_2(:)
+       read(2) boxlength_2
+       read(2) boxcentre_2
      end if
      deallocate(x_2,v_2)
    else if (headercheck .eq. -13337) then
 #ifndef PGI
-     allocate(x_3(3*natom),v_3(3*natom))
-     read(2) dummy,(x_3(i),i=1,nat3)
-     read(2) dummy,(v_3(i),i=1,nat3)
+     allocate(x_3(natom),v_3(natom))
+     read(2) dummy,(x_3(i),i=1,natom)
+     read(2) dummy,(v_3(i),i=1,natom)
      if( use_PBC) then
-       read(2) boxlength_3(:)
-       read(2) boxcentre_3(:)
+       read(2) boxlength_3
+       read(2) boxcentre_3
      end if
      deallocate(x_3,v_3)
 #else
@@ -4455,7 +4455,7 @@ do is = 1, nwpolr_shell
         ri = rout - dr
         wshell(is)%dr = dr
         Vshell = rout**3 - ri**3
-        n_insh = int(4 * pi/3 * Vshell * rho_wat)
+        n_insh = int(4.0_prec * pi/3.0_prec * Vshell * rho_wat)
         if (n_insh > n_max_insh) n_max_insh = n_insh
 rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
 
@@ -4463,7 +4463,7 @@ rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
         ! --- Note below: 0.98750 = (1-1/epsilon) for water
         ! now deprecated because we actually read the dielectric from the
         ! solvent files as dielectric = epsilon * 1000
-        eps_diel = real(dielectric/1000,kind=prec)
+        eps_diel = real(dielectric/1000.0_prec,kind=prec)
         eps_diel = one-(one/eps_diel)
 !wshell(is)%cstb = crgQtot*0.98750_prec/(rho_wat*mu_w*4.0_prec*pi*rshell**2)
         wshell(is)%cstb = crgQtot*eps_diel/(rho_wat*mu_w*4.0_prec*pi*rshell**2)

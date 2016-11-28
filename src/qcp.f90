@@ -1776,11 +1776,8 @@ if(restart) then
                 write(*,'(a16,3f8.3)') 'Centre of box =', boxcentre
         end if
         !water polarisation data will be read from restart file in wat_shells
-! now get the temperature from the restart file
-        call qcp_temperature(Tfree)
 else
         x(1:natom) = xtop(1:natom)
-        Tfree = Temp0
 end if
 
 ! clear iqatom atom array
@@ -1815,6 +1812,7 @@ end if
 end do
 
 qcp_T = 2.0_prec*qcp_T/Boltz/real(Ndegfree,kind=prec)
+write(*,'(a,f8.3)') 'QCP temperature is set to temperature from restart velocities, Tfree = ',qcp_T
 
 end subroutine qcp_temperature
 
@@ -1831,6 +1829,11 @@ logical                         :: yes
 
 frame = 0
 nat3 = natom*3
+if(restart) then
+        call qcp_temperature(Tfree)
+else
+        Tfree = Temp0
+end if
 !only do file handling on master node
 if (nodeid.eq.0) then
 yes =  trj_open(trj_file)
@@ -1868,7 +1871,7 @@ if(ierr.ne.0) call die ('QPI Bcast x')
 #endif
 call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 ! first call to pot_energy to get classical energies of the given configuration
-call pot_energy(E,EQ,.true.)
+call pot_energy(E,EQ,.false.)
 ! and call qcp_run now for qcp_energies
 call qcp_run(Tfree,E,EQ)
 ! write stuff to nice data structure
@@ -1899,5 +1902,45 @@ subroutine qcp_startup
 ! here we go again
 
 end subroutine qcp_startup
+
+subroutine qcp_shutdown
+! calls all the deallocation
+! TODO need allocation check
+if(allocated(wl_lam0)) deallocate(wl_lam0)
+if(allocated(wl_lam1)) deallocate(wl_lam1)
+if(allocated(wl_lam2)) deallocate(wl_lam2)
+if(allocated(qcp_EQ)) deallocate(qcp_EQ)
+if(allocated(qcp_coord)) deallocate(qcp_coord)
+if(allocated(qcp_coord2)) deallocate(qcp_coord2)
+if(allocated(qcp_coord_old)) deallocate(qcp_coord_old)
+if(allocated(qcp_Ebeta)) deallocate(qcp_Ebeta)
+if(allocated(qcp_EQbeta)) deallocate(qcp_EQbeta)
+if(allocated(qcp_Ebeta2)) deallocate(qcp_Ebeta2)
+if(allocated(qcp_EQbeta2)) deallocate(qcp_EQbeta2)
+if(allocated(EQsave)) deallocate(EQsave)
+if(allocated(EQtmp)) deallocate(EQtmp)
+if(allocated(EQsave2)) deallocate(EQsave2)
+if(allocated(EQtmp2)) deallocate(EQtmp2)
+if(allocated(total_EQPI)) deallocate(total_EQPI)
+if(allocated(EQpot_ave)) deallocate(EQpot_ave)
+if(allocated(total_EQPI2)) deallocate(total_EQPI2)
+if(allocated(EQpot_ave2)) deallocate(EQpot_ave2)
+if(allocated(qcp_EQbead_old)) deallocate(qcp_EQbead_old)
+if(allocated(qcp_EQbead_new)) deallocate(qcp_EQbead_new)
+if(allocated(qcp_EQ_tot)) deallocate(qcp_EQ_tot)
+if(allocated(qcp_EQbead_old2)) deallocate(qcp_EQbead_old2)
+if(allocated(qcp_EQbead_new2)) deallocate(qcp_EQbead_new2)
+if(allocated(qcp_EQ_tot2)) deallocate(qcp_EQ_tot2)
+if(allocated(qcp_Ebead_old)) deallocate(qcp_Ebead_old)
+if(allocated(qcp_Ebead_new)) deallocate(qcp_Ebead_new)
+if(allocated(qcp_Ebead_old2)) deallocate(qcp_Ebead_old2)
+if(allocated(qcp_Ebead_new2)) deallocate(qcp_Ebead_new2)
+if(allocated(qcp_sqmass)) deallocate(qcp_sqmass)
+if(allocated(qcp_atom)) deallocate(qcp_atom)
+if(allocated(qcp_mass)) deallocate(qcp_mass)
+if(allocated(x_save)) deallocate(x_save)
+if(allocated(d_save)) deallocate(d_save)
+
+end subroutine qcp_shutdown
 
 end module QCP

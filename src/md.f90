@@ -51,6 +51,7 @@ end subroutine md_startup
 
 subroutine md_shutdown
 ! call used modules' shutdown subroutines
+if(use_qcp) call qcp_shutdown
 call simprep_shutdown
 call md_deallocate
 call topo_deallocate
