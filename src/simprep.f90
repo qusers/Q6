@@ -1527,6 +1527,8 @@ call MPI_Bcast(qcp_steps,2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_steps')
 call MPI_Bcast(qcp_atnum,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qcp_atnum')
+call MPI_Bcast(use_qcp_mass,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if(ierr .ne. 0) call die('init_nodes/MPI_Bcast use_qcp_mass')
 if (nodeid .ne. 0) then
 allocate(qcp_atom(qcp_atnum))
 end if

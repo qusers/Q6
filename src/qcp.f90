@@ -272,17 +272,9 @@ do i = 1, qcp_atnum
 	if(use_qcp_mass) qcp_sqmass(i) = q_sqrt(one/winv(iqseq(qcp_atom(i)))/qcp_mass(i))
 	wl_lam1(i) = q_sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
-end do
-
-do i = 1, qcp_atnum
 call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
 if(use_qcp_mass) call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
 end do
-
-
-
-end if
-
 qcp_EQ_tot = qcp_EQ_tot * zero
 qcp_Ebead_old = zero
 qcp_Ebead_new = zero
@@ -307,8 +299,6 @@ qcp_EQbead_old2(i,:) = qcp_EQbead_old2(i,:) * zero
 qcp_EQbead_new2(i,:) = qcp_EQbead_new2(i,:) * zero
 end do
 end if
-
-if (nodeid.eq.0) then
 ! set number of beads to move, 1 bead for bisection, center all
 ncent = qcp_size
 nmove = 1
@@ -466,19 +456,21 @@ irand = qcp_randm()
 if (bfactor .ge. irand) then
 ! energy only calculated for sampling, not for equilibration? weird!
         if(qcp_loop .eq. 2) then
-                Esave  = Etmp
-                EQsave = EQtmp
-                if (use_qcp_mass) then
-                        Esave2  = Etmp2
-                        EQsave2 = EQtmp2
-                end if
-                if(qcp_veryverbose) then
-                write(*,'(a,i4,a,f12.6,a,f12.6)') 'Values at step ',step,' for Esave = ',Esave,' , and Etmp = ',Etmp
-                        do istate = 1 ,nstates
-                        write(*,'(a,i4,a,i4)') 'Values at step ',step,' state = ',istate
-                        write(*,'(a,f12.6,a,f12.6)') 'EQsave = ',EQsave(istate)%total,&
-                                ' , EQtmp = ',EQtmp(istate)%total
-                        end do
+                if(nodeid .eq.0) then
+                        Esave  = Etmp
+                        EQsave = EQtmp
+                        if (use_qcp_mass) then
+                                Esave2  = Etmp2
+                                EQsave2 = EQtmp2
+                        end if
+                        if(qcp_veryverbose) then
+                        write(*,'(a,i4,a,f12.6,a,f12.6)') 'Values at step ',step,' for Esave = ',Esave,' , and Etmp = ',Etmp
+                                do istate = 1 ,nstates
+                                write(*,'(a,i4,a,i4)') 'Values at step ',step,' state = ',istate
+                                write(*,'(a,f12.6,a,f12.6)') 'EQsave = ',EQsave(istate)%total,&
+                                        ' , EQtmp = ',EQtmp(istate)%total
+                                end do
+                        end if
                 end if
                 do i = 1, qcp_size
                 if (nodeid.eq.0) then
@@ -501,13 +493,11 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                 /real(qcp_size,kind=prec))
                         qcp_Ebead_old(i) = qcp_Ebead_new(i)
                         qcp_EQbead_old(i,:) = qcp_EQbead_new(i,:)
-                end if
-                if (use_qcp_mass) then
-                if (nodeid.eq.0) then
-                        do j = 1, qcp_atnum
-                        ! only atoms with qcp_coords need update, saved in x_save
-                        x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
-                        end do ! qcp_atnum
+                        if (use_qcp_mass) then
+                                do j = 1, qcp_atnum
+                                ! only atoms with qcp_coords need update, saved in x_save
+                                        x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
+                                end do ! qcp_atnum
                 end if
 #ifdef USE_MPI
 call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
@@ -1849,12 +1839,11 @@ end do
 ! and rewind the whole thing back to the start
 yes = trj_seek(1)
 nframes = frame
-end if
 else
 ! we are dead, can not open dcd file
 call die('Could not open trajectory file')
 end if
-
+end if
 ! now we know the length of the file, we can iterate over the individual frames and Bcast stuff to nodes
 #ifdef USE_MPI
 call MPI_Bcast(yes,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
