@@ -1874,11 +1874,13 @@ call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 call pot_energy(E,EQ,.true.)
 ! and call qcp_run now for qcp_energies
 call qcp_run(Tfree,E,EQ)
+
+if (noffd .gt. 0 ) call offdiag
 ! write stuff to nice data structure
 
 if (nodeid.eq.0) then
 call qatom_savetowrite(EQ,1)
-! sasve to file
+! save to file
 call put_ene(11,EQ_save,OFFD,ene_header%arrays,nstates)
 end if
 end do

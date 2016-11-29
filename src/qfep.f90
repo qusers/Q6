@@ -274,35 +274,22 @@ end if
 		if(ifile.eq.1) then
 		do jj=1,nstates
 		allocate(EQ(jj)%qx(fileheader%arrays),EQ(jj)%qq(fileheader%arrays),&
-		EQ(jj)%qp(fileheader%arrays), &
-		EQ(jj)%qw(fileheader%arrays),EQ(jj)%total(fileheader%arrays),STAT=ERR)
+		EQ(jj)%qp(fileheader%arrays), EQ(jj)%qw(fileheader%arrays),&
+                EQ(jj)%total(fileheader%arrays),EQ(jj)%q(fileheader%arrays),&
+                EQ(jj)%restraint(fileheader%arrays),STAT=ERR)
 		if(ERR /= 0) then
 			stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 11'
 		end if
 		EQ(jj)%total(:)=zero
 		allocate(avEQ(jj)%qx(fileheader%arrays),avEQ(jj)%qq(fileheader%arrays),&
-		avEQ(jj)%qp(fileheader%arrays), &
-		avEQ(jj)%qw(fileheader%arrays),avEQ(jj)%total(fileheader%arrays),STAT=ERR)
-		avEQ(jj)%total(:)  = zero
-		avEQ(jj)%qx(:)%el  = zero
-		avEQ(jj)%qq(:)%el  = zero
-		avEQ(jj)%qp(:)%el  = zero
-		avEQ(jj)%qw(:)%el  = zero
-		avEQ(jj)%qx(:)%vdw = zero
-		avEQ(jj)%qq(:)%vdw = zero
-		avEQ(jj)%qp(:)%vdw = zero
-		avEQ(jj)%qw(:)%vdw = zero
+		avEQ(jj)%qp(fileheader%arrays),avEQ(jj)%qw(fileheader%arrays),&
+                avEQ(jj)%total(fileheader%arrays),avEQ(jj)%q(fileheader%arrays),&
+                avEQ(jj)%restraint(fileheader%arrays),STAT=ERR)
 
 		if(ERR /= 0) then
 			stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 12'
 		end if
 		end do
-                avEQ(:)%q%bond     = zero
-                avEQ(:)%q%angle    = zero
-                avEQ(:)%q%torsion  = zero
-                avEQ(:)%q%improper = zero
-                avEQ(:)%restraint  = zero
-
 		end if
 		if(ifile.eq.1) then
 	        !allocate large arrays
@@ -364,12 +351,12 @@ end if
 
 		ipt = 0
                 do i=1,nstates
-                avEQ(i)%q%bond     = avEQ(i)%q%bond     * zero
-                avEQ(i)%q%angle    = avEQ(i)%q%angle    * zero
-                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * zero
-                avEQ(i)%q%improper = avEQ(i)%q%improper * zero
-                avEQ(i)%restraint  = avEQ(i)%restraint  * zero
                 do jj=1,fileheader%arrays !can not use Q energies operator any more
+                avEQ(i)%q(jj)%bond     = avEQ(i)%q(jj)%bond     * zero
+                avEQ(i)%q(jj)%angle    = avEQ(i)%q(jj)%angle    * zero
+                avEQ(i)%q(jj)%torsion  = avEQ(i)%q(jj)%torsion  * zero
+                avEQ(i)%q(jj)%improper = avEQ(i)%q(jj)%improper * zero
+                avEQ(i)%restraint(jj)  = avEQ(i)%restraint(jj)  * zero
                 avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * zero
                 avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * zero
                 avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * zero
@@ -401,8 +388,8 @@ end if
 			if (gas .gt. 0 ) then
 			do i=1,nstates
 				do j=1,fileheader%arrays
-				EQ(i)%total(j)=EQ(i)%q%bond+EQ(i)%q%angle+EQ(i)%q%torsion+ &
-					EQ(i)%q%improper+EQ(i)%qq(j)%el+EQ(i)%qq(j)%vdw+EQ(i)%restraint
+				EQ(i)%total(j)=EQ(i)%q(j)%bond+EQ(i)%q(j)%angle+EQ(i)%q(j)%torsion+ &
+					EQ(i)%q(j)%improper+EQ(i)%qq(j)%el+EQ(i)%qq(j)%vdw+EQ(i)%restraint(j)
 				end do
 !			print*, EQ(i)%total, EQ(i)%q,EQ(i)%qq,EQ(i)%restraint
 !			print*, "''''''''''"
@@ -412,12 +399,12 @@ end if
 	!!!!!!!!!!!!!!   masoud
 			if(ipt > nskip) then
 				do i=1,nstates
-				avEQ(i)%q%bond     = avEQ(i)%q%bond     + EQ(i)%q%bond
-				avEQ(i)%q%angle    = avEQ(i)%q%angle    + EQ(i)%q%angle  
-				avEQ(i)%q%torsion  = avEQ(i)%q%torsion  + EQ(i)%q%torsion  
-				avEQ(i)%q%improper = avEQ(i)%q%improper + EQ(i)%q%improper  
-				avEQ(i)%restraint  = avEQ(i)%restraint  + EQ(i)%restraint  
 				do jj=1,fileheader%arrays !can not use Q energies operator any more
+				avEQ(i)%q(jj)%bond     = avEQ(i)%q(jj)%bond     + EQ(i)%q(jj)%bond
+				avEQ(i)%q(jj)%angle    = avEQ(i)%q(jj)%angle    + EQ(i)%q(jj)%angle  
+				avEQ(i)%q(jj)%torsion  = avEQ(i)%q(jj)%torsion  + EQ(i)%q(jj)%torsion  
+				avEQ(i)%q(jj)%improper = avEQ(i)%q(jj)%improper + EQ(i)%q(jj)%improper  
+				avEQ(i)%restraint(jj)  = avEQ(i)%restraint(jj)  + EQ(i)%restraint(jj)  
 				avEQ(i)%total(jj)  = avEQ(i)%total(jj)  + EQ(i)%total(jj) 
 				avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  + EQ(i)%qx(jj)%el
 				avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw + EQ(i)%qx(jj)%vdw
@@ -541,12 +528,12 @@ end if
 			stop 'Qfep5 terminated abnormally: Too few data points in file.'
 		else
 	                do i=1,nstates
-	                avEQ(i)%q%bond     = avEQ(i)%q%bond     * (one/(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%angle    = avEQ(i)%q%angle    * (one/(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%torsion  = avEQ(i)%q%torsion  * (one/(FEP(ifile)%npts-nskip))
-	                avEQ(i)%q%improper = avEQ(i)%q%improper * (one/(FEP(ifile)%npts-nskip))
-	                avEQ(i)%restraint  = avEQ(i)%restraint  * (one/(FEP(ifile)%npts-nskip))
 	                do jj=1,fileheader%arrays !can not use Q energies operator any more
+	                avEQ(i)%q(jj)%bond     = avEQ(i)%q(jj)%bond     * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q(jj)%angle    = avEQ(i)%q(jj)%angle    * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q(jj)%torsion  = avEQ(i)%q(jj)%torsion  * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%q(jj)%improper = avEQ(i)%q(jj)%improper * (one/(FEP(ifile)%npts-nskip))
+	                avEQ(i)%restraint(jj)  = avEQ(i)%restraint(jj)  * (one/(FEP(ifile)%npts-nskip))
 	                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * (one/(FEP(ifile)%npts-nskip))
 	                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * (one/(FEP(ifile)%npts-nskip))
 	                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * (one/(FEP(ifile)%npts-nskip))
@@ -563,12 +550,12 @@ end if
 !Write information for each of the calculations using different exclusion definitions
 		do istate=1,nstates
 		write(*,17) trim(filnam), istate, FEP(ifile)%npts-nskip, FEP(ifile)%lambda(istate), &
-			avEQ(istate)%total(j),avEQ(istate)%q%bond,avEQ(istate)%q%angle,&
-			avEQ(istate)%q%torsion, &
-			avEQ(istate)%q%improper,avEQ(istate)%qx(j)%el,avEQ(istate)%qx(j)%vdw, &
+			avEQ(istate)%total(j),avEQ(istate)%q(j)%bond,avEQ(istate)%q(j)%angle,&
+			avEQ(istate)%q(j)%torsion, &
+			avEQ(istate)%q(j)%improper,avEQ(istate)%qx(j)%el,avEQ(istate)%qx(j)%vdw, &
 			avEQ(istate)%qq(j)%el,avEQ(istate)%qq(j)%vdw,avEQ(istate)%qp(j)%el,&
 			avEQ(istate)%qp(j)%vdw, &
-			avEQ(istate)%qw(j)%el,avEQ(istate)%qw(j)%vdw,avEQ(istate)%restraint
+			avEQ(istate)%qw(j)%el,avEQ(istate)%qw(j)%vdw,avEQ(istate)%restraint(j)
 
 		end do
 		end do !fileheader%arrays
@@ -834,6 +821,8 @@ write(*,28)
 	do istate=1,nstates
 		deallocate(EQ(istate)%qx,EQ(istate)%qq,EQ(istate)%qp,EQ(istate)%qw,EQ(istate)%total)
 		deallocate(avEQ(istate)%qx,avEQ(istate)%qq,avEQ(istate)%qp,avEQ(istate)%qw,avEQ(istate)%total)
+                deallocate(EQ(istate)%q,EQ(istate)%restraint)
+                deallocate(avEQ(istate)%q,avEQ(istate)%restraint)
 	end do
 	deallocate(sumg,sumg2,avdvg,avc1,avc2,avr,binsum,nbinpts,ptsum,EQ,avEQ,dvv,dGv,alfa,coeff,&
 		A,mu,eta,rxy0,avdvv,sumv,sumv2,offd)

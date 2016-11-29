@@ -204,17 +204,17 @@ integer                         :: pos
 integer                         :: istate
 
 do istate = 1, nstates
-EQ_save(istate)%lambda     = saveEQ(istate)%lambda
-EQ_save(istate)%q%bond     = saveEQ(istate)%q%bond
-EQ_save(istate)%q%angle    = saveEQ(istate)%q%angle
-EQ_save(istate)%q%torsion  = saveEQ(istate)%q%torsion
-EQ_save(istate)%q%improper = saveEQ(istate)%q%improper
-EQ_save(istate)%qx(pos)    = saveEQ(istate)%qx
-EQ_save(istate)%qq(pos)    = saveEQ(istate)%qq
-EQ_save(istate)%qp(pos)    = saveEQ(istate)%qp
-EQ_save(istate)%qw(pos)    = saveEQ(istate)%qw
-EQ_save(istate)%total(pos) = saveEQ(istate)%total
-EQ_save(istate)%restraint  = saveEQ(istate)%restraint
+EQ_save(istate)%lambda          = saveEQ(istate)%lambda
+EQ_save(istate)%q(pos)%bond     = saveEQ(istate)%q%bond
+EQ_save(istate)%q(pos)%angle    = saveEQ(istate)%q%angle
+EQ_save(istate)%q(pos)%torsion  = saveEQ(istate)%q%torsion
+EQ_save(istate)%q(pos)%improper = saveEQ(istate)%q%improper
+EQ_save(istate)%qx(pos)         = saveEQ(istate)%qx
+EQ_save(istate)%qq(pos)         = saveEQ(istate)%qq
+EQ_save(istate)%qp(pos)         = saveEQ(istate)%qp
+EQ_save(istate)%qw(pos)         = saveEQ(istate)%qw
+EQ_save(istate)%total(pos)      = saveEQ(istate)%total
+EQ_save(istate)%restraint(pos)  = saveEQ(istate)%restraint
 
 end do
 end subroutine qatom_savetowrite
@@ -1511,7 +1511,7 @@ logical function qatom_load_fep(fep_file)
 !then get the torsions that those atoms are involved in if not set to zero
 !and check if they are broken in the improper section
 !allocate the maximum number of impropers that can theoretically break
-        allocate(break_impropers(nbreak_bnd*4),stat=alloc_status_qat)
+        allocate(break_impropers(nqimp+1),stat=alloc_status_qat)
 	call check_alloc_general(alloc_status_qat,'Q improper breaking array')
 	nbreak_imp = 0
         do i=1,nbreak_bnd

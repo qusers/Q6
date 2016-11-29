@@ -147,7 +147,7 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qpi5 qdyn5 qfep5 qprep5 qdum5 move1 move5 moveqdyn
+	qpi5 qdyn5 qfep5 qprep5 qdum5 move1 move2 move5 moveqdyn
 #	qdyn5 qpi5 move1 moveqdyn move5
 
 prof:

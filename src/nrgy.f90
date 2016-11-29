@@ -38,11 +38,11 @@ implicit none
 
 	type Q_ENERGIES
 		sequence
-		real(kind=prec)					::	lambda
-		real(kind=prec),allocatable					::	total(:)
-		type(BONDED_ENERGIES)	::	q
+		real(kind=prec)				::	lambda
+		real(kind=prec),allocatable		::	total(:)
+		type(BONDED_ENERGIES),allocatable	::	q(:)
 		type(NB_ENERGIES),allocatable		::	qx(:), qq(:), qp(:), qw(:)
-		real(kind=prec)					::	restraint
+		real(kind=prec),allocatable		::	restraint(:)
 	end type Q_ENERGIES
 	type OQ_ENERGIES
                 sequence
@@ -115,9 +115,9 @@ subroutine put_ene(unit, e2, OFFD,arrays,nstates)
 	
 !	do i=first, last
 	do i=1,nstates
-		write (unit) i, e2(i)%lambda,e2(i)%total(1:arrays),e2(i)%q,&
+		write (unit) i, e2(i)%lambda,e2(i)%total(1:arrays),e2(i)%q(1:arrays),&
 			e2(i)%qx(1:arrays),e2(i)%qq(1:arrays),e2(i)%qp(1:arrays),&
-			e2(i)%qw(1:arrays),e2(i)%restraint
+			e2(i)%qw(1:arrays),e2(i)%restraint(1:arrays)
 	end do
 
 	bound = lbound(OFFD)

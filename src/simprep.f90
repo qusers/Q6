@@ -3557,7 +3557,8 @@ end if
 	do i=1,nstates
 	allocate(EQ_save(i)%qx(ene_header%arrays),EQ_save(i)%qq(ene_header%arrays),&
 		EQ_save(i)%qp(ene_header%arrays),EQ_save(i)%qw(ene_header%arrays),&
-		EQ_save(i)%total(ene_header%arrays))
+		EQ_save(i)%total(ene_header%arrays),EQ_save(i)%q(ene_header%arrays),&
+                EQ_save(i)%restraint(ene_header%arrays))
 	end do
 
 !if using PBC, alredy allocate the old_EQ arrays so we don't have to do it
