@@ -67,18 +67,23 @@ hbar       = planck/(2*pi)
 !during actual QCP calc
 
 ! TODO need allocation check
-allocate(wl_lam0(qcp_atnum),wl_lam1(qcp_atnum),wl_lam2(qcp_atnum))
+allocate(wl_lam0(qcp_atnum),wl_lam1(qcp_atnum),wl_lam2(qcp_atnum),stat=alloc_status)
+call check_alloc('QCP arrays 1')
 ! one array each for fep states and qcp steps to save energy
-allocate(qcp_EQ(nstates))
+allocate(qcp_EQ(nstates),stat=alloc_status)
+call check_alloc('QCP_arrays 2')
 ! allocate bead coordinate array
-allocate(qcp_coord(qcp_atnum,qcp_size),qcp_coord_old(qcp_atnum,qcp_size))
-allocate(qcp_Ebeta(maxval(qcp_steps)))
-allocate(qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
-        EQpot_ave(nstates),EQtmp(nstates))
-allocate(qcp_EQbead_old(qcp_size,nstates),qcp_EQbead_new(qcp_size,nstates))
-allocate(qcp_EQ_tot(nstates))
-allocate(x_save(natom),d_save(natom))
-allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size))
+allocate(qcp_coord(qcp_atnum,qcp_size),qcp_coord_old(qcp_atnum,qcp_size),stat=alloc_status)
+call check_alloc('QCP_arrays 3')
+allocate(qcp_Ebeta(maxval(qcp_steps)),qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
+        EQpot_ave(nstates),EQtmp(nstates),stat=alloc_status)
+call check_alloc('QCP_arrays 4')
+allocate(qcp_EQbead_old(qcp_size,nstates),qcp_EQbead_new(qcp_size,nstates),stat=alloc_status)
+call check_alloc('QCP_arrays 5')
+allocate(qcp_EQ_tot(nstates),x_save(natom),d_save(natom),stat=alloc_status)
+call check_alloc('QCP_arrays 6')
+allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size),stat=alloc_status)
+call check_alloc('QCP_arrays 7')
 
 
 if (use_qcp_mass) then

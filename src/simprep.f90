@@ -3525,14 +3525,14 @@ else
 !no extra groups, write minimal info to header
 !only need to know if QCP is being performed
 	ene_header%arrays = 1 + QCP_N
-	ene_header%totresid = 0 ! to prevent allocation errors
+	ene_header%totresid = 1 ! to prevent allocation errors
 	allocate(ene_header%types(1+QCP_N),ene_header%numres(1+QCP_N),ene_header%gcnum(1+QCP_N))
 end if
 	ene_header%totresid = ene_header%totresid + 1
 	allocate(ene_header%resid(ene_header%totresid))
 	ene_header%types(1)=NOGC
 	ene_header%numres(1)=1
-	ene_header%resid(1)=-1
+	ene_header%resid(:)=-1
 	ene_header%gcnum(1)=-1
 	runvar=2
 	do i=2,ene_header%arrays - QCP_N
@@ -3571,12 +3571,10 @@ if (use_qcp) then
         call qcp_init
         ene_header%types(qcp_pos)=QCP_NORM
         ene_header%numres(qcp_pos)=qcp_atnum
-        ene_header%resid(qcp_pos)=-1
         ene_header%gcnum(qcp_pos)=-1
         if(use_qcp_mass) then
                 ene_header%types(qcp_pos2)=QCP_MASSP
                 ene_header%numres(qcp_pos2)=qcp_atnum
-                ene_header%resid(qcp_pos2)=-1
                 ene_header%gcnum(qcp_pos2)=-1
         end if
 end if

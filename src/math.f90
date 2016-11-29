@@ -485,23 +485,6 @@ q_ceiling(3) = ceiling(a%z)
 
 end function q_ceiling
 
-function qvec_sum(a)
-! returns sum of all elements of qr_vec object a
-! needs to be an array
-! arguments
-TYPE(qr_vec),INTENT(IN) :: a(:)
-! locals
-TYPE(qr_vec)            :: qvec_sum
-integer                 :: i
-
-qvec_sum = qvec_sum * zero
-do i=1,sizeof(a)
-qvec_sum = qvec_sum + a(i)
-end do
-
-end function qvec_sum
-
-
 subroutine math_initialize
         pi = 4.0_prec*q_atan(one)
         deg2rad = pi/180.0_prec

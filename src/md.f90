@@ -1683,13 +1683,13 @@ end if
 
 if (thermostat == BERENDSEN) then
 if (separate_scaling) then
-        if ( Tfree_solvent .ne. 0 ) Tscale_solvent = Temp0/Tfree_solvent - one
-        Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
-        if ( Tfree_solute .ne. 0 ) Tscale_solute = Temp0/Tfree_solute - one
-        Tscale_solute = sqrt ( 1 + dt/tau_T * Tscale_solute )
+        if ( Tfree_solvent .ne. zero ) Tscale_solvent = Temp0/Tfree_solvent - one
+        Tscale_solvent = sqrt ( one + dt/tau_T * Tscale_solvent )
+        if ( Tfree_solute .ne. zero ) Tscale_solute = Temp0/Tfree_solute - one
+        Tscale_solute = sqrt ( one + dt/tau_T * Tscale_solute )
 else
-        if ( Tfree .ne. 0 ) Tscale_solvent = Temp0/Tfree - one
-        Tscale_solvent = sqrt ( 1 + dt/tau_T * Tscale_solvent )
+        if ( Tfree .ne. zero ) Tscale_solvent = Temp0/Tfree - one
+        Tscale_solvent = sqrt ( one + dt/tau_T * Tscale_solvent )
         Tscale_solute = Tscale_solvent
 end if
 end if

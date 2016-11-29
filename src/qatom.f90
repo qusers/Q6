@@ -1556,7 +1556,7 @@ logical function qatom_load_fep(fep_file)
                 abreak = break_impropers(i)%num
                 cbreak = break_impropers(i)%code
                 improper_set = .false.
-                do j=1,nqtor
+                do j=1,nqimp
                         if(( (imp(abreak)%i.eq.qimp(j)%i) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
                                 (imp(abreak)%k.eq.qimp(j)%k) .and. (imp(abreak)%l.eq.qimp(j)%l)) .or. &
 				((imp(abreak)%i.eq.qimp(j)%k) .and. (imp(abreak)%j.eq.qimp(j)%j) .and. &
