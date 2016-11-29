@@ -643,9 +643,11 @@ end if
 	curres = 1
 	do j=1,fileheader%arrays
 66	format(/,'# Calculation for full system')
-67	format(/,'# Calculation for system with full exclusion, residues',2x,10i4)
-68	format(/,'# Calculation for system with electrostatic exclusion, residues',2x,10i4)
-69	format(/,'# Calculation for system with vdW exclusion, residues',2x,10i4)
+67	format(/,'# Calculation for system with full exclusion, residues ',2x,10i4)
+68	format(/,'# Calculation for system with electrostatic exclusion, residues ',2x,10i4)
+69	format(/,'# Calculation for system with vdW exclusion, residues ',2x,10i4)
+169     format(/,'# Calculation for QCP, number of atoms ',2x,i4)
+170     format(/,'# Calculation for QCP Mass Perturbation, number of atoms ',2x,i4)
 
 	write(*,21)
 
@@ -658,6 +660,10 @@ end if
 		write(*,68) (fileheader%resid(jj),jj=curres,curres+fileheader%numres(j)-1)
 		case(VDW)
 		write(*,69) (fileheader%resid(jj),jj=curres,curres+fileheader%numres(j)-1)
+                case(QCP_NORM)
+                write(*,169) (fileheader%numres(j))
+                case(QCP_MASSP)
+                write(*,170) (fileheader%numres(j))
 		case default
 		if (is_old_file) then
 		write(*,66)

@@ -204,12 +204,17 @@ integer                         :: pos
 integer                         :: istate
 
 do istate = 1, nstates
-
+EQ_save(istate)%lambda     = saveEQ(istate)%lambda
+EQ_save(istate)%q%bond     = saveEQ(istate)%q%bond
+EQ_save(istate)%q%angle    = saveEQ(istate)%q%angle
+EQ_save(istate)%q%torsion  = saveEQ(istate)%q%torsion
+EQ_save(istate)%q%improper = saveEQ(istate)%q%improper
 EQ_save(istate)%qx(pos)    = saveEQ(istate)%qx
 EQ_save(istate)%qq(pos)    = saveEQ(istate)%qq
 EQ_save(istate)%qp(pos)    = saveEQ(istate)%qp
 EQ_save(istate)%qw(pos)    = saveEQ(istate)%qw
 EQ_save(istate)%total(pos) = saveEQ(istate)%total
+EQ_save(istate)%restraint  = saveEQ(istate)%restraint
 
 end do
 end subroutine qatom_savetowrite
@@ -2052,6 +2057,8 @@ logical function qatom_load_fep(fep_file)
 			qatom_load_fep = .false.
 	end select
 	end if ! qcp_select
+        write(*,'(a)') 'Using the following atoms for QCP, in order of appearance'
+        write(*,*) qcp_atom(1:qcp_atnum)
 end if ! use qcp
 ! if qcp is still on and the user wanted mass perturbation, now it is time looking for this info in the fep file
         if(use_qcp.and.use_qcp_mass) then

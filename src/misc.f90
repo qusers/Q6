@@ -14,7 +14,7 @@ use SIZES
 
 	! for enumeration of group contribution types
 	ENUM, bind(c)
-        	ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC
+        	ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC,QCP_NORM,QCP_MASSP
 	END ENUM
 
 	ENUM, bind(c)

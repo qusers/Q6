@@ -3566,9 +3566,19 @@ if( use_PBC ) then
         allocate(old_EQ(nstates))
 end if
 
-if (use_qcp) call qcp_init
-
-!TODO write QCP info to header
+if (use_qcp) then
+        call qcp_init
+        ene_header%types(qcp_pos)=QCP_NORM
+        ene_header%numres(qcp_pos)=qcp_atnum
+        ene_header%resid(qcp_pos)=-1
+        ene_header%gcnum(qcp_pos)=-1
+        if(use_qcp_mass) then
+                ene_header%types(qcp_pos2)=QCP_MASSP
+                ene_header%numres(qcp_pos2)=qcp_atnum
+                ene_header%resid(qcp_pos2)=-1
+                ene_header%gcnum(qcp_pos2)=-1
+        end if
+end if
 
 ! the last thing to prepare are the MD grids
 ! so we call them here
