@@ -861,7 +861,7 @@ integer						:: LJ_code
 
 
 npp = 0
-rcut2 = rcut
+rcut2 = rcut**2
 
 igloop: do ig = 1, ncgp_solute
 nppcgp(ig) = 0
@@ -2061,7 +2061,7 @@ TYPE(qr_vec)					:: shift
 !  Rcpw, ncgp, cgp, excl, nwat, nat_solute, x, cgpatom, iqatom, ljcod, crg, iaclib
 
 npw = 0
-rcut2 = Rcut
+rcut2 = Rcut**2
 
 igloop: do ig = 1, ncgp_solute
 ! for each charge group of the protein:
@@ -3284,7 +3284,7 @@ TYPE(qr_vec)					:: shift
 !	if the user did not specify a q - q cutoff of > 0
 
 nqp = 0
-rcut2 = Rcut
+rcut2 = Rcut**2
 
 
 
@@ -3347,7 +3347,7 @@ TYPE(qr_vec)					:: shift
 !	This routine counts water molecules that interact with q-atoms
 !	Note that in PBC the default is no cutoff (rcq < 0), so we just count all of them
 nqw = 0
-rcut2 = Rcut
+rcut2 = Rcut**2
 
 
 if(nqat .eq. 0) return
@@ -4016,7 +4016,7 @@ TYPE(qr_vec)					:: shift
 ! This routine counts non-bonded solvent-solvent atom pairs.
 
 nww = 0
-rcut2 = Rcut
+rcut2 = Rcut**2
 
 iwloop: do iw = 1, nwat
 nwwmol(iw) = 0
@@ -6212,7 +6212,6 @@ subroutine offdiag
 ! local variables
 integer						:: io,i,j,k,l
 real(kind=prec)					:: r
-TYPE(qr_dist)					:: distance
 
 ! global variables used:
 !  offd, noffd, iqseq, x, Hij, offd2
@@ -6224,9 +6223,8 @@ i  = offd(io)%i
 j  = offd(io)%j
 k  = iqseq(offd2(io)%k)
 l  = iqseq(offd2(io)%l)
-distance = q_dist(x(k),x(l))
 
-r = distance%r
+r = q_sqrt(q_dist4(x(k),x(l)))
 
 Hij(i,j) = offd2(io)%A * exp(-offd2(io)%mu*r)
 offd(io)%Hij = Hij(i,j)	! store for save

@@ -124,21 +124,18 @@ profile(8)%time = profile(8)%time + rtime() - start_loop_time1
 if( .not. use_PBC ) then
    call fix_shell(E_loc%restraint)     !Restrain all excluded atoms plus heavy solute atoms in the inner shell.
 end if
-
 call p_restrain(E_loc%restraint%protein,EQ_loc(:)%restraint,EQ(:)%lambda)
 !Seq. restraints, dist. restaints, etc
-
 if( .not. use_PBC ) then
         if(nwat > 0) then
           call restrain_solvent(E_loc%restraint)
-        if (wpol_restr) call watpol(E_loc%restraint,in_md)
+          if (wpol_restr) call watpol(E_loc%restraint,in_md)
         end if
 end if
 
 ! q-q nonbonded interactions
 call nonbond_qq(EQ_loc(:)%qq,EQ_loc(:)%lambda)
 call nonbond_qqp(EQ_loc(:)%qp,EQ_loc(:)%lambda)
-
 ! q-atom bonded interactions: loop over q-atom states
 do istate = 1, nstates
   ! bonds, angles, torsions and impropers
@@ -318,7 +315,7 @@ TYPE(RESTRAINT_ENERGIES)                        :: E_loc
 ! local variables
 integer						::	i,i3
 real(kind=prec)					::	fk,r2,erst
-TYPE(qr_dist)                                   :: dist
+TYPE(qr_dist5)                                  ::      dist
 ! global variables used:
 !  E, nat_pro, excl, shell, heavy, fk_fix, fk_pshell, x, xtop, d
 
@@ -337,7 +334,7 @@ fk = fk_pshell
 end if
 
 ! calculate drift from topology
-dist = q_dist(xtop(i),x(i))
+dist = q_dist5(xtop(i),x(i))
 r2   = dist%r2
 erst = 0.5_prec*fk*r2
 
@@ -346,7 +343,7 @@ if ( excl(i) )  E_loc%fix   = E_loc%fix + erst
 if ( shell(i) ) E_loc%shell = E_loc%shell + erst 
 
 ! update forces
-d(i) = d(i) + dist%vec * fk
+d(i) = d(i) + (dist%vec * fk)
 end if
 end do
 end subroutine fix_shell

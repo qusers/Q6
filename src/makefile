@@ -143,7 +143,7 @@ tools:
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
-	qdyn5 move1 move5 moveqdyn
+	qdyn5 move1 moveqdyn
 
 debug:
 	@make FFLAGS="${DEBUG}" \
