@@ -45,7 +45,8 @@ real(kind=prec)                         :: total_EPI2,Epot_ave2,qcp_Ering_ave2,E
 real(kind=prec)                         :: qcp_Ering_new2,qcp_Ering_old2,qcp_Ering2
 real(kind=prec),allocatable             :: qcp_Ebead_old2(:),qcp_Ebead_new2(:)
 
-
+! random number
+integer                         :: qcp_seed = -1
 ! for gaussian deviation algorithm
 integer                         :: gauss_set = 0
 real(kind=prec)                 :: gval = zero
@@ -723,8 +724,6 @@ real(kind=prec) :: RNJ,FAC
 integer,save :: ICNT=0   ,ICHG=1167     ,ICHG0=1167  ,ICN0=458753759,  &
                 IMUL=1173,ICON=458753759,IMOD=1048573, &
                 JMUL=1161,JCON=458716759,JMOD=1048573,JRN=124690
-integer         :: IRN
-
   ICNT = ICNT+1
   IF (ICNT.EQ.ICHG) THEN
      !
@@ -770,9 +769,9 @@ integer         :: IRN
   !
   !-----------------------------------------------------------------------
   !
-  IRN = IRN*IMUL+ICON
-  IRN = MOD(IRN,IMOD)
-  qcp_randm = real(IRN,kind=prec)/real(IMOD,kind=prec)
+  qcp_seed = qcp_seed*IMUL+ICON
+  qcp_seed = MOD(qcp_seed,IMOD)
+  qcp_randm = real(qcp_seed,kind=prec)/real(IMOD,kind=prec)
 
 end function qcp_randm
 
@@ -804,6 +803,7 @@ character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
+integer                                         :: timeval(8)
 
 ! read name of input file from the command line
 num_args = command_argument_count()
@@ -1243,6 +1243,15 @@ if(nstates > 0 ) then
 	else
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
 		use_qcp = .true.
+                if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed,-1)) then
+                        write(*,'(a)') 'Using random number for seeding from srand'
+                        call date_and_time(values=timeval)
+                        qcp_seed = timeval(5)*3600 + timeval(6)*60+timeval(7)+133337
+                        qcp_seed = MOD(qcp_seed,1000000)
+                        if(MOD(qcp_seed,2).eq.0) qcp_seed = qcp_seed + 1
+                else
+                        write(*,'(a,i4)') 'Using the follwing random number for seeding ',qcp_seed
+                end if
 ! find out if we use mass perturbation for KIE
                 yes = prm_get_logical_by_key('qcp_kie',use_qcp_mass,.false.)
                 if(use_qcp_mass) then

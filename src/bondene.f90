@@ -958,7 +958,7 @@ end if
 
 if(distres%dist < rstdis(ir)%d1) then !shorter than d1
         db     = distres%dist - rstdis(ir)%d1
-elseif(b > rstdis(ir)%d2) then !longer than d2
+elseif(distres%dist > rstdis(ir)%d2) then !longer than d2
         db     = distres%dist - rstdis(ir)%d2
 else
         db = 0

@@ -140,6 +140,7 @@ character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
+integer                                         :: timeval(8)
 ! this subroutine will init:
 !  nsteps, stepsize, dt
 !  Temp0, tau_T, iseed, Tmaxw
@@ -965,6 +966,15 @@ if(nstates > 0 ) then
 	else
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
 		use_qcp = .true.
+                if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed,-1)) then
+                        write(*,'(a)') 'Using random number for seeding from srand'
+                        call date_and_time(values=timeval)
+                        qcp_seed = timeval(5)*3600 + timeval(6)*60+timeval(7)+133337
+                        qcp_seed = MOD(qcp_seed,1000000)
+                        if(MOD(qcp_seed,2).eq.0) qcp_seed = qcp_seed + 1
+                else
+                        write(*,'(a,i4)') 'Using the follwing random number for seeding ',qcp_seed
+                end if
 ! find out if we use mass perturbation for KIE
                 yes = prm_get_logical_by_key('qcp_kie',use_qcp_mass,.false.)
                 if(use_qcp_mass) then

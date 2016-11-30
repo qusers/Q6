@@ -2704,6 +2704,7 @@ do ig = 1, nat_solute
                         ! atom ig is a qatom, add to exc_qq list with state info
                                 if (.not.qq_precomp(iq,iqatom(ig),istate)%set) cycle
                                 ! if those two atoms are allowed to interact
+                                jq = iqatom(ig)
                                 exc_nbqq_list(igc,istate,exc_qqlist)%iq = iq
                                 exc_nbqq_list(igc,istate,exc_qqlist)%jq = jq
                                 exc_nbqq_list(igc,istate,exc_qqlist)%vdWA = qq_precomp(iq,jq,istate)%vdWA
