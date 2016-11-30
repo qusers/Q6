@@ -121,7 +121,7 @@ nbe_qq%Vel  = nb%elec *r
 nbe_qq%vec  = distance%vec
 if (nb%soft) then
 nbe_qq%V_b = zero
-nbe_qq%V_a = nb%vdWA*exp(-nb%vdWB/r)
+nbe_qq%V_a = nb%vdWA*q_exp(-nb%vdWB/r)
 nbe_qq%dv  = r2*( -nbe_qq%Vel -nbe_qq%V_b*nbe_qq%V_a/r )*lambda
 else
 nbe_qq%V_a  = nb%vdWA *r12 

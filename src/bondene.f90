@@ -507,7 +507,7 @@ do ib = 1, nqbond
 	calc = bond_calc(x(i),x(j))
 	db = calc%dist - qbondlib(ic)%r0
 
-        fexp = exp ( -qbondlib(ic)%amz*db ) 
+        fexp = q_exp ( -qbondlib(ic)%amz*db ) 
         be = qbondlib(ic)%Dmz*(fexp*fexp-2.0_prec*fexp) + 0.5_prec*qbondlib(ic)%fk*db**2
         EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
 	E_loc = E_loc + be
@@ -518,7 +518,7 @@ do ib = 1, nqbond
 	d(j) = d(j) + calc%a_vec*dv
 
 !Force scaling factor to be 1 when distance is smaller than r0
- if ( db > 0 ) then
+ if ( db > zero ) then
  	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
         dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
  	dMorse_j(ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
@@ -1038,7 +1038,7 @@ do ir = 1, nrstr_wall
                                 erst =  0.5_prec * fk * db**2 - rstwal(ir)%Dmorse
                                 dv = fk*db/distres%dist
                         else
-                                fexp = exp(rstwal(ir)%aMorse*db)
+                                fexp = q_exp(rstwal(ir)%aMorse*db)
                                 erst = rstwal(ir)%dMorse*(fexp*fexp-2.0_prec*fexp)
                                 dv=-2.0_prec*rstwal(ir)%dMorse*rstwal(ir)%aMorse*(fexp-fexp*fexp)/distres%dist
                         end if

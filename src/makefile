@@ -40,9 +40,9 @@ ifeq ($(COMP),ifort)
 	MPI=		${MPI_FCFLAGS}
 	MPFLAG=		-openmp ${MPI}
 
-	DEBUG=          -debug -traceback -g   ${FFLAGS}
-	DEBUGMPI=       -debug -traceback -g   ${FFLAGS}
-	DEBUGMP=        -openmp -debug -traceback -g  -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUG=          -debug -traceback -g -O0  ${FFLAGS}
+	DEBUGMPI=       -debug -traceback -g -O0  ${FFLAGS}
+	DEBUGMP=        -openmp -debug -traceback -g -O0 -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
 
 
 ################################################################################
@@ -107,9 +107,9 @@ else ifeq ($(COMP),gcc)
 	FFLAGS=		--static ${OMPI_FCFLAGS}
 	FFLAGS_R8=	
 
-	DEBUG=          -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
-	DEBUGMPI=       -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
-	DEBUGMP=        -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
+	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  
+	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
+	DEBUGMP=        -O0 -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
 
 	PROF=		-pg ${DEBUG}
 
