@@ -248,7 +248,7 @@ TYPE(ENERGIES), INTENT(in)              :: E_init
 TYPE(OQ_ENERGIES),INTENT(in)            :: EQ_init(:)
 ! locals
 integer                                 :: ncent,nmove,qcp_loop,istate
-integer                                 :: i,ia,j,step
+integer                                 :: i,ia,j,step,nmodel,qcp_writenum
 real(kind=prec)                         :: bfactor,deltaH,irand,MCaccept,MCreject,MCrepeat
 ! in case of MPI this is a mess, because only the pot_ene stuff needs it
 ! everything else needs to be on the master node to keep it clean
@@ -303,6 +303,7 @@ end if
 ! set number of beads to move, 1 bead for bisection, center all
 ncent = qcp_size
 nmove = 1
+nmodel = 0
 end if
 
 do i = 1 , nstates
@@ -444,6 +445,23 @@ if(use_qcp_mass) then
         qcp_Ering2 = qcp_Ering2 + qcp_energy(iqseq(qcp_atom(i)),qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
 end if
 end do
+if(qcp_write) then
+        nmodel = nmodel + 1
+1       format(a5,5x,i4)
+2       format(a6)
+        write(qcp_filen,1) 'MODEL',nmodel
+        qcp_writenum = 0
+        do i = 1, qcp_atnum
+        call qcp_write_coord(qcp_coord(i,:),i,iqseq(qcp_atom(i)),qcp_writenum,qcp_filen)
+        end do
+        qcp_writenum = 0
+        do i = 1, qcp_atnum
+        call qcp_write_connect(qcp_writenum,qcp_filen)
+        end do
+        write(qcp_filen,2) 'ENDMDL'
+end if
+
+
 qcp_Ering_new = qcp_Ering
 if (use_qcp_mass) qcp_Ering_new2 = qcp_Ering2
 end if
@@ -1265,6 +1283,19 @@ if(nstates > 0 ) then
 ! section for methods goes here later
 ! TODO !
 ! implement other sampling methods (staging, simple MC, ...)
+                yes = prm_get_logical_by_key('qcp_write',qcp_write,.true.)
+                if(qcp_write) then
+! need file name
+                        if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
+                                qcp_initialize = .false.
+                                write(*,'(a)') '>>> ERROR: Need file name for print out of qcp bead coordinates'
+                                write(*,'(a)') 'Keyword: qcp_pdb'
+                        else
+                                write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
+                        end if
+                else
+                        write(*,'(a)') '>>>> WARNING: Not writing out bead coordinates'
+                end if
 ! decide on printout level
                if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
                        qcp_verbose = .false.
@@ -1861,12 +1892,27 @@ do while(trj_read(x))
 frame = frame + 1
 end do
 ! and rewind the whole thing back to the start
-yes = trj_seek(1)
+call trj_close
 nframes = frame
-else
-! we are dead, can not open dcd file
-call die('Could not open trajectory file')
+yes = trj_open(trj_file)
 end if
+if (.not.yes) then
+! we are dead, can not open dcd file
+call die('Error reading in trajectory file')
+end if
+! write PDB header for qcp
+if(qcp_write) then
+        qcp_filen = freefile()
+        open(unit=qcp_filen,file=qcp_pdb_name,status='unknown',form='formatted', action='write',err=666)
+1       format(a6,1x,a)
+2       format(a6,1x,a,2i4)
+3       format(a6,1x,a,i4)
+        write(qcp_filen,1) 'REMARK','QCP BEAD Coordinates'
+        write(qcp_filen,1) 'REMARK','Always split between Equilibration and sampling'
+        write(qcp_filen,2) 'REMARK','Number of steps for each data point = ',qcp_steps
+        write(qcp_filen,3) 'REMARK','Total number of data points = ',nframes
+end if
+
 end if
 ! now we know the length of the file, we can iterate over the individual frames and Bcast stuff to nodes
 #ifdef USE_MPI
@@ -1878,7 +1924,13 @@ if(ierr.ne.0) call die('QPI Bcast nframes')
 
 do frame = 1, nframes
 ! file reading only on node 0
-if(nodeid.eq.0) yes = trj_read(x)
+if(nodeid.eq.0) then
+        yes = trj_read(x)
+        if(.not.yes) call die('Error opening QCP trj file')
+! write out first part of QCP Bead PDB file
+
+
+end if
 
 #ifdef USE_MPI
 call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
@@ -1902,9 +1954,66 @@ end do
 
 if (nodeid.eq.0) call trj_close
 
+return
+666     write(*,667)
+667     format('>>>>> Error while opening QCP PDB file')
+        return
 
 end subroutine qcp_work
 
+subroutine qcp_write_coord(coord,qcpnum,atom,totnum,filen)
+! write out the coordinates of the beads used for each data point
+! write as simple xyz file, so that no topology or other stuff is needed to view them
+! arguments
+! bead coordinates
+TYPE(qr_vec)                    :: coord(:)
+! current atom
+integer                         :: qcpnum,atom
+! current atom coord
+TYPE(qr_vec)                    :: acoord
+! file pointer
+integer                         :: filen
+! locals
+integer                         :: totnum,i
+character(4)                    :: bname
+character(5)                    :: btext
+character(4)                    :: rname
+
+666     format(a4,2x,i5,1x,a5,a4,1x,i4,4x,3f8.3)
+667     format(a3,14x,a4,1x,i4)
+
+btext = trim('BEA')
+rname = trim('???')
+bname = 'ATOM'
+do i = 1, qcp_size
+totnum = totnum + 1
+acoord = x(atom) + coord(i)
+write(filen,666) bname,totnum,btext,rname,qcpnum,acoord
+end do
+bname = trim('TER')
+write(filen,667) bname,rname,totnum
+
+end subroutine qcp_write_coord
+
+subroutine qcp_write_connect(totnum,filen)
+!write connect information to each model in the qcp bead pdb file
+!gets first atom number from totnum and goes from there
+!arguments
+integer                         :: totnum,filen
+!locals
+character(6)                    :: conn
+integer                         :: i,start
+conn = 'CONECT'
+start = totnum + 1
+do i = 1,qcp_size - 1
+1       format(a6,i5,i5)
+totnum = totnum + 1
+write(filen,1) conn,totnum,totnum+1
+end do
+totnum = totnum + 1
+write(filen,1) conn,totnum,start
+
+end subroutine qcp_write_connect
 subroutine qcp_massper(ratio,coord1,coord2)
 ! this function does the coordinate scaling for the different masses
 ! arguments

@@ -988,6 +988,19 @@ if(nstates > 0 ) then
 ! section for methods goes here later
 ! TODO !
 ! implement other sampling methods (staging, simple MC, ...)
+                yes = prm_get_logical_by_key('qcp_write',qcp_write,.true.)
+                if(qcp_write) then
+! need file name
+                        if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
+                                initialize = .false.
+                                write(*,'(a)') '>>> ERROR: Need file name for print out of qcp bead coordinates'
+                                write(*,'(a)') 'Keyword: qcp_pdb'
+                        else
+                                write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
+                        end if
+                else
+                        write(*,'(a)') 'Not writing out bead coordinates'
+                end if
 ! decide on printout level
                 if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
                        qcp_verbose = .false.

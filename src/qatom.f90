@@ -2078,6 +2078,11 @@ end if ! use qcp
                         qatom_load_fep = .false.
                 end if
         end do
+        write(*,'(a)') 'Mass values used for QCP atoms in order of appearance'
+        write(*,'(a)') 'Qatom Mass'
+        do i = 1, qcp_atnum
+        write(*,'(i4,f8.3)') qcp_atom(i),qcp_mass(i)
+        end do
         end if
         call prm_close
 	return
