@@ -1243,12 +1243,13 @@ if(nstates > 0 ) then
 	else
 		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
 		use_qcp = .true.
-                if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed,-1)) then
-                        write(*,'(a)') 'Using random number for seeding from srand'
+                if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed)) then
+                        write(*,'(a)') 'Using random number for seeding from date_and_time'
                         call date_and_time(values=timeval)
-                        qcp_seed = timeval(5)*3600 + timeval(6)*60+timeval(7)+133337
-                        qcp_seed = MOD(qcp_seed,1000000)
+                        qcp_seed = timeval(5)*3600 + timeval(6)*60+timeval(7)+13337
+                        qcp_seed = MOD(qcp_seed,10000)
                         if(MOD(qcp_seed,2).eq.0) qcp_seed = qcp_seed + 1
+                        write(*,'(a,i4)') 'Using the follwing random number for seeding ',qcp_seed
                 else
                         write(*,'(a,i4)') 'Using the follwing random number for seeding ',qcp_seed
                 end if
