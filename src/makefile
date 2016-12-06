@@ -138,7 +138,7 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qpi5 qfep5 qprep5 qdum5 move1 move2 move5
+	qpi5 qfep5 qprep5 qdum5 qmin5 move1 move2
 #	qfep5 qprep5 qdum5 qcalc5 move1 move2
 
 serial:	
@@ -147,7 +147,7 @@ serial:
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qpi5 qdyn5 qfep5 qprep5 qdum5 move1 move2 move5 moveqdyn
+	qpi5 qdyn5 qfep5 qprep5 qdum5 qmin5 move1 move2 moveqdyn
 #	qdyn5 qpi5 move1 moveqdyn move5
 
 prof:
@@ -156,11 +156,11 @@ prof:
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	qdyn5p qpi5p move1 move3 move6
+	qdyn5p qpi5p qmin5p move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	qdyn5p qpi5p move1 move3 move6
+	qdyn5p qpi5p qmin5p move1 move3 
 hybrid:
 	@make FFLAGS="${MPFLAG}" \
 	qdyn5h move1 move4
@@ -177,11 +177,11 @@ nuke:
 
 qcalc5 qprep5 qfep5: mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5 qpi5 qpi5p: version.o misc.o math.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5 qpi5 qpi5p qmin5 qmin5p: version.o misc.o math.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qpi5 qpi5p: mask.o prmfile.o sizes.o topo.o trj.o index.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qpi5 qpi5p qmin5 qmin5p: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5 qpi5 qpi5p: nrgy.o
+qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5 qpi5 qpi5p qmin5 qmin5p: nrgy.o
 
 qcalc5: qatom.o
 
@@ -191,7 +191,9 @@ qcalc5 qprep5: maskmanip.o
 
 qdyn5 qdum5: qdyn.o
 
-qdyn5 qdum5 qdyn5p qdyn5h qpi5 qpi5p: qatom.o exc.o globals.o
+qmin5: qmin.o
+
+qdyn5 qdum5 qdyn5p qdyn5h qpi5 qpi5p qmin5 qmin5p: qatom.o exc.o globals.o
 
 qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -204,14 +206,20 @@ qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5 qdum5 qpi5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
+qdyn5 qdum5 qpi5 qmin5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
 	bonded.o bondene.o mpiglob.o 
 
-qdyn5p qdyn5h qpi5p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
+qdyn5p qdyn5h qpi5p qmin5p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
 	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o
 
 qdyn5 : md.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
+
+qmin5 : minim.o
+	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
+
+qmin5p :qmin_mpi.o minim_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdum5 : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
@@ -317,6 +325,15 @@ md_mpi.o: md.f90 mpiglob_mpi.o qatom.o sizes.o topo.o trj.o exc.o version.o \
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c md.f90 -o md_mpi.o
 
+minim.o:  minim.f90 mpiglob.o qatom.o sizes.o trj.o topo.o exc.o version.o \
+          math.o globals.o simprep.o potene.o qcp.o
+	${FC} ${FFLAGS} ${FPP_FLG} -c minim.f90
+
+minim_mpi.o: minim.f90 mpiglob_mpi.o qatom.o sizes.o topo.o trj.o exc.o version.o \
+	math.o globals.o simprep_mpi.o potene_mpi.o qcp_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
+	-c minim.f90 -o minim_mpi.o
+
 misc.o: misc.f90 sizes.o
 	${FC} ${FFLAGS} -c $<
 
@@ -395,6 +412,13 @@ qdyn_mpi.o: qdyn.f90 md_mpi.o mpiglob_mpi.o version.o simprep_mpi.o
 qfep.o: qfep.f90 nrgy.o parse.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qfep.f90
 
+qmin.o: qmin.f90 minim.o mpiglob.o version.o simprep.o
+	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qmin.f90
+
+qmin_mpi.o: qmin.f90 minim_mpi.o simprep_mpi.o mpiglob_mpi.o
+	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG}  ${BUILD_NUMBER_LDFLAGS} -DUSE_MPI \
+	-c qmin.f90 -o qmin_mpi.o
+
 qpi.o: qpi.f90 qcp.o version.o simprep.o mpiglob.o
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c qpi.f90
 
@@ -431,19 +455,15 @@ move1:
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 ../bin/
+	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qpi5 qmin5 ../bin/
 
 move3:
-	mkdir -p ../bin ; mv qdyn5p ../bin/
+	mkdir -p ../bin ; mv qdyn5p qpi5p qmin5p ../bin/
 
 move4:
 	mkdir -p ../bin ; mv qdyn5h ../bin/
 
-move5:  
-	mkdir -p ../bin ; mv qpi5 ../bin/
 
-move6:
-	mkdir -p ../bin ; mv qpi5p ../bin/
 
 
 include buildnumber.mak

@@ -323,6 +323,7 @@ logical function qatom_load_atoms(fep_file)
 	character(len=4), allocatable :: names(:)
 	integer					::	offset_residue, max_res, resno
 	integer, allocatable	::  residues(:)
+        integer                 :: tmp_states
   !.......................................................................
 
 	use_new_fep_format = .true.
@@ -344,13 +345,26 @@ logical function qatom_load_atoms(fep_file)
 	end if
 
 	if(.not. prm_open_section('FEP')) then
-		nstates = 1
+                tmp_states = 1
+                if (tmp_states .ne. nstates) then
+                        qatom_load_atoms = .false.
+                        write(*,*) '>>>>> ERROR: Mismatch between nstates in input and FEP file'
+                end if
+		nstates = tmp_states
 		write(*,21, advance='no') nstates
 	else
-		if(.not.prm_get_integer_by_key('states', nstates)) then
-			nstates = 1
+		if(.not.prm_get_integer_by_key('states', tmp_states)) then
+			tmp_states = 1
+                        if(tmp_states.ne.nstates) then
+                                qatom_load_atoms = .false.
+                                write(*,*) '>>>>> ERROR: Mismatch between nstates in input and FEP file'
+                        end if
 			write(*,21) nstates
 		else
+                        if(tmp_states.ne.nstates) then
+                                qatom_load_atoms = .false.
+                                write(*,*) '>>>>> ERROR: Mismatch between nstates in input and FEP file'
+                        end if
 			write(*,20) nstates
 		end if
 		yes = prm_get_logical_by_key('qq_use_library_charges', qq_use_library_charges, .false.)

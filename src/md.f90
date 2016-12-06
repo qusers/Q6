@@ -959,13 +959,13 @@ end if
 !new section in *inp files to control QCP behaviour
 !will only trigger if FEP file is in use -> if more than 0 states
 if(nstates > 0 ) then
-	if(.not. prm_open_section('QCP')) then
-		write(*,'(a)') 'No QCP section found, will not try to use RPMD.'
-		use_qcp = .false.
-               QCP_N = QCP_OFF
-	else
-		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
-		use_qcp = .true.
+        if(.not. prm_open_section('QCP')) then
+                write(*,'(a)') 'No QCP section found, will not try to use RPMD.'
+                use_qcp = .false.
+                QCP_N = QCP_OFF
+        else
+                write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
+                use_qcp = .true.
                 if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed)) then
                         write(*,'(a)') 'Using random number for seeding from date_and_time'
                         call date_and_time(values=timeval)
@@ -1095,6 +1095,8 @@ if(nstates > 0 ) then
 	end if
 else
 	write(*,'(a)') 'No RPMD in classical MD'
+        use_qcp = .false.
+        QCP_N = QCP_OFF
 end if
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'

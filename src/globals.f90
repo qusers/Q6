@@ -103,7 +103,7 @@ integer						::	thermostat = -1
 character(len=80)			:: name_integrator
 integer						:: integrator = -1
 ENUM, bind(c)
-	ENUMERATOR	:: LEAPFROG,VELVERLET
+	ENUMERATOR	:: LEAPFROG,VELVERLET,MIN_STEEP,MIN_CG
 END ENUM
 real(kind=prec), allocatable				::	xnh(:), vnh(:), qnh(:), Gnh(:) 
 
@@ -329,7 +329,7 @@ type(ENERGIES)				::	E,old_E,previous_E
 !added the variables for the MC_volume function as globals
 real(kind=prec)						::	Tfree, Tfree_solvent, Tfree_solute, Temp
 real(kind=prec)						::	Temp_solvent, Temp_solute, Texcl_solute, Texcl_solvent
-
+real(kind=prec)                                         :: energy_cutoff
 
 !-----------------------------------------------------------------------
 !	Nonbonded pair information
