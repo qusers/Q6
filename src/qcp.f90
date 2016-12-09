@@ -1572,7 +1572,7 @@ TYPE(qr_vecs),allocatable :: x_single(:),v_single(:)
 TYPE(qr_vecs)             :: boxl_single,boxc_single
 TYPE(qr_vecd),allocatable :: x_double(:),v_double(:)
 TYPE(qr_vecd)             :: boxl_double,boxc_double
-#ifndef PGI
+#ifdef HAVEQUAD
 TYPE(qr_vecq),allocatable   :: x_quad(:),v_quad(:)
 TYPE(qr_vecq)               :: boxl_quad,boxc_quad
 #endif
@@ -1580,7 +1580,7 @@ if (prec .eq. singleprecision) then
 myprec = -137
 elseif (prec .eq. doubleprecision) then
 myprec = -1337
-#ifndef PGI
+#ifdef HAVEQUAD
 elseif (prec .eq. quadprecision) then
 myprec = -13337
 #endif
@@ -1624,7 +1624,7 @@ read(12) headercheck
          xtop(1:natom)%z = x_double(1:natom)%z
          deallocate(x_double)
        else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
          allocate(x_quad(natom))
          read (12,err=112,end=112) nat3, (x_quad(i),i=1,natom)
          xtop(1:natom)%x = x_quad(1:natom)%x
@@ -1756,7 +1756,7 @@ if(restart) then
                  boxcentre%z = boxc_double%z
               end if
             else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
               allocate(x_quad(natom),v_quad(natom))
               read (2,err=112,end=112) nat3, (x_quad(i),i=1,natom)
               read (2,err=112,end=112) nat3, (v_quad(i),i=1,natom)

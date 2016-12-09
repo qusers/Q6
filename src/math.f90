@@ -18,7 +18,7 @@ TYPE qr_vecd
 real(kind=doubleprecision) :: x,y,z
 end type qr_vecd
 
-#ifndef PGI
+#ifdef HAVEQUAD
 TYPE qr_vecq
 real(kind=quadprecision) :: x,y,z
 end type qr_vecq

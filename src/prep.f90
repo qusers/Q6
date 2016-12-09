@@ -5809,7 +5809,7 @@ subroutine solvate_restart
 	logical					::	old_restart
         TYPE(qr_vecs),allocatable	::	xtmp_single(:)
         TYPE(qr_vecd),allocatable	::	xtmp_double(:)
-#ifndef PGI
+#ifdef HAVEQUAD
         TYPE(qr_vecq),allocatable	::	xtmp_quad(:)
 #endif
 	u=freefile()
@@ -5879,7 +5879,7 @@ subroutine solvate_restart
                 xtmp(1:natom)%z = xtmp_single(1:natom)%z
 		deallocate(xtmp_single)
 	else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
 !quadruple precision
 		allocate(xtmp_quad(natom))
 		read(u) headercheck

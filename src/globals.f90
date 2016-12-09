@@ -166,7 +166,7 @@ type SHELL_TYPE_DOUBLE
         real(kind=doubleprecision)                                 ::      avtheta, avn_insh, theta_corr
         integer                                 ::      n_insh
 end type SHELL_TYPE_DOUBLE
-#ifndef PGI
+#ifdef HAVEQUAD
 type SHELL_TYPE_QUAD
         real(kind=quadprecision)                                 ::      rout, dr, cstb
         real(kind=quadprecision)                                 ::      avtheta, avn_insh, theta_corr
@@ -178,7 +178,7 @@ type(SHELL_TYPE), allocatable::	wshell(:)
 type(OLD_SHELL_TYPE), allocatable::old_wshell(:)
 type(SHELL_TYPE_SINGLE), allocatable:: wshell_single(:)
 type(SHELL_TYPE_DOUBLE), allocatable:: wshell_double(:)
-#ifndef PGI
+#ifdef HAVEQUAD
 type(SHELL_TYPE_QUAD), allocatable:: wshell_quad(:)
 #endif
 ! constants & default values
@@ -305,12 +305,15 @@ type PRECOMPUTE_INT_QQ
 end type PRECOMPUTE_INT_QQ
 
 
-type(PRECOMPUTE_INT),allocatable                :: pp_precomp(:,:)
+type(PRECOMPUTE_INT),allocatable                :: pp_precomp(:)
 type(PRECOMPUTE_INT),allocatable                :: pw_precomp(:,:)
 type(PRECOMPUTE_INT),allocatable                :: ww_precomp(:,:)
 type(PRECOMPUTE_INT),allocatable                :: qp_precomp(:,:,:)
 type(PRECOMPUTE_INT),allocatable                :: qw_precomp(:,:,:)
 type(PRECOMPUTE_INT_QQ),allocatable             :: qq_precomp(:,:,:)
+integer(AI),allocatable                         :: pp_map(:,:)
+integer                                         :: pp_low,pw_low
+
 !-----------------------------------------------------------------------
 !	Coordinates, velocities, forces
 !-----------------------------------------------------------------------

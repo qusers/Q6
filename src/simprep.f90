@@ -2371,7 +2371,7 @@ TYPE(qr_vecs),allocatable :: x_single(:),v_single(:)
 TYPE(qr_vecs)             :: boxl_single,boxc_single
 TYPE(qr_vecd),allocatable :: x_double(:),v_double(:)
 TYPE(qr_vecd)             :: boxl_double,boxc_double
-#ifndef PGI
+#ifdef HAVEQUAD
 TYPE(qr_vecq),allocatable   :: x_quad(:),v_quad(:)
 TYPE(qr_vecq)               :: boxl_quad,boxc_quad
 #endif
@@ -2379,7 +2379,7 @@ if (prec .eq. singleprecision) then
 myprec = -137
 elseif (prec .eq. doubleprecision) then
 myprec = -1337
-#ifndef PGI
+#ifdef HAVEQUAD
 elseif (prec .eq. quadprecision) then
 myprec = -13337
 #endif
@@ -2423,7 +2423,7 @@ read(12) headercheck
          xtop(1:natom)%z = x_double(1:natom)%z
          deallocate(x_double)
        else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
          allocate(x_quad(natom))
          read (12,err=112,end=112) nat3, (x_quad(i),i=1,natom)
          xtop(1:natom)%x = x_quad(1:natom)%x
@@ -2558,7 +2558,7 @@ if(restart) then
                  boxcentre%z = boxc_double%z
               end if
             else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
               allocate(x_quad(natom),v_quad(natom))
               read (2,err=112,end=112) nat3, (x_quad(i),i=1,natom)
               read (2,err=112,end=112) nat3, (v_quad(i),i=1,natom)
@@ -2750,17 +2750,33 @@ subroutine pp_int_comp
 ! immidiate lookup
 
 ! locals
-integer                         :: ig,jg,nl
-integer                         :: ia,ja,i,j
-allocate(pp_precomp(nat_solute,nat_solute),stat=alloc_status)
-call check_alloc('Protein-Protein precomputation array')
+integer                         :: ig,jg,nl,it
+integer                         :: ia,ja,i,j,k
+integer                         :: hval,lval
 
-! 
-pp_precomp(:,:)%set   = .false.
-pp_precomp(:,:)%score = zero
-pp_precomp(:,:)%elec  = zero
-pp_precomp(:,:)%vdWA  = zero
-pp_precomp(:,:)%vdWB  = zero
+do k = 1, 2
+! two passes, one for finding max num of interactions, and one for assigning them
+! also reduce array size in second pass
+
+if(k.eq.1) lval = nat_solute
+if(k.eq.1) hval = 0
+
+if(k.eq.2) then
+allocate(pp_precomp(it),stat=alloc_status)
+call check_alloc('Protein-Protein precomputation array')
+allocate(pp_map(hval-lval+1,nat_solute),stat=alloc_status)
+call check_alloc('Protein-Protein map array')
+
+pp_map = 0
+pp_precomp(:)%set   = .false.
+pp_precomp(:)%score = zero
+pp_precomp(:)%elec  = zero
+pp_precomp(:)%vdWA  = zero
+pp_precomp(:)%vdWB  = zero
+
+end if
+it = 0
+
 
 igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
         ia = cgp(ig)%iswitch
@@ -2777,6 +2793,8 @@ ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
                         i = cgpatom(ia)
 !             --- q-atom ? ---
                         if ( iqatom(i) .ne. 0 ) cycle ialoop
+                        if((i.lt.lval).and.(k.eq.1)) lval = i
+                        if((i.gt.hval).and.(k.eq.1)) hval = i
 
 jaloop:                 do ja = cgp(jg)%first, cgp(jg)%last
                                 j = cgpatom(ja)
@@ -2790,14 +2808,18 @@ jaloop:                 do ja = cgp(jg)%first, cgp(jg)%last
                                                 if ( listex(j-i,i) ) then
                                                         cycle jaloop
                                                 else if (list14(j-i,i)) then
-                                                        call precompute_set_values_pp(i,j,3)
+                                                        it = it + 1
+                                                        if(k.eq.2) pp_map(i-lval+1,j) = it
+                                                        if(k.eq.2) call precompute_set_values_pp(i,j,it,3)
                                                         cycle jaloop
                                                 end if
                                         else
                                                 if ( listex(i-j,j) ) then
                                                         cycle jaloop
                                                 else if ( list14(i-j,j)) then
-                                                        call precompute_set_values_pp(i,j,3)
+                                                        it = it + 1
+                                                        if(k.eq.2) pp_map(i-lval+1,j) = it
+                                                        if(k.eq.2) call precompute_set_values_pp(i,j,it,3)
                                                         cycle jaloop
                                                 end if
                                         end if
@@ -2815,16 +2837,25 @@ jaloop:                 do ja = cgp(jg)%first, cgp(jg)%last
                                                         list14long(2,nl) .eq. j      ) .or. &
                                                         (list14long(1,nl) .eq. j .and. &
                                                         list14long(2,nl) .eq. i      ) ) then
-                                                        call precompute_set_values_pp(i,j,3)
+                                                        it = it + 1
+                                                        if(k.eq.2) pp_map(i-lval+1,j) = it
+                                                        if(k.eq.2) call precompute_set_values_pp(i,j,it,3)
                                                         cycle jaloop
                                                 end if
                                         end do
                                 end if
-                                call precompute_set_values_pp(i,j,ljcod(iac(i),iac(j)))
+                                it = it + 1
+                                if(k.eq.2) pp_map(i-lval+1,j) = it
+                                if(k.eq.2) call precompute_set_values_pp(i,j,it,ljcod(iac(i),iac(j)))
                         end do jaloop
                 end do ialoop
         end do jgloop
 end do igloop
+
+end do
+
+pp_low = lval - 1
+
 end subroutine pp_int_comp
 
 !-----------------------------------------------------------------------
@@ -2832,15 +2863,24 @@ end subroutine pp_int_comp
 subroutine pw_int_comp
 ! locals
 integer                         :: ig,jg,ia,a_ind,b_ind
+integer                         :: hval,lval,it,i
 
-allocate(pw_precomp(nat_solute,solv_atom),stat=alloc_status)
+lval = nat_solute
+hval = 0
+
+do i = 1,2
+
+if(i.eq.2) then
+allocate(pw_precomp(hval-lval+1,solv_atom),stat=alloc_status)
 call check_alloc('Protein-Solvent precomputation array')
-
 pw_precomp(:,:)%set = .false.
 pw_precomp(:,:)%score = zero
 pw_precomp(:,:)%elec  = zero
 pw_precomp(:,:)%vdWA  = zero
 pw_precomp(:,:)%vdWB  = zero
+end if
+
+
 
 igloop:do ig = calculation_assignment%pw%start, calculation_assignment%pw%end
 jgloop: do jg = 1, solv_atom
@@ -2848,10 +2888,17 @@ ialoop:         do ia = cgp(ig)%first, cgp(ig)%last
                         a_ind = cgpatom(ia)
                         b_ind = jg
                         if ( iqatom(a_ind) .ne. 0 ) cycle ialoop
-                        call precompute_set_values_pw(a_ind,b_ind,ljcod(iac(a_ind),iac(nat_solute+b_ind)))
+                        if ((a_ind.lt.lval).and.(i.eq.1)) lval = a_ind
+                        if ((a_ind.gt.hval).and.(i.eq.1)) hval = a_ind
+                        if(i.eq.2) &
+                         call precompute_set_values_pw(a_ind,b_ind,lval,ljcod(iac(a_ind),iac(nat_solute+b_ind)))
                 end do ialoop
         end do jgloop
 end do igloop
+
+end do
+
+pw_low = lval - 1
 end subroutine pw_int_comp
 
 !-----------------------------------------------------------------------
@@ -2859,6 +2906,7 @@ end subroutine pw_int_comp
 subroutine qp_int_comp
 ! locals
 integer                         :: ig,jq,ia,a_ind,is,vdw,j,k
+
 
 allocate(qp_precomp(nat_solute,nqat,nstates),stat=alloc_status)
 call check_alloc('Protein-QAtom precomputation array')
@@ -3058,17 +3106,17 @@ end subroutine ww_int_comp
 
 !-----------------------------------------------------------------------
 
-subroutine precompute_set_values_pp(i,j,vdw)
+subroutine precompute_set_values_pp(i,j,it,vdw)
 ! arguments
-integer                         :: i,j,vdw
+integer                         :: i,j,it,vdw
 ! locals
 real(kind=prec)                 :: tempA,tempB
 select case(ivdw_rule)
 case(VDW_GEOMETRIC)
 tempA = iaclib(iac(i))%avdw(vdw) * iaclib(iac(j))%avdw(vdw)
 tempB = iaclib(iac(i))%bvdw(vdw) * iaclib(iac(j))%bvdw(vdw)
-pp_precomp(i,j)%vdWA = tempA
-pp_precomp(i,j)%vdWB = tempB
+pp_precomp(it)%vdWA = tempA
+pp_precomp(it)%vdWB = tempB
 
 case(VDW_ARITHMETIC)
 tempA = iaclib(iac(i))%avdw(vdw) + iaclib(iac(j))%avdw(vdw)
@@ -3076,35 +3124,35 @@ tempA = tempA**2
 tempA = tempA * tempA * tempA
 tempB = iaclib(iac(i))%bvdw(vdw) * iaclib(iac(j))%bvdw(vdw)
 
-pp_precomp(i,j)%vdWA = (tempA**2) * tempB
-pp_precomp(i,j)%vdWB = 2.0_prec * tempA * tempB
+pp_precomp(it)%vdWA = (tempA**2) * tempB
+pp_precomp(it)%vdWB = 2.0_prec * tempA * tempB
 
 end select
-pp_precomp(i,j)%elec = crg(i) * crg(j)
+pp_precomp(it)%elec = crg(i) * crg(j)
 
-if ( (pp_precomp(i,j)%vdWA.ne.zero) .or. (pp_precomp(i,j)%vdWB.ne.zero) &
-        .or. (pp_precomp(i,j)%elec.ne.zero)) pp_precomp(i,j)%set  = .true.
+if ( (pp_precomp(it)%vdWA.ne.zero) .or. (pp_precomp(it)%vdWB.ne.zero) &
+        .or. (pp_precomp(it)%elec.ne.zero)) pp_precomp(it)%set  = .true.
 
-if (vdw .eq. 3 ) pp_precomp(i,j)%elec = pp_precomp(i,j)%elec * el14_scale
+if (vdw .eq. 3 ) pp_precomp(it)%elec = pp_precomp(it)%elec * el14_scale
 
-! make sure both possible ways to get there are prepared
-pp_precomp(j,i) = pp_precomp(i,j)
 
 end subroutine precompute_set_values_pp
 
 !-----------------------------------------------------------------------
 
-subroutine precompute_set_values_pw(i,j,vdw)
+subroutine precompute_set_values_pw(i,j,lval,vdw)
 ! arguments
-integer                         :: i,j,vdw
+integer                         :: i,j,vdw,lval
 ! locals
 real(kind=prec)                 :: tempA,tempB
+integer                         :: low
+low = i - lval + 1
 select case(ivdw_rule)
 case(VDW_GEOMETRIC)
 tempA = iaclib(iac(i))%avdw(vdw) * aLJ_solv(j,vdw)
 tempB = iaclib(iac(i))%bvdw(vdw) * bLJ_solv(j,vdw)
-pw_precomp(i,j)%vdWA = tempA
-pw_precomp(i,j)%vdWB = tempB
+pw_precomp(low,j)%vdWA = tempA
+pw_precomp(low,j)%vdWB = tempB
 
 case(VDW_ARITHMETIC)
 tempA = iaclib(iac(i))%avdw(vdw) + aLJ_solv(j,vdw)
@@ -3112,14 +3160,14 @@ tempA = tempA**2
 tempA = tempA * tempA * tempA
 tempB = iaclib(iac(i))%bvdw(vdw) * bLJ_solv(j,vdw)
 
-pw_precomp(i,j)%vdWA = (tempA**2) * tempB
-pw_precomp(i,j)%vdWB = 2.0_prec * tempA * tempB
+pw_precomp(low,j)%vdWA = (tempA**2) * tempB
+pw_precomp(low,j)%vdWB = 2.0_prec * tempA * tempB
 
 end select
-pw_precomp(i,j)%elec = crg(i) * chg_solv(j)
+pw_precomp(low,j)%elec = crg(i) * chg_solv(j)
 
-if ( (pw_precomp(i,j)%vdWA.ne.zero) .or. (pw_precomp(i,j)%vdWB.ne.zero) &
-        .or. (pw_precomp(i,j)%elec.ne.zero)) pw_precomp(i,j)%set  = .true.
+if ( (pw_precomp(low,j)%vdWA.ne.zero) .or. (pw_precomp(low,j)%vdWB.ne.zero) &
+        .or. (pw_precomp(low,j)%elec.ne.zero)) pw_precomp(low,j)%set  = .true.
 
 end subroutine precompute_set_values_pw
 
@@ -3756,7 +3804,7 @@ if (prec .eq. singleprecision) then
 canary = 137
 else if (prec .eq. doubleprecision) then
 canary = 1337
-#ifndef PGI
+#ifdef HAVEQUAD
 else if (prec .eq. quadprecision) then
 canary = 13337
 #endif
@@ -4315,13 +4363,13 @@ logical :: old_restart = .false.
 TYPE(qr_vec),allocatable :: x_old(:), v_old(:)
 TYPE(qr_vecs),allocatable :: x_1(:), v_1(:)
 TYPE(qr_vecd),allocatable :: x_2(:), v_2(:)
-#ifndef PGI
+#ifdef HAVEQUAD
 type(qr_vecq),allocatable :: x_3(:), v_3(:)
 #endif
 TYPE(qr_vec)  :: old_boxlength,old_boxcentre
 TYPE(qr_vecs) :: boxlength_1,boxcentre_1
 TYPE(qr_vecd) :: boxlength_2,boxcentre_2
-#ifndef PGI
+#ifdef HAVEQUAD
 TYPE(qr_vecq) :: boxlength_3,boxcentre_3
 #endif
 integer :: headercheck,i,myprec,dummy
@@ -4330,7 +4378,7 @@ if (prec .eq. singleprecision) then
 myprec = -137
 elseif (prec .eq. doubleprecision) then
 myprec = -1337
-#ifndef PGI
+#ifdef HAVEQUAD
 elseif (prec .eq. quadprecision) then
 myprec = -13337
 #endif
@@ -4391,7 +4439,7 @@ if(restart) then !try to load theta_corr from restart file
      end if
      deallocate(x_2,v_2)
    else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
      allocate(x_3(natom),v_3(natom))
      read(2) dummy,(x_3(i),i=1,natom)
      read(2) dummy,(v_3(i),i=1,natom)
@@ -4430,7 +4478,7 @@ if(restart) then !try to load theta_corr from restart file
                        wshell(:)%theta_corr = wshell_double(:)%theta_corr
                        deallocate(wshell_double)
                      else if (headercheck .eq. -13337) then
-#ifndef PGI
+#ifdef HAVEQUAD
                        allocate(wshell_quad(nwpolr_shell), stat=alloc_status)
                        read(2) nwpolr_shell_restart,wshell_quad(:)%theta_corr
                        wshell(:)%theta_corr = wshell_quad(:)%theta_corr

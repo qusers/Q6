@@ -1060,16 +1060,17 @@ jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                 if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
                                 nbpp_pair = nbpp_pair + 1
                                 nbpp(nbpp_pair)%i = i
                                 nbpp(nbpp_pair)%j = j
-                                nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
 !$omp end critical
 
                         end do jaloop
@@ -1190,16 +1191,17 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                        if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                        if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                        if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                         if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j
-                                        nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                        nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                        nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                        nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                        nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                        nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
                                         nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair
 !$omp end critical
                                 end do jaloop
@@ -1328,16 +1330,17 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                        if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                        if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                        if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                         if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j
-                                        nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                        nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                        nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                        nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                        nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                        nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
                                         nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair
 !$omp end critical
                                 end do jaloop
@@ -1475,7 +1478,8 @@ jaloop:				do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                        if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                        if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                        if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 
                                         ! if out of space then make more space
 !$omp critical
@@ -1484,9 +1488,9 @@ jaloop:				do ja = cgp(jgr)%first, cgp(jgr)%last
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j
-                                        nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                        nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                        nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                        nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                        nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                        nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
 !$omp end critical
                                 end do jaloop
                         end do ialoop
@@ -1602,7 +1606,8 @@ jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                 if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
@@ -1610,9 +1615,9 @@ jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
                                 nbpp_pair = nbpp_pair + 1
                                 nbpp(nbpp_pair)%i = i
                                 nbpp(nbpp_pair)%j = j 
-                                nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
 !$omp end critical
 
                         end do jaloop
@@ -1734,7 +1739,8 @@ jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                 if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                 if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
@@ -1742,9 +1748,9 @@ jaloop:                 do ja = cgp(jgr)%first, cgp(jgr)%last
                                 nbpp_pair = nbpp_pair + 1
                                 nbpp(nbpp_pair)%i = i
                                 nbpp(nbpp_pair)%j = j 
-                                nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
                                 nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair !which pair of charge groups the atom pair belongs to
 !$omp end critical		
                         end do jaloop
@@ -1862,7 +1868,8 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                        if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                        if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                        if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                         if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
@@ -1870,9 +1877,9 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j
-                                        nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                        nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                        nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                        nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                        nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                        nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
 !$omp end critical
                                 end do jaloop
                         end do ialoop
@@ -2005,7 +2012,8 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
 ! make sure each pair is only counted once
                                         if ( ig .eq. jgr .and. i .ge. j ) cycle jaloop
 ! do they interact?
-                                        if(.not.pp_precomp(i,j)%set) cycle jaloop
+                                        if(pp_map(i-pp_low,j).eq.0) cycle jaloop
+                                        if(.not.pp_precomp(pp_map(i-pp_low,j))%set) cycle jaloop
 ! if out of space then make more space
 !$omp critical
                                         if (nbpp_pair .eq. calculation_assignment%pp%max) call reallocate_nonbondlist_pp
@@ -2013,9 +2021,9 @@ jaloop:                         do ja = cgp(jgr)%first, cgp(jgr)%last
                                         nbpp_pair = nbpp_pair + 1
                                         nbpp(nbpp_pair)%i = i
                                         nbpp(nbpp_pair)%j = j 
-                                        nbpp(nbpp_pair)%vdWA = pp_precomp(i,j)%vdWA
-                                        nbpp(nbpp_pair)%vdWB = pp_precomp(i,j)%vdWB
-                                        nbpp(nbpp_pair)%elec = pp_precomp(i,j)%elec
+                                        nbpp(nbpp_pair)%vdWA = pp_precomp(pp_map(i-pp_low,j))%vdWA
+                                        nbpp(nbpp_pair)%vdWB = pp_precomp(pp_map(i-pp_low,j))%vdWB
+                                        nbpp(nbpp_pair)%elec = pp_precomp(pp_map(i-pp_low,j))%elec
                                         nbpp(nbpp_pair)%cgp_pair = nbpp_cgp_pair !which pair of charge groups the atom pair belongs to
 !$omp end critical
                                 end do jaloop
@@ -2207,9 +2215,9 @@ jaloop:                 do j = 1, solv_atom
                                 nbpw_pair = nbpw_pair + 1
                                 nbpw(nbpw_pair)%i = i
                                 nbpw(nbpw_pair)%j = ja
-                                nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                 nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                         end do jaloop
 !$omp end critical
@@ -2320,9 +2328,9 @@ jaloop:                 do j = 1, solv_atom
                                 nbpw_pair = nbpw_pair + 1
                                 nbpw(nbpw_pair)%i = i
                                 nbpw(nbpw_pair)%j = ja
-                                nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                 nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                         end do jaloop
 !$omp end critical
@@ -2445,9 +2453,9 @@ jaloop:                         do j = 1, solv_atom
                                         nbpw_pair = nbpw_pair + 1
                                         nbpw(nbpw_pair)%i = i
                                         nbpw(nbpw_pair)%j = ja 
-                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                        nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                        nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                         nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                                 end do jaloop
 !$omp end critical
@@ -2571,9 +2579,9 @@ jaloop:                         do j = 1, solv_atom
                                         nbpw_pair = nbpw_pair + 1
                                         nbpw(nbpw_pair)%i = i
                                         nbpw(nbpw_pair)%j = ja
-                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                        nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                        nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                         nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                                 end do jaloop
 !$omp end critical
@@ -2685,9 +2693,9 @@ jaloop:                 do j = 1, solv_atom
                                 nbpw_pair = nbpw_pair + 1
                                 nbpw(nbpw_pair)%i = i
                                 nbpw(nbpw_pair)%j = ja 
-                                nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                         end do jaloop
 !$omp end critical
                 end do ialoop
@@ -2797,9 +2805,9 @@ jaloop:                 do j = 1, solv_atom
                                 nbpw_pair = nbpw_pair + 1
                                 nbpw(nbpw_pair)%i = i
                                 nbpw(nbpw_pair)%j = ja 
-                                nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                 nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                         end do jaloop
 !$omp end critical
@@ -2907,9 +2915,9 @@ jaloop:                         do j = 1, solv_atom
                                         nbpw_pair = nbpw_pair + 1
                                         nbpw(nbpw_pair)%i = i
                                         nbpw(nbpw_pair)%j = ja 
-                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                        nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                        nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                 end do jaloop
 !$omp end critical
                         end do ialoop
@@ -3033,9 +3041,9 @@ jaloop:                         do j = 1, solv_atom
                                         nbpw_pair = nbpw_pair + 1
                                         nbpw(nbpw_pair)%i = i
                                         nbpw(nbpw_pair)%j = ja 
-                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i,j)%vdWA
-                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i,j)%vdWB
-                                        nbpw(nbpw_pair)%elec = pw_precomp(i,j)%elec
+                                        nbpw(nbpw_pair)%vdWA = pw_precomp(i-pw_low,j)%vdWA
+                                        nbpw(nbpw_pair)%vdWB = pw_precomp(i-pw_low,j)%vdWB
+                                        nbpw(nbpw_pair)%elec = pw_precomp(i-pw_low,j)%elec
                                         nbpw(nbpw_pair)%cgp_pair = nbpw_cgp_pair
                                 end do jaloop
 !$omp end critical
@@ -4586,16 +4594,17 @@ do par=1,monitor_group_pairs
                                 end do
 ! and if neither is a qatom, we use the pp-list
                         else
-                                if(.not.(pp_precomp(i,j)%set)) cycle
+                                if(pp_map(i-pp_low,j).eq.0) cycle
+                                if(.not.(pp_precomp(pp_map(i-pp_low,j))%set)) cycle
                                 num_int(:) = num_int(:) + 1
                                 monitor_group_int(num_int(:),:)%iq= atomi
                                 monitor_group_int(num_int(:),:)%jq= atomj
                                 monitor_group_int(num_int(:),:)%elec = &
-                                        pp_precomp(i,j)%elec
+                                        pp_precomp(pp_map(i-pp_low,j))%elec
                                 monitor_group_int(num_int(:),:)%vdWA = &
-                                        pp_precomp(i,j)%vdWA
+                                        pp_precomp(pp_map(i-pp_low,j))%vdWA
                                 monitor_group_int(num_int(:),:)%vdWB = &
-                                        pp_precomp(i,j)%vdWB
+                                        pp_precomp(pp_map(i-pp_low,j))%vdWB
                         end if
                 end do
         end do

@@ -13,7 +13,7 @@ module	SIZES
 	!Set precision for real
 	integer, parameter :: singleprecision = SELECTED_REAL_KIND(6, 37)
 	integer, parameter :: doubleprecision = SELECTED_REAL_KIND(15,307)
-#ifndef PGI
+#ifdef HAVEQUAD
 	integer, parameter :: quadprecision = SELECTED_REAL_KIND(33,4931)
 #endif
 

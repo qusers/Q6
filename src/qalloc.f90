@@ -812,7 +812,7 @@ if (prec .eq. singleprecision) then
 canary = -137
 elseif (prec .eq. doubleprecision) then
 canary = -1337
-#ifndef PGI
+#ifdef HAVEQUAD
 elseif (prec .eq. quadprecision) then
 canary = -13337
 #endif
