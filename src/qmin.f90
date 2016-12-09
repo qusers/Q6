@@ -108,7 +108,7 @@ program Qmin5
 	call make_nbqqlist
 	call shrink_topology
 	call init_trj
-
+        call initial_shaking
   end if
 
 #if defined (USE_MPI)

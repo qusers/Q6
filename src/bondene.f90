@@ -1052,7 +1052,29 @@ end if
 
 end subroutine p_restrain
 !-----------------------------------------------------------------------
+subroutine initial_shaking
+!
+! initial shaking
+!
+integer						:: niter
 
+
+xx(:)=x(:)
+niter=shake(xx, x)	
+write(*,100) 'x', niter
+100	format('Initial ',a,'-shaking required',i4,&
+' interations per molecule on average.')
+
+xx(:)=x(:)-v(:)*dt
+niter=shake(x, xx)	
+write(*,100) 'v', niter
+
+v(:)=(x(:)-xx(:))/dt
+
+
+end subroutine initial_shaking
+
+!-----------------------------------------------------------------------
 
 integer function shake(xx, x)
 !arguments

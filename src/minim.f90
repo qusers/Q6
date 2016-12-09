@@ -114,7 +114,9 @@ character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 real(kind=prec)                                 :: size_default = one/10000
-real(kind=prec)                                 :: Ecut_default = 500.0_prec
+real(kind=prec)                                 :: Ecut_default = 20.0_prec
+logical                                         :: shake_all,shake_all_solvent,shake_all_solute
+logical                                         :: shake_all_hydrogens,shake_all_heavy
 ! this subroutine will init:
 !  nsteps, stepsize, dt
 !  Temp0, tau_T, iseed, Tmaxw
@@ -195,6 +197,98 @@ else
         write(*,*) 'Minimizer: ', name_integrator
 end if
 
+if(.not. prm_get_logical_by_key('shake_solvent', shake_solvent, .false.)) then
+write(*,'(a)') '>>> Error: shake_solvent must be on or off.'
+initialize = .false.
+end if
+!write(*,17) 'all solvent bonds', onoff(shake_solvent)
+17	format('Shake constraints on ',a,' to ',a,' : ',a3)
+
+if(.not. prm_get_logical_by_key('shake_solute', shake_solute, .false.)) then
+write(*,'(a)') '>>> Error: shake_solute must be on or off.'
+initialize = .false.
+end if 
+!write(*,17) 'all solute bonds', onoff(shake_solute)
+
+if(.not. prm_get_logical_by_key('shake_hydrogens', shake_hydrogens, .false.)) then
+write(*,'(a)') '>>> Error: shake_hydrogens must be on or off.'
+initialize = .false.
+end if 
+
+if(.not. prm_get_logical_by_key('shake_heavy', shake_heavy, .false.) ) then
+write(*,'(a)') '>>> Error: shake_heavy must be on or off.'
+initialize = .false.
+end if
+
+
+if(prm_get_logical_by_key('shake_all',shake_all)) then
+if(shake_all) then
+       shake_solute    = .true.
+       shake_solvent   = .true.
+       shake_hydrogens = .true.
+       shake_heavy     = .true.
+else
+       shake_solute    = .false.
+       shake_solvent   = .false.
+       shake_hydrogens = .false.
+       shake_heavy     = .false.
+end if
+end if
+
+if(prm_get_logical_by_key('shake_all_solvent',shake_all_solvent)) then
+if(shake_all_solvent) then
+       shake_solvent   = .true.
+       shake_hydrogens = .true.
+       shake_heavy     = .true.
+else
+       shake_solvent   = .false.
+end if
+end if
+
+if(prm_get_logical_by_key('shake_all_solute',shake_all_solute)) then
+if(shake_all_solute) then
+       shake_solute    = .true.
+       shake_hydrogens = .true.
+       shake_heavy     = .true.
+else
+       shake_solute    = .false.
+end if
+end if
+
+if(prm_get_logical_by_key('shake_all_hydrogens',shake_all_hydrogens)) then
+if(shake_all_hydrogens) then
+        shake_solute    = .true.
+        shake_solvent   = .true.
+        shake_hydrogens = .true.
+else
+        shake_hydrogens = .false.
+end if
+end if
+
+if(prm_get_logical_by_key('shake_all_heavy',shake_all_heavy)) then
+if(shake_all_heavy) then
+         shake_solute  = .true.
+         shake_solvent = .true.
+         shake_heavy   = .true.
+else
+         shake_heavy   = .false.
+end if
+end if
+
+if(shake_solvent) then
+if(shake_heavy) write(*,17) 'solvent bonds','heavy atoms',onoff(shake_heavy)
+if(shake_hydrogens) write(*,17) 'solvent bonds','hydrogens',onoff(shake_hydrogens)
+else
+write(*,17) 'solvent bonds','any atoms',onoff(shake_solvent)
+endif
+if(shake_solute) then
+if(shake_heavy) write(*,17) 'solute bonds','heavy atoms',onoff(shake_heavy)
+if(shake_hydrogens) write(*,17) 'solute bonds','hydrogens',onoff(shake_hydrogens)
+else
+write(*,17) 'solute bonds','any atoms',onoff(shake_solute)
+endif
+
+
 yes = prm_get_logical_by_key('lrf', use_LRF, .true.)
 if(use_LRF) then
        write(*,20) 'LRF Taylor expansion outside cut-off'
@@ -248,6 +342,7 @@ end if
 
 
 end if !section PBC
+
 
 ! --- Rcpp, Rcww, Rcpw, Rcq, RcLRF
 ! change for PBC, q-atoms interact with everything for now, placeholder until we have 
@@ -777,8 +872,8 @@ maxforce   = 0
 maxf       = zero
 atmaxf     = -1
 do i = 1, nat_pro
-        f2old = qvec_square(old_d(i))
-        f2new = qvec_square(new_d(i))
+        f2old = q_sqrt(qvec_square(old_d(i)))
+        f2new = q_sqrt(qvec_square(new_d(i)))
         if(f2new .gt. f2old) then
                 maxforce = 1
         end if
@@ -940,6 +1035,8 @@ else if(retval .eq. 0) then
         scaling = scaling*10
 end if
 
+        if(shake_constraints .gt.0) niter=shake(xx,x)
+
 end if !if(nodeid .eq. 0)
 
 #ifdef USE_MPI
@@ -1011,6 +1108,10 @@ call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 call pot_energy(E,EQ,.true.)
 if (nodeid .eq. 0) then
         write(*,*)
+        ! set velocities to zero now
+        ! TODO
+        ! need flag in restart to not allow MD without new velocities
+        v(:) = v(:) * zero
         call write_out
         call write_xfin
         deallocate(d_old)

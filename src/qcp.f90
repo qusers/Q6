@@ -838,17 +838,7 @@ call centered_heading(trim(text), '-')
 
 qcp_initialize = .true. 
 
-if(.not. prm_open_section('PBC', infilename)) then
-box = .false.
-write(*,'(a)') 'Boundary: sphere'
-else
-box = .true.
-write(*,'(a)') 'Boundary: periodic box'
-
-end if !section PBC
-
-
-if(.not. prm_open_section('general')) then
+if(.not. prm_open_section('general',infilename)) then
 call prm_close
 ! open input file
 fu = freefile()
@@ -857,7 +847,7 @@ if (fstat .ne. 0) call die('error opening input file '//infilename)
         qcp_initialize = .false.
         close(fu)
 return
-end if
+else
 
 need_restart = .false. !flag for restart file required
 ! need restart file to calculate velocities and temperatures
@@ -968,7 +958,6 @@ if(shake_hydrogens) write(*,17) 'solute bonds','hydrogens',onoff(shake_hydrogens
 else
 write(*,17) 'solute bonds','any atoms',onoff(shake_solute)
 endif
-!write(*,17) 'all bonds to hydrogen', onoff(shake_hydrogens)
 
 
 yes = prm_get_logical_by_key('lrf', use_LRF, .true.)
@@ -979,6 +968,18 @@ else
 end if
 
 20	format ('Nonbonded method   = ',a)
+
+
+end if
+
+if(.not. prm_open_section('PBC')) then
+box = .false.
+write(*,'(a)') 'Boundary: sphere'
+else
+box = .true.
+write(*,'(a)') 'Boundary: periodic box'
+
+end if !section PBC
 
 ! --- Rcpp, Rcww, Rcpw, Rcq, RcLRF
 ! change for PBC, q-atoms interact with everything for now, placeholder until we have 
