@@ -3,8 +3,8 @@
 #  code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
 #  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          #
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
-#  keeper of the code: Paul Bauer                                              #
-#  maintainers: Beat Amrein, Alexandre Barrozo, Paul Bauer                     #
+#  keeper of the code:                                                         #
+#  maintainers: Beat Amrein, Alexandre Barrozo                                 #
 #  latest update: Oct 17, 2014                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
@@ -40,9 +40,9 @@ ifeq ($(COMP),ifort)
 	MPI=		${MPI_FCFLAGS}
 	MPFLAG=		-openmp ${MPI}
 
-	DEBUG=          -debug -traceback -g -O0  ${FFLAGS}
-	DEBUGMPI=       -debug -traceback -g -O0  ${FFLAGS}
-	DEBUGMP=        -openmp -debug -traceback -g -O0 -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS}
+	DEBUG=          -debug -traceback -g -O0  ${FFLAGS} -DDEBUG
+	DEBUGMPI=       -debug -traceback -g -O0  ${FFLAGS} -DDEBUG
+	DEBUGMP=        -openmp -debug -traceback -g -O0 -I${VT_ROOT}/include -L${VT_LIB_DIR} ${VT_ADD_LIBS} ${FFLAGS} -DDEBUG
 
 
 ################################################################################
@@ -107,9 +107,9 @@ else ifeq ($(COMP),gcc)
 	FFLAGS=		--static ${OMPI_FCFLAGS}
 	FFLAGS_R8=	
 
-	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wuninitialized 
-	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
-	DEBUGMP=        -O0 -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -lmcheck
+	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wuninitialized -DDEBUG
+	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
+	DEBUGMP=        -O0 -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
 
 	PROF=		-pg ${DEBUG}
 

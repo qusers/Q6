@@ -608,9 +608,9 @@ logical function topo_read(u, require_version, extrabonds)
 	      nat_solute = nat_pro !default is nat_solute = nat_pro
             end if
             solv_atom  = 3        !default for solv atom to keep rest from crashing
-            dielectric = int(80.1*1000) !default for dielectric (of water) to keep rest working
+            dielectric = int(80*1000) !default for dielectric (of water) to keep rest working
           end if
-          dielectric = int(80.1*1000) !default for dielectric (of water) to keep rest working
+          dielectric = int(80*1000) !default for dielectric (of water) to keep rest working
         end if
 
 	write (*,20) nat_solute, nat_pro-nat_solute

@@ -491,5 +491,30 @@ subroutine math_initialize
         rad2deg = 180.0_prec/pi
 end subroutine math_initialize
 
+#ifdef DEBUG
+!function that returns sum of a given qr_vec array
+!useful for printing out total force vectors during debugging
+subroutine q_vecsum(a,b,c)
+! arguments
+TYPE(qr_vec)            :: a(:)
+TYPE(qr_vec)            :: vecsum
+integer                 :: b
+character(*)            :: c
+! locals
+integer                 :: i
+
+666     format(a,a30,3f18.12)
+
+vecsum = vecsum * zero
+do i = 1 , b
+vecsum = vecsum + a(i)
+end do
+
+write(*,666) 'Total force after ',c,vecsum
+
+
+end subroutine q_vecsum
+#endif
+
 end module QMATH
 

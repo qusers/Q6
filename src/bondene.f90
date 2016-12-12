@@ -851,6 +851,10 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
           end if
         end do
   end if
+#ifdef DEBUG
+call q_vecsum(d,nat_pro,'p_restrain 1')
+#endif
+
  
 else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
   ! restrain to mass centre
@@ -882,6 +886,9 @@ else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
           end if
         end do
   end if
+#ifdef DEBUG
+call q_vecsum(d,nat_pro,'p_restrain 2')
+#endif
 
 else 
   ! restrain each atom to its topology co-ordinate
@@ -903,6 +910,10 @@ else
           d(i) = d(i) + dr*fk
         end if
   end do
+#ifdef DEBUG
+call q_vecsum(d,nat_pro,'p_restrain 3')
+#endif
+
 end if
 end do
 
