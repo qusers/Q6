@@ -920,32 +920,32 @@ if(nstates > 0 ) then
                 yes = prm_get_logical_by_key('qcp_write',qcp_write,.true.)
                 if(qcp_write) then
 ! need file name
-                        if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
-                                initialize = .false.
-                                write(*,'(a)') '>>> ERROR: Need file name for print out of qcp bead coordinates'
-                                write(*,'(a)') 'Keyword: qcp_pdb'
-                        else
-                                write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
-                        end if
+                       if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
+                               qcp_write = .false.
+                               write(*,'(a)') '>>> WARNING: Need file name for print out of qcp bead coordinates. Disabled write out'
+                               write(*,'(a)') 'Keyword: qcp_pdb'
+                       else
+                               write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
+                       end if
                 else
                         write(*,'(a)') 'Not writing out bead coordinates'
                 end if
 ! decide on printout level
-                if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
+               if(.not. prm_get_logical_by_key('qcp_show',qcp_verbose)) then
                        qcp_verbose = .false.
-                else
+               else
                        if(qcp_verbose) then
                                write(*,'(a)') 'Printing more QCP information'
                        end if
-                end if
-                if(.not.prm_get_logical_by_key('veryverbose',qcp_veryverbose)) then
+               end if
+               if(.not.prm_get_logical_by_key('qcp_debug',qcp_veryverbose)) then
                        qcp_veryverbose = .false.
-                else
+               else
                        if(qcp_veryverbose) then
                                qcp_verbose = .true.
                                write(*,'(a)') 'Printing all QCP information I can find'
                        end if
-                end if
+               end if
 !chose which atoms should be treated as ring polymers
 !important later when setting up NB list, RP will be treated different from classical
 !this section can be overwritten in the FEP file
@@ -988,9 +988,15 @@ if(nstates > 0 ) then
 			else if (qcp_size_name .eq. 'LARGE') then
 				write(*,'(a,i6,a)') 'Will use large RP, ',QCP_SIZE_LARGE,' beads per atom!'
 				qcp_size = QCP_SIZE_LARGE
-                       else if (qcp_size_name .eq. 'DEFINE') then
-                               yes = prm_get_integer_by_key('DEFINE',qcp_size)
-                               write(*,'(a,i6,a)') 'Will use RP with ',qcp_size,' beads per atom!'
+                       else if (qcp_size_name .eq. 'USERDEFINE') then
+                                yes = prm_get_integer_by_key('qcp_size_user',qcp_size,QCP_SIZE_DEFAULT)
+                                if (qcp_size .lt. 4) then
+                                        write(*,'(a,i6)') 'Can not use size of ',qcp_size
+                                        write(*,'(a,i6)') 'Resorting to smallest default value of ',QCP_SIZE_VERYSMALL
+                                else
+                                        
+                                        write(*,'(a,i6,a)') 'Will use RP with ',qcp_size,' beads per atom!'
+                                end if
 			else
 				write(*,'(a)') ' >>> ERROR: No such QCP size selection!'
 				initialize = .false.
@@ -1000,8 +1006,13 @@ if(nstates > 0 ) then
 ! for bisection, this is 2**qcp_level .eq. qcp_size
                 write(*,'(a,i6,a)') 'Setting bisection level to default, log_2(',qcp_size,')'
                 qcp_level = int(q_log2(real(qcp_size,kind=prec)))
+                if (real(qcp_level,kind=prec) .ne. q_log2(real(qcp_size,kind=prec))) then
+! whoops, the bead size does not work for bisection
+                        write(*,'(a)') 'Bead size is not the result of 2**n. Does not work with bisection strategy'
+                        initialize = .false.
+                end if
 !number of PI steps at each calculation
-		if(.not. prm_get_integer_by_key('equilibration_steps',qcp_steps(1))) then
+		if(.not. prm_get_integer_by_key('equilibration',qcp_steps(1))) then
 			write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for equilibration'
 			qcp_steps(1) = QCP_steps_default
 		else
@@ -1011,7 +1022,7 @@ if(nstates > 0 ) then
 			end if
 			write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(1),' for free particle equilibration!'
 		end if
-                if(.not.prm_get_integer_by_key('sampling_steps',qcp_steps(2))) then
+                if(.not.prm_get_integer_by_key('sampling',qcp_steps(2))) then
                         write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for sampling'
                         qcp_steps(2) = QCP_steps_default
                 else
@@ -2012,7 +2023,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
-                        call write_out
+                        call write_out(E,EQ)
                 end if
                 ! backup file of coordinates and velocities
                 if ( mod(istep,1000) .eq. 0 ) then
@@ -2067,7 +2078,7 @@ call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 call pot_energy(E,EQ,.true.)
 if (nodeid .eq. 0) then
         write(*,*)
-        call write_out
+        call write_out(E,EQ)
         call write_xfin
 end if
 

@@ -618,14 +618,16 @@ end do ! step
 
 if (nodeid.eq.0) then
 ! write out info about QCP success rate and energies
-        if (qcp_loop .eq.1) then
+        if ((qcp_loop .eq.1).and.(qcp_verbose)) then
                 write(*,'(a)') 'QCP summary for free particle equilibration'
-        else
+        else if((qcp_loop .eq.2).and.(qcp_verbose)) then
                 write(*,'(a)') 'QCP summary for free particle sampling'
         end if
-        write(*,'(a,i4)') 'Total number of steps is ',step-1
-        write(*,'(a,i4)') 'Number of accepted MC steps = ',int(MCaccept)
-        write(*,'(a,i4)') 'Number of rejected MC steps = ',int(MCreject)
+        if(qcp_verbose) then
+                write(*,'(a,i4)') 'Total number of steps is ',step-1
+                write(*,'(a,i4)') 'Number of accepted MC steps = ',int(MCaccept)
+                write(*,'(a,i4)') 'Number of rejected MC steps = ',int(MCreject)
+        end if
 end if
 
 ! make averages for saving to file
@@ -651,7 +653,7 @@ if (use_qcp_mass) then
         EQpot_ave2(:)  = EQpot_ave2(:)  / MCaccept
 end if
 
-if(qcp_verbose) then
+if(qcp_veryverbose) then
         write(*,'(a,f12.6)') 'Total PI energy = ',total_EPI
         write(*,'(a,f12.6)') 'Final PI potential energy = ',Epot_ave
         do i = 1 , nstates
@@ -855,7 +857,9 @@ temp_defined = .false.
 ! default is that we will use temperatures from restart file velocities
 ! convert to internal time units once and for all.
 ! don't need to read in stepsize
-
+! set nsteps to -1 and istep to -2
+nsteps = -1
+istep  = -2
 ! --- Temperature, Thermostat etc.
 if(.not. prm_get_real8_by_key('temperature', Temp0)) then
 write(*,*) 'temperature not specified (section general), will need restart'
@@ -1254,14 +1258,14 @@ ngroups_gc = 0
 !new section in *inp files to control QCP behaviour
 !will only trigger if FEP file is in use -> if more than 0 states
 if(nstates > 0 ) then
-	if(.not. prm_open_section('QCP')) then
-		write(*,'(a)') '>>> ERROR: No QCP section found'
-		qcp_initialize = .false.
+        if(.not. prm_open_section('QCP')) then
+                write(*,'(a)') '>>> ERROR: No QCP section found'
+                qcp_initialize = .false.
                 use_qcp = .false.
                 QCP_N = QCP_OFF
-	else
-		write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
-		use_qcp = .true.
+        else
+                write(*,'(a)') 'Found QCP section, will use RPMD to describe atoms in Q region.'
+                use_qcp = .true.
                 if(.not.prm_get_integer_by_key('qcp_seed',qcp_seed)) then
                         write(*,'(a)') 'Using random number for seeding from date_and_time'
                         call date_and_time(values=timeval)
@@ -1287,25 +1291,25 @@ if(nstates > 0 ) then
                 yes = prm_get_logical_by_key('qcp_write',qcp_write,.true.)
                 if(qcp_write) then
 ! need file name
-                        if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
-                                qcp_initialize = .false.
-                                write(*,'(a)') '>>> ERROR: Need file name for print out of qcp bead coordinates'
-                                write(*,'(a)') 'Keyword: qcp_pdb'
-                        else
-                                write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
-                        end if
+                       if(.not.prm_get_string_by_key('qcp_pdb',qcp_pdb_name)) then
+                               qcp_initialize = .false.
+                               write(*,'(a)') '>>> ERROR: Need file name for print out of qcp bead coordinates'
+                               write(*,'(a)') 'Keyword: qcp_pdb'
+                       else
+                               write(*,'(a,a)') 'Writing coordinates to file ',qcp_pdb_name
+                       end if
                 else
                         write(*,'(a)') '>>>> WARNING: Not writing out bead coordinates'
                 end if
 ! decide on printout level
-               if(.not. prm_get_logical_by_key('verbose',qcp_verbose)) then
+               if(.not. prm_get_logical_by_key('qcp_show',qcp_verbose)) then
                        qcp_verbose = .false.
                else
                        if(qcp_verbose) then
                                write(*,'(a)') 'Printing more QCP information'
                        end if
                end if
-               if(.not.prm_get_logical_by_key('veryverbose',qcp_veryverbose)) then
+               if(.not.prm_get_logical_by_key('qcp_debug',qcp_veryverbose)) then
                        qcp_veryverbose = .false.
                else
                        if(qcp_veryverbose) then
@@ -1379,7 +1383,7 @@ if(nstates > 0 ) then
                         qcp_initialize = .false.
                 end if
 !number of PI steps at each calculation
-		if(.not. prm_get_integer_by_key('equilibration_steps',qcp_steps(1))) then
+		if(.not. prm_get_integer_by_key('equilibration',qcp_steps(1))) then
 			write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for equilibration'
 			qcp_steps(1) = QCP_steps_default
 		else
@@ -1389,7 +1393,7 @@ if(nstates > 0 ) then
 			end if
 			write(*,'(a,i4,a)') 'Will use the following number of PI steps, n = ',qcp_steps(1),' for free particle equilibration!'
 		end if
-                if(.not.prm_get_integer_by_key('sampling_steps',qcp_steps(2))) then
+                if(.not.prm_get_integer_by_key('sampling',qcp_steps(2))) then
                         write(*,'(a,i6,a)') 'Will use default number of PI steps, n = ',QCP_steps_default,' for sampling'
                         qcp_steps(2) = QCP_steps_default
                 else
@@ -1402,6 +1406,8 @@ if(nstates > 0 ) then
 	end if
 else
 	write(*,'(a)') 'No RPMD in classical MD'
+        use_qcp = .false.
+        QCP_N = QCP_OFF
 end if
 !	--- restraints:
 write (*,'(/,a)') 'Listing of restraining data:'
@@ -1497,19 +1503,8 @@ write (*,140)
 140             format ('atom_i atom_j atom_k   angle   fc        state')
 do i=1,nrstr_angl
         yes=prm_get_line(text)
-        ! read rstang(i)
-        !if(scan(text, ':') > 0) then !got res:atnr
-          !Store in i&j as res:atnr and assign atom nr after topology is
-          !read (prep_coord)
-        !  read(text,*, iostat=fstat) rstang(i)%itext,rstang(i)%jtext,rstang(i)%ktext,&
-        !     rstang(i)%ang, rstang(i)%fk, rstang(i)%ipsi
-        !else !Plain numbers
           read(text,*, iostat=fstat) rstang(i)%i,rstang(i)%j,rstang(i)%k,&
                 rstang(i)%ang, rstang(i)%fk, rstang(i)%ipsi
-         ! rstang(i)%itext = 'nil'
-         ! rstang(i)%jtext = 'nil'
-         ! rstang(i)%ktext = 'nil'
-        !end if
         if(fstat /= 0) then
           write(*,'(a)') '>>> ERROR: Invalid angle restraint data.'
           qcp_initialize = .false.
@@ -1951,6 +1946,7 @@ if (noffd .gt. 0 ) call offdiag
 
 if (nodeid.eq.0) then
 call qatom_savetowrite(EQ,1)
+if(qcp_verbose) call write_out(qcp_E,qcp_EQ)
 ! save to file
 call put_ene(11,EQ_save,OFFD,ene_header%arrays,nstates)
 end if
