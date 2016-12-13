@@ -138,7 +138,7 @@ program QPI5
   end if
 
   ! deallocate memory etc.
-!  call qcp_shutdown
+  call qpi_shutdown
 
 #if defined (USE_MPI)
   ! shut down MPI
@@ -164,7 +164,7 @@ end subroutine startup
 
 !-----------------------------------------------------------------------
 
-subroutine shutdown
+subroutine qpi_shutdown
   integer						:: i
 
   if (nodeid .eq. 0) then
@@ -174,7 +174,7 @@ subroutine shutdown
 
   ! call shutdown
   call qcp_shutdown
-end subroutine shutdown
+end subroutine qpi_shutdown
 
 !-----------------------------------------------------------------------
 INTEGER(4) FUNCTION qsignal( signum, proc, sigflag )

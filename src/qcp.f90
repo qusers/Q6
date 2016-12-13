@@ -1873,6 +1873,9 @@ subroutine qcp_work
 ! locals
 integer                         :: frame,nframes
 logical                         :: yes
+real(kind=prec)                 :: time0,time1
+
+if(nodeid.eq.0) time0=rtime()
 
 frame = 0
 nat3 = natom*3
@@ -1953,7 +1956,14 @@ call put_ene(11,EQ_save,OFFD,ene_header%arrays,nstates)
 end if
 end do
 
-if (nodeid.eq.0) call trj_close
+if (nodeid.eq.0) then
+        call trj_close
+        time1 = rtime()
+        write(*,'(a,f15.1)') 'Total calculation time: ',time1-time0
+end if
+
+
+
 
 return
 666     write(*,667)
