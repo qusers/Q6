@@ -410,11 +410,20 @@ integer						::	nbqw_pair !current no of q-atom-water mol. pairs
 type(NBQP_TYPE), allocatable	::	nbqw(:,:)
 
 type(NBQ_TYPE),allocatable      :: monitor_group_int(:,:)
-type(NBQ_TYPE),allocatable      :: exc_nbqq_list(:,:,:)
-type(NBQP_TYPE),allocatable     :: exc_nbqqp_list(:,:,:)
-type(NBQP_TYPE),allocatable     :: exc_nbqp_list(:,:,:)
 
-integer,allocatable             :: exc_nbqp(:),exc_nbqqp(:),exc_nbqq(:)
+TYPE EXC_NBQ_TYPE
+        integer                         :: inter
+        TYPE(NBQ_TYPE),allocatable      :: list(:)
+end TYPE EXC_NBQ_TYPE
+
+TYPE EXC_NBQP_TYPE
+        integer                         :: inter
+        TYPE(NBQP_TYPE),allocatable     :: list(:)
+end TYPE EXC_NBQP_TYPE
+
+type(EXC_NBQ_TYPE),allocatable          :: exc_nbqq(:,:)
+type(EXC_NBQP_TYPE),allocatable         :: exc_nbqqp(:,:)
+type(EXC_NBQP_TYPE),allocatable         :: exc_nbqp(:,:)
 ! for internal solvent stuff
 type(NB_TYPE),allocatable			:: nonbnd_solv_int(:)
 

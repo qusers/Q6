@@ -81,41 +81,38 @@ integer function get_from_mask(ST_gc_local,nres)
 	read(str1,*) get_from_mask
 end function get_from_mask
 
-subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
-	!parameters
-	integer				:: atomi,atomj,gctype
-	real(kind=prec)				:: Vel, VvdW
-        logical(1),pointer                 :: mask(:)
-	real(kind=prec)			        :: totVel,totVvdw
-	
-        if(((mask(atomi)).or.(mask(atomj)))) then
-		select case (gctype)
-			case (FULL)
-			!Do nothing
-			case (ELECTRO)
-			totVvdW = totVvdW + VvdW
-			case (VDW)
-			totVel = totVel  + Vel
-		end select
-	else
-                totVel = totVel  + Vel
-                totVvdW = totVvdW + VvdW
-        end if
-end subroutine set_gc_energies
-subroutine	excluded_shutdown(nexc)
+!subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
+!	!parameters
+!	integer				:: atomi,atomj,gctype
+!	real(kind=prec)				:: Vel, VvdW
+!        logical(1),pointer                 :: mask(:)
+!	real(kind=prec)			        :: totVel,totVvdw
+!	
+!        if(((mask(atomi)).or.(mask(atomj)))) then
+!		select case (gctype)
+!			case (FULL)
+!			!Do nothing
+!			case (ELECTRO)
+!			totVvdW = totVvdW + VvdW
+!			case (VDW)
+!			totVel = totVel  + Vel
+!		end select
+!	else
+!                totVel = totVel  + Vel
+!                totVvdW = totVvdW + VvdW
+!        end if
+!end subroutine set_gc_energies
+subroutine excluded_shutdown(nexc)
 !arguments
-integer			:: nexc
+integer                 :: nexc
 !locals
-integer			:: i
+integer                 :: i
 do i=1,nexc
         call mask_deallocate(ST_gc(i)%gcmask)
 end do
-if(allocated(exc_nbqq_list)) then
-        deallocate(exc_nbqq_list)
-end if
-if(allocated(exc_nbqp_list)) then
-        deallocate(exc_nbqp_list)
-end if
+if(allocated(exc_nbqq))  deallocate(exc_nbqq)
+if(allocated(exc_nbqp))  deallocate(exc_nbqp)
+if(allocated(exc_nbqqp)) deallocate(exc_nbqqp)
 
 end subroutine excluded_shutdown
 

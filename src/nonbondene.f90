@@ -6829,53 +6829,55 @@ integer                         :: iq,jq,i,j,ia,ic
 TYPE(qr_dist3)                  :: dist
 TYPE(qr_vec)                    :: shift
 TYPE(ENERET_TYPE)               :: nb_ene
+TYPE(OQ_ENERGIES)               :: EQ_loc(size(EQ))
 
-do istate = 1, nstates
+
 do aindex = 2, ene_header%arrays - QCP_N
+do istate = 1, nstates
+
+! first set total energies
+EQ_loc(istate) = EQ(istate)
 ! get actual index of calculation type
 gcnum = ene_header%gcnum(aindex)
-! set total energy to full system
-EQ_save(istate)%qq(aindex) = EQ(istate)%qq
-EQ_save(istate)%qp(aindex) = EQ(istate)%qp
 
 ! start looping over all the excluded interactions
 ! first qq stuff, substract from qq index
-do num = 1, exc_nbqq(gcnum)
-iq = exc_nbqq_list(gcnum,istate,num)%iq
-jq = exc_nbqq_list(gcnum,istate,num)%jq
+do num = 1, exc_nbqq(gcnum,istate)%inter
+iq = exc_nbqq(gcnum,istate)%list(num)%iq
+jq = exc_nbqq(gcnum,istate)%list(num)%jq
 
-nb_ene = nbe_qq(exc_nbqq_list(gcnum,istate,num),EQ(istate)%lambda)
-select case (ST_gc(gcnum)%caltype)
+nb_ene = nbe_qq(exc_nbqq(gcnum,istate)%list(num),EQ(istate)%lambda)
+select case (ene_header%types(aindex))
 case (FULL)
-        EQ_save(istate)%qq(aindex)%el  = EQ_save(istate)%qq(aindex)%el  - nb_ene%Vel
-        EQ_save(istate)%qq(aindex)%vdw = EQ_save(istate)%qq(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qq%el  = EQ_loc(istate)%qq%el  - nb_ene%Vel
+        EQ_loc(istate)%qq%vdw = EQ_loc(istate)%qq%vdw - (nb_ene%V_a - nb_ene%V_b)
 case (ELECTRO)
-        EQ_save(istate)%qq(aindex)%el  = EQ_save(istate)%qq(aindex)%el  - nb_ene%Vel
+        EQ_loc(istate)%qq%el  = EQ_loc(istate)%qq%el  - nb_ene%Vel
 case (VDW)
-        EQ_save(istate)%qq(aindex)%vdw = EQ_save(istate)%qq(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qq%vdw = EQ_loc(istate)%qq%vdw - (nb_ene%V_a - nb_ene%V_b)
 end select
 end do ! num
-do num = 1, exc_nbqqp(gcnum)
-iq = exc_nbqqp_list(gcnum,istate,num)%i
+do num = 1, exc_nbqqp(gcnum,istate)%inter
+iq = exc_nbqqp(gcnum,istate)%list(num)%i
 i  = iqseq(iq)
-j  = exc_nbqqp_list(gcnum,istate,num)%j
+j  = exc_nbqqp(gcnum,istate)%list(num)%j
 
 dist = q_dist3(x(i),x(j))
-nb_ene = nbe_qx(exc_nbqqp_list(gcnum,istate,num),EQ(istate)%lambda,dist)
-select case (ST_gc(gcnum)%caltype)
+nb_ene = nbe_qx(exc_nbqqp(gcnum,istate)%list(num),EQ(istate)%lambda,dist)
+select case (ene_header%types(aindex))
 case (FULL)
-        EQ_save(istate)%qp(aindex)%el  = EQ_save(istate)%qp(aindex)%el  - nb_ene%Vel
-        EQ_save(istate)%qp(aindex)%vdw = EQ_save(istate)%qp(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qp%el  = EQ_loc(istate)%qp%el  - nb_ene%Vel
+        EQ_loc(istate)%qp%vdw = EQ_loc(istate)%qp%vdw - (nb_ene%V_a - nb_ene%V_b)
 case (ELECTRO)
-        EQ_save(istate)%qp(aindex)%el  = EQ_save(istate)%qp(aindex)%el  - nb_ene%Vel
+        EQ_loc(istate)%qp%el  = EQ_loc(istate)%qp%el  - nb_ene%Vel
 case (VDW)
-        EQ_save(istate)%qp(aindex)%vdw = EQ_save(istate)%qp(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qp%vdw = EQ_loc(istate)%qp%vdw - (nb_ene%V_a - nb_ene%V_b)
 end select
 end do ! num
-do num = 1 , exc_nbqp(gcnum)
-iq = exc_nbqp_list(gcnum,istate,num)%i
+do num = 1 , exc_nbqp(gcnum,istate)%inter
+iq = exc_nbqp(gcnum,istate)%list(num)%i
 i  = iqseq(iq)
-j  = exc_nbqp_list(gcnum,istate,num)%j
+j  = exc_nbqp(gcnum,istate)%list(num)%j
 
 if (use_PBC) then
         ia = iwhich_cgp(j)
@@ -6885,19 +6887,29 @@ if (use_PBC) then
 else
         dist = q_dist3(x(i),x(j))
 end if
-nb_ene = nbe_qx(exc_nbqp_list(gcnum,istate,num),EQ(istate)%lambda,dist)
-select case (ST_gc(gcnum)%caltype)
+nb_ene = nbe_qx(exc_nbqp(gcnum,istate)%list(num),EQ(istate)%lambda,dist)
+select case (ene_header%types(aindex))
 case (FULL)
-        EQ_save(istate)%qp(aindex)%el  = EQ_save(istate)%qp(aindex)%el  - nb_ene%Vel
-        EQ_save(istate)%qp(aindex)%vdw = EQ_save(istate)%qp(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qp%el  = EQ_loc(istate)%qp%el  - nb_ene%Vel
+        EQ_loc(istate)%qp%vdw = EQ_loc(istate)%qp%vdw - (nb_ene%V_a - nb_ene%V_b)
 case (ELECTRO)
-        EQ_save(istate)%qp(aindex)%el  = EQ_save(istate)%qp(aindex)%el  - nb_ene%Vel
+        EQ_loc(istate)%qp%el  = EQ_loc(istate)%qp%el  - nb_ene%Vel
 case (VDW)
-        EQ_save(istate)%qp(aindex)%vdw = EQ_save(istate)%qp(aindex)%vdw - (nb_ene%V_a - nb_ene%V_b)
+        EQ_loc(istate)%qp%vdw = EQ_loc(istate)%qp%vdw - (nb_ene%V_a - nb_ene%V_b)
 end select
 end do ! num
-end do ! aindex
+
+! update total EQ for this state and index
+EQ_loc(istate)%qx%el  = EQ_loc(istate)%qq%el  + EQ_loc(istate)%qp%el  + EQ_loc(istate)%qw%el
+EQ_loc(istate)%qx%vdw = EQ_loc(istate)%qq%vdw + EQ_loc(istate)%qp%vdw + EQ_loc(istate)%qw%vdw
+EQ_loc(istate)%total  = EQ_loc(istate)%q%bond + EQ_loc(istate)%q%angle + EQ_loc(istate)%q%torsion + &
+        EQ_loc(istate)%q%improper + EQ_loc(istate)%qx%el + EQ_loc(istate)%qx%vdw + EQ_loc(istate)%restraint
+
 end do ! nstates
+
+call qatom_savetowrite(EQ_loc,aindex)
+
+end do ! aindex
 
 end subroutine calculate_exc
 

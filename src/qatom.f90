@@ -451,6 +451,15 @@ logical function qatom_load_atoms(fep_file)
                 allocate(iang_coupl(3,nqat),itor_coupl(3,nqat),iimp_coupl(3,nqat),iqshake(nqat) , &
                         jqshake(nqat),qshake_dist(nqat,max_states),EMorseD(nqat) , &
                         dMorse_i(nqat),dMorse_j(nqat))
+                        iang_coupl  = 0
+                        itor_coupl  = 0
+                        iimp_coupl  = 0
+                        iqshake     = 0
+                        jqshake     = 0
+                        qshake_dist = zero
+                        EMorseD     = zero
+                        dMorse_i    = dMorse_i * zero
+                        dMorse_j    = dMorse_j * zero
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
 			if(prm_get_int_int(s, topno)) then

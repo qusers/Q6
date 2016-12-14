@@ -2685,61 +2685,74 @@ subroutine exc_assign
 !locals
 integer                         :: ig,iq,jq,istate
 integer                         :: igc
-integer                         :: exc_qqlist,exc_qqplist,exc_qplist
+integer,allocatable             :: exc_qqlist(:),exc_qqplist(:),exc_qplist(:)
+
 ! allocate all arrays
-allocate(exc_nbqq_list(ngroups_gc,nstates,maxval(exc_nbqq)),exc_nbqqp_list(ngroups_gc,nstates,maxval(exc_nbqqp)),&
-        exc_nbqp_list(ngroups_gc,nstates,maxval(exc_nbqp)))
+do igc = 1, ngroups_gc
+do istate = 1, nstates
 
+allocate(exc_nbqq(igc,istate)%list(exc_nbqq(igc,istate)%inter),stat=alloc_status)
+call check_alloc('EXC qq list')
+allocate(exc_nbqp(igc,istate)%list(exc_nbqp(igc,istate)%inter),stat=alloc_status)
+call check_alloc('EXC qp list')
+allocate(exc_nbqqp(igc,istate)%list(exc_nbqqp(igc,istate)%inter),stat=alloc_status)
+call check_alloc('EXC qqp list')
+end do
+end do
 
-exc_qqlist  = 1
-exc_qplist  = 1
-exc_qqplist = 1
+allocate(exc_qqlist(nstates),exc_qplist(nstates),exc_qqplist(nstates),stat=alloc_status)
+call check_alloc('EXC current list')
 
-do ig = 1, nat_solute
-        do igc = 1, ngroups_gc
+do igc = 1, ngroups_gc
+exc_qqlist(:)  = 1
+exc_qplist(:)  = 1
+exc_qqplist(:) = 1
+        do ig = 1, nat_solute
                 if (ST_gc(igc)%gcmask%mask(ig)) then
-                        do iq = 1, nqat
                         do istate = 1, nstates
+                        do iq = 1, nqat
                         if (iqatom(ig) .ne. 0) then
                         ! atom ig is a qatom, add to exc_qq list with state info
                                 if (.not.qq_precomp(iq,iqatom(ig),istate)%set) cycle
                                 ! if those two atoms are allowed to interact
                                 jq = iqatom(ig)
-                                exc_nbqq_list(igc,istate,exc_qqlist)%iq = iq
-                                exc_nbqq_list(igc,istate,exc_qqlist)%jq = jq
-                                exc_nbqq_list(igc,istate,exc_qqlist)%vdWA = qq_precomp(iq,jq,istate)%vdWA
-                                exc_nbqq_list(igc,istate,exc_qqlist)%vdWB = qq_precomp(iq,jq,istate)%vdWB
-                                exc_nbqq_list(igc,istate,exc_qqlist)%elec = qq_precomp(iq,jq,istate)%elec
-                                exc_nbqq_list(igc,istate,exc_qqlist)%soft = qq_precomp(iq,jq,istate)%soft
-                                exc_nbqq_list(igc,istate,exc_qqlist)%score = qq_precomp(iq,jq,istate)%score
-                                exc_qqlist = exc_qqlist + 1
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%iq = iq
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%jq = jq
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%vdWA = qq_precomp(iq,jq,istate)%vdWA
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%vdWB = qq_precomp(iq,jq,istate)%vdWB
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%elec = qq_precomp(iq,jq,istate)%elec
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%soft = qq_precomp(iq,jq,istate)%soft
+                                exc_nbqq(igc,istate)%list(exc_qqlist(istate))%score = qq_precomp(iq,jq,istate)%score
+                                exc_qqlist(istate) = exc_qqlist(istate) + 1
                         else if(any(qconn(:,ig,:) <= 3)) then
                         ! it is bonded somehow to a q atom        
                                 if (.not.qp_precomp(ig,iq,istate)%set) cycle
                                 ! ! if atoms can interact, should not be needed but who knows
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%i = iq
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%j = ig
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%vdWA = qp_precomp(ig,iq,istate)%vdWA
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%elec = qp_precomp(ig,iq,istate)%elec
-                                exc_nbqqp_list(igc,istate,exc_qqplist)%score = qp_precomp(ig,iq,istate)%score
-                                exc_qqplist = exc_qqplist + 1
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%i = iq
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%j = ig
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%vdWA = qp_precomp(ig,iq,istate)%vdWA
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%vdWB = qp_precomp(ig,iq,istate)%vdWB
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%elec = qp_precomp(ig,iq,istate)%elec
+                                exc_nbqqp(igc,istate)%list(exc_qqplist(istate))%score = qp_precomp(ig,iq,istate)%score
+                                exc_qqplist(istate) = exc_qqplist(istate) + 1
                         else
                         ! plain old nonbonded qp
                                 if (.not.qp_precomp(iq,iq,istate)%set) cycle
-                                exc_nbqp_list(igc,istate,exc_qplist)%i = iq
-                                exc_nbqp_list(igc,istate,exc_qplist)%j = ig
-                                exc_nbqp_list(igc,istate,exc_qplist)%vdWA = qp_precomp(ig,iq,istate)%vdWA
-                                exc_nbqp_list(igc,istate,exc_qplist)%vdWB = qp_precomp(ig,iq,istate)%vdWB
-                                exc_nbqp_list(igc,istate,exc_qplist)%elec = qp_precomp(ig,iq,istate)%elec
-                                exc_nbqp_list(igc,istate,exc_qplist)%score = qp_precomp(ig,iq,istate)%score
-                                exc_qplist = exc_qplist + 1
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%i = iq
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%j = ig
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%vdWA = qp_precomp(ig,iq,istate)%vdWA
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%vdWB = qp_precomp(ig,iq,istate)%vdWB
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%elec = qp_precomp(ig,iq,istate)%elec
+                                exc_nbqp(igc,istate)%list(exc_qplist(istate))%score = qp_precomp(ig,iq,istate)%score
+                                exc_qplist(istate) = exc_qplist(istate) + 1
                         end if
-                        end do ! nstates
                         end do ! nqat
+                        end do ! nstates
                 end if
         end do
 end do
+
+deallocate(exc_qqlist,exc_qqplist,exc_qplist)
 
 end subroutine exc_assign
 
@@ -2911,7 +2924,10 @@ integer                         :: ig,jq,ia,a_ind,is,vdw,j,k
 allocate(qp_precomp(nat_solute,nqat,nstates),stat=alloc_status)
 call check_alloc('Protein-QAtom precomputation array')
 if(use_excluded_groups) then
-        allocate(exc_nbqp(ngroups_gc),exc_nbqqp(ngroups_gc))
+        allocate(exc_nbqp(ngroups_gc,nstates),exc_nbqqp(ngroups_gc,nstates),stat=alloc_status)
+        call check_alloc('EXC group lists qp,qqp')
+        exc_nbqp(:,:)%inter  = 0
+        exc_nbqqp(:,:)%inter = 0
 end if
 qp_precomp(:,:,:)%set   = .false.
 qp_precomp(:,:,:)%score = zero
@@ -2929,7 +2945,7 @@ igloop:do ig = 1, nat_solute
                         if (use_excluded_groups) then
                                 do k = 1, ngroups_gc
                                 if(ST_gc(k)%gcmask%mask(ig)) then
-                                        exc_nbqp(k) = exc_nbqp(k) + 1
+                                        exc_nbqp(k,is)%inter = exc_nbqp(k,is)%inter + 1
                                 end if
                                 end do
                         end if
@@ -2948,7 +2964,9 @@ logical                         :: found
 allocate(qq_precomp(nqat,nqat,nstates),stat=alloc_status)
 call check_alloc('QAtom-QAtom precomputation array')
 if (use_excluded_groups) then
-        allocate(exc_nbqq(ngroups_gc))
+        allocate(exc_nbqq(ngroups_gc,nstates),stat=alloc_status)
+        call check_alloc('EXC group list qq')
+        exc_nbqq(:,:)%inter  = 0
 end if
 
 qq_precomp(:,:,:)%set   = .false.
@@ -3005,10 +3023,10 @@ do iq = 1, nqat - 1
                                 if(use_excluded_groups) then
                                         do k = 1, ngroups_gc
                                         if(ST_gc(k)%gcmask%mask(ia)) then
-                                                exc_nbqq(k) = exc_nbqq(k) + 1
+                                                exc_nbqq(k,is)%inter = exc_nbqq(k,is)%inter + 1
                                                 !call exc_add_int_qq(k,iq,jq)
                                         else if(ST_gc(k)%gcmask%mask(ja)) then
-                                                exc_nbqq(k) = exc_nbqq(k) + 1
+                                                exc_nbqq(k,is)%inter = exc_nbqq(k,is)%inter + 1
                                         end if
                                         end do
                                 end if
@@ -3036,7 +3054,7 @@ do ja = 1, nat_solute
                                         if (use_excluded_groups) then
                                                 do k = 1, ngroups_gc
                                                 if (ST_gc(k)%gcmask%mask(ja)) then
-                                                        exc_nbqqp(k) = exc_nbqqp(k) + 1
+                                                        exc_nbqqp(k,is)%inter = exc_nbqqp(k,is)%inter + 1
                                                 end if
                                                 end do
                                         end if
@@ -3567,7 +3585,7 @@ if (use_excluded_groups) then
 		runvar = runvar + 1
 	write (*,*) 'Finished group ',i
         end do
-	do i=2,ene_header%arrays
+	do i=2,ene_header%arrays - QCP_N
 		ene_header%totresid = ene_header%totresid + ene_header%numres(i)
 	end do
 else
