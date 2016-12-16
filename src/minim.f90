@@ -857,11 +857,11 @@ end function initialize
 
 !-----------------------------------------------------------------------------------
 
-integer function maxforce(new_d,old_d)
+integer function maxforce(new_d,oldmax)
 ! calculate the current maximum force 
 ! arguments
 TYPE(qr_vec)                    :: new_d(:)
-TYPE(qr_vec)                    :: old_d(size(new_d))
+real(kind=prec),INTENT(INOUT)   :: oldmax
 !locals
 real(kind=prec)                 :: maxf
 integer                         :: i, atmaxf
@@ -872,22 +872,22 @@ maxforce   = 0
 maxf       = zero
 atmaxf     = -1
 do i = 1, nat_pro
-        f2old = q_sqrt(qvec_square(old_d(i)))
         f2new = q_sqrt(qvec_square(new_d(i)))
-        if(f2new .gt. f2old) then
-                maxforce = 1
-        end if
         if (f2new.gt.maxf) then
                 maxf   = f2new
                 atmaxf = i
         end if
+        if (f2new.gt.oldmax) then
+                oldmax = f2new
+                maxforce = 1
+        end if
 end do
+! if forces are lower, set oldforce to lowest limit
+if(maxforce .eq. 0) oldmax = maxf
 
 if(maxf .lt. energy_cutoff) maxforce = 2
 
-old_d = new_d
-
-write(*,'(a,f12.3,a,i4)') 'Maximum force of ',maxf,' on atom ',atmaxf
+write(*,'(a,f12.3,a,i8)') 'Maximum force of ',maxf,' on atom ',atmaxf
 
 end function maxforce
 
@@ -909,9 +909,8 @@ subroutine min_run
 ! local variables
 integer				:: i,j,k,niter,retval
 !Random variable temperature control array
-real(kind=prec)				:: scaling,time0, time1, time_per_step, startloop
+real(kind=prec)				:: scaling,time0, time1, time_per_step, startloop, force
 integer(4)				:: time_completion
-TYPE(qr_vec),allocatable                :: d_old(:)
 !Local variables for file writing to energy files
 integer				:: loc_arrays
 !Define array length for EQ array in local usage
@@ -919,8 +918,6 @@ loc_arrays=ene_header%arrays
 
 !Define number of coord to send/recieve
 nat3=natom*3
-allocate(d_old(natom))
-d_old = d_old * zero
 if (nodeid .eq. 0) then
 ! master node only: print initial temperatures
 ! init timer
@@ -929,6 +926,11 @@ time0 = rtime()
         ! Init timer of total loop time
         startloop = rtime()
 end if
+
+! calculate initial forces etc before main loop
+
+force  = zero
+retval = maxforce(d,force)
 
 !***********************************************************************
 !	begin MAIN DYNAMICS LOOP (Verlet leap-frog algorithm)
@@ -1025,14 +1027,15 @@ if(nodeid .eq. 0) then
         ! update velocities from accelerations,
         ! scale velocities & update positions from velocities
 ! section for checking max force and position update
-retval = maxforce(d,d_old)
+retval = maxforce(d,force)
 if(retval.eq.1) then
 ! we have a rise in energy, reset scaling factor for steepest decent
         scaling = dt
         call update_pos(scaling)
 else if(retval .eq. 0) then
 ! increase step size
-        scaling = scaling*10
+        scaling = scaling*1.20
+        call update_pos(scaling)
 end if
 
         if(shake_constraints .gt.0) niter=shake(xx,x)
@@ -1114,7 +1117,6 @@ if (nodeid .eq. 0) then
         v(:) = v(:) * zero
         call write_out(E,EQ)
         call write_xfin
-        deallocate(d_old)
 end if
 
 
