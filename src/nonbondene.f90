@@ -6479,17 +6479,17 @@ do iw = ncgp_solute + 1, ncgp
         b  = q_sqrt(distance%r2)
         db = b - (rwat - shift)
         ! calculate erst and dv
-        if ( db > 0 ) then
+        if ( db .gt. zero ) then
                 erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
                 dv = fk_wsphere*db/b
         else
-                if (b > zero) then
-                  fexp = exp ( awmz*db )
+                if (b .gt. zero) then
+                  fexp = q_exp ( awmz*db )
                   erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
                   dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
                 else
-                  dv = 0
-                  erst = 0
+                  dv = zero
+                  erst = zero
                 end if
         end if
         d(i) = d(i) + distance%vec*dv
@@ -6499,7 +6499,9 @@ else
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
         if (excl(i)) cycle ! skip excluded topology waters
-        dcent= dcent * zero
+        dcent%x = zero
+        dcent%y = zero
+        dcent%z = zero
         jsolv = iw - ncgp_solute
         i = nat_solute + solv_atom*jsolv - (solv_atom-1)
         do isolv = 0 , solv_atom - 1
@@ -6511,17 +6513,17 @@ do iw = ncgp_solute + 1, ncgp
         db = b - (rwat - shift)
 
         ! calculate erst and dv
-        if ( db > 0 ) then
+        if ( db .gt. zero ) then
                 erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
                 dv = fk_wsphere*db/b
         else
-                if (b > zero) then
-                  fexp = exp ( awmz*db )
+                if (b .gt. zero) then
+                  fexp = q_exp ( awmz*db )
                   erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
                   dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
                 else
-                  dv = 0
-                  erst = 0
+                  dv = zero
+                  erst = zero
                 end if
         end if
         dv = dv / solv_atom

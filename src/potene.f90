@@ -86,7 +86,9 @@ EQ_loc(istate)%restraint = zero
 end do
 
 !reset derivatives ---
-d = d * zero
+d(:)%x = zero
+d(:)%y = zero
+d(:)%z = zero
 
 ! --- calculate the potential energy and derivatives ---
 ! *** nonbonds distribueras

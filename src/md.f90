@@ -815,6 +815,10 @@ else
         write (*,98) (EQ(i)%lambda,i=1,nstates)
 98			format ('lambda-values      = ',10f8.5)
 end if
+else
+        ! need dummy EQ allocation for classical MD to work
+        allocate(EQ(1),stat=alloc_status)
+        call check_alloc('Dummy Q-atom energy array')
 end if
 !Option to make additional calculation with atom groups excluded from the
 !energy calculation to provide 'real' group contribution
