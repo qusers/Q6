@@ -1909,8 +1909,8 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
         type(TMP_ANGLE_TYPE)                            ::      tmp_ang(max_conn)
         type(TMP_TOR_TYPE)                              ::      tmp_tor(max_conn*3)
 	integer						::	nHang, Hang_atom(max_conn), ator
-	integer						::	Hang_code(max_conn),mtor,nHtor
-        integer                                         ::      iaci,iacj,iack,iacl,icod
+	integer						::	Hang_code(max_conn),mtor,nHtor,icod
+        character(KEYLENGTH)                            ::      taci,tacj,tack,tacl
         integer                                         ::      Htor_latom(max_conn*4),Htor_katom(max_conn*4)
         logical                                         ::      opt_only
 	integer						::	rule
@@ -1956,11 +1956,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 				H = missing_bonds(miss)%j
 			else ! bond already made. optimise structure again
 				missing_local(addatom)%bond_notset(mbond) = .false.
-				opt_only = .true.
+				cycle !opt_only = .true.
 			end if
-                        iaci = iac(missing_bonds(miss)%i)
-                        iacj = iac(missing_bonds(miss)%j)
-                        tmp_bnd_code = bondcode(tac(iaci),tac(iacj))
+                        taci = lib(irc_solvent)%tac_lib(missing_bonds(miss)%i)
+                        tacj = lib(irc_solvent)%tac_lib(missing_bonds(miss)%j)
+                        tmp_bnd_code = bondcode(taci,tacj)
 			if (tmp_bnd_code .gt. 0) then
 				bnd0 = bnd_prm(tmp_bnd_code)%prm%bnd0
 			else
@@ -1977,10 +1977,10 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 						(.not.(missing_local(missing_angles(miss)%k)%atom_missing))) then
 						nHang = nHang + 1
 						Hang_atom(nHang) = missing_angles(miss)%k
-                                                iaci = iac(missing_angles(miss)%i)
-                                                iacj = iac(missing_angles(miss)%j)
-                                                iack = iac(missing_angles(miss)%k)
-                                                tmp_ang_code = anglecode(tac(iaci),tac(iacj),tac(iack))
+                                                taci = lib(irc_solvent)%tac_lib(missing_angles(miss)%i)
+                                                tacj = lib(irc_solvent)%tac_lib(missing_angles(miss)%j)
+                                                tack = lib(irc_solvent)%tac_lib(missing_angles(miss)%k)
+                                                tmp_ang_code = anglecode(taci,tacj,tack)
 						tmp_ang(nHang)%ang0  = ang_prm(tmp_ang_code)%ang0
 						tmp_ang(nHang)%fk    = ang_prm(tmp_ang_code)%fk
 					elseif((missing_angles(miss)%k .eq. H).and. &
@@ -1988,10 +1988,10 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 						(.not.(missing_local(missing_angles(miss)%i)%atom_missing))) then
 						nHang = nHang + 1
 						Hang_atom(nHang) = missing_angles(miss)%i
-                                                iaci = iac(missing_angles(miss)%k)
-                                                iacj = iac(missing_angles(miss)%j)
-                                                iack = iac(missing_angles(miss)%i)
-                                                tmp_ang_code = anglecode(tac(iaci),tac(iacj),tac(iack))
+                                                taci = lib(irc_solvent)%tac_lib(missing_angles(miss)%k)
+                                                tacj = lib(irc_solvent)%tac_lib(missing_angles(miss)%j)
+                                                tack = lib(irc_solvent)%tac_lib(missing_angles(miss)%i)
+                                                tmp_ang_code = anglecode(taci,tacj,tack)
 						tmp_ang(nHang)%ang0  = ang_prm(tmp_ang_code)%ang0
 						tmp_ang(nHang)%fk    = ang_prm(tmp_ang_code)%fk
 					end if
@@ -2010,11 +2010,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 						nHtor = nHtor + 1
 						Htor_latom(nHtor) = missing_torsions(miss)%l
 						Htor_katom(nHtor) = missing_torsions(miss)%k
-                                                iaci = iac(missing_torsions(miss)%i)
-                                                iacj = iac(missing_torsions(miss)%j)
-                                                iack = iac(missing_torsions(miss)%k)
-                                                iacl = iac(missing_torsions(miss)%k)
-                                                tmp_tor_codes = torcode(tac(iaci),tac(iacj),tac(iack),tac(iacl))
+                                                taci = lib(irc_solvent)%tac_lib(missing_torsions(miss)%i)
+                                                tacj = lib(irc_solvent)%tac_lib(missing_torsions(miss)%j)
+                                                tack = lib(irc_solvent)%tac_lib(missing_torsions(miss)%k)
+                                                tacl = lib(irc_solvent)%tac_lib(missing_torsions(miss)%k)
+                                                tmp_tor_codes = torcode(taci,tacj,tack,tacl)
 ! remember here that tor% structures are a special data structure with n fields
                                                 tmp_tor(nHtor)%ntor = tmp_tor_codes%ncod
                                                 do icod = 1, tmp_tor_codes%ncod
@@ -2030,11 +2030,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 						nHtor = nHtor + 1
 						Htor_latom(nHtor) = missing_torsions(miss)%j
 						Htor_katom(nHtor) = missing_torsions(miss)%i
-                                                iaci = iac(missing_torsions(miss)%k)
-                                                iacj = iac(missing_torsions(miss)%l)
-                                                iacl = iac(missing_torsions(miss)%j)
-                                                iack = iac(missing_torsions(miss)%i)
-                                                tmp_tor_codes = torcode(tac(iaci),tac(iacj),tac(iack),tac(iacl))
+                                                taci = lib(irc_solvent)%tac_lib(missing_torsions(miss)%k)
+                                                tacj = lib(irc_solvent)%tac_lib(missing_torsions(miss)%l)
+                                                tacl = lib(irc_solvent)%tac_lib(missing_torsions(miss)%j)
+                                                tack = lib(irc_solvent)%tac_lib(missing_torsions(miss)%i)
+                                                tmp_tor_codes = torcode(taci,tacj,tack,tacl)
 ! remember here that tor% structures are a special data structure with n fields
                                                 tmp_tor(nHtor)%ntor = tmp_tor_codes%ncod
                                                 do icod = 1, tmp_tor_codes%ncod
@@ -5554,7 +5554,7 @@ subroutine solvate_sphere_grid
 		grid%y = minc%y
 		do while (grid%y <= maxc%y + 0.1_prec)
 			grid%z = minc%z
-			do while (grid%z <= maxc%x + 0.1_prec)
+			do while (grid%z <= maxc%z + 0.1_prec)
 				if( .not. q_dist4(grid,xwcent) > radius2) then
 				waters_in_sphere = waters_in_sphere + 1
 				!if not outside keep these coordinates
@@ -6079,6 +6079,9 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 			missing_heavy(i)%bond_notset(:)=.false.
 			missing_heavy(i)%angle_notset(:)=.false.
                         missing_heavy(i)%torsion_notset(:)=.false.
+                        missing_heavy(i)%bonds(:)    = -1
+                        missing_heavy(i)%angles(:)   = -1
+                        missing_heavy(i)%torsions(:) = -1
                         if(lib(irc_solvent)%atnam(i)(1:1) == 'H') then
                                 missing_heavy(i)%atom_missing = .false.
                         end if
