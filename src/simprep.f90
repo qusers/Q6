@@ -4173,7 +4173,7 @@ TYPE(qr_vec)						::	vcm
 
 ! calculate totmass and vcm
 totmass = zero
-vcm = vcm * zero
+vcm = zero
 do i=1,natom
 rmass = iaclib(iac(i))%mass
 totmass=totmass+rmass

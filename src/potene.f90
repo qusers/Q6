@@ -86,9 +86,7 @@ EQ_loc(istate)%restraint = zero
 end do
 
 !reset derivatives ---
-d(:)%x = zero
-d(:)%y = zero
-d(:)%z = zero
+d(:) = zero
 
 ! --- calculate the potential energy and derivatives ---
 ! *** nonbonds distribueras
@@ -380,7 +378,7 @@ if (excl(i) .or. shell(i)) then
 if ( excl(i) ) then 
 fk = fk_fix
 if ( freeze ) then
-v(i) = v(i) * zero
+v(i) = zero
 x(i) = xtop(i)
 fk = 0
 endif

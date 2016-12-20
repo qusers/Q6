@@ -824,7 +824,7 @@ if(rstseq(ir)%to_centre == 1) then     ! Put == 1, then equal to 2
   ! restrain to geometrical centre
 
   ! reset dr & atom counter
-  dr    = dr * zero
+  dr    = zero
   n_ctr = 0
 
   ! calculate deviation from center
@@ -859,7 +859,7 @@ call q_vecsum(d,nat_pro,'p_restrain 1')
 else if(rstseq(ir)%to_centre == 2) then     ! Put == 1, then equal to 2
   ! restrain to mass centre
   ! reset dr & variable to put masses
-  dr = dr * zero
+  dr = zero
   totmass = zero
   
 ! calculate deviation from mass center

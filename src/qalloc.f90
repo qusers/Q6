@@ -73,12 +73,12 @@ allocate(x(natom), &
 call check_alloc('atom data arrays')
 !set arrays to zero after allocation
 !we can not trust the compiler to do this
-        x(:)  = x(:)  * zero
-        xx(:) = xx(:) * zero
-        v(:)  = v(:)  * zero
-        d(:)  = d(:)  * zero
-	winv(:)= zero
-	iqatom(:)=0
+        x(:)     = zero
+        xx(:)    = zero
+        v(:)     = zero
+        d(:)     = zero
+	winv(:)  = zero
+	iqatom(:)= 0
 end subroutine allocate_natom_arrays
 
 !----------------------------------------------------------------------

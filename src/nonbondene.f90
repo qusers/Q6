@@ -43,11 +43,11 @@ do ig = mp_start,mp_end
 #else
 do ig = 1, ncgp
 #endif
-        lrf(ig)%cgp_cent  = lrf(ig)%cgp_cent * zero
-        lrf(ig)%phi0 = zero
-        lrf(ig)%phi1    = lrf(ig)%phi1    * zero
-        lrf(ig)%phi2(:) = lrf(ig)%phi2(:) * zero
-        lrf(ig)%phi3(:) = lrf(ig)%phi3(:) * zero
+        lrf(ig)%cgp_cent  = zero
+        lrf(ig)%phi0      = zero
+        lrf(ig)%phi1      = zero
+        lrf(ig)%phi2(:)   = zero
+        lrf(ig)%phi3(:)   = zero
 
         do i  = cgp(ig)%first, cgp(ig)%last
                 lrf(ig)%cgp_cent = lrf(ig)%cgp_cent + x(cgpatom(i))
@@ -641,12 +641,10 @@ i_sw = cgp(group1)%iswitch
 shift = x(i_sw) - lrf(group2)%cgp_cent
 shift = boxlength*q_nint(shift*inv_boxl)
 else
-shift = shift * zero
+shift = zero
 end if
 ! unit vector for later assignments
-  uvec%x = one
-  uvec%y = one
-  uvec%z = one
+  uvec = one
 
 
 iloop:        do ia = cgp(group1)%first, cgp(group1)%last
@@ -6499,9 +6497,7 @@ else
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
         if (excl(i)) cycle ! skip excluded topology waters
-        dcent%x = zero
-        dcent%y = zero
-        dcent%z = zero
+        dcent = zero
         jsolv = iw - ncgp_solute
         i = nat_solute + solv_atom*jsolv - (solv_atom-1)
         do isolv = 0 , solv_atom - 1
@@ -6572,8 +6568,8 @@ if(excl(i)) cycle ! skip excluded topology solvent
 ! molecules, meaning that the simple geometry won't work any longer
 ! we will only keep the old code for SPC/TIP3P like solvent
 
-rmu = rmu * zero
-rmc = rmc * zero
+rmu = zero
+rmc = zero
 
 if (solv_atom .eq. 3) then
 !SPC/TIP3P solvent, keep old code
@@ -6680,8 +6676,8 @@ E_loc%water_pol = E_loc%water_pol + 0.5_prec*fkwpol* &
 dv = fkwpol*(theta(iw)-theta0(il)+wshell(is)%theta_corr)
 
 i  = nat_solute + solv_atom*iw - (solv_atom-1)
-rmu= rmu *zero ! solvent vector
-rmc= rmc *zero
+rmu= zero ! solvent vector
+rmc= zero
 if (solv_atom .eq. 3) then
 !SPC/TIP3P solvent, keep old code
 do isolv = 1, solv_atom - 1

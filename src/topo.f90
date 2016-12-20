@@ -1440,7 +1440,7 @@ subroutine make_shell2(nwat)
 
 	allocate(cgp_cent(ncgp+nwat))
 
-	cgp_cent = cgp_cent * zero
+	cgp_cent = zero
 
 	do ig=1,ncgp_solute
     if (.not. excl(cgp(ig)%iswitch) .and. heavy(cgp(ig)%iswitch)) then

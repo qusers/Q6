@@ -68,6 +68,12 @@ interface operator(/)
         module procedure q_realdiv,q_arraydiv,q_realdiv2,q_vecdiv
 end interface
 
+public :: assignment(=)
+
+interface assignment(=)
+        module procedure qvec_assign,qarray_assign
+end interface
+
 contains
 
 function qvec_add(a,b)
@@ -80,6 +86,30 @@ qvec_add%x = a%x + b%x
 qvec_add%y = a%y + b%y
 qvec_add%z = a%z + b%z
 end function qvec_add
+
+subroutine qvec_assign(a,b)
+! vector addition, std function used later
+! args
+TYPE(qr_vec), INTENT (INOUT) :: a
+real(kind=prec),INTENT(IN)   :: b
+! locals
+a%x = b
+a%y = b
+a%z = b
+end subroutine qvec_assign
+
+subroutine qarray_assign(a,b)
+! vector addition, std function used later
+! args
+TYPE(qr_vec), INTENT (INOUT) :: a(:)
+real(kind=prec),INTENT(IN)   :: b
+! locals
+a(:)%x = b
+a(:)%y = b
+a(:)%z = b
+
+end subroutine qarray_assign
+
 
 function qvec_realadd(a,b)
 ! vector scaling by constant number, operator
@@ -505,7 +535,7 @@ integer                 :: i
 
 666     format(a,a30,3f18.12)
 
-vecsum = vecsum * zero
+vecsum = zero
 do i = 1 , b
 vecsum = vecsum + a(i)
 end do
