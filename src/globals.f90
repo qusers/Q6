@@ -518,7 +518,7 @@ integer                         :: QCP_size_small = 16
 integer                         :: QCP_size_verysmall = 4
 integer                         :: QCP_size_large = 64
 integer                         :: qcp_enum,qcp_size
-integer                         :: qcp_level = 5
+integer                         :: qcp_level = -1
 integer                         :: qcp_filen
 character(80)                   :: qcp_pdb_name
 ! one for equilibration, second for sampling
@@ -536,7 +536,7 @@ real(kind=prec),parameter       :: avogadro = 6.022E23_prec
 real(kind=prec),parameter       :: convert = 4186.05_prec / avogadro
 real(kind=prec),parameter       :: cboltz = 1.380662E-23_prec
 real(kind=prec),parameter       :: planck = 6.626176E-34_prec
-
+real(kind=prec),parameter       :: ddiff  = 1E-6_prec ! for checking equality
 
 !-----------------------------------------------------------------------
 !	profiling vars

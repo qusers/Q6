@@ -1004,9 +1004,9 @@ if(nstates > 0 ) then
 		end if
 ! now we know how many beads, set default for qcp_level
 ! for bisection, this is 2**qcp_level .eq. qcp_size
-                write(*,'(a,i6,a)') 'Setting bisection level to default, log_2(',qcp_size,')'
-                qcp_level = int(q_log2(real(qcp_size,kind=prec)))
-                if (real(qcp_level,kind=prec) .ne. q_log2(real(qcp_size,kind=prec))) then
+                qcp_level = ceiling(q_log2(real(qcp_size,kind=prec)))
+                write(*,'(a,i4,a,i4)') 'Setting bisection level to default, log_2(',qcp_size,'), = ',qcp_level
+                if (real(qcp_level,kind=prec) - q_log2(real(qcp_size,kind=prec)) .gt. ddiff) then
 ! whoops, the bead size does not work for bisection
                         write(*,'(a)') 'Bead size is not the result of 2**n. Does not work with bisection strategy'
                         initialize = .false.
