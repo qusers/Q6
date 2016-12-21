@@ -114,7 +114,7 @@ character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 real(kind=prec)                                 :: size_default = one/10000
-real(kind=prec)                                 :: Ecut_default = 20.0_prec
+real(kind=prec)                                 :: Ecut_default = 1.0_prec
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 ! this subroutine will init:

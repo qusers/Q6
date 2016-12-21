@@ -118,7 +118,7 @@ TYPE(qr_vec)                    :: qcpvec(:)
 real(kind=prec)                 :: angle,percent,displ_l,displ_h,displ,dangl
 integer                         :: i, irand,jrand,krand
 
-qcpvec = qcpvec * zero
+qcpvec = zero
 
 end subroutine qcp_init_beads
 
@@ -144,7 +144,7 @@ integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead
 TYPE(qr_vec)                    :: midpoint
 real(kind=prec)                 :: lbsect
 
-        qcp_bisect = qcp_bisect * zero
+        qcp_bisect = zero
 
 ! for a given particle, go through all beads
 ! perform number of steps depending on bisection level
@@ -185,7 +185,7 @@ real(kind=prec)                 :: inv_beads
 TYPE(qr_vec)                    :: center
 
 inv_beads = one/(real(qcp_size ,kind=prec))
-center = center * zero
+center = zero
 do i = 1, qcp_size
 center = center + qcpvec(i)
 end do

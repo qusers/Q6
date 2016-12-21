@@ -1956,7 +1956,11 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 				H = missing_bonds(miss)%j
 			else ! bond already made. optimise structure again
 				missing_local(addatom)%bond_notset(mbond) = .false.
-				cycle !opt_only = .true.
+                                if (missing_bonds(miss)%i .eq. addatom) H = missing_bonds(miss)%j
+                                if (missing_bonds(miss)%j .eq. addatom) H = missing_bonds(miss)%i
+                                xH = waterarray(H)
+!write(*,'(a,i4,a,3f12.8)') 'Position of existing atom ',H,' = ',xH
+				opt_only = .true.
 			end if
                         taci = lib(irc_solvent)%tac_lib(missing_bonds(miss)%i)
                         tacj = lib(irc_solvent)%tac_lib(missing_bonds(miss)%j)
@@ -2047,7 +2051,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 				end if
 			end do
 
-
+                if (.not. opt_only) then
 		!random vector
 		xH%x = randm() - 0.5_prec
 		xH%y = randm() - 0.5_prec
@@ -2057,6 +2061,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 		xH = xH / bond_length * bnd0
 		!place near atom j
 		xH = xH + xj
+                end if
 		!conjugate gradient minimisation
 		do setH = 1,nsetH
 		do cgiter = 1, max_cg_iterations
@@ -2159,7 +2164,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 		!check if not converged
 		if(cgiter >= max_cg_iterations .and. Vtot > 3.0_prec) then
 			!display warning
-			write(*,900) H, j, Vtot
+			write(*,900) H, addatom, Vtot
 900				format('>>> WARNING: Positioning of heavy atom',i6,&
 				' bound to atom',i6,' didn''t converge.',/, &
 				'Potential is ',f8.3,' kcal/mol.')
@@ -5535,7 +5540,7 @@ subroutine solvate_sphere_grid
 
 	allocate(xw(lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
         do i=1,lib(irc_solvent)%nat
-	xw(i,:) = xw(i,:) * zero
+	xw(i,:) = zero
         end do
 	call check_alloc('water sphere co-ordinate array')
 
@@ -6014,56 +6019,56 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
                                 if (missing_bonds(i)%i .eq. missing_bonds(h)%j) then
                                         if (missing_bonds(i)%j .eq. missing_bonds(j)%i) then
                                                 heavy_torsions = heavy_torsions + 1
-                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
-                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
-                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
-                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
-                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
-                                                heavy_torsions = heavy_torsions + 1
-                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
                                                 missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
                                                 missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
                                                 missing_torsions(heavy_torsions)%l = missing_bonds(j)%j
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
                                         endif
                                 elseif(missing_bonds(i)%i .eq. missing_bonds(h)%i) then
                                         if (missing_bonds(i)%j .eq. missing_bonds(j)%i) then
                                                 heavy_torsions = heavy_torsions + 1
-                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
-                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
-                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
-                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
-                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
-                                                heavy_torsions = heavy_torsions + 1
-                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%i
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
                                                 missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
                                                 missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
                                                 missing_torsions(heavy_torsions)%l = missing_bonds(j)%j
+                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(h)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(j)%i
                                         end if
 
                                 elseif (missing_bonds(i)%j .eq. missing_bonds(h)%j) then
                                         if (missing_bonds(i)%i .eq. missing_bonds(j)%i) then
                                                 heavy_torsions = heavy_torsions + 1
-                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%i
-                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
-                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
-                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
-                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
-                                                heavy_torsions = heavy_torsions + 1
                                                 missing_torsions(heavy_torsions)%i = missing_bonds(j)%j
                                                 missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
                                                 missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
-                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
-                                        endif
-                                elseif(missing_bonds(i)%j .eq. missing_bonds(h)%i) then
-                                        if (missing_bonds(i)%i .eq. missing_bonds(j)%i) then
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%i
+                                        elseif(missing_bonds(i)%i .eq. missing_bonds(j)%j) then
                                                 heavy_torsions = heavy_torsions + 1
                                                 missing_torsions(heavy_torsions)%i = missing_bonds(j)%i
                                                 missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
                                                 missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
                                                 missing_torsions(heavy_torsions)%l = missing_bonds(h)%i
-                                        elseif(missing_bonds(i)%j .eq. missing_bonds(j)%j) then
+                                        endif
+                                elseif(missing_bonds(i)%j .eq. missing_bonds(h)%i) then
+                                        if (missing_bonds(i)%i .eq. missing_bonds(j)%i) then
                                                 heavy_torsions = heavy_torsions + 1
                                                 missing_torsions(heavy_torsions)%i = missing_bonds(j)%j
+                                                missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
+                                                missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
+                                                missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
+                                        elseif(missing_bonds(i)%i .eq. missing_bonds(j)%j) then
+                                                heavy_torsions = heavy_torsions + 1
+                                                missing_torsions(heavy_torsions)%i = missing_bonds(j)%i
                                                 missing_torsions(heavy_torsions)%j = missing_bonds(i)%i
                                                 missing_torsions(heavy_torsions)%k = missing_bonds(i)%j
                                                 missing_torsions(heavy_torsions)%l = missing_bonds(h)%j
@@ -6083,7 +6088,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
                         missing_heavy(i)%angles(:)   = -1
                         missing_heavy(i)%torsions(:) = -1
                         if(lib(irc_solvent)%atnam(i)(1:1) == 'H') then
-                                missing_heavy(i)%atom_missing = .false.
+                                missing_heavy(i)%atom_missing = .true.
                         end if
                                 added = 0
 			do j = 1, heavy_bonds
@@ -6114,7 +6119,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 		missing_heavy(1)%atom_missing = .false.
 
                 allocate(wat_temp(lib(irc_solvent)%nat))
-
+                wat_temp(:) = zero
 		added_heavy = 0
 		do w_mol = 1, max_waters
 ! Q always generates the first solvent atom on a grid, so we start generating missing heavy atoms after that
