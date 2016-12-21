@@ -1779,7 +1779,7 @@ integer function genH(j, residue)
 				flipped = .false.
 				do lineiter = 1, max_line_iterations
 					Vtot  = zero
-					dVtot = dVtot * zero
+					dVtot = zero
 					!calc. potential & gradient
 					!angles
 					do a = 1, nHang
@@ -2032,12 +2032,12 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 						(.not.(missing_local(missing_torsions(miss)%j)%atom_missing)).and.&
 						(.not.(missing_local(missing_torsions(miss)%i)%atom_missing))) then
 						nHtor = nHtor + 1
-						Htor_latom(nHtor) = missing_torsions(miss)%j
-						Htor_katom(nHtor) = missing_torsions(miss)%i
+						Htor_katom(nHtor) = missing_torsions(miss)%j
+						Htor_latom(nHtor) = missing_torsions(miss)%i
                                                 taci = lib(irc_solvent)%tac_lib(missing_torsions(miss)%k)
                                                 tacj = lib(irc_solvent)%tac_lib(missing_torsions(miss)%l)
-                                                tacl = lib(irc_solvent)%tac_lib(missing_torsions(miss)%j)
-                                                tack = lib(irc_solvent)%tac_lib(missing_torsions(miss)%i)
+                                                tack = lib(irc_solvent)%tac_lib(missing_torsions(miss)%j)
+                                                tacl = lib(irc_solvent)%tac_lib(missing_torsions(miss)%i)
                                                 tmp_tor_codes = torcode(taci,tacj,tack,tacl)
 ! remember here that tor% structures are a special data structure with n fields
                                                 tmp_tor(nHtor)%ntor = tmp_tor_codes%ncod
@@ -2072,7 +2072,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 			flipped = .false.
 			do lineiter = 1, max_line_iterations
 				Vtot  = zero
-				dVtot = dVtot * zero
+				dVtot = zero
 				!calc. potential & gradient
 				!angles
 				rjH = xH - xj 
