@@ -5504,22 +5504,20 @@ real(kind=prec) :: Vel_omp,Vvdw_omp
 threads_num = omp_get_num_threads()
 thread_id = omp_get_thread_num()
 
-quotient = (nbww_pair/(solv_atom**2))/threads_num
-remainder = MOD(nbww_pair/(solv_atom**2), threads_num)
+quotient = nbww_pair/threads_num
+remainder = MOD(nbww_pair, threads_num)
 
 mp_start = thread_id * quotient + 1 + MIN(thread_id, remainder)
 mp_end = mp_start + quotient - 1
-mp_start = (mp_start*(solv_atom**2)) - (solv_atom**2) + 1
 if (remainder .gt. thread_id) then
 mp_end = mp_end + 1
 endif
-mp_end = (mp_end*(solv_atom**2))
 
 Vel_omp=zero
 Vvdw_omp=zero
-do iw = mp_start,mp_end,solv_atom
+do iw = mp_start,mp_end
 #else
-do iw = 1, nbww_pair, solv_atom**2
+do iw = 1, nbww_pair
 #endif
 i     = nbww(iw)%i
 j     = nbww(iw)%j
