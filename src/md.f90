@@ -1945,7 +1945,7 @@ call pot_energy(E,EQ,.true.)
 ! exclusions and qcp if needed
 ! exc are only done on master, while qcp is spread to nodes
 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
-        if (nodeid .eq. 0 .and. use_excluded_groups) call calculate_exc
+        if (use_excluded_groups) call calculate_exc
         if (use_qcp) call qcp_run(Tfree,E,EQ)
 end if
 
@@ -2027,7 +2027,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
-                        call write_out(E,EQ)
+                        call write_out
                 end if
                 ! backup file of coordinates and velocities
                 if ( mod(istep,1000) .eq. 0 ) then
@@ -2082,7 +2082,7 @@ call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 call pot_energy(E,EQ,.true.)
 if (nodeid .eq. 0) then
         write(*,*)
-        call write_out(E,EQ)
+        call write_out
         call write_xfin
 end if
 

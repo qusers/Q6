@@ -1946,7 +1946,7 @@ if (noffd .gt. 0 ) call offdiag
 
 if (nodeid.eq.0) then
 call qatom_savetowrite(EQ,1)
-if(qcp_verbose) call write_out(qcp_E,qcp_EQ)
+if(qcp_verbose) call qcp_write_out
 ! save to file
 call put_ene(11,EQ_save,OFFD,ene_header%arrays,nstates)
 end if
@@ -2075,5 +2075,73 @@ if(allocated(x_save)) deallocate(x_save)
 if(allocated(d_save)) deallocate(d_save)
 
 end subroutine qcp_shutdown
+
+!need individual write out for optimization reasons
+subroutine qcp_write_out
+! arguments
+! local variables
+integer					::	i,istate,ngrms
+
+! header line
+write(*,633) 'QCP energy'
+633     format('=========================== ',A,' =============================')
+
+! q-atom energies
+if(nstates > 0) then
+  write(*,633) 'QCP Q-atom energies'
+end if
+
+write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
+
+do istate =1, nstates
+  write (*,32) 'Q-Q', istate, qcp_EQ(istate)%lambda, qcp_EQ(istate)%qq%el, qcp_EQ(istate)%qq%vdw
+end do
+write(*,*)
+if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
+  do istate =1, nstates
+        write (*,32) 'Q-prot', istate,qcp_EQ(istate)%lambda, qcp_EQ(istate)%qp%el, qcp_EQ(istate)%qp%vdw
+  end do
+  write(*,*)
+end if
+
+if(nwat > 0) then
+  do istate =1, nstates
+        write (*,32) 'Q-wat', istate, qcp_EQ(istate)%lambda, qcp_EQ(istate)%qw%el, qcp_EQ(istate)%qw%vdw
+  end do
+  write(*,*)
+end if
+
+do istate =1, nstates
+  write (*,32) 'Q-surr.',istate, qcp_EQ(istate)%lambda, &
+                qcp_EQ(istate)%qp%el + qcp_EQ(istate)%qw%el, qcp_EQ(istate)%qp%vdw &
+                + qcp_EQ(istate)%qw%vdw
+end do
+write(*,*)
+
+do istate = 1, nstates
+  write (*,36) 'Q-any', istate, qcp_EQ(istate)%lambda, qcp_EQ(istate)%qx%el,&
+                qcp_EQ(istate)%qx%vdw, qcp_EQ(istate)%q%bond, qcp_EQ(istate)%q%angle,&
+                qcp_EQ(istate)%q%torsion, qcp_EQ(istate)%q%improper
+end do
+write(*,*)
+
+write(*,22) 'total', 'restraint'
+do istate = 1, nstates
+  write (*,32) 'Q-SUM', istate, qcp_EQ(istate)%lambda,&
+                qcp_EQ(istate)%total, qcp_EQ(istate)%restraint
+end do
+do i=1,noffd
+  write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &
+                offd2(i)%k, offd2(i)%l, offd(i)%rkl
+360	  format ('H(',i2,',',i2,') =',f8.2,' dist. between Q-atoms',2i4, ' =',f8.2)
+end do
+
+22	format('type   st lambda',2A10)
+26	format('type   st lambda',6a10)
+32	format (a,T8,i2,f7.4,2f10.2)
+36	format (a,T8,i2,f7.4,6f10.2)
+
+end subroutine qcp_write_out
+
 
 end module QCP

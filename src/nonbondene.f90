@@ -6827,6 +6827,7 @@ TYPE(qr_vec)                    :: shift
 TYPE(ENERET_TYPE)               :: nb_ene
 TYPE(OQ_ENERGIES)               :: EQ_loc(size(EQ))
 
+if(nodeid.eq.0) then
 
 do aindex = 2, ene_header%arrays - QCP_N
 do istate = 1, nstates
@@ -6906,6 +6907,8 @@ end do ! nstates
 call qatom_savetowrite(EQ_loc,aindex)
 
 end do ! aindex
+
+end if
 
 end subroutine calculate_exc
 

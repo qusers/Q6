@@ -592,7 +592,7 @@ write(*,*)
 call centered_heading('ABNORMAL TERMINATION', '!')
 ! write final energies if run has started
 if (istep > 0) then
-        if ( mod(istep,iout_cycle) .ne. 1 ) call write_out(E,EQ)
+        if ( mod(istep,iout_cycle) .ne. 1 ) call write_out
 end if
         if(allocated(v)) then
         !save restart file for diagnosing coordinate problems
@@ -636,18 +636,14 @@ end subroutine die
 ! TODO
 ! needs to split apart and made much easier to handle
 
-subroutine write_out(E_loc,EQ_loc)
+subroutine write_out
 ! arguments
-TYPE(ENERGIES)                          :: E_loc
-TYPE(OQ_ENERGIES)                        :: EQ_loc(:)
 ! local variables
 integer					::	i,istate,ngrms
 
 ! header line
 if(istep >= nsteps) then
 write(*,3) 'Energy summary'
-else if (nsteps .lt. 0) then
-write(*,633) 'QCP classical energy'
 else
 write(*,2) 'Energy summary', istep
 end if
@@ -659,29 +655,29 @@ write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
 4 format(16X, 6A10)
 
 ! row by row: solute, solvent, solute-solvent, LRF, q-atom
-write(*,6) 'solute', E_loc%pp%el, E_loc%pp%vdw, E_loc%p%bond, E_loc%p%angle, E_loc%p%torsion, E_loc%p%improper
+write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper
 6 format(A,T17, 6F12.2)
 
 if(nwat > 0) then
-write(*,6) 'solvent', E_loc%ww%el, E_loc%ww%vdw, E_loc%w%bond, E_loc%w%angle, E_loc%w%torsion, E_loc%w%improper
+write(*,6) 'solvent', E%ww%el, E%ww%vdw, E%w%bond, E%w%angle, E%w%torsion, E%w%improper
 end if
 
-write(*,6) 'solute-solvent', E_loc%pw%el, E_loc%pw%vdw
+write(*,6) 'solute-solvent', E%pw%el, E%pw%vdw
 
 if(use_LRF) then
-write(*,6) 'LRF', E_loc%LRF
+write(*,6) 'LRF', E%LRF
 end if
 
 if(nqat .gt. 0) then
-	write(*,6) 'Q-atom', E_loc%qx%el, E_loc%qx%vdw, E_loc%q%bond, E_loc%q%angle, E_loc%q%torsion, E_loc%q%improper
+	write(*,6) 'Q-atom', E%qx%el, E%qx%vdw, E%q%bond, E%q%angle, E%q%torsion, E%q%improper
 end if
 
 ! restraints
 write(*,*)
 write(*,4) 'total', 'fix', 'slvnt_rad', 'slvnt_pol', 'shell', 'solute'
-write(*,6) 'restraints', E_loc%restraint%total, E_loc%restraint%fix, &
-        E_loc%restraint%solvent_radial, E_loc%restraint%water_pol, E_loc%restraint%shell, &
-        E_loc%restraint%protein
+write(*,6) 'restraints', E%restraint%total, E%restraint%fix, &
+        E%restraint%solvent_radial, E%restraint%water_pol, E%restraint%shell, &
+        E%restraint%protein
 write(*,*)
 
 ! totals
@@ -694,10 +690,10 @@ if(force_rms) then
         grms = q_sqrt(grms)
 !        grms = sqrt(dot_product(d(:), d(:))/(3*natom))
         write(*,4) 'total', 'potential', 'kinetic', '', 'RMS force'
-        write(*,14) 'SUM', E_loc%potential+E_loc%kinetic, E_loc%potential, E_loc%kinetic, grms
+        write(*,14) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic, grms
 else
         write(*,4) 'total', 'potential', 'kinetic'
-        write(*,6) 'SUM', E_loc%potential+E_loc%kinetic, E_loc%potential, E_loc%kinetic
+        write(*,6) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic
 end if
 14 format(A,T17, 3F10.2, 10X, F10.2)
 
@@ -705,8 +701,6 @@ end if
 if(nstates > 0) then
 if(istep >= nsteps) then
   write(*,3) 'Q-atom energies'
-else if(nsteps .lt. 0) then
-  write(*,633) 'QCP Q-atom energies'
 else
   write(*,2) 'Q-atom energies', istep
 end if
@@ -714,41 +708,41 @@ end if
 write(*,26) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
 
 do istate =1, nstates
-  write (*,32) 'Q-Q', istate, EQ_loc(istate)%lambda, EQ_loc(istate)%qq%el, EQ_loc(istate)%qq%vdw
+  write (*,32) 'Q-Q', istate, EQ(istate)%lambda, EQ(istate)%qq%el, EQ(istate)%qq%vdw
 end do
 write(*,*)
 if(nat_solute > nqat) then !only if there is something else than Q-atoms in topology
   do istate =1, nstates
-        write (*,32) 'Q-prot', istate,EQ_loc(istate)%lambda, EQ_loc(istate)%qp%el, EQ_loc(istate)%qp%vdw
+        write (*,32) 'Q-prot', istate,EQ(istate)%lambda, EQ(istate)%qp%el, EQ(istate)%qp%vdw
   end do
   write(*,*)
 end if
 
 if(nwat > 0) then
   do istate =1, nstates
-        write (*,32) 'Q-wat', istate, EQ_loc(istate)%lambda, EQ_loc(istate)%qw%el, EQ_loc(istate)%qw%vdw
+        write (*,32) 'Q-wat', istate, EQ(istate)%lambda, EQ(istate)%qw%el, EQ(istate)%qw%vdw
   end do
   write(*,*)
 end if
 
 do istate =1, nstates
-  write (*,32) 'Q-surr.',istate, EQ_loc(istate)%lambda, &
-                EQ_loc(istate)%qp%el + EQ_loc(istate)%qw%el, EQ_loc(istate)%qp%vdw &
-                + EQ_loc(istate)%qw%vdw
+  write (*,32) 'Q-surr.',istate, EQ(istate)%lambda, &
+                EQ(istate)%qp%el + EQ(istate)%qw%el, EQ(istate)%qp%vdw &
+                + EQ(istate)%qw%vdw
 end do
 write(*,*)
 
 do istate = 1, nstates
-  write (*,36) 'Q-any', istate, EQ_loc(istate)%lambda, EQ_loc(istate)%qx%el,&
-                EQ_loc(istate)%qx%vdw, EQ_loc(istate)%q%bond, EQ_loc(istate)%q%angle,&
-                EQ_loc(istate)%q%torsion, EQ_loc(istate)%q%improper
+  write (*,36) 'Q-any', istate, EQ(istate)%lambda, EQ(istate)%qx%el,&
+                EQ(istate)%qx%vdw, EQ(istate)%q%bond, EQ(istate)%q%angle,&
+                EQ(istate)%q%torsion, EQ(istate)%q%improper
 end do
 write(*,*)
 
 write(*,22) 'total', 'restraint'
 do istate = 1, nstates
-  write (*,32) 'Q-SUM', istate, EQ_loc(istate)%lambda,&
-                EQ_loc(istate)%total, EQ_loc(istate)%restraint
+  write (*,32) 'Q-SUM', istate, EQ(istate)%lambda,&
+                EQ(istate)%total, EQ(istate)%restraint
 end do
 do i=1,noffd
   write (*,360) offd(i)%i, offd(i)%j, Hij(offd(i)%i, offd(i)%j), &

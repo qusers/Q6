@@ -1078,7 +1078,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 end if
                 ! end-of-line, then call write_out, which will print a report on E and EQ
                 if ( mod(istep,iout_cycle) == 0 ) then
-                        call write_out(E,EQ)
+                        call write_out
                 end if
                 ! backup file of coordinates and velocities
                 if ( mod(istep,1000) .eq. 0 ) then
@@ -1119,7 +1119,7 @@ if (nodeid .eq. 0) then
         ! TODO
         ! need flag in restart to not allow MD without new velocities
         v(:) = v(:) * zero
-        call write_out(E,EQ)
+        call write_out
         call write_xfin
 end if
 
