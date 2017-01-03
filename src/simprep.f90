@@ -1146,7 +1146,7 @@ do k = 1, nexspec
                                 write(*,594) k
                                 call die('invalid special exclusion data')
                         else !exlcude in all states
-                                if(abs(j-i) <= max_nbr_range) then
+                                if(iabs(j-i) <= max_nbr_range) then
                                         if(i < j) then
                                                 listex(j-i,i) = .true.
                                         else
@@ -2816,7 +2816,7 @@ jaloop:                 do ja = cgp(jg)%first, cgp(jg)%last
 ! count once
                                 if ( ig .eq. jg .and. i .ge. j ) cycle jaloop
 
-                                if ( abs(j-i) .le. max_nbr_range ) then
+                                if ( iabs(j-i) .le. max_nbr_range ) then
                                         if ( i .lt. j ) then
                                                 if ( listex(j-i,i) ) then
                                                         cycle jaloop
@@ -4239,7 +4239,7 @@ end do
 !	If arithmetic combination rule (ivdw_rule=2) take sqrt(epsilon) now
 if ( ivdw_rule .eq. 2 ) then
 do i=1,natyps
-  iaclib(i)%bvdw(:) = sqrt(abs(iaclib(i)%bvdw(:)))
+  iaclib(i)%bvdw(:) = q_sqrt2(q_abs2(iaclib(i)%bvdw(:)))
 end do
 end if
 

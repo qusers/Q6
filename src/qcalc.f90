@@ -168,7 +168,7 @@ character*80				:: lambda
 		write(*,666) 'Lambda in state ', states, ' = ', lamda(states)
 666	format(a,i2,a,f10.3)
         end do
-        if(( abs(1._8 - totlambda)).gt.eps)  then
+        if(( q_abs(1._8 - totlambda)).gt.eps)  then
                 write(*,*) 'Lambda values do not add up to one, aborting'
 667	format(a,f10.3)
                 write(*,667) 'Total value is ',totlambda

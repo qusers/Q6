@@ -536,8 +536,8 @@ subroutine pmfRead_InputQatom
 	character(len=256)	:: buf, head, chVal
 	integer							:: res
 
-	if(input%show_abs(1:6).eq.'QATOM=') then
-		chVal = input%show_abs(7:20)
+	if(input%show_q_abs(1:6).eq.'QATOM=') then
+		chVal = input%show_q_abs(7:20)
 
 		p = index(chVal,':')
 		if(p.ne.0) then
@@ -980,7 +980,7 @@ real function PMF_Score(lig,prot,inp)
 			
 			score = pmfdata(k,l,m)
 			lig%atom(i)%abs  = lig%atom(i)%abs + score
-			if(abs(score)>0.000001) lig%atom(i)%nonzero_score = 1
+			if(q_abs(score)>0.000001) lig%atom(i)%nonzero_score = 1
 
 			if(input%show_detailed_abs.eq.'YES') then
 				lig%atom(i)%abscount = lig%atom(i)%abscount +1						! save detailed score info
@@ -1503,7 +1503,7 @@ integer function pmfEval_Rule(atom,mol,r)
 		end if
 	end if
 
-	if(invert.eq.1) mark = abs(1-mark)
+	if(invert.eq.1) mark = q_abs(1-mark)
 	pmfEval_Rule = mark
 end function
 

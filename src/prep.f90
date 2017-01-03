@@ -1814,7 +1814,7 @@ integer function genH(j, residue)
 						dx_line = -dx_line !next step back
 						flipped = .true.
 					endif
-					rms_dV = q_sqrt(abs(q_dotprod(dVtot, dVLast)))
+					rms_dV = q_sqrt(q_abs(q_dotprod(dVtot, dVLast)))
 					if(rms_dV < convergence_criterum / 10) then
 						exit !reached a potential minimum along the search line
 					endif
@@ -2115,7 +2115,7 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 					dx_line = -dx_line !next step back
 					flipped = .true.
 				endif
-				rms_dV = q_sqrt(abs(q_dotprod(dVtot, dVLast)))
+				rms_dV = q_sqrt(q_abs(q_dotprod(dVtot, dVLast)))
 				if(rms_dV < convergence_criterum / 10) then
 					exit !reached a potential minimum along the search line
 				endif
@@ -2797,7 +2797,7 @@ subroutine oldreadlib(filnam)
 				qgrp = qgrp + lib(nlibres)%crg_lib(igp)
 			enddo
 			!check fractional charges
-			if(abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
+			if(q_abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
 				write( *, 130) qgrp, i
 			end if
 			qtot_grp = qtot_grp + qgrp
@@ -2806,7 +2806,7 @@ subroutine oldreadlib(filnam)
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(abs(qtot - qtot_grp)  >0.000001_prec) then
+		if(q_abs(qtot - qtot_grp)  >0.000001_prec) then
 			write(*,160)
 		end if
 	enddo
@@ -3139,7 +3139,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 				ntot = ntot + lib(nlibres)%natcgp(i)
 
 				!check fractional charges
-				if(abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
+				if(q_abs(qgrp - nint(qgrp) ) >0.000001_prec)  then
 					write( *, 130) qgrp, i
 				end if
 				qtot_grp = qtot_grp + qgrp
@@ -3150,7 +3150,7 @@ ruleloop: do i = 1, lib(nlibres)%nrules
 		if(ntot /= lib(nlibres)%nat) then
 			write(*, 150)
 		endif
-		if(abs(qtot - qtot_grp)  >0.000001_prec) then
+		if(q_abs(qtot - qtot_grp)  >0.000001_prec) then
 			write(*,160)
 		end if
 	end do !entries
@@ -5655,14 +5655,14 @@ subroutine solvate_sphere_file(shift)
 	end if
 
   ! estimate amount of memory to allocate for temporary water coordinates
-	if((is_box .and. abs(rwat) <= boxl/2.0_prec)) then
+	if((is_box .and. q_abs(rwat) <= boxl/2.0_prec)) then
 		!don't need to replicate
 		!5% safety margin
 		nwat_allocate = int(lib(irc_solvent)%density*1.05_prec*volume)
 	elseif(is_box) then
-		newboxl = boxl*2**(int(q_logarithm(abs(rwat)*2.0_prec/boxl)/q_logarithm(2.0_prec)+0.9999_prec))
+		newboxl = boxl*2**(int(q_logarithm(q_abs(rwat)*2.0_prec/boxl)/q_logarithm(2.0_prec)+0.9999_prec))
 		nwat_allocate = int(lib(irc_solvent)%density*1.05_prec*newboxl**3)
-	elseif(abs(rwat) > boxl) then !it's a sphere and it's too small
+	elseif(q_abs(rwat) > boxl) then !it's a sphere and it's too small
 		write(*,'(a)') '>>>>> ERROR: Water sphere in the file is too small.'
 		call parse_reset
 		close(13)
@@ -5706,8 +5706,8 @@ subroutine solvate_sphere_file(shift)
   ! --- Replicate box if necessary
 
   nnw = nw
-  if (is_box .and.  abs(rwat) .gt. boxl/2. ) then
-     do while ( abs(rwat) .gt. boxl/2. )
+  if (is_box .and.  q_abs(rwat) .gt. boxl/2. ) then
+     do while ( q_abs(rwat) .gt. boxl/2. )
         write (*,'(a)') 'Replicating periodic box...'
         xwshift(1)%x = boxl
         xwshift(1)%y = zero
@@ -6318,7 +6318,7 @@ real(kind=prec) function rwat_eff()
 	if ( nwat .eq. 0 ) return
 
 	!make sure to include all waters in topology
-  bins = int(max(abs(rwat), rexcl_o)*100)+1000
+  bins = int(max(q_abs(rwat), rexcl_o)*100)+1000
   allocate(npro_of_r(bins), stat=alloc_status)
   call check_alloc('protein radial distribution array')
 

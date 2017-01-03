@@ -1124,7 +1124,7 @@ do mol=1,shake_molecules
                                 j = shake_mol(mol)%bond(ic)%j
                                 xij     = q_dist5(x(j),x(i))
                                 diff    = shake_mol(mol)%bond(ic)%dist2 - xij%r2
-                                if(abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
+                                if(q_abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
                                         shake_mol(mol)%bond(ic)%ready = .true. ! in range
                                 end if
                                 xxij = xx(i) - xx(j)

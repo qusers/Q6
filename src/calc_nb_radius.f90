@@ -397,7 +397,7 @@ subroutine nb_make_list(mask1, mask2, nb_list)
 	
 					!Are atoms of pair in 1-4 position?
 !					if(iqatom(atomj) == 0 .and. iqatom(atomk) == 0) then !neither atom is q_atom
-					if (abs(atomk-atomj) .le. max_nbr_range ) then
+					if (q_abs(atomk-atomj) .le. max_nbr_range ) then
 						if (atomj .gt. atomk ) then
 							if ( list14(atomj-atomk, atomk) ) LJ_code = 3 !3 means 1-4
 																			!list14 contains 1-4 neighbors

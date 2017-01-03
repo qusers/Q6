@@ -196,7 +196,7 @@ do k = 1, nexspec
                                 write(*,594) k
                                 call die_general('invalid special exclusion data')
                         else !exlcude in all states
-                                if(abs(j-i) <= max_nbr_range) then
+                                if(q_abs(j-i) <= max_nbr_range) then
                                         if(i < j) then
                                                 listex(j-i,i) = .true.
                                         else

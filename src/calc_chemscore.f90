@@ -1308,7 +1308,7 @@ real(kind=prec) function g1_hb(a,b)
         TYPE(qr_dist)           :: dr
 						! ideal value 1.85 Å
 	dr = dist(a,b)
-	dev_dr = abs(1.85_prec-dr%r)
+	dev_dr = q_abs(1.85_prec-dr%r)
 
 	if(dev_dr < 0.65_prec) then		!if atoms are interacting at all
 		if(dev_dr <= 0.25_prec) then
@@ -1328,7 +1328,7 @@ real(kind=prec) function g2_hb(a,b,c)
 	TYPE(angl_val)  :: ang
 	
 	ang = angle(a,b,c)
-	dev_ang = abs(180.0_prec-ang%angl)
+	dev_ang = q_abs(180.0_prec-ang%angl)
 
 	if(dev_ang < 80.0_prec) then
 		if(dev_ang <= 30.0_prec) then

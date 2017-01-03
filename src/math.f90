@@ -411,6 +411,21 @@ q_sqrt = temp2
 
 end function q_sqrt
 
+function q_sqrt2(a)
+! returns result of dsqrt as real of chosen precision type
+! to make compilation independent of variable size
+! args
+real(kind=prec) :: a(:)
+reaL(kind=prec) :: q_sqrt2(size(a))
+! locals
+real(kind=doubleprecision) :: temp1(size(a)),temp2(size(a))
+
+temp1(:)  = a(:)
+temp2(:)  = dsqrt(temp1(:))
+q_sqrt2(:) = temp2(:)
+
+end function q_sqrt2
+
 real(kind=prec) function q_atan(a)
 ! returns results of datan as real of chosen precision type
 ! to make compilation independent of variable size
@@ -515,6 +530,31 @@ q_ceiling(3) = ceiling(a%z)
 
 end function q_ceiling
 
+real(kind=prec) function q_abs(a)
+! returns absolute number in requested precision
+! always calculated as dabs
+! args
+real(kind=prec) :: a
+! locals
+real(kind=doubleprecision) :: temp1,temp2
+temp1 = a
+temp2 = dabs(temp1)
+q_abs = temp2
+end function q_abs
+
+function q_abs2(a)
+! returns absolute number in requested precision
+! always calculated as dabs
+! args
+real(kind=prec) :: a(:)
+! locals
+real(kind=prec) :: q_abs2(size(a))
+real(kind=doubleprecision) :: temp1(size(a)),temp2(size(a))
+temp1(:) = a(:)
+temp2(:) = dabs(temp1(:))
+q_abs2(:) = temp2(:)
+end function q_abs2
+
 subroutine math_initialize
         pi = 4.0_prec*q_atan(one)
         deg2rad = pi/180.0_prec
@@ -533,7 +573,7 @@ character(*)            :: c
 ! locals
 integer                 :: i
 
-666     format(a,a30,3f18.12)
+666     format(a,a30,3f20.16)
 
 vecsum = zero
 do i = 1 , b

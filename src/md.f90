@@ -2033,7 +2033,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 if ( mod(istep,1000) .eq. 0 ) then
                         call write_xfin
                 end if
-                if ( abs(Temp-Tlast)/Temp > TEMP_PRINT_THRESHOLD .or. &
+                if ( q_abs(Temp-Tlast)/Temp > TEMP_PRINT_THRESHOLD .or. &
                         (mod(istep, itemp_cycle) == 0 .and. istep > 0)) then
                         ! temperatures
                         Tlast = Temp

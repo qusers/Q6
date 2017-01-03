@@ -1401,8 +1401,8 @@ subroutine XReadInputQatom
 	character(len=256)	:: buf, head, chVal
 	integer							:: res
 
-	if(input%show_abs(1:6).eq.'QATOM=') then
-		chVal = input%show_abs(7:20)
+	if(input%show_q_abs(1:6).eq.'QATOM=') then
+		chVal = input%show_q_abs(7:20)
 
 		p = index(chVal,':')
 		if(p.ne.0) then
@@ -5181,7 +5181,7 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 	! note 'fabs' is applied because SB strength could be negative
 	do i = 0,num_candidate-1 -1 
 		do j = i+1,num_candidate -1 
-			if(abs(candidate(i)%score)>=abs(candidate(j)%score)) goto 1
+			if(q_abs(candidate(i)%score)>=q_abs(candidate(j)%score)) goto 1
 !			write(*,*) 'swapping ', i, j
 			!call SWAP(candidate(i),candidate(j))
 			call HBond_operator_copy(tmp_hbond,candidate(i))
@@ -5205,7 +5205,7 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 				v2(k) = protein%atom(patom-1)%coor(k)-ligand%mol%atom(latom-1)%coor(k) 
 			end do
 
-			angle=abs(Angle_of_Two_Vectors(v1,v2)) 
+			angle=q_abs(Angle_of_Two_Vectors(v1,v2)) 
 
 			if(angle<45.0) then
 				candidate(j)%score=0.000 
@@ -5228,7 +5228,7 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 !				v2(k) = ligand%mol%atom(latom-1)%coor(k)-protein%atom(patom-1)%coor(k) 
 !      end do
 !
-!      angle=abs(Angle_of_Two_Vectors(v1,v2)) 
+!      angle=q_abs(Angle_of_Two_Vectors(v1,v2)) 
 !      if(angle<45.0) then
 !				candidate(j)%score=0.000 
 !      else 
@@ -5646,7 +5646,7 @@ real function Ligand_Calculate_HB(ligand,protein)
 
 	! then sum their contributions
 	do i = 0,num_candidate -1 
-		if(abs(candidate(i)%score)<0.01) then
+		if(q_abs(candidate(i)%score)<0.01) then
 			goto 1
 		else
 	 	 sum=sum+candidate(i)%score 
@@ -5742,7 +5742,7 @@ integer function Ligand_Get_HBond_Pair_PL(ligand,protein,candidate)
 		 ! this section is used to differentiate HB and SB
 		 if((ligand%mol%atom(i)%ttype.eq.'O.co2').and.(protein%atom(j)%ttype.eq.'O.co2')) then
 			 sb=0
-	 	 elseif(abs(ligand%mol%atom(i)%q)>0.01.and.abs(protein%atom(j)%q)>0.01)  then
+	 	 elseif(q_abs(ligand%mol%atom(i)%q)>0.01.and.q_abs(protein%atom(j)%q)>0.01)  then
 			 sb=1
 		 else 
 			 sb=0
@@ -5768,7 +5768,7 @@ integer function Ligand_Get_HBond_Pair_PL(ligand,protein,candidate)
 
 		 slask = HBond_Value_HBond_2(tmp_candidate) 
 
-		 if(abs(tmp_candidate%score)>0.000) then
+		 if(q_abs(tmp_candidate%score)>0.000) then
 			candidate(num)=tmp_candidate
 			num = num +1
 		 else
@@ -6141,7 +6141,7 @@ type(tXDotSet) function ForceField_Get_Surface_Dot_Rxyz(bigR, x, y, z)
   mark=0
 
   do i = 0,ff%num_sdot_type -1
-    if(abs(bigR-ff%sdot(i)%r)>0.025) then
+    if(q_abs(bigR-ff%sdot(i)%r)>0.025) then
 			goto 1
     else
 			!tmp_set=ff%sdot(i)
@@ -6721,7 +6721,7 @@ end function Angle
 !	 	 ! align H to the optimal position and then recalculate <D-H-bigA 
 !	 	 b=0.98  ! D-H length 
 !	 	 c=d 	 ! D-bigA length 
-!	 	 bigA=abs(Angle(hbond%D%root,hbond%D%coor,hbond%A%coor)-109.0)  
+!	 	 bigA=q_abs(Angle(hbond%D%root,hbond%D%coor,hbond%A%coor)-109.0)  
 !	 	 a=sqrt(b*b+c*c-2*b*c*cos(bigA/180.0)) 	! H-bigA length
 !		 bigC=acos((a*a+b*b-c*c)/(2*a*b))/PI*180.0 
 !	 	 a0=180.0-bigC 
