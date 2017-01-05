@@ -642,9 +642,9 @@ calc = torsion_calc(x(i),x(j),x(k),x(l))
 ! ---       energy
 
 arg = qtorlib(ic)%rmult*calc%angl-qtorlib(ic)%deltor
-pe = qtorlib(ic)%fk*(one+cos(arg))
+pe = qtorlib(ic)%fk*(one+q_cos(arg))
 E_loc = E_loc + pe*gamma
-dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*sin(arg)*gamma*lambda
+dv = -qtorlib(ic)%rmult*qtorlib(ic)%fk*q_sin(arg)*gamma*lambda
 
 ! ---       forces
 
@@ -721,11 +721,11 @@ calc = torsion_calc(x(i),x(j),x(k),x(l))
 
 arg = tor_lib(ic)%rmult*calc%angl-tor_lib(ic)%deltor
 #ifdef _OPENMP
-    mp_real_tmp = mp_real_tmp + tor_lib(ic)%fk*(one+cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
+    mp_real_tmp = mp_real_tmp + tor_lib(ic)%fk*(one+q_cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
 #else    
-    torsion = torsion + tor_lib(ic)%fk*(one+cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
+    torsion = torsion + tor_lib(ic)%fk*(one+q_cos(arg))*tor_lib(ic)%paths   !lib%paths is previously inverted 
 #endif
-dv = -tor_lib(ic)%rmult*tor_lib(ic)%fk*sin(arg)*tor_lib(ic)%paths
+dv = -tor_lib(ic)%rmult*tor_lib(ic)%fk*q_sin(arg)*tor_lib(ic)%paths
 
 ! ---       forces
 d(i) = d(i) + calc%a_vec*dv
@@ -1149,7 +1149,7 @@ do mol=1,shake_molecules
                                         j = shake_mol(mol)%bond(ic)%j
                                         dist = q_dist4(xx(i),xx(j))
                                         write (*,100) i,j,dist,&
-                                                sqrt(shake_mol(mol)%bond(ic)%dist2)
+                                                q_sqrt(shake_mol(mol)%bond(ic)%dist2)
                                 end if
                         end do
                         dead_shake = .true.

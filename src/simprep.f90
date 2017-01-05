@@ -1026,8 +1026,8 @@ end if
 !Adapt LJ parameters to topology
 !If arithmetic combination rule take sqrt(epsilon) now
 if (qvdw_flag .and. ivdw_rule .eq. 2 ) then
-        qbvdw(:,1) = sqrt( qbvdw(:,1) )
-        qbvdw(:,3) = sqrt( qbvdw(:,3) )
+        qbvdw(:,1) = q_sqrt2( qbvdw(:,1) )
+        qbvdw(:,3) = q_sqrt2( qbvdw(:,3) )
 end if
 
 !remove redefined bonded interactions from topology
@@ -2304,7 +2304,7 @@ TYPE(qr_vec)                                    :: vg
 kT = Boltz*Tmaxw
 
 do i=1,natom
-        sd = sqrt (kT/iaclib(iac(i))%mass)
+        sd = q_sqrt (kT/iaclib(iac(i))%mass)
         call q_gauss(zero,sd,vg,iseed)
         v(i) = vg
 end do
@@ -3514,12 +3514,12 @@ end if
 !is done after shake has started, here shake_constraints are still zero
 
 !scale charges by sqrt(coulomb_constant) 
-crg(:) = crg(:) * sqrt(coulomb_constant)
+crg(:) = crg(:) * q_sqrt(coulomb_constant)
 if(nwat > 0) then
-chg_solv(:) = chg_solv(:) * sqrt(coulomb_constant)
+chg_solv(:) = chg_solv(:) * q_sqrt(coulomb_constant)
 end if
 if(nqat > 0) then
-        qcrg(:,:) = qcrg(:,:) * sqrt(coulomb_constant)
+        qcrg(:,:) = qcrg(:,:) * q_sqrt(coulomb_constant)
 end if
 if (use_excluded_groups) then
 !start writing the energy file header with the needed information

@@ -1884,13 +1884,13 @@ logical function qatom_load_fep(fep_file)
 							sc_bj = iaclib(j)%bvdw(1)
 							if (alpha_max(i,i2) /= 0) then
 								if (ivdw_rule == 1) then !geometric vdw rule
-									sc_lookup(i,j,i2) = (-sc_bq*sc_bj+sqrt(sc_bq*sc_bq*sc_bj* &
+									sc_lookup(i,j,i2) = (-sc_bq*sc_bj+q_sqrt(sc_bq*sc_bq*sc_bj* &
 										sc_bj+4*alpha_max(i,i2)*sc_aq*sc_aj))/(2*alpha_max(i,i2))
 								else !arithmetic vdw rule. OBS some epsilons (q atom epsilons, sc_bq)
 										!	have not been square rooted yet. We'll take this into account
 										!   when calculating the sc_lookup
-									sc_lookup(i,j,i2) = (-2*sqrt(sc_bq)*sc_bj+2*sqrt(sc_bq*sc_bj**2+ &
-									alpha_max(i,i2)*sqrt(sc_bq)*sc_bj))*(sc_aq+sc_aj)**6/(2*alpha_max(i,i2))
+									sc_lookup(i,j,i2) = (-2*q_sqrt(sc_bq)*sc_bj+2*q_sqrt(sc_bq*sc_bj**2+ &
+									alpha_max(i,i2)*q_sqrt(sc_bq)*sc_bj))*(sc_aq+sc_aj)**6/(2*alpha_max(i,i2))
 								end if
 							end if
 						else  !user has not requested alpha calculation, each q-atom has the same alpha for every atom type

@@ -688,7 +688,6 @@ if(force_rms) then
         grms = grms + q_dotprod(d(ngrms),d(ngrms)/real(3*natom,kind=prec))
         end do
         grms = q_sqrt(grms)
-!        grms = sqrt(dot_product(d(:), d(:))/(3*natom))
         write(*,4) 'total', 'potential', 'kinetic', '', 'RMS force'
         write(*,14) 'SUM', E%potential+E%kinetic, E%potential, E%kinetic, grms
 else

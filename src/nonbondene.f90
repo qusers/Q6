@@ -6231,7 +6231,7 @@ l  = iqseq(offd2(io)%l)
 
 r = q_sqrt(q_dist4(x(k),x(l)))
 
-Hij(i,j) = offd2(io)%A * exp(-offd2(io)%mu*r)
+Hij(i,j) = offd2(io)%A * q_exp(-offd2(io)%mu*r)
 offd(io)%Hij = Hij(i,j)	! store for save
 offd(io)%rkl = r
 end do
@@ -6646,9 +6646,9 @@ write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
 wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update, kind=prec)
 wshell(is)%avn_insh = wshell(is)%avn_insh / real (itdis_update, kind=prec)
-wshell(is)%theta_corr = wshell(is)%theta_corr + wshell(is)%avtheta-acos(wshell(is)%cstb)
+wshell(is)%theta_corr = wshell(is)%theta_corr + wshell(is)%avtheta-q_acos(wshell(is)%cstb)
 write (*,10) is,wshell(is)%avn_insh,wshell(is)%avtheta/deg2rad, &
-     acos(wshell(is)%cstb)/deg2rad,wshell(is)%theta_corr/deg2rad
+     q_acos(wshell(is)%cstb)/deg2rad,wshell(is)%theta_corr/deg2rad
 10	  format(i5,1x,f6.1,3x,f8.3,3x,f8.3,3x,f8.3)
 wshell(is)%avtheta = zero
 wshell(is)%avn_insh = zero
@@ -6661,8 +6661,8 @@ avtdum = zero
 do il = 1, wshell(is)%n_insh
 iw = nsort(il,is)
 arg = one + (one - 2.0_prec*real(il, kind=prec))/real(wshell(is)%n_insh, kind=prec)
-theta0(il) = acos ( arg )
-theta0(il) = theta0(il)-3.0_prec*sin(theta0(il))*wshell(is)%cstb/2.0_prec
+theta0(il) = q_acos ( arg )
+theta0(il) = theta0(il)-3.0_prec*q_sin(theta0(il))*wshell(is)%cstb/2.0_prec
 if ( theta0(il) .lt. zero ) theta0(il) = zero
 if ( theta0(il) .gt. pi)   theta0(il) = pi
 
