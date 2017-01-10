@@ -618,10 +618,12 @@ end function lrf_cgp_rep
 ! only used with MPI
 #ifdef USE_MPI
 subroutine lrf_gather
-call MPI_Allreduce(MPI_IN_PLACE,LRF,ncgp,mpitype_batch_lrf,mpi_lrf_add,&
+! need this to keep some stuff from crashing with MPI_IN_PLACE option
+type(LRF_TYPE) :: MPI_LRF_TMP(ncgp)
+call MPI_Allreduce(LRF,MPI_LRF_TMP,ncgp,mpitype_batch_lrf,mpi_lrf_add,&
 MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('lrf_gather reduce')
-!if (nodeid .eq.0 ) LRF = lrf_reduce
+LRF = MPI_LRF_TMP
 end subroutine lrf_gather
 #endif
 
