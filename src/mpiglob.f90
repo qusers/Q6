@@ -62,9 +62,17 @@ include "mpif.h"
  integer,allocatable  :: nbqp_per_cgp(:)
  integer,allocatable  :: nbqw_per_cgp(:)
 
+! custom Q types to convert MPI_REAL to actual size of Q variables
+! will  crash in beautiful ways if not assigned
+ integer :: QMPI_REAL = -1
+ integer :: QMPI_VECT = -1
+ integer :: QMPI_BYTE = -1
  ! stuff for mpi type create
  integer                :: mpitype_batch_lrf,mpi_lrf_add,mpi_lrf_cgp_rep,mpitype_batch_solv_int
  integer                :: mpitype_batch_ppgrid,mpitype_batch_pwgrid,mpitype_batch_wwgrid,mpi_grid_add
+ integer                :: mpitype_qrvec,mpitype_batch_cgp,mpitype_batch_iaclib,mpitype_batch_grid
+ integer                :: mpitype_pair_assignment,mpitype_node_assignment
+
 #ifdef _OPENMP
  !for omp use
  integer  :: thread_id,threads_num,mp_start,mp_end,mp_counter

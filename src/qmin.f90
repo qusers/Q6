@@ -28,7 +28,7 @@ program Qmin5
 
 #if defined (USE_MPI)
   ! MPI error code
-  integer						:: qdyn_ierr
+  integer						:: qmin_ierr
 #endif
 
   ! signal handler data and declarations
@@ -51,10 +51,10 @@ program Qmin5
 
 #if defined (USE_MPI)
   ! initialize MPI
-  call MPI_Init(qdyn_ierr)
-  if (qdyn_ierr .ne. MPI_SUCCESS) call die('failure at MPI init')
-  call MPI_Comm_rank(MPI_COMM_WORLD, nodeid, qdyn_ierr)
-  call MPI_Comm_size(MPI_COMM_WORLD, numnodes, qdyn_ierr)
+  call MPI_Init(qmin_ierr)
+  if (qmin_ierr .ne. MPI_SUCCESS) call die('failure at MPI init')
+  call MPI_Comm_rank(MPI_COMM_WORLD, nodeid, qmin_ierr)
+  call MPI_Comm_size(MPI_COMM_WORLD, numnodes, qmin_ierr)
 #else
 	nodeid = 0
 	numnodes = 1
@@ -112,6 +112,8 @@ program Qmin5
   end if
 
 #if defined (USE_MPI)
+  ! initialise data types
+  call set_mpi_types
   ! initialise slave nodes
   if (numnodes .gt. 1) call init_nodes
 #endif
@@ -141,7 +143,7 @@ program Qmin5
 
 #if defined (USE_MPI)
   ! shut down MPI
-  call MPI_Finalize(qdyn_ierr)
+  call MPI_Finalize(qmin_ierr)
 #endif
 
 contains

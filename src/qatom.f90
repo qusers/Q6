@@ -458,8 +458,8 @@ logical function qatom_load_atoms(fep_file)
                         jqshake     = 0
                         qshake_dist = zero
                         EMorseD     = zero
-                        dMorse_i    = dMorse_i * zero
-                        dMorse_j    = dMorse_j * zero
+                        dMorse_i    = zero
+                        dMorse_j    = zero
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
 			if(prm_get_int_int(s, topno)) then
@@ -970,14 +970,14 @@ logical function qatom_load_fep(fep_file)
 					goto 1000
 				else
 					!Harmonic OK - clear Morse
-					qbondlib(j)%Dmz = 0
-					qbondlib(j)%amz = 0
+					qbondlib(j)%Dmz = zero
+					qbondlib(j)%amz = zero
 					type_read(j) =.true.
 					write (*,226) j, qbondlib(j)%r0, qbondlib(j)%fk
 				end if
 			else
 				!Morse OK - clear harmonic
-				qbondlib(j)%fk = 0
+				qbondlib(j)%fk = zero
 				type_read(j) =.true.
 				write (*,225) j,qbondlib(j)%Dmz,qbondlib(j)%amz, qbondlib(j)%r0
 			end if
@@ -1679,19 +1679,29 @@ logical function qatom_load_fep(fep_file)
 544		format (/,'No. of angle-Morse couplings = ',i5)
 		write(*,543)
 		do i=1,nang_coupl
-			if(.not. prm_get_int_int(j, k)) goto 1000
-			iang_coupl(1,i) = j
-			iang_coupl(2,i) = k
+                        if(.not. prm_get_line(line))  goto 1000
+                        read(line,*,iostat=stat) j,k,l
+                        if(stat .eq.0) then
+                                iang_coupl(1,i) = j
+                                iang_coupl(2,i) = k
+                                iang_coupl(3,i) = l
+                        else
+                                read(line,*,err=1000) j,k
+                                iang_coupl(1,i) = j
+                                iang_coupl(2,i) = k
+                                iang_coupl(3,i) = 0
+                        end if
 			write (*,545) iang_coupl(:,i)
 			if(j < 1 .or. j > nqangle) then
 				write(*,546) 'q-angle', j
 				qatom_load_fep = .false.
 			end if
 			if(k < 1 .or. k > nqbond) then
-				write(*,546) 'q-bond', j
+				write(*,546) 'q-bond', k
 				qatom_load_fep = .false.
 			end if
 			if(bond_harmonic_in_any_state(k)) then
+                                write(*,'(a,i6,a)') '>>>> ERROR: q-bond ',k,' is always harmonic'
 				qatom_load_fep = .false.
 			end if
 		end do
@@ -1707,19 +1717,29 @@ logical function qatom_load_fep(fep_file)
 548		format (/,'No. of torsion-Morse couplings = ',i5)
 		write(*,547)
 		do i=1,ntor_coupl
-			if(.not. prm_get_int_int(j, k)) goto 1000
-			itor_coupl(1,i) = j
-			itor_coupl(2,i) = k
+                        if(.not.prm_get_line(line)) goto 1000
+                        read(line,*,iostat=stat) j,k,l
+                        if(stat .eq. 0) then
+                                itor_coupl(1,i) = j
+                                itor_coupl(2,i) = k
+                                itor_coupl(3,i) = l
+                        else
+                                read(line,*,err=1000) j,k
+                                itor_coupl(1,i) = j
+                                itor_coupl(2,i) = k
+                                itor_coupl(3,i) = 0
+                        end if
 			write (*,549) itor_coupl(:,i)
-			if(itor_coupl(1,i) < 1 .or. itor_coupl(1,i) > nqtor) then
-				write(*,546) 'q-torsion', itor_coupl(1,i)
+			if(j < 1 .or. j > nqtor) then
+				write(*,546) 'q-torsion', j
 				qatom_load_fep = .false.
 			end if
-			if(itor_coupl(2,i) < 1 .or. itor_coupl(2,i) > nqbond) then
-				write(*,546) 'q-bond', itor_coupl(2,i)
+			if(k < 1 .or. k > nqbond) then
+				write(*,546) 'q-bond', k
 				qatom_load_fep = .false.
 			end if
 			if(bond_harmonic_in_any_state(k)) then
+                                write(*,'(a,i6,a)') '>>>> ERROR: q-bond ',k,' is always harmonic'
 				qatom_load_fep = .false.
 			end if
 		end do
@@ -1758,6 +1778,7 @@ logical function qatom_load_fep(fep_file)
 				qatom_load_fep = .false.
 			end if
 			if(bond_harmonic_in_any_state(k)) then
+                                write(*,'(a,i6,a)') '>>>> ERROR: q-bond ',k,' is always harmonic'
 				qatom_load_fep = .false.
 			end if
 		end do
@@ -1832,7 +1853,7 @@ logical function qatom_load_fep(fep_file)
 	allocate (alpha_max(nqat,nstates),sc_lookup(nqat,natyps+nqat,nstates))
 
 	!default is no softcore, i.e. alpha=zero (sc_lookup = 0)
-	sc_lookup(:,:,:)=0.0_prec
+	sc_lookup(:,:,:)=zero
 
 	section = 'softcore'
 	if(.not. prm_open_section(section)) then

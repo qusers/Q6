@@ -126,7 +126,7 @@ subroutine allocate_mpi
 if(nodeid .eq. 0) then
  allocate(mpi_status(MPI_STATUS_SIZE,numnodes-1), & 
          request_recv(numnodes-1,3), &
-         d_recv(natom*3,numnodes-1), &
+         d_recv(natom,numnodes-1), &
          E_recv(numnodes-1), &
          EQ_recv(nstates,numnodes-1), &
          stat=alloc_status)

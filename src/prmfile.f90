@@ -151,43 +151,13 @@ logical function prm_get_real_by_key(key, value, default)
 		value = default
 		prm_get_real_by_key = .true.
 	else
-		value = 0.
+		value = zero
 		prm_get_real_by_key = .false.
 	end if
 
 end function prm_get_real_by_key
 
 !-----------------------------------------------------------------
-
-logical function prm_get_real8_by_key(key, value, default)
-!arguments
-	character(*)				::	key
-	real(kind=prec), intent(out)			::	value
-	real(kind=prec), intent(in), optional	:: default
-!locals
-	character(len=80)			::	inkey
-	character(200)				::	str_value
-
-	call rewind_section
-	do while (get_strings(inkey, str_value))
-	    read(str_value, fmt=*, iostat=stat) value !read integer from value
-		if (inkey .eq. key .and. stat == 0)  then
-		    prm_get_real8_by_key = .true.
-		    return	
-		end if
-	end do	
-
-	if(present(default)) then
-		value = default
-		prm_get_real8_by_key = .true.
-	else
-		value = 0.
-		prm_get_real8_by_key = .false.
-	end if
-
-end function prm_get_real8_by_key
-
-!----------------------------------------------------------
 
 logical function prm_get_string_by_key(key, value, default)
 !arguments
@@ -512,30 +482,10 @@ end function prm_get_string_real
 
 !-----------------------------------------------------------------------------
 
-logical function prm_get_string_real8(key, value)
-!arguments
-	character(*),intent(out)	::	key
-	real(8), intent(out)		::	value
-!locals
-	character(200)				::	str_value
-
-
-	prm_get_string_real8 = get_strings(key, str_value)
-	read(str_value, fmt=*, iostat=stat) value !read real from str_value
-
-	if (stat == 0) then
-		prm_get_string_real8 = .true.
-	else
-		prm_get_string_real8 = .false.
-	endif
-
-end function prm_get_string_real8
-
-!---------------------------------------------------------------------------------
 logical function prm_get_int_real(key, value)
 !arguments
 	integer,intent(out)			::	key
-	real, intent(out)			::	value
+	real(kind=prec), intent(out)			::	value
 !locals
 	character(200)				::	line
 
@@ -550,24 +500,6 @@ logical function prm_get_int_real(key, value)
 end function prm_get_int_real
 
 !---------------------------------------------------------------------------------
-logical function prm_get_int_real8(key, value)
-!arguments
-	integer,intent(out)			::	key
-	real(8), intent(out)			::	value
-!locals
-	character(200)				::	line
-
-
-	prm_get_int_real8 = prm_get_line(line)
-	read(line, fmt=*, iostat=stat) key, value !read integer from value
-	if(stat == 0) then
-		prm_get_int_real8 = .true.
-	else 
-		prm_get_int_real8 = .false.
-	end if
-end function prm_get_int_real8
-
-!----------------------------------------------------------------------------------
 
 logical function prm_get_int_int(key, value)
 !arguments

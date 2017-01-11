@@ -16,8 +16,18 @@ module	SIZES
 #ifdef HAVEQUAD
 	integer, parameter :: quadprecision = SELECTED_REAL_KIND(33,4931)
 #endif
+#define SINGLEPREC 1
+#define DOUBLEPREC 2
+#define QUADPREC 3
+#define PROGPREC DOUBLEPREC
 
-	integer, parameter :: prec = doubleprecision 
+#if (PROGPREC == SINGLEPREC)
+        integer, parameter :: prec = singleprecision
+#elif (PROGPREC == DOUBLEPREC)
+        integer, parameter :: prec = doubleprecision
+#elif defined HAVEQUAD
+        integer, parameter :: prec = quadprecision
+#endif
 
 	real(kind=prec),parameter	:: zero = 0.0_prec
 	real(kind=prec),parameter	:: one  = 1.0_prec

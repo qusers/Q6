@@ -88,7 +88,7 @@ if ( scalar .lt. -one ) scalar = -one
 angle_calc%angl = q_acos(scalar)
 
 inv_angl = q_sin(angle_calc%angl)
-if ( q_abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
+if ( q_abs(inv_angl) .lt. 1.e-4_prec ) inv_angl = 1.e-4_prec
 inv_angl =  -one / inv_angl
 
 afvec = inv_angl * ((bcvec * abdist*bcdist) - (ab2dist*scalar*abvec))
@@ -120,7 +120,7 @@ if ( scalar .lt. -one ) scalar = -one
 box_angle_calc%angl = q_acos(scalar)
 
 inv_angl = q_sin(box_angle_calc%angl)
-if ( q_abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
+if ( q_abs(inv_angl) .lt. 1.e-4_prec ) inv_angl = 1.e-4_prec
 inv_angl =  -one / inv_angl
 
 box_angle_calc%a_vec = ( (tempbc%a_vec/(tempab%dist*tempbc%dist)) - &
@@ -192,7 +192,7 @@ if ( sgn .lt. zero ) torsion_calc%angl = -torsion_calc%angl
 
 ! first derivative of angle
 inv_angl = q_sin(torsion_calc%angl)
-if ( q_abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
+if ( q_abs(inv_angl) .lt. 1.e-4_prec ) inv_angl = 1.e-4_prec
 inv_angl =  -one / inv_angl
 
 ! get two vectors that decide force directions on all atoms
@@ -274,7 +274,7 @@ if ( sgn .lt. zero ) improper_calc%angl = -improper_calc%angl
 
 ! first derivative of angle
 inv_angl = q_sin(improper_calc%angl)
-if ( q_abs(inv_angl) .lt. 1.e-12_prec ) inv_angl = 1.e-12_prec
+if ( q_abs(inv_angl) .lt. 1.e-4_prec ) inv_angl = 1.e-4_prec
 inv_angl =  -one / inv_angl
 
 ! get two vectors that decide force directions on all atoms

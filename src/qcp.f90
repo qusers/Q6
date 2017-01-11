@@ -331,7 +331,7 @@ end if
 
 ! MPI BCast new coordinates to nodes
 #ifdef USE_MPI
-call MPI_BCast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_BCast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
@@ -358,7 +358,7 @@ end if
 
 ! MPI BCast new coordinates to nodes
 #ifdef USE_MPI
-call MPI_BCast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_BCast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
@@ -475,7 +475,7 @@ bfactor = q_exp(-deltaH*beta)
 ! get some random number?
 irand = qcp_randm()
 #ifdef USE_MPI
-call MPI_Bcast(irand,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(irand,1,QMPI_REAL,0,MPI_COMM_WORLD,ierr)
 if( ierr .ne. 0) call die('QCP Bcast irand')
 #endif
 ! this is the monte carlo part
@@ -506,7 +506,7 @@ if (bfactor .ge. irand) then
                         end do ! qcp_atnum
                 end if
 #ifdef USE_MPI
-call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
@@ -528,7 +528,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                 end if
                 if (use_qcp_mass) then
 #ifdef USE_MPI
-call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
@@ -681,9 +681,9 @@ d = d_save
 end if
 ! Bcast when using MPI
 #ifdef USE_MPI
-call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
-call MPI_Bcast(d,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(d,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast d')
 #endif
 
@@ -861,7 +861,7 @@ temp_defined = .false.
 nsteps = -1
 istep  = -2
 ! --- Temperature, Thermostat etc.
-if(.not. prm_get_real8_by_key('temperature', Temp0)) then
+if(.not. prm_get_real_by_key('temperature', Temp0)) then
 write(*,*) 'temperature not specified (section general), will need restart'
 need_restart = .true.
 temp_defined = .false.
@@ -1000,26 +1000,26 @@ Rcq = rcq_default_sph
 end if
 RcLRF = rcLRF_default
 else
-if(.not. prm_get_real8_by_key('solute_solute', Rcpp, rcpp_default)) then
+if(.not. prm_get_real_by_key('solute_solute', Rcpp, rcpp_default)) then
         write(*,'(a)') 'solute-solute cut-off set to default'
 end if
-if(.not. prm_get_real8_by_key('solvent_solvent', Rcww, rcww_default)) then
+if(.not. prm_get_real_by_key('solvent_solvent', Rcww, rcww_default)) then
         write(*,'(a)') 'solvent-solvent cut-off set to default'
 end if
-if(.not. prm_get_real8_by_key('solute_solvent', Rcpw, rcpw_default)) then
+if(.not. prm_get_real_by_key('solute_solvent', Rcpw, rcpw_default)) then
         write(*,'(a)') 'solute-solvent cut-off set to default'
 end if
 if (box) then
-if(.not. prm_get_real8_by_key('q_atom', Rcq, rcq_default_pbc)) then
+if(.not. prm_get_real_by_key('q_atom', Rcq, rcq_default_pbc)) then
         write(*,'(a)') 'q-atom cut-off set to default for PBC'
 end if
 else
-if(.not. prm_get_real8_by_key('q_atom', Rcq, rcq_default_sph)) then
+if(.not. prm_get_real_by_key('q_atom', Rcq, rcq_default_sph)) then
         write(*,'(a)') 'q-atom cut-off set to default for sphere'
 end if
 end if
 if(use_LRF) then
-        if(.not. prm_get_real8_by_key('lrf', rcLRF, rcLRF_default)) then
+        if(.not. prm_get_real_by_key('lrf', rcLRF, rcLRF_default)) then
                 write(*,'(a)') 'LRF cut-off set to default'
         end if
         if(RcLRF < rcpp .or. RcLRF < rcpw .or. RcLRF < rcww) then
@@ -1058,10 +1058,10 @@ else
                 write(*,30) 'centre'
         end if
         ! --- rexcl_o, rexcl_i, fk_pshell
-        if(prm_get_real8_by_key('radius', rjunk)) then
+        if(prm_get_real_by_key('radius', rjunk)) then
                 write(*,30) 'radius'
         end if
-        if(prm_get_real8_by_key('shell_radius', rexcl_i)) then  !inner radius of restrained shell
+        if(prm_get_real_by_key('shell_radius', rexcl_i)) then  !inner radius of restrained shell
             write(*,50) rexcl_i
             if(rexcl_i < zero) then
               call die('inner radius of restrained shell must be >= 0')
@@ -1072,7 +1072,7 @@ else
             write(*,50) rexcl_i
         end if
 50 format('Radius of inner restrained shell       =    ',f8.3) 
-        if(.not. prm_get_real8_by_key('shell_force', fk_pshell)) then
+        if(.not. prm_get_real_by_key('shell_force', fk_pshell)) then
                 write(*,'(a)') 'Shell force constant set to default'
                 fk_pshell = fk_pshell_default
         end if
@@ -1080,7 +1080,7 @@ else
                 write(*,47) fk_pshell
         end if
 47		format('Shell restraint force constant         =',f8.2)
-        if(.not. prm_get_real8_by_key('excluded_force', fk_fix   )) then
+        if(.not. prm_get_real_by_key('excluded_force', fk_fix   )) then
                 write(*,'(a)') 'Excluded atoms force constant set to default'
                 fk_fix = fk_fix_default
         end if
@@ -1117,18 +1117,18 @@ if(.not. inlog) then       !defaults
         wpol_born = wpol_restr_default
         fkwpol = -1 
 else
-        if(prm_get_real8_by_key('radius', rwat_in)) then
+        if(prm_get_real_by_key('radius', rwat_in)) then
                 write(*,'(a,f8.2)') 'Target solvent radius =',rwat_in
         end if
         if(prm_get_line_by_key('centre', instring)) then
                 write(*,30) 'centre'
         end if
-        if(prm_get_real8_by_key('pack', rjunk)) then
+        if(prm_get_real_by_key('pack', rjunk)) then
                 write(*,30) 'pack'
         end if
 
 
-  if(.not. prm_get_real8_by_key('radial_force', fk_wsphere)) then
+  if(.not. prm_get_real_by_key('radial_force', fk_wsphere)) then
         write(*,'(a)') 'Solvent radial restraint force constant set to default'
         fk_wsphere = -1 ! this will be set in water_sphere, once target radius is known
   end if
@@ -1139,12 +1139,12 @@ else
         write(*,'(a)') '>>> ERROR: charge_correction on requires polarisation on (section solvent)'
         qcp_initialize = .false.
   end if
-  if(.not. prm_get_real8_by_key('polarisation_force', fkwpol)) then
+  if(.not. prm_get_real_by_key('polarisation_force', fkwpol)) then
         write(*,'(a)') 'Solvent polarisation force constant set to default'
         fkwpol = -1 ! this will be set in water_sphere, once target radius is known
   end if
-  yes = prm_get_real8_by_key('morse_depth', Dwmz, -1._8)			
-  yes = prm_get_real8_by_key('morse_width', awmz, -1._8)			
+  yes = prm_get_real_by_key('morse_depth', Dwmz, -one)
+  yes = prm_get_real_by_key('morse_width', awmz, -one)
   if(prm_get_string_by_key('model', instring)) then
         write(*,30) 'model'
   end if
@@ -1932,7 +1932,7 @@ if(nodeid.eq.0) then
 end if
 
 #ifdef USE_MPI
-call MPI_Bcast(x,nat3,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if(ierr.ne.0) call die ('QPI Bcast x')
 #endif
 call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)

@@ -115,6 +115,8 @@ program QPI5
   end if
 
 #if defined (USE_MPI)
+  ! initialise data types
+  call set_mpi_types
   ! initialise slave nodes
   if (numnodes .gt. 1) call init_nodes
 #endif

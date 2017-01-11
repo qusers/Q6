@@ -377,24 +377,20 @@ real(kind=prec) function q_logarithm(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1       = a
-temp2       = dlog(temp1)
-q_logarithm = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_logarithm = log(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_logarithm = dlog(a)
+#else
+q_logarithm = dlog(real(a,kind=doubleprecision))
+#endif
 end function q_logarithm
 
 real(kind=prec) function q_log2(a)
 ! returns log to base two of any value
-! as correct size integer
 ! args
 real(kind=prec) :: a
-! locals
-
 q_log2 = q_logarithm(a) / q_logarithm(2.0_prec)
-
 end function q_log2
 
 real(kind=prec) function q_sqrt(a)
@@ -402,13 +398,13 @@ real(kind=prec) function q_sqrt(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1  = a
-temp2  = dsqrt(temp1)
-q_sqrt = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_sqrt = sqrt(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_sqrt = dsqrt(a)
+#else
+q_sqrt = dsqrt(real(a,kind=doubleprecision))
+#endif
 end function q_sqrt
 
 function q_sqrt2(a)
@@ -417,13 +413,13 @@ function q_sqrt2(a)
 ! args
 real(kind=prec) :: a(:)
 reaL(kind=prec) :: q_sqrt2(size(a))
-! locals
-real(kind=doubleprecision) :: temp1(size(a)),temp2(size(a))
-
-temp1(:)  = a(:)
-temp2(:)  = dsqrt(temp1(:))
-q_sqrt2(:) = temp2(:)
-
+#if (PROGPREC == SINGLEPREC)
+q_sqrt2(:)  = sqrt(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_sqrt2(:)  = dsqrt(a)
+#else
+q_sqrt2(:)  = dsqrt(real(a(:),kind=doubleprecision))
+#endif
 end function q_sqrt2
 
 real(kind=prec) function q_atan(a)
@@ -431,13 +427,13 @@ real(kind=prec) function q_atan(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1  = a
-temp2  = datan(temp1)
-q_atan = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_atan  = atan(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_atan  = datan(a)
+#else
+q_atan  = datan(real(a,kind=doubleprecision))
+#endif
 end function q_atan
 
 real(kind=prec) function q_acos(a)
@@ -445,13 +441,13 @@ real(kind=prec) function q_acos(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1  = a
-temp2  = dacos(temp1)
-q_acos = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_acos  = acos(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_acos  = dacos(a)
+#else
+q_acos  = dacos(real(a,kind=doubleprecision))
+#endif
 end function q_acos
 
 real(kind=prec) function q_cos(a)
@@ -459,13 +455,13 @@ real(kind=prec) function q_cos(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1  = a
-temp2  = dcos(temp1)
-q_cos  = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_cos  = cos(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_cos  = dcos(a)
+#else
+q_cos  = dcos(real(a,kind=doubleprecision))
+#endif
 end function q_cos
 
 real(kind=prec) function q_sin(a)
@@ -473,39 +469,55 @@ real(kind=prec) function q_sin(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1  = a
-temp2  = dsin(temp1)
-q_sin  = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_sin  = sin(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_sin  = dsin(a)
+#else
+q_sin  = dsin(real(a,kind=doubleprecision))
+#endif
 end function q_sin
 
 real(kind=prec) function q_exp(a)
 ! returns exponent of value as correct q precision type real
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1 = a
-temp2 = dexp(temp1)
-q_exp = temp2
-
+#if (PROGPREC == SINGLEPREC)
+q_exp = exp(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_exp = dexp(a)
+#else
+q_exp = dexp(real(a,kind=doubleprecision))
+#endif
 end function q_exp
+
+function q_exp2(a)
+! returns exponent of value as correct q precision type real
+! args
+real(kind=prec) :: a(:)
+real(kind=prec) :: q_exp2(size(a))
+#if (PROGPREC == SINGLEPREC)
+q_exp2 = exp(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_exp2 = dexp(a)
+#else
+q_exp2 = dexp(real(a,kind=doubleprecision))
+#endif
+end function q_exp2
+
 
 real(kind=prec) function q_epsilon(a)
 ! from gcc documentation
 ! returns the smallest number E of the same kind as X such that 1 + E > 1. 
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-
-temp1 = a
-temp2 = epsilon(temp1)
-q_epsilon = temp2
+#if (PROGPREC == SINGLEPREC)
+q_epsilon = epsilon(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_epsilon = epsilon(a)
+#else
+q_epsilon = epsilon(real(a,kind=doubleprecision))
+#endif
 end function q_epsilon
 
 TYPE(qr_vec) function q_nint(a)
@@ -535,11 +547,13 @@ real(kind=prec) function q_abs(a)
 ! always calculated as dabs
 ! args
 real(kind=prec) :: a
-! locals
-real(kind=doubleprecision) :: temp1,temp2
-temp1 = a
-temp2 = dabs(temp1)
-q_abs = temp2
+#if (PROGPREC == SINGLEPREC)
+q_abs = abs(a)
+#elif (PROGPREC == DOUBLEPREC)
+q_abs = dabs(a)
+#else
+q_abs = dabs(real(a,kind=doubleprecision))
+#endif
 end function q_abs
 
 function q_abs2(a)
@@ -547,12 +561,14 @@ function q_abs2(a)
 ! always calculated as dabs
 ! args
 real(kind=prec) :: a(:)
-! locals
 real(kind=prec) :: q_abs2(size(a))
-real(kind=doubleprecision) :: temp1(size(a)),temp2(size(a))
-temp1(:) = a(:)
-temp2(:) = dabs(temp1(:))
-q_abs2(:) = temp2(:)
+#if (PROGPREC == SINGLEPREC)
+q_abs2(:) = abs(a(:))
+#elif (PROGPREC == DOUBLEPREC)
+q_abs2(:) = dabs(a(:))
+#else
+q_abs2(:) = dabs(real(a(:),kind=doubleprecision))
+#endif
 end function q_abs2
 
 subroutine math_initialize
@@ -577,7 +593,7 @@ integer                 :: i
 
 vecsum = zero
 do i = 1 , b
-vecsum = vecsum + a(i)
+        vecsum = vecsum + a(i)
 end do
 
 write(*,666) 'Total force after ',c,vecsum

@@ -146,7 +146,7 @@ do ia=istart,iend
 #else 
                 urey_bradley = urey_bradley + ang_lib(ic)%ureyfk*ru**2
 #endif
-                du = 2*ang_lib(ic)%ureyfk*ru/calc%dist
+                du = 2.0_prec*ang_lib(ic)%ureyfk*ru/calc%dist
 		d(k) = d(k) - calc%a_vec*du
 		d(i) = d(i) + calc%a_vec*du
         end if
@@ -343,13 +343,13 @@ do ip = iend, istart,-1
 	ic = impropers(ip)%cod
 	calc = improper_calc(x(i),x(j),x(k),x(l))
 
-	arg = 2*calc%angl - imp_lib(ic)%imp0
+	arg = 2.0_prec*calc%angl - imp_lib(ic)%imp0
 #ifdef _OPENMP
-	mp_real_tmp = mp_real_tmp + imp_lib(ic)%fk * (1 + q_cos(arg))
+	mp_real_tmp = mp_real_tmp + imp_lib(ic)%fk * (one + q_cos(arg))
 #else
-	improper2 = improper2 + imp_lib(ic)%fk * (1 + q_cos(arg))
+	improper2 = improper2 + imp_lib(ic)%fk * (one + q_cos(arg))
 #endif
-	dv  = -2*imp_lib(ic)%fk * q_sin(arg)
+	dv  = -2.0_prec*imp_lib(ic)%fk * q_sin(arg)
 
 ! ---       forces
 	d(i) = d(i) + calc%a_vec*dv
@@ -466,7 +466,7 @@ do ia = 1, nqangle
         ru = calc%dist - qanglib(ic)%ureyr0
         Eurey = qanglib(ic)%ureyfk*ru**2
         E_loc = E_loc + Eurey*gamma
-        du = gamma*2*(qanglib(ic)%ureyfk*ru/calc%dist)*lambda
+        du = gamma*2.0_prec*(qanglib(ic)%ureyfk*ru/calc%dist)*lambda
 
 	d(i) = d(i) - calc%a_vec*du
 	d(k) = d(k) + calc%a_vec*du
@@ -743,65 +743,6 @@ end function torsion
 
 !-----------------------------------------------------------------------
 
-recursive subroutine find_bonded(origin, current, level, state)
-!args
-integer, intent(in)			::	origin, current, level, state
-!locals
-integer						::	b, newcurrent, newlevel
-
-!find q-atom connectivity using the bond list and the q-bond list
-!shaken bonds (code -1) must be taken into account, but not 
-!redefined bonds in the topology
-do b = 1, nbonds_solute
-        if(bnd(b)%cod == 0) cycle !skip redefined (but not shaken)
-        if(bnd(b)%i  == current) then
-                newlevel = level + 1 
-                newcurrent = bnd(b)%j
-                if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
-                        qconn(state, newcurrent, iqatom(origin)) = newlevel
-                        if(newlevel < 4) then
-                                call find_bonded(origin, newcurrent, newlevel, state)
-                        end if
-                end if
-        elseif(bnd(b)%j  == current) then
-                newlevel = level + 1 
-                newcurrent = bnd(b)%i
-                if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
-                        qconn(state, newcurrent, iqatom(origin)) = newlevel
-                        if(newlevel < 4) then
-                                call find_bonded(origin, newcurrent, newlevel, state)
-                        end if
-                end if
-        end if
-end do
-do b = 1, nqbond
-        if(qbnd(b)%cod(state) > 0) then
-                if(qbnd(b)%i  == current) then
-                        newlevel = level + 1 
-                        newcurrent = qbnd(b)%j
-                        if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
-                                qconn(state, newcurrent, iqatom(origin)) = newlevel
-                                if(newlevel < 4) then
-                                        call find_bonded(origin, newcurrent, newlevel, state)
-                                end if
-                        end if
-                elseif(qbnd(b)%j  == current) then
-                        newlevel = level + 1 
-                        newcurrent = qbnd(b)%i
-                        if(qconn(state, newcurrent, iqatom(origin)) > newlevel)  then
-                                qconn(state, newcurrent, iqatom(origin)) = newlevel
-                                if(newlevel < 4) then
-                                        call find_bonded(origin, newcurrent, newlevel, state)
-                                end if
-                        end if
-                end if
-        end if
-end do
-
-end subroutine find_bonded
-
-!-----------------------------------------------------------------------
-
 subroutine p_restrain(E_loc,EQ_rest,lambda)
 ! arguments
 real(kind=prec)                         :: E_loc, EQ_rest(:),lambda(:)
@@ -967,12 +908,12 @@ end if
 
 
 
-if(distres%dist < rstdis(ir)%d1) then !shorter than d1
+if(distres%dist .lt. rstdis(ir)%d1) then !shorter than d1
         db     = distres%dist - rstdis(ir)%d1
-elseif(distres%dist > rstdis(ir)%d2) then !longer than d2
+elseif(distres%dist .gt. rstdis(ir)%d2) then !longer than d2
         db     = distres%dist - rstdis(ir)%d2
 else
-        db = 0
+        db = zero
         cycle !skip zero force calculation
 endif
 

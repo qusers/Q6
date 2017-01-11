@@ -167,12 +167,12 @@ if(.not. prm_get_integer_by_key('steps', nsteps)) then
 write(*,*) '>>> ERROR: steps not specified (section MINIM)'
 initialize = .false.
 end if
-yes = prm_get_real8_by_key('initialsize', stepsize,size_default)
+yes = prm_get_real_by_key('initialsize', stepsize,size_default)
 write (*,10) nsteps, stepsize
 10	format ('Number of Minimization steps =',i10,'  Initial Stepsize    =',f10.3)
 dt = stepsize
 
-if(.not. prm_get_real8_by_key('Ecut',energy_cutoff)) then
+if(.not. prm_get_real_by_key('Ecut',energy_cutoff)) then
         energy_cutoff = Ecut_default
         write(*,'(a,f8.3)') 'Energy end cutoff set to default, ',energy_cutoff
 else if(energy_cutoff .gt.zero) then
@@ -359,26 +359,26 @@ Rcq = rcq_default_sph
 end if
 RcLRF = rcLRF_default
 else
-if(.not. prm_get_real8_by_key('solute_solute', Rcpp, rcpp_default)) then
+if(.not. prm_get_real_by_key('solute_solute', Rcpp, rcpp_default)) then
         write(*,'(a)') 'solute-solute cut-off set to default'
 end if
-if(.not. prm_get_real8_by_key('solvent_solvent', Rcww, rcww_default)) then
+if(.not. prm_get_real_by_key('solvent_solvent', Rcww, rcww_default)) then
         write(*,'(a)') 'solvent-solvent cut-off set to default'
 end if
-if(.not. prm_get_real8_by_key('solute_solvent', Rcpw, rcpw_default)) then
+if(.not. prm_get_real_by_key('solute_solvent', Rcpw, rcpw_default)) then
         write(*,'(a)') 'solute-solvent cut-off set to default'
 end if
 if (box) then
-if(.not. prm_get_real8_by_key('q_atom', Rcq, rcq_default_pbc)) then
+if(.not. prm_get_real_by_key('q_atom', Rcq, rcq_default_pbc)) then
         write(*,'(a)') 'q-atom cut-off set to default for PBC'
 end if
 else
-if(.not. prm_get_real8_by_key('q_atom', Rcq, rcq_default_sph)) then
+if(.not. prm_get_real_by_key('q_atom', Rcq, rcq_default_sph)) then
         write(*,'(a)') 'q-atom cut-off set to default for sphere'
 end if
 end if
 if(use_LRF) then
-        if(.not. prm_get_real8_by_key('lrf', rcLRF, rcLRF_default)) then
+        if(.not. prm_get_real_by_key('lrf', rcLRF, rcLRF_default)) then
                 write(*,'(a)') 'LRF cut-off set to default'
         end if
         if(RcLRF < rcpp .or. RcLRF < rcpw .or. RcLRF < rcww) then
@@ -417,10 +417,10 @@ else
                 write(*,30) 'centre'
         end if
         ! --- rexcl_o, rexcl_i, fk_pshell
-        if(prm_get_real8_by_key('radius', rjunk)) then
+        if(prm_get_real_by_key('radius', rjunk)) then
                 write(*,30) 'radius'
         end if
-        if(prm_get_real8_by_key('shell_radius', rexcl_i)) then  !inner radius of restrained shell
+        if(prm_get_real_by_key('shell_radius', rexcl_i)) then  !inner radius of restrained shell
             write(*,50) rexcl_i
             if(rexcl_i < zero) then
               call die('inner radius of restrained shell must be >= 0')
@@ -431,7 +431,7 @@ else
             write(*,50) rexcl_i
         end if
 50 format('Radius of inner restrained shell       =    ',f8.3) 
-        if(.not. prm_get_real8_by_key('shell_force', fk_pshell)) then
+        if(.not. prm_get_real_by_key('shell_force', fk_pshell)) then
                 write(*,'(a)') 'Shell force constant set to default'
                 fk_pshell = fk_pshell_default
         end if
@@ -439,7 +439,7 @@ else
                 write(*,47) fk_pshell
         end if
 47		format('Shell restraint force constant         =',f8.2)
-        if(.not. prm_get_real8_by_key('excluded_force', fk_fix   )) then
+        if(.not. prm_get_real_by_key('excluded_force', fk_fix   )) then
                 write(*,'(a)') 'Excluded atoms force constant set to default'
                 fk_fix = fk_fix_default
         end if
@@ -469,27 +469,27 @@ end if
 inlog = prm_open_section('solvent')
 if(.not. inlog) inlog = prm_open_section('water') !try also the old name
 if(.not. inlog) then       !defaults
-        fk_wsphere = -1
-        Dwmz = -1
-        awmz = -1
+        fk_wsphere = -one
+        Dwmz = -one
+        awmz = -one
         wpol_restr = wpol_restr_default
         wpol_born = wpol_restr_default
-        fkwpol = -1 
+        fkwpol = -one 
 else
-        if(prm_get_real8_by_key('radius', rwat_in)) then
+        if(prm_get_real_by_key('radius', rwat_in)) then
                 write(*,'(a,f8.2)') 'Target solvent radius =',rwat_in
         end if
         if(prm_get_line_by_key('centre', instring)) then
                 write(*,30) 'centre'
         end if
-        if(prm_get_real8_by_key('pack', rjunk)) then
+        if(prm_get_real_by_key('pack', rjunk)) then
                 write(*,30) 'pack'
         end if
 
 
-  if(.not. prm_get_real8_by_key('radial_force', fk_wsphere)) then
+  if(.not. prm_get_real_by_key('radial_force', fk_wsphere)) then
         write(*,'(a)') 'Solvent radial restraint force constant set to default'
-        fk_wsphere = -1 ! this will be set in water_sphere, once target radius is known
+        fk_wsphere = -one ! this will be set in water_sphere, once target radius is known
   end if
   yes=prm_get_logical_by_key('polarisation', wpol_restr, wpol_restr_default)
   !default is on when pol. restr is on, otherwise off
@@ -498,12 +498,12 @@ else
         write(*,'(a)') '>>> ERROR: charge_correction on requires polarisation on (section solvent)'
         initialize = .false.
   end if
-  if(.not. prm_get_real8_by_key('polarisation_force', fkwpol)) then
+  if(.not. prm_get_real_by_key('polarisation_force', fkwpol)) then
         write(*,'(a)') 'Solvent polarisation force constant set to default'
-        fkwpol = -1 ! this will be set in water_sphere, once target radius is known
+        fkwpol = -one ! this will be set in water_sphere, once target radius is known
   end if
-  yes = prm_get_real8_by_key('morse_depth', Dwmz, -1._8)			
-  yes = prm_get_real8_by_key('morse_width', awmz, -1._8)			
+  yes = prm_get_real_by_key('morse_depth', Dwmz, -one)
+  yes = prm_get_real_by_key('morse_width', awmz, -one)
   if(prm_get_string_by_key('model', instring)) then
         write(*,30) 'model'
   end if
@@ -1058,7 +1058,7 @@ if (nodeid.eq.0) write (*,*) 'System has converged'
 end if
 
 #if defined(USE_MPI)
-call MPI_Bcast(x, nat3, MPI_REAL8, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(x, natom, mpitype_qrvec, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('MD Bcast x')
 #endif
 

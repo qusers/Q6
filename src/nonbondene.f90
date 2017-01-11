@@ -65,17 +65,10 @@ integer					:: npp, npw, nqp, nww, nqw
 type(NODE_ASSIGNMENT_TYPE),allocatable  :: node_assignment(:)
 real					:: avgload, old_avgload
 integer					:: i, last_cgp, last_pair
-integer					:: mpitype_pair_assignment, mpitype_node_assignment
 integer                                 :: average_pairs,inode,icgp,sum,less_than_sum
 integer                                 :: n_bonded, n_nonbonded, master_assign
 real                                    :: percent
 integer                                 :: master_sum
-!!!!Tmp vars för allokering
-integer,parameter			:: vars = 5
-integer     :: mpi_batch, i_loop
-integer     :: blockcnt(vars),type(vars)
-integer(8)  :: disp(vars)
-!!!
 
 
 ! count the number of nonbonded interactions and distribute them among the nodes
@@ -388,25 +381,11 @@ if (numnodes .gt. 1) then
 	! Dummy allocation to avoid runtime errors when using pointer checking
 	allocate(node_assignment(1),stat=alloc_status)
     endif 
-! register data types
-call MPI_Type_contiguous(3, MPI_INTEGER, mpitype_pair_assignment, ierr)
-if (ierr .ne. 0) call die('failure while creating custom MPI data type')
-call MPI_Type_commit(mpitype_pair_assignment, ierr)
-if (ierr .ne. 0) call die('failure while creating custom MPI data type')
-
-call MPI_Type_contiguous(11, mpitype_pair_assignment, mpitype_node_assignment, ierr)
-if (ierr .ne. 0) call die('failure while creating custom MPI data type')
-call MPI_Type_commit(mpitype_node_assignment, ierr)
-if (ierr .ne. 0) call die('failure while creating custom MPI data type')
-
 ! distribute
 call MPI_Scatter(node_assignment, 1, mpitype_node_assignment, &
     calculation_assignment, 1, mpitype_node_assignment, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('failure while sending node assignments')
 
-! free data type
-call MPI_Type_free(mpitype_node_assignment, ierr)
-call MPI_Type_free(mpitype_pair_assignment, ierr)
     if (nodeid .ne. 0) then
 	deallocate(node_assignment)
     endif 
@@ -433,8 +412,6 @@ end if
 end if
 
 #if defined (USE_MPI)
-blockcnt(:) = 1
-type(:) = MPI_INTEGER
 call MPI_Bcast(totnbpp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(totnbpw, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 call MPI_Bcast(totnbqp, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -5597,7 +5574,7 @@ j    = nbww(iw)%j
 shift = x(i) - x(j)
 shift = boxlength*q_nint(shift*inv_boxl)
 
-do ia = 1, (solv_atom**2) - 1
+do ia = 0 , (solv_atom**2) - 1
 ip    = iw+ia
 
 i     = nbww(ip)%i
@@ -5923,8 +5900,6 @@ d(j) = d(j) + nb_ene%vec*dv
 
 
 ! now calc the rest of the interactions
-! remember that we need to switch the atoms every solv_atom steps
-
 do jw = 1, (solv_atom**2) - 1
 
 ip    = iw+jw
@@ -6252,12 +6227,6 @@ integer					:: ichg,igrid
 integer					:: i
 TYPE(qr_vec)                            :: boxmin,boxmax,xc
 logical                                 :: set = .false.
-#ifdef USE_MPI
-integer, parameter                      :: vars = 40    !increment this var when adding data to broadcast in batch 1
-integer                                 :: blockcnt(vars), ftype(vars)
-integer(kind=MPI_ADDRESS_KIND)                          :: fdisp(vars)
-#endif
-
 !each node now does its share
 
 if (use_PBC) then
@@ -6714,7 +6683,7 @@ scp = q_dotprod(rmu,rcu)
 if ( scp .gt.  one ) scp =  one
 if ( scp .lt. -one ) scp = -one
 f0 = q_sin ( q_acos(scp) )
-if ( q_abs(f0) .lt. 1.e-12_prec ) f0 = 1.e-12_prec
+if ( q_abs(f0) .lt. 1.e-4_prec ) f0 = 1.e-4_prec
 f0 = -one / f0
 f0 = dv*f0
 
@@ -6755,8 +6724,8 @@ TYPE(ENERGIES)                          :: E_loc
 TYPE(OQ_ENERGIES)                       :: EQ_loc(:)
 integer,parameter                       :: vars=3
 integer,dimension(3,numnodes-1)         :: tag
-integer,dimension(vars)	                :: blockcnt,ftype 
-integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
+!integer,dimension(vars)	                :: blockcnt,ftype 
+!integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
 integer                                 :: mpitype_package,mpitype_send
 integer                                 :: i,j,istate
 
@@ -6777,13 +6746,13 @@ if (nodeid .eq. 0) then        !master
 ! and d_recv's type should be handled correctly (it's KIND=wp8)
 ! should preferably use size(d_recv, 1) for count
 do i = 1,numnodes-1
-  call MPI_IRecv(d_recv(1,i), natom*3, MPI_REAL8, i, tag(1,i), MPI_COMM_WORLD, &
+  call MPI_IRecv(d_recv(1,i), natom, mpitype_qrvec, i, tag(1,i), MPI_COMM_WORLD, &
        request_recv(i,1),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv d_recv')
-  call MPI_IRecv(E_recv(i), 3*2+1, MPI_REAL8, i, tag(2,i), MPI_COMM_WORLD, &
+  call MPI_IRecv(E_recv(i), 3*2+1, QMPI_REAL, i, tag(2,i), MPI_COMM_WORLD, &
        request_recv(i,2),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv E_recv')
-  call MPI_IRecv(EQ_recv(1,i), reclength, MPI_REAL8, i, tag(3,i), MPI_COMM_WORLD, &
+  call MPI_IRecv(EQ_recv(1,i), reclength, QMPI_REAL, i, tag(3,i), MPI_COMM_WORLD, &
 	request_recv(i,3),ierr)
   if (ierr .ne. 0) call die('gather_nonbond/MPI_IRecv EQ_recv')
 end do
@@ -6804,11 +6773,11 @@ EQ_send(i)%qw%vdw = EQ_loc(i)%qw%vdw
 end do
 
 ! See comments above on the IRecv part
-call MPI_Send(d, natom*3, MPI_REAL8, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 
+call MPI_Send(d, natom, mpitype_qrvec, 0, tag(1,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send d')
-call MPI_Send(E_send, 3*2+1, MPI_REAL8, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
+call MPI_Send(E_send, 3*2+1, QMPI_REAL, 0, tag(2,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send E_send')
-call MPI_Send(EQ_send, reclength, MPI_REAL8, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
+call MPI_Send(EQ_send, reclength, QMPI_REAL, 0, tag(3,nodeid), MPI_COMM_WORLD,ierr) 
 if (ierr .ne. 0) call die('gather_nonbond/Send EQ_send')
 
 end if

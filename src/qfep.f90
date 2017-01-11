@@ -451,11 +451,11 @@ end if
  							Hij(i,j,jj)=EQ(i)%total(jj)
 						else
  							if (A(i,j)==zero) then
- 								Hij(i,j,jj) = A(j,i)*exp(-mu(j,i)*(offd(1)%rkl-rxy0(j,i)))* &
- 								exp(-eta(j,i)*(offd(1)%rkl-rxy0(j,i))**2)
+ 								Hij(i,j,jj) = A(j,i)*q_exp(-mu(j,i)*(offd(1)%rkl-rxy0(j,i)))* &
+ 								q_exp(-eta(j,i)*(offd(1)%rkl-rxy0(j,i))**2)
  							else
- 								Hij(i,j,jj) = A(i,j)*exp(-mu(i,j)*(offd(1)%rkl-rxy0(i,j)))* &
- 								exp(-eta(i,j)*(offd(1)%rkl-rxy0(i,j))**2)
+ 								Hij(i,j,jj) = A(i,j)*q_exp(-mu(i,j)*(offd(1)%rkl-rxy0(i,j)))* &
+ 								q_exp(-eta(i,j)*(offd(1)%rkl-rxy0(i,j))**2)
  							end if
 						end if
 						end do
@@ -586,10 +586,10 @@ end if
 				dv(j)=veff2(j)-veff1(j)
 				veff1(j)= zero
 				veff2(j)= zero
-				sum(j)=sum(j)+exp(-dv(j)/rt)
+				sum(j)=sum(j)+q_exp(-dv(j)/rt)
 			end do
 			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip, kind=prec)
-			dgf(j,ifile)=-rt*dlog(sum(j))
+			dgf(j,ifile)=-rt*q_logarithm(sum(j))
 			dgfsum(j,ifile+1)=dgfsum(j,ifile)+dgf(j,ifile)
 			sum(:)= zero
 		end do
@@ -610,10 +610,10 @@ end if
 				dv(j)=veff2(j)-veff1(j)
 				veff1(j)=zero
 				veff2(j)=zero
-				sum(j)=sum(j)+exp(-dv(j)/rt)
+				sum(j)=sum(j)+q_exp(-dv(j)/rt)
 			end do
 			sum(j)=sum(j)/real(FEP(ifile)%npts-nskip, kind=prec)
-			dgr(j,ifile)=-rt*dlog(sum(j))
+			dgr(j,ifile)=-rt*q_logarithm(sum(j))
 			dgrsum(j,ifile-1)=dgrsum(j,ifile)+dgr(j,ifile)
 			sum(j)= zero
 		end do
@@ -747,8 +747,8 @@ end if
 					dvv(istate)=FEP(ifile)%v(j,istate,ipt)-veff-avdvv(istate,ibin)
 				end do
 				dvg=FEP(ifile)%vg(j,ipt)-veff-avdvg(ibin)
-				sumv(:,ibin)=sumv(:,ibin)+exp(-dvv(:)/rt)
-				sumg(ibin)=sumg(ibin)+exp(-dvg/rt)
+				sumv(:,ibin)=sumv(:,ibin)+q_exp2(-dvv(:)/rt)
+				sumg(ibin)=sumg(ibin)+q_exp(-dvg/rt)
 			end do   !ipt
 
 			do ibin=1,nbins
@@ -762,9 +762,9 @@ sumg(ibin)=sumg(ibin)/real(nbinpts(ibin))
 ptsum(ibin)=ptsum(ibin)+nbinpts(ibin)
 
 	do istate=1,nstates
-sumv2(istate,ibin)=-rt*dlog(sumv(istate,ibin))+avdvv(istate,ibin)
+sumv2(istate,ibin)=-rt*q_logarithm(sumv(istate,ibin))+avdvv(istate,ibin)
 	end do
-sumg2(ibin)=-rt*dlog(sumg(ibin))+avdvg(ibin)
+sumg2(ibin)=-rt*q_logarithm(sumg(ibin))+avdvg(ibin)
 	! These are the diabatic free energy curves
 dGv(:)=dG(j,ifile)+sumv2(:,ibin)
 	! This is the reaction free energy
@@ -953,7 +953,7 @@ SUBROUTINE TRED2(A,N,NP,D,E)
                 H=H+A(I,K)**2.0_prec
               end do
               F=A(I,L)
-              G=-SIGN(SQRT(H),F)
+              G=-SIGN(q_sqrt(H),F)
               E(I)=SCALE*G
               H=H-F*G
               A(I,L)=F-G
@@ -1038,15 +1038,15 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
         DO L=1,N
           ITER=0
 1         DO M=L,N-1
-            DD=ABS(D(M))+ABS(D(M+1))
-            IF (ABS(E(M))+DD.EQ.DD) GO TO 2
+            DD=q_abs(D(M))+q_abs(D(M+1))
+            IF (q_abs(E(M))+DD.EQ.DD) GO TO 2
           end do
           M=N
 2         IF(M.NE.L)THEN
             IF(ITER.EQ.30)STOP 'too many iterations'
             ITER=ITER+1
             G=(D(L+1)-D(L))/(2.0_prec*E(L))
-            R=SQRT(G**2.0_prec+one)
+            R=q_sqrt(G**2.0_prec+one)
             G=D(M)-D(L)+E(L)/(G+SIGN(R,G))
             S=one
             C=one
@@ -1054,15 +1054,15 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
             DO I=M-1,L,-1
               F=S*E(I)
               B=C*E(I)
-              IF(ABS(F).GE.ABS(G))THEN
+              IF(q_abs(F).GE.q_abs(G))THEN
                 C=G/F
-                R=SQRT(C**2.0_prec+one)
+                R=q_sqrt(C**2.0_prec+one)
                 E(I+1)=F*R
                 S=one/R
                 C=C*S
               ELSE
                 S=F/G
-                R=SQRT(S**2.0_prec+one)
+                R=q_sqrt(S**2.0_prec+one)
                 E(I+1)=G*R
                 C=one/R
                 S=S*C
