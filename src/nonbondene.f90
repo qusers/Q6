@@ -6463,7 +6463,7 @@ TYPE(qr_dist5)                                  :: distance
 !  E, Boltz, Tfree, fk_wsphere, nwat, nat_pro, x, xwcent, rwat, Dwmz, awmz, d
 
 if(fk_wsphere .ne. zero) then
-        shift = sqrt (Boltz*Tfree/fk_wsphere)
+        shift = q_sqrt (Boltz*Tfree/fk_wsphere)
 else
         shift = zero
 end if

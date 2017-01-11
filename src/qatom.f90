@@ -1882,15 +1882,15 @@ logical function qatom_load_fep(fep_file)
 							sc_bq = qbvdw(qiac(i,i2),1)
 							sc_aj = iaclib(j)%avdw(1)
 							sc_bj = iaclib(j)%bvdw(1)
-							if (alpha_max(i,i2) /= 0) then
+							if (alpha_max(i,i2) .gt. 1E-6_prec) then
 								if (ivdw_rule == 1) then !geometric vdw rule
 									sc_lookup(i,j,i2) = (-sc_bq*sc_bj+q_sqrt(sc_bq*sc_bq*sc_bj* &
-										sc_bj+4*alpha_max(i,i2)*sc_aq*sc_aj))/(2*alpha_max(i,i2))
+										sc_bj+4.0_prec*alpha_max(i,i2)*sc_aq*sc_aj))/(2.0_prec*alpha_max(i,i2))
 								else !arithmetic vdw rule. OBS some epsilons (q atom epsilons, sc_bq)
 										!	have not been square rooted yet. We'll take this into account
 										!   when calculating the sc_lookup
-									sc_lookup(i,j,i2) = (-2*q_sqrt(sc_bq)*sc_bj+2*q_sqrt(sc_bq*sc_bj**2+ &
-									alpha_max(i,i2)*q_sqrt(sc_bq)*sc_bj))*(sc_aq+sc_aj)**6/(2*alpha_max(i,i2))
+									sc_lookup(i,j,i2) = (-2.0_prec*q_sqrt(sc_bq)*sc_bj+2.0_prec*q_sqrt(sc_bq*sc_bj**2+ &
+									alpha_max(i,i2)*q_sqrt(sc_bq)*sc_bj))*(sc_aq+sc_aj)**6/(2.0_prec*alpha_max(i,i2))
 								end if
 							end if
 						else  !user has not requested alpha calculation, each q-atom has the same alpha for every atom type
@@ -1910,7 +1910,7 @@ logical function qatom_load_fep(fep_file)
 							if (softcore_use_max_potential) then  !use the smallest alpha_max of the two q atoms
 								alpha_max_tmp = min ( alpha_max(i,i2), alpha_max(j,i2) )
 
-								if ((alpha_max(i,i2) == 0) .or. (alpha_max(j,i2) == 0)) then !unless one of them is zero
+								if ((alpha_max(i,i2) .lt. 1E-6_prec) .or. (alpha_max(j,i2) .lt. 1E-6_prec)) then !unless one of them is zero
 									alpha_max_tmp = max ( alpha_max(i,i2), alpha_max(j,i2) )
 								end if
 
@@ -1925,14 +1925,14 @@ logical function qatom_load_fep(fep_file)
 
 								if (ivdw_rule == 1) then !geometric vdw rule
 									sc_lookup(i,j+natyps,i2) = (-sc_bq*sc_bj+ &
-										sqrt(sc_bq*sc_bq*sc_bj*sc_bj+ &
-										4*alpha_max_tmp*sc_aq*sc_aj))/(2*alpha_max_tmp)
+										q_sqrt(sc_bq*sc_bq*sc_bj*sc_bj+ &
+										4.0_prec*alpha_max_tmp*sc_aq*sc_aj))/(2.0_prec*alpha_max_tmp)
 								else !arithmetic vdw rule   OBS some epsilons (q atom epsilons, sc_bq and sc_bj)
 										!	have not been square-rooted yet. We'll take this into account
 										!   when calculating the sc_lookup
-									sc_lookup(i,j+natyps,i2) = (-2*sqrt(sc_bq*sc_bj)+ &
-										2*sqrt(sc_bq*sc_bj+alpha_max_tmp*sqrt(sc_bq*sc_bj)))* &
-										(sc_aq+sc_aj)**6/(2*alpha_max_tmp)
+									sc_lookup(i,j+natyps,i2) = (-2.0_prec*q_sqrt(sc_bq*sc_bj)+ &
+										2.0_prec*q_sqrt(sc_bq*sc_bj+alpha_max_tmp*q_sqrt(sc_bq*sc_bj)))* &
+										(sc_aq+sc_aj)**6/(2.0_prec*alpha_max_tmp)
 								end if
 
 							else  !user has not requested alpha calculation, each q-atom has the same alpha for every atom type

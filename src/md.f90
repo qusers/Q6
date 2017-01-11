@@ -1643,12 +1643,12 @@ end if
 if (thermostat == BERENDSEN) then
 if (separate_scaling) then
         if ( Tfree_solvent .ne. zero ) Tscale_solvent = Temp0/Tfree_solvent - one
-        Tscale_solvent = sqrt ( one + dt/tau_T * Tscale_solvent )
+        Tscale_solvent = q_sqrt ( one + dt/tau_T * Tscale_solvent )
         if ( Tfree_solute .ne. zero ) Tscale_solute = Temp0/Tfree_solute - one
-        Tscale_solute = sqrt ( one + dt/tau_T * Tscale_solute )
+        Tscale_solute = q_sqrt ( one + dt/tau_T * Tscale_solute )
 else
         if ( Tfree .ne. zero ) Tscale_solvent = Temp0/Tfree - one
-        Tscale_solvent = sqrt ( one + dt/tau_T * Tscale_solvent )
+        Tscale_solvent = q_sqrt ( one + dt/tau_T * Tscale_solvent )
         Tscale_solute = Tscale_solvent
 end if
 end if
@@ -1845,7 +1845,7 @@ else
 !we use gaussian random numbers
 gkT = 2.0_prec*friction*Boltz*Temp0/dv_mod
 end if
-randva(:)= sqrt (gkT/winv(:))
+randva(:)= q_sqrt2 (gkT/winv(:))
 end if
 end if !nodeid .eq. 0
 
