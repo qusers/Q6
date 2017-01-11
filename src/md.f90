@@ -1008,7 +1008,7 @@ if(nstates > 0 ) then
 		end if
 ! now we know how many beads, set default for qcp_level
 ! for bisection, this is 2**qcp_level .eq. qcp_size
-                qcp_level = ceiling(q_log2(real(qcp_size,kind=prec)))
+                qcp_level = nint(q_log2(real(qcp_size,kind=prec)))
                 write(*,'(a,i4,a,i4)') 'Setting bisection level to default, log_2(',qcp_size,'), = ',qcp_level
                 if (real(qcp_level,kind=prec) - q_log2(real(qcp_size,kind=prec)) .gt. ddiff) then
 ! whoops, the bead size does not work for bisection
