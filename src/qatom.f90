@@ -672,8 +672,8 @@ logical function qatom_load_fep(fep_file)
   type(QIMPLIB_TYPE),allocatable		:: tmp_qimplib(:)
   type(QTORSION_TYPE),allocatable		:: tmp_qimp(:)
 !for setting vdW arrays to default
-  logical					:: vdw_from_topo = .false.
-  integer                                       :: tmp_qcp_num
+  logical					:: vdw_from_topo = .false., found
+  integer                                       :: tmp_qcp_num,dummy
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
 	character(len=keylength)	:: qtac_tmp(max_states)
@@ -2109,17 +2109,24 @@ end if ! use qcp
         section='qcp_mass'
         tmp_qcp_num = prm_count(section)
 ! needs to be same size as qcp_atnum, and will assign masses in order of appearance
-        if (tmp_qcp_num .ne. qcp_atnum) then
-                write(*,'(a)') '>>> ERROR: Mass perturbation values need to be defined for all atoms in QCP region. Aborting program'
-                qatom_load_fep = .false.
-        end if
         allocate(qcp_mass(qcp_atnum))
+        if (tmp_qcp_num .ne. qcp_atnum) then
+                write(*,'(a)') 'WARNING: Better to define mass perturbation values for all atoms in QCP region. Filling from default mass values'
+                do i = 1, qcp_atnum
+                        qcp_mass(i) = iaclib(iac(iqseq(qcp_atom(i))))%mass
+                        end do  
+        end if
+
         do i=1,tmp_qcp_num
         if(.not. prm_get_line(line)) goto 1000
-                read (line,*, err=1000) tmpindex, qcp_mass(i)
-                if((qcp_mass(i) .lt. zero)) then
-                        write(*,'(a,i4)') 'No negative mass allowed by physics for atom i = ',i
+                read (line,*, err=1000) tmpindex
+                read (line,*, err=1000) tmpindex, qcp_mass(tmpindex)
+                if((qcp_mass(tmpindex) .lt. zero)) then
+                        write(*,'(a,i4)') '>>> ERROR: No negative mass allowed by physics for qatom ',tmpindex
+                        write(*,'(a,f8.4)') '>>> ERROR: Mass is ',qcp_mass(tmpindex)
                         qatom_load_fep = .false.
+                else
+                        write(*,'(a,i4,a,f8.4)') 'Mass of qatom ',tmpindex,' set to ',qcp_mass(tmpindex)
                 end if
         end do
         write(*,'(a)') 'Mass values used for QCP atoms in order of appearance'
