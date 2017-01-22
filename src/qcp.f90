@@ -270,10 +270,12 @@ tmp_wl_lam = hbar / (2.0_prec * tmp_wl_lam *  angstrom * real(qcp_size,kind=prec
 ! set wl values for every atom
 ! use masses from FEP file, can be isotope exact there and not effect MD
 do i = 1, qcp_atnum
-        wl_lam0(i) = tmp_wl_lam * one/qmass(qiac(qcp_atom(i),1))
-!	wl_lam0(i) = tmp_wl_lam * winv(iqseq(qcp_atom(i)))
-        if(use_qcp_mass) qcp_sqmass(i) = q_sqrt(qmass(qiac(qcp_atom(i),1))/qcp_mass(i))
-!	if(use_qcp_mass) qcp_sqmass(i) = q_sqrt(one/winv(iqseq(qcp_atom(i)))/qcp_mass(i))
+        if(use_qcp_mass) then
+                wl_lam0(i) = tmp_wl_lam * one/qmass(qiac(qcp_atom(i),1))
+                qcp_sqmass(i) = q_sqrt(qmass(qiac(qcp_atom(i),1))/qcp_mass(i))
+        else
+                wl_lam0(i) = tmp_wl_lam * winv(iqseq(qcp_atom(i)))
+        end if
 	wl_lam1(i) = q_sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
 call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
