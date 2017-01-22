@@ -2113,7 +2113,8 @@ end if ! use qcp
         if (tmp_qcp_num .ne. qcp_atnum) then
                 write(*,'(a)') 'WARNING: Better to define mass perturbation values for all atoms in QCP region. Filling from default mass values'
                 do i = 1, qcp_atnum
-                        qcp_mass(i) = iaclib(iac(iqseq(qcp_atom(i))))%mass
+! mass selection can be an issue here, we only take default masses from the first appearence of the atom type
+                        qcp_mass(i) =  qmass(qiac(qcp_atom(i),1)) !  iaclib(iac(iqseq(qcp_atom(i))))%mass
                         end do  
         end if
 
