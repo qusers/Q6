@@ -1,0 +1,24 @@
+0a1,9
+> *--------------------------------------------------------------------------------
+> * Q-library: Amber ff14SB ported from AmberTools16 by M. Purg (October 2016)
+> *     
+> * v0.2
+> *   Minor formatting changes
+> * v0.1
+> *   Added HOH (TIP3P from qamber95.lib)
+> *   Added ARN (neutral Arginine), 10.1021/jm0608210, ff14sb atom types
+> *--------------------------------------------------------------------------------
+1302a1312,1324
+> *--------------------------------------------------------------------------------
+> {HOH} !TIP3P water
+>     [info]
+>         solvent 1
+>         density 0.0335
+>     [atoms]
+>          1 O       OW         -0.8340
+>          2 H1      HW          0.4170
+>          3 H2      HW          0.4170
+>     [bonds]
+>        O    H1
+>        O    H2
+>        H1   H2 !for shake

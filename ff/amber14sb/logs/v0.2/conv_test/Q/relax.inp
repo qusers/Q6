@@ -1,0 +1,23 @@
+[md]
+steps                                           1
+random_seed                                     1
+temperature                                     1
+initial_temperature                             1
+stepsize                                        1
+bath_coupling                                   1
+shake_solvent                                 off
+lrf                                           off
+
+[cut-offs]
+solute_solute  150
+
+[intervals]
+non_bond                                         1
+output                                           1
+temperature                                      1
+trajectory                                       1
+
+[files]
+topology                              mol.top
+final                                 relax.re
+trajectory                            relax.dcd
