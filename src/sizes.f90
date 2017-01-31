@@ -16,17 +16,27 @@ module	SIZES
 #ifdef HAVEQUAD
 	integer, parameter :: quadprecision = SELECTED_REAL_KIND(33,4931)
 #endif
-#define SINGLEPREC 1
-#define DOUBLEPREC 2
-#define QUADPREC 3
-#define PROGPREC DOUBLEPREC
 
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
+#if defined DOUBLE || defined QUADRUPLE
+#ERROR Can not define multiple precision values
+#endif
         integer, parameter :: prec = singleprecision
-#elif (PROGPREC == DOUBLEPREC)
+        real(kind=prec),parameter :: QREAL_EPS = 1.E-5_prec
+#endif
+#ifdef DOUBLE
+#if defined SINGLE || defined QUADRUPLE
+#ERROR Can not define multiple precision values
+#endif
         integer, parameter :: prec = doubleprecision
-#elif defined HAVEQUAD
+        real(kind=prec),parameter :: QREAL_EPS = 1.E-14_prec
+#endif
+#ifdef QUADRUPLE 
+#if defined SINGLE || defined DOUBLE 
+#ERROR Can not define multiple precision values
+#endif
         integer, parameter :: prec = quadprecision
+        real(kind=prec),parameter :: QREAL_EPS = 1.E-32_prec
 #endif
 
 	real(kind=prec),parameter	:: zero = 0.0_prec

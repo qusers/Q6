@@ -6683,7 +6683,7 @@ scp = q_dotprod(rmu,rcu)
 if ( scp .gt.  one ) scp =  one
 if ( scp .lt. -one ) scp = -one
 f0 = q_sin ( q_acos(scp) )
-if ( q_abs(f0) .lt. 1.e-4_prec ) f0 = 1.e-4_prec
+if ( q_abs(f0) .lt. QREAL_EPS ) f0 = QREAL_EPS
 f0 = -one / f0
 f0 = dv*f0
 

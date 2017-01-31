@@ -20,6 +20,7 @@ BUILD_NUMBER_FILE=build-number.txt
 # Intel Fortran ifort ( tested in linux and osx)
 ################################################################################
 ifeq ($(COMP),ifort)
+	PREC=		-DDOUBLE
 	FC=			ifort 
 	FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline \
 				-unroll-aggressive -finline-limit=1000000000\
@@ -27,7 +28,7 @@ ifeq ($(COMP),ifort)
 				-no-inline-max-per-routine -no-inline-max-size \
 				-no-inline-max-total-size -no-inline-min-size \
 				-auto
-	FFLAGS=		
+	FFLAGS=		${PREC}
 	FFLAGS_R8=	
 	FC_DEBUG=	-unroll 
 	FPP_FLG=	-fpp -DINTEL
@@ -49,11 +50,12 @@ ifeq ($(COMP),ifort)
 # OSX Mavericks using gfortran
 ################################################################################
 else ifeq ($(COMP),osx)
+	PREC=		-DDOUBLE
 	FC= gfortran
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics\
-                        -std=legacy -Wall -Wtabs 
+                        -std=legacy -Wall -Wtabs ${PREC}
 	FFLAGS_R8=	-fdefault-real-8
 	FPP_FLG=        -cpp -DOSX
 
@@ -69,9 +71,10 @@ else ifeq ($(COMP),osx)
 # PGI Compiler -- compiles at csb
 ################################################################################
 else ifeq ($(COMP),pgi)
+	PREC=		-DDOUBLE
 	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
-	FFLAGS=		
+	FFLAGS=		${PREC}
 	FFLAGS_R8=	-r8
 	FPP_FLG=	-Mpreprocess -DPGI
 
@@ -85,14 +88,16 @@ else ifeq ($(COMP),pgi)
 # IBM Compiler -- untested
 ################################################################################
 else ifeq ($(COMP),ibm)
+	PREC=		-DDOUBLE
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
-	FFLAGS=		-qrealsize=8 -DIBM
+	FFLAGS=		-qrealsize=8 -DIBM ${PREC}
 
 ################################################################################
 # GNU gcc-gfortran
 ################################################################################
 else ifeq ($(COMP),gcc)
+	PREC=		-DDOUBLE
 	FC=		gfortran
 	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto
 	FPP_FLG=	-cpp -DGCC
@@ -104,7 +109,7 @@ else ifeq ($(COMP),gcc)
 	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
 	MPFLAG=		-fopenmp ${MPI}
 
-	FFLAGS=		--static ${OMPI_FCFLAGS}
+	FFLAGS=		--static ${OMPI_FCFLAGS} ${PREC}
 	FFLAGS_R8=	
 
 	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wuninitialized -DDEBUG
@@ -114,6 +119,7 @@ else ifeq ($(COMP),gcc)
 	PROF=		-pg ${DEBUG}
 
 else
+	PREC=		-DDOUBLE
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll 
 	FPP_FLG=	-cpp -DUNKNOWN
@@ -121,7 +127,7 @@ else
 	MPI=		-DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy
 	MPFLAG=		-fopenmp ${MPI}
-	FFLAGS=		--static ${MPI}
+	FFLAGS=		--static ${MPI} ${PREC}
 	FFLAGS_R8=	
 endif
 

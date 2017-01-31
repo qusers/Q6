@@ -377,11 +377,13 @@ real(kind=prec) function q_logarithm(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_logarithm = log(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_logarithm = dlog(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_logarithm = dlog(real(a,kind=doubleprecision))
 #endif
 end function q_logarithm
@@ -398,11 +400,13 @@ real(kind=prec) function q_sqrt(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_sqrt = sqrt(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_sqrt = dsqrt(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_sqrt = dsqrt(real(a,kind=doubleprecision))
 #endif
 end function q_sqrt
@@ -413,11 +417,13 @@ function q_sqrt2(a)
 ! args
 real(kind=prec) :: a(:)
 reaL(kind=prec) :: q_sqrt2(size(a))
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_sqrt2(:)  = sqrt(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_sqrt2(:)  = dsqrt(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_sqrt2(:)  = dsqrt(real(a(:),kind=doubleprecision))
 #endif
 end function q_sqrt2
@@ -427,11 +433,13 @@ real(kind=prec) function q_atan(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_atan  = atan(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_atan  = datan(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_atan  = datan(real(a,kind=doubleprecision))
 #endif
 end function q_atan
@@ -441,11 +449,13 @@ real(kind=prec) function q_acos(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_acos  = acos(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_acos  = dacos(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_acos  = dacos(real(a,kind=doubleprecision))
 #endif
 end function q_acos
@@ -455,11 +465,13 @@ real(kind=prec) function q_cos(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_cos  = cos(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_cos  = dcos(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_cos  = dcos(real(a,kind=doubleprecision))
 #endif
 end function q_cos
@@ -469,11 +481,13 @@ real(kind=prec) function q_sin(a)
 ! to make compilation independent of variable size
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_sin  = sin(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_sin  = dsin(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_sin  = dsin(real(a,kind=doubleprecision))
 #endif
 end function q_sin
@@ -482,11 +496,13 @@ real(kind=prec) function q_exp(a)
 ! returns exponent of value as correct q precision type real
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_exp = exp(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_exp = dexp(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_exp = dexp(real(a,kind=doubleprecision))
 #endif
 end function q_exp
@@ -496,11 +512,13 @@ function q_exp2(a)
 ! args
 real(kind=prec) :: a(:)
 real(kind=prec) :: q_exp2(size(a))
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_exp2 = exp(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_exp2 = dexp(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_exp2 = dexp(real(a,kind=doubleprecision))
 #endif
 end function q_exp2
@@ -511,11 +529,13 @@ real(kind=prec) function q_epsilon(a)
 ! returns the smallest number E of the same kind as X such that 1 + E > 1. 
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_epsilon = epsilon(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_epsilon = epsilon(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_epsilon = epsilon(real(a,kind=doubleprecision))
 #endif
 end function q_epsilon
@@ -547,11 +567,13 @@ real(kind=prec) function q_abs(a)
 ! always calculated as dabs
 ! args
 real(kind=prec) :: a
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_abs = abs(a)
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_abs = dabs(a)
-#else
+#endif
+#ifdef QUADRUPLE
 q_abs = dabs(real(a,kind=doubleprecision))
 #endif
 end function q_abs
@@ -562,11 +584,13 @@ function q_abs2(a)
 ! args
 real(kind=prec) :: a(:)
 real(kind=prec) :: q_abs2(size(a))
-#if (PROGPREC == SINGLEPREC)
+#ifdef SINGLE
 q_abs2(:) = abs(a(:))
-#elif (PROGPREC == DOUBLEPREC)
+#endif
+#ifdef DOUBLE
 q_abs2(:) = dabs(a(:))
-#else
+#endif
+#ifdef QUADRUPLE
 q_abs2(:) = dabs(real(a(:),kind=doubleprecision))
 #endif
 end function q_abs2
