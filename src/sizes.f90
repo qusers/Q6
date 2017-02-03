@@ -17,22 +17,22 @@ module	SIZES
 	integer, parameter :: quadprecision = SELECTED_REAL_KIND(33,4931)
 #endif
 
-#ifdef SINGLE
-#if defined DOUBLE || defined QUADRUPLE
+#ifdef QSINGLE
+#if defined QDOUBLE || defined QQUADRUPLE
 #ERROR Can not define multiple precision values
 #endif
         integer, parameter :: prec = singleprecision
         real(kind=prec),parameter :: QREAL_EPS = 1.E-5_prec
 #endif
-#ifdef DOUBLE
-#if defined SINGLE || defined QUADRUPLE
+#ifdef QDOUBLE
+#if defined QSINGLE || defined QQUADRUPLE
 #ERROR Can not define multiple precision values
 #endif
         integer, parameter :: prec = doubleprecision
         real(kind=prec),parameter :: QREAL_EPS = 1.E-14_prec
 #endif
 #ifdef QUADRUPLE 
-#if defined SINGLE || defined DOUBLE 
+#if defined QSINGLE || defined QDOUBLE 
 #ERROR Can not define multiple precision values
 #endif
         integer, parameter :: prec = quadprecision

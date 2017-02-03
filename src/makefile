@@ -20,7 +20,7 @@ BUILD_NUMBER_FILE=build-number.txt
 # Intel Fortran ifort ( tested in linux and osx)
 ################################################################################
 ifeq ($(COMP),ifort)
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC=			ifort 
 	FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline \
 				-unroll-aggressive -finline-limit=1000000000\
@@ -50,7 +50,7 @@ ifeq ($(COMP),ifort)
 # OSX Mavericks using gfortran
 ################################################################################
 else ifeq ($(COMP),osx)
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC= gfortran
 	FC_OPT=         -O3
 	FFLAGS=         -fstack-protector -DG95=1 \
@@ -71,7 +71,7 @@ else ifeq ($(COMP),osx)
 # PGI Compiler -- compiles at csb
 ################################################################################
 else ifeq ($(COMP),pgi)
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
 	FFLAGS=		${PREC}
@@ -88,7 +88,7 @@ else ifeq ($(COMP),pgi)
 # IBM Compiler -- untested
 ################################################################################
 else ifeq ($(COMP),ibm)
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
 	FFLAGS=		-qrealsize=8 -DIBM ${PREC}
@@ -97,7 +97,7 @@ else ifeq ($(COMP),ibm)
 # GNU gcc-gfortran
 ################################################################################
 else ifeq ($(COMP),gcc)
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC=		gfortran
 	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto
 	FPP_FLG=	-cpp -DGCC
@@ -119,7 +119,7 @@ else ifeq ($(COMP),gcc)
 	PROF=		-pg ${DEBUG}
 
 else
-	PREC=		-DDOUBLE
+	PREC=		-DQDOUBLE
 	FC=		gfortran
 	FC_OPT=		-O3 -unroll 
 	FPP_FLG=	-cpp -DUNKNOWN

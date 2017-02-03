@@ -352,20 +352,20 @@ end if
 		ipt = 0
                 do i=1,nstates
                 do jj=1,fileheader%arrays !can not use Q energies operator any more
-                avEQ(i)%q(jj)%bond     = avEQ(i)%q(jj)%bond     * zero
-                avEQ(i)%q(jj)%angle    = avEQ(i)%q(jj)%angle    * zero
-                avEQ(i)%q(jj)%torsion  = avEQ(i)%q(jj)%torsion  * zero
-                avEQ(i)%q(jj)%improper = avEQ(i)%q(jj)%improper * zero
-                avEQ(i)%restraint(jj)  = avEQ(i)%restraint(jj)  * zero
-                avEQ(i)%total(jj)  = avEQ(i)%total(jj)  * zero
-                avEQ(i)%qx(jj)%el  = avEQ(i)%qx(jj)%el  * zero
-                avEQ(i)%qx(jj)%vdw = avEQ(i)%qx(jj)%vdw * zero
-                avEQ(i)%qq(jj)%el  = avEQ(i)%qq(jj)%el  * zero
-                avEQ(i)%qq(jj)%vdw = avEQ(i)%qq(jj)%vdw * zero
-                avEQ(i)%qp(jj)%el  = avEQ(i)%qp(jj)%el  * zero
-                avEQ(i)%qp(jj)%vdw = avEQ(i)%qp(jj)%vdw * zero
-                avEQ(i)%qw(jj)%el  = avEQ(i)%qw(jj)%el  * zero
-                avEQ(i)%qw(jj)%vdw = avEQ(i)%qw(jj)%vdw * zero
+                avEQ(i)%q(jj)%bond     = zero
+                avEQ(i)%q(jj)%angle    = zero
+                avEQ(i)%q(jj)%torsion  = zero
+                avEQ(i)%q(jj)%improper = zero
+                avEQ(i)%restraint(jj)  = zero
+                avEQ(i)%total(jj)      = zero
+                avEQ(i)%qx(jj)%el      = zero
+                avEQ(i)%qx(jj)%vdw     = zero
+                avEQ(i)%qq(jj)%el      = zero
+                avEQ(i)%qq(jj)%vdw     = zero
+                avEQ(i)%qp(jj)%el      = zero
+                avEQ(i)%qp(jj)%vdw     = zero
+                avEQ(i)%qw(jj)%el      = zero
+                avEQ(i)%qw(jj)%vdw     = zero
                 end do
                 end do
 
