@@ -106,7 +106,7 @@ else ifeq ($(COMP),gcc)
 	OMPI_FC=	${FC}
 	OMPI_FCFLAGS=	-DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy 
-	MPI=		${OMPI_FCFLAGS} ${FC_OPT}
+	MPI=		${OMPI_FCFLAGS} ${FC_OPT} ${PREC}
 	MPFLAG=		-fopenmp ${MPI}
 
 	FFLAGS=		--static ${OMPI_FCFLAGS} ${PREC}

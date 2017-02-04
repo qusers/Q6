@@ -400,39 +400,82 @@ if(.not. prm_open_section('PBC')) then
 box = .false.
 write(*,'(a)') 'Boundary: sphere'
 else
-box = .true.
-write(*,'(a)') 'Boundary: periodic box'
-if( .not. prm_get_logical_by_key('rigid_box_centre', rigid_box_centre, .false. ) ) then
-        write(*,'(a)') '>>> Error: rigid_box_centre must be on or off'
-        initialize = .false.
-end if
-write(*,'(a,a3)') 'Rigid box centre ', onoff(rigid_box_centre)
-constant_pressure = .false.
-control_box = .false.
-
-yes = prm_get_logical_by_key('put_solvent_back_in_box', put_solvent_back_in_box)
-
-yes = prm_get_logical_by_key('put_solute_back_in_box', put_solute_back_in_box)
-
-
-if(put_solute_back_in_box .and. put_solvent_back_in_box) then
-   write(*,'(a)') 'Solute and solvent molecules will be put back in box.'
-else
-        if (put_solute_back_in_box) then
-        write(*,'(a)') 'Only solute molecules will be put back in box.'
-        else
-                if (put_solvent_back_in_box) then
-                        write(*,'(a)') 'Only solvent molecules will be put back in box.'
-                else
-                        write(*,'(a)') 'No molecules will be put back in box.'				
-                end if
-        end if
-end if
-
-
-
+        box = .true.
+        write(*,'(a)') 'Boundary: periodic box'                                                                         
+        if( .not. prm_get_logical_by_key('rigid_box_centre', rigid_box_centre, .false. ) ) then                         
+                write(*,'(a)') '>>> Error: rigid_box_centre must be on or off'                                          
+                initialize = .false.                                                                                    
+        end if                                                                                                          
+        write(*,'(a,a3)') 'Rigid box centre ', onoff(rigid_box_centre)                                                  
+        if( .not. prm_get_logical_by_key('constant_pressure', constant_pressure, .false.) ) then                        
+                write(*,'(a)') '>>> Error: constant_pressure must be on or off'                                         
+                initialize = .false.                                                                                    
+        end if                                                                                                          
+                                                                                                                        
+        if( constant_pressure ) then                                                                                    
+                write(*,'(a)') 'NPT-ensemble'                                                                           
+                volume_try = 0                                                                                          
+                volume_acc = 0                                                                                          
+                if( .not. prm_get_real_by_key('max_volume_displ', max_vol_displ) ) then                                
+                        initialize = .false.                                                                            
+                        write(*,'(a)') '>>> ERROR: maximum volume displacement not specified (section PBC)'             
+                else                                                                                                    
+                        write(*,5) max_vol_displ                                                                        
+                end if                                                                                                  
+5	format ('Maximum volume displacemet = ', f10.3)                                                                
+                                                                                                                        
+                if( .not. prm_get_integer_by_key('pressure_seed', pressure_seed)) then                                  
+                        pressure_seed = 3781                                                                            
+                end if                                                                                                  
+                                                                                                                        
+				write(*, '(a, i4 )' ) 'Pressure seed: ', pressure_seed                                  
+                                                                                                                        
+                if( .not. prm_get_real_by_key('pressure', pressure) ) then                                             
+                        pressure = one                                                                                  
+                end if                                                                                                  
+                write(*,9) pressure                                                                                     
+9	format ('Pressure = ',f10.3,'  bar')                                                                           
+                !convert pressure to strange internal unit                                                              
+                pressure = pressure * 1.43836e-5_prec                                                                   
+                yes = prm_get_logical_by_key('atom_based_scaling', atom_based_scaling, .false.)                         
+                if (atom_based_scaling) then                                                                            
+                        write (*,'(a)') 'Coordinate scaling on volume changes:  Atom based'                             
+                else                                                                                                    
+                        write (*,'(a)') 'Coordinate scaling on volume changes:  Molecule based'                         
+                end if                                                                                                  
+                                                                                                                        
+        else                                                                                                            
+                write(*,'(a)') 'NVT-ensemble'                                                                           
+                if( prm_get_line_by_key('control_box', instring) ) then                                                 
+                        read(instring, *) new_boxl
+                        control_box = .true.                                                                            
+                        write(*,'(a, 3f10.3)')'Boxsize will be changed to: ', new_boxl                                  
+                else                                                                                                    
+                        control_box = .false.                                                                           
+                end if                                                                                                  
+                                                                                                                        
+                                                                                                                        
+        end if !section constant_pressure                                                                               
+                                                                                                                        
+	yes = prm_get_logical_by_key('put_solvent_back_in_box', put_solvent_back_in_box)                                
+                                                                                                                        
+	yes = prm_get_logical_by_key('put_solute_back_in_box', put_solute_back_in_box)                                  
+                                                                                                                        
+                                                                                                                        
+	if(put_solute_back_in_box .and. put_solvent_back_in_box) then                                                   
+           write(*,'(a)') 'Solute and solvent molecules will be put back in box.'                                       
+	else
+		if (put_solute_back_in_box) then
+           	write(*,'(a)') 'Only solute molecules will be put back in box.'
+		else
+			if (put_solvent_back_in_box) then
+				write(*,'(a)') 'Only solvent molecules will be put back in box.'
+			else
+				write(*,'(a)') 'No molecules will be put back in box.'
+			end if
+		end if
+	end if
 end if !section PBC
-
 
 ! --- Rcpp, Rcww, Rcpw, Rcq, RcLRF
 ! change for PBC, q-atoms interact with everything for now, placeholder until we have 
