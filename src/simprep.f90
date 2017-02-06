@@ -3692,6 +3692,44 @@ allocate(pw_igrid(ncgp_solute))
 allocate(ww_igrid(nwat))
 #endif
 
+! check for restraint settings to make sure all atoms are within bounds
+        do i=1,nrstr_seq
+        if ((rstseq(i)%i.gt.natom).or.(rstseq(i)%j.gt.natom).or.&
+                (rstseq(i)%i.lt.1).or.(rstseq(i)%j.lt.1)) then
+                write(*,666) 'sequence',i
+                write(*,667)
+                call die('Out of bounds atoms')
+        end if
+        end do
+        do i=1,nrstr_pos
+        if ((rstpos(i)%i.gt.natom).or.(rstpos(i)%i.lt.1)) then
+                write(*,666) 'position',i
+                write(*,667)
+                call die('Out of bounds atoms')
+        end if
+        end do
+        do i=1,nrstr_dist
+        if ((rstdis(i)%i.gt.natom).or.(rstdis(i)%j.gt.natom).or.&
+                (rstdis(i)%i.lt.1).or.(rstdis(i)%j.lt.1)) then
+                write(*,666) 'distance',i
+                write(*,667)
+                call die('Out of bounds atoms')
+        end if
+        end do
+        do i=1,nrstr_angl
+        if((rstang(i)%i.gt.natom).or.(rstang(i)%i.lt.1).or. &
+                (rstang(i)%j.gt.natom).or.(rstang(i)%j.lt.1).or. &
+                (rstang(i)%k.gt.natom).or.(rstang(i)%k.lt.1)) then
+                write(*,666) 'angle',i
+                write(*,667)
+                call die('Out of bounds atoms')
+        end if
+        end do
+
+
+666     format('>>>> ERROR: Bad restraint setting for ',a, ' restraint ',i4)
+667     format('>>>> ERROR: Out of bounds atom setting')
+
 ! prepare internal nonbonded interactions for solvent
 call prep_sim_precompute_solvent
 
