@@ -281,28 +281,28 @@ do i = 1, qcp_atnum
 call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
 if(use_qcp_mass) call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
 end do
-qcp_EQ_tot = qcp_EQ_tot * zero
+qcp_EQ_tot    = zero
 qcp_Ebead_old = zero
 qcp_Ebead_new = zero
 qcp_Ebead     = zero
 Etmp  = zero
 Esave = zero
-EQtmp = EQtmp * zero
+EQtmp = zero
 do i = 1, qcp_size
-qcp_EQbead_old(i,:) = qcp_EQbead_old(i,:) * zero
-qcp_EQbead_new(i,:) = qcp_EQbead_new(i,:) * zero
+qcp_EQbead_old(i,:) = zero
+qcp_EQbead_new(i,:) = zero
 end do
 if (use_qcp_mass) then
-qcp_EQ_tot2 = qcp_EQ_tot2 * zero
+qcp_EQ_tot2    = zero
 qcp_Ebead_old2 = zero
 qcp_Ebead_new2 = zero
 qcp_Ebead2     = zero
 Etmp2  = zero
 Esave2 = zero
-EQtmp2 = EQtmp2 * zero
+EQtmp2 = zero
 do i = 1, qcp_size
-qcp_EQbead_old2(i,:) = qcp_EQbead_old2(i,:) * zero
-qcp_EQbead_new2(i,:) = qcp_EQbead_new2(i,:) * zero
+qcp_EQbead_old2(i,:) = zero
+qcp_EQbead_new2(i,:) = zero
 end do
 end if
 ! set number of beads to move, 1 bead for bisection, center all
@@ -414,13 +414,13 @@ if (use_qcp_mass) qcp_Ering_old2 = qcp_Ering2
 total_EPI     = zero
 qcp_Ering_ave = zero
 Epot_ave      = zero
-EQpot_ave     = EQpot_ave * zero
+EQpot_ave     = zero
 total_EQPI    = zero
 if (use_qcp_mass) then
         total_EPI2     = zero
         qcp_Ering_ave2 = zero
         Epot_ave2      = zero
-        EQpot_ave2     = EQpot_ave2 * zero
+        EQpot_ave2     = zero
         total_EQPI2    = zero
 end if
 ! MC stuff
@@ -524,29 +524,29 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                                 /real(qcp_size,kind=prec))
                         qcp_Ebead_old(i) = qcp_Ebead_new(i)
                         qcp_EQbead_old(i,:) = qcp_EQbead_new(i,:)
-                        if (use_qcp_mass) then
+                end if
+                if (use_qcp_mass) then
+                        if(nodeid.eq.0) then
                                 do j = 1, qcp_atnum
                                 ! only atoms with qcp_coords need update, saved in x_save
                                         x(iqseq(qcp_atom(j))) = x_save(iqseq(qcp_atom(j))) + qcp_coord2(j,i)
                                 end do ! qcp_atnum
                         end if
-                end if
-                if (use_qcp_mass) then
 #ifdef USE_MPI
 call MPI_Bcast(x,natom,mpitype_qrvec,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('QCP Bcast x')
 #endif
 
-                call pot_energy(qcp_E,qcp_EQ,.false.)
-                if (nodeid.eq.0) then
-                        qcp_Ebead_new2(i) = qcp_E%potential
-                        qcp_EQbead_new2(i,:) = qcp_EQ(:)
-                        Esave2 = Esave2 + ((qcp_Ebead_new2(i)-qcp_Ebead_old2(i))/real(qcp_size,kind=prec))
-                        EQsave2(:) = EQsave2(:) + ((qcp_EQbead_new2(i,:) - qcp_EQbead_old2(i,:)) &
-                                /real(qcp_size,kind=prec))
-                        qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
-                        qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
-                end if
+                        call pot_energy(qcp_E,qcp_EQ,.false.)
+                        if (nodeid.eq.0) then
+                                qcp_Ebead_new2(i) = qcp_E%potential
+                                qcp_EQbead_new2(i,:) = qcp_EQ(:)
+                                Esave2 = Esave2 + ((qcp_Ebead_new2(i)-qcp_Ebead_old2(i))/real(qcp_size,kind=prec))
+                                EQsave2(:) = EQsave2(:) + ((qcp_EQbead_new2(i,:) - qcp_EQbead_old2(i,:)) &
+                                        /real(qcp_size,kind=prec))
+                                qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
+                                qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
+                        end if
                 end if
                 end do ! qcp_size
 
@@ -657,6 +657,10 @@ if (use_qcp_mass) then
         total_EQPI2(:) = total_EQPI2(:) / MCaccept
         EQpot_ave2(:)  = EQpot_ave2(:)  / MCaccept
 end if
+
+! set lambda values to correct values from EQ
+EQpot_ave(:)%lambda = EQ(:)%lambda
+if (use_qcp_mass) EQpot_ave2(:)%lambda = EQ(:)%lambda
 
 if(qcp_veryverbose) then
         write(*,'(a,f12.6)') 'Total PI energy = ',total_EPI

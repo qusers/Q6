@@ -89,6 +89,14 @@ implicit none
         interface operator(-)
                 module procedure sub_ene,sub_classical_ene
         end interface
+
+public :: assignment(=)
+
+interface assignment(=)
+        module procedure ene_set, ene_set_classical
+end interface
+
+
 contains
 
 !----------------------------------------------------------------------
@@ -182,7 +190,7 @@ end function get_ene
 function add_ene (e1, e2)
    type(OQ_ENERGIES), INTENT (IN) :: e1 (:), e2 (SIZE (e1))
    type(OQ_ENERGIES) :: add_ene (SIZE (e1))
-
+        add_ene(:)%lambda       =e1(:)%lambda
 	add_ene(:)%total	=e1(:)%total		+e2(:)%total
 	add_ene(:)%q%bond	=e1(:)%q%bond		+e2(:)%q%bond
 	add_ene(:)%q%angle	=e1(:)%q%angle		+e2(:)%q%angle
@@ -206,6 +214,7 @@ function sub_ene (e1, e2)
    type(OQ_ENERGIES), INTENT (IN) :: e1 (:), e2 (SIZE (e1))
    type(OQ_ENERGIES) :: sub_ene (SIZE (e1))
 
+        sub_ene(:)%lambda       =e1(:)%lambda
 	sub_ene(:)%total	=e1(:)%total		-e2(:)%total
 	sub_ene(:)%q%bond	=e1(:)%q%bond		-e2(:)%q%bond
 	sub_ene(:)%q%angle	=e1(:)%q%angle		-e2(:)%q%angle
@@ -230,6 +239,7 @@ function scale_ene (e1, k)
    real(kind=prec), intent(in)				:: k
    type(OQ_ENERGIES)				:: scale_ene (SIZE (e1))
 
+        scale_ene(:)%lambda     =e1(:)%lambda
 	scale_ene(:)%total	=e1(:)%total*k
 	scale_ene(:)%q%bond	=e1(:)%q%bond*k
 	scale_ene(:)%q%angle	=e1(:)%q%angle*k
@@ -251,6 +261,8 @@ function div_ene(e1,k)
         type(OQ_ENERGIES),INTENT(IN)    :: e1(:)
         real(kind=prec),intent(in)      :: k
         type(OQ_ENERGIES)               :: div_ene (SIZE(e1))
+
+        div_ene(:)%lambda       =e1(:)%lambda
 	div_ene(:)%total	=e1(:)%total            /k
 	div_ene(:)%q%bond	=e1(:)%q%bond           /k
 	div_ene(:)%q%angle	=e1(:)%q%angle          /k
@@ -270,6 +282,29 @@ end function div_ene
 
 !----------------------------------------------------------------------
 
+subroutine ene_set (e1, k)
+   type(OQ_ENERGIES), INTENT (INOUT):: e1 (:)
+   real(kind=prec), intent(in)				:: k
+
+        e1(:)%lambda       =  k 
+	e1(:)%total	=  k
+	e1(:)%q%bond	=  k
+	e1(:)%q%angle	=  k
+	e1(:)%q%torsion	=  k
+	e1(:)%q%improper	=  k
+	e1(:)%qx%el	=  k
+	e1(:)%qx%vdw	=  k
+	e1(:)%qq%el	=  k
+	e1(:)%qq%vdw	=  k
+	e1(:)%qp%el	=  k
+	e1(:)%qp%vdw	=  k
+	e1(:)%qw%el	=  k
+	e1(:)%qw%vdw	=  k
+	e1(:)%restraint	=  k
+
+end subroutine ene_set
+
+!----------------------------------------------------------------------
 function scale_classical_ene(e1,k)
 type(ENERGIES),INTENT(IN)       :: e1
 real(kind=prec),intent(IN)      :: k
@@ -419,6 +454,56 @@ sub_classical_ene%restraint%solvent_radial = e1%restraint%solvent_radial  - e2%r
 sub_classical_ene%restraint%water_pol      = e1%restraint%water_pol       - e2%restraint%water_pol      
 
 end function sub_classical_ene
+!-------------------------------------------------------------------------
+subroutine ene_set_classical(e1,k)
+type(ENERGIES),INTENT(INOUT)    :: e1
+real(kind=prec),intent(IN)      :: k
+
+e1%potential  = k
+e1%kinetic    = k
+e1%LRF        = k
+e1%p%bond     = k
+e1%p%angle    = k
+e1%p%torsion  = k
+e1%p%improper = k
+e1%w%bond     = k
+e1%w%angle    = k
+e1%w%torsion  = k
+e1%w%improper = k
+e1%q%bond     = k
+e1%q%angle    = k
+e1%q%torsion  = k
+e1%q%improper = k
+e1%pp%el      = k
+e1%pp%vdw     = k
+e1%pw%el      = k
+e1%pw%vdw     = k
+e1%ww%el      = k
+e1%ww%vdw     = k
+e1%qx%el      = k
+e1%qx%vdw     = k
+
+e1%restraint%total          = k
+e1%restraint%fix            = k
+e1%restraint%shell          = k
+e1%restraint%protein        = k
+e1%restraint%solvent_radial = k
+e1%restraint%water_pol      = k
+
+
+end subroutine ene_set_classical
+!----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
 
 !----------------------------------------------------------------------
 
