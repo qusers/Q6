@@ -111,6 +111,9 @@ else ifeq ($(COMP),gcc)
 
 	FFLAGS=		--static ${OMPI_FCFLAGS} ${PREC}
 	FFLAGS_R8=	
+	DEBUG_FC=	${PREC}
+
+
 
 	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wuninitialized -DDEBUG
 	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG

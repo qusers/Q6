@@ -3426,10 +3426,13 @@ end subroutine precompute_set_values_ww
 !-----------------------------------------------------------------------
 subroutine prep_sim
 ! local variables
-integer						:: i, j, ig, istate,runvar,iw,irc_solvent
-type(Q_ENE_HEAD)				:: tempheader
+integer                                         :: i, j, ig, istate,runvar,iw,irc_solvent,ia
+type(Q_ENE_HEAD)                                :: tempheader
+real(kind=prec)                                 :: rdist,curdist,maxdist
+type(qr_vec)                                    :: xcgp
+logical                                         :: willdie
 
-if (nodeid .eq. 0) then	
+if (nodeid .eq. 0) then
         write(*,*)
         call centered_heading('Initialising dynamics', '-')
 end if
@@ -3732,6 +3735,41 @@ allocate(ww_igrid(nwat))
 
 ! prepare internal nonbonded interactions for solvent
 call prep_sim_precompute_solvent
+
+! final check to see if atom groups are too large for the cut-off settings used
+! will loop through all atoms of each group and check for either pp or pw cut-off
+! no check for qatoms, because cut-off should be inconsequent then
+if (iuse_switch_atom .eq. 1) then
+        rdist = min(rcpp,rcpw)
+        rdist = rdist**2
+        willdie = .false.
+do ig = 1, ncgp
+        xcgp    = xtop(cgp(ig)%iswitch)
+        maxdist = zero
+        curdist = zero
+        do i = cgp(ig)%first, cgp(ig)%last
+                ia = cgpatom(i)
+                if ((iqatom(ia) .eq. 0).and.((use_PBC) .or.(.not.excl(ia)))) then
+                        curdist = q_dist4(xcgp,xtop(ia))
+                        if (curdist .gt. maxdist) maxdist = curdist
+                end if
+        end do
+        if (maxdist .gt. (rdist * 0.75_prec)) then
+                write(*,668) ig,q_sqrt(rdist) 
+                write(*,669) cgp(ig)%iswitch
+                write(*,670) q_sqrt(maxdist)
+                willdie = .true.
+        end if
+
+
+
+end do
+        if(willdie) call die('Too large charge group')
+end if
+668     format('>>>> ERROR: Charge group ',i4,' is too large for cut-off of ',f8.3)
+669     format('>>>> ERROR: Switch atom is ',i4)
+670     format('>>>> ERROR: Charge group maximum distance is ',f8.3)
+
 
 #if defined (USE_MPI)
 !	reclength=nstates*((2*ene_header%arrays)+(2*ene_header%arrays))
