@@ -563,9 +563,14 @@ real(kind=prec),allocatable				:: node_times(:)
 !	temperature calculation variables
 !-----------------------------------------------------------------------
 integer						:: Ndegf,Ndegfree
-integer						:: Ndegf_solute,Ndegfree_solute
-integer						:: Ndegf_solvent,Ndegfree_solvent
 logical						:: detail_temps			!controls whether or not solute and solvent temps are printed separately (true if solute and solvent degrees of freedom are both not zero)
+integer                                         :: ntgroups
+TYPE TGROUP_TYPE
+        real(kind=prec)                         :: sfact
+        integer                                 :: starta,enda
+        integer                                 :: Ndegf,Ndegfree
+end TYPE TGROUP_TYPE
+TYPE(TGROUP_TYPE),allocatable                   :: tscale(:)
 
 !----END OF SHARED VARIABLES
 end module GLOBALS

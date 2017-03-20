@@ -270,8 +270,10 @@ end if
 yes = prm_get_logical_by_key('separate_scaling', separate_scaling, .true.)
 if(separate_scaling) then
    write(*,'(a)') 'Solute and solvent atoms coupled separately to heat bath.'
+   write(*,'(a)') 'May redefine groups in later section'
 else 
    write(*,'(a)') 'Solute and solvent atoms coupled together to heat bath.'
+   ntgroups = 1
 end if
 
 15	format ('Target temperature =',f10.2,'  T-relax time     =',f10.2)
@@ -396,74 +398,114 @@ end if
 
 end if
 
+if(.not.prm_open_section('TGROUPS')) then
+        if(separate_scaling) then
+                ntgroups = 2
+                allocate(tscale(ntgroups))
+                tscale(1)%starta = 1
+                tscale(1)%enda   = nat_solute
+                tscale(2)%starta = nat_solute + 1
+                tscale(2)%enda   = natom
+        else
+                allocate(tscale(ntgroups))
+                tscale(1)%starta = 1
+                tscale(1)%enda   = natom
+        end if
+        write(*,'(a)') 'Using default temperature coupling groups'
+else
+        if(.not. separate_scaling) then
+                write(*,'(a)') 'Only one temperature coupling group requested, skipping'
+                allocate(tscale(ntgroups))
+                tscale(1)%starta = 1
+                tscale(1)%enda   = natom
+        else
+                ntgroups = prm_count('TGROUPS')
+                if(ntgroups .le. 1) then
+                        write(*,'(a)') 'Weird values for temperature groups, defaulting to two groups'
+                        ntgroups = 2
+                        allocate(tscale(ntgroups))
+                        tscale(1)%starta = 1
+                        tscale(1)%enda   = nat_solute
+                        tscale(2)%starta = nat_solute + 1
+                        tscale(2)%enda   = natom
+                end if
+                allocate(tscale(ntgroups))
+                write(*,'(a,i4)') 'Using this number of temperature control groups: ',ntgroups
+
+                do tgroups = 1 , ntgroups
+                        yes = prm_get_line(text)
+                        read(text,*, iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda
+                        if(fstat /= 0) then
+                                write(*,'(a,i4)') '>>> ERROR: Invalid data for temperature scaling group ',tgroups
+                                initialize = .false.
+                                exit
+                        end if
+                        write(*,789) 'Temperature scaling group ',tgroups
+                        write(*,789) 'Starting atom = ',tscale(tgroups)%starta
+                        write(*,789) 'End atom = ',tscale(tgroups)%enda
+                end do
+789     format(a,i4)
+
+
+
+
 if(.not. prm_open_section('PBC')) then
 box = .false.
 write(*,'(a)') 'Boundary: sphere'
 else
         box = .true.
-        write(*,'(a)') 'Boundary: periodic box'                                                                         
-        if( .not. prm_get_logical_by_key('rigid_box_centre', rigid_box_centre, .false. ) ) then                         
-                write(*,'(a)') '>>> Error: rigid_box_centre must be on or off'                                          
-                initialize = .false.                                                                                    
-        end if                                                                                                          
-        write(*,'(a,a3)') 'Rigid box centre ', onoff(rigid_box_centre)                                                  
-        if( .not. prm_get_logical_by_key('constant_pressure', constant_pressure, .false.) ) then                        
-                write(*,'(a)') '>>> Error: constant_pressure must be on or off'                                         
-                initialize = .false.                                                                                    
-        end if                                                                                                          
-                                                                                                                        
-        if( constant_pressure ) then                                                                                    
-                write(*,'(a)') 'NPT-ensemble'                                                                           
-                volume_try = 0                                                                                          
-                volume_acc = 0                                                                                          
-                if( .not. prm_get_real_by_key('max_volume_displ', max_vol_displ) ) then                                
-                        initialize = .false.                                                                            
-                        write(*,'(a)') '>>> ERROR: maximum volume displacement not specified (section PBC)'             
-                else                                                                                                    
-                        write(*,5) max_vol_displ                                                                        
-                end if                                                                                                  
-5	format ('Maximum volume displacemet = ', f10.3)                                                                
-                                                                                                                        
-                if( .not. prm_get_integer_by_key('pressure_seed', pressure_seed)) then                                  
-                        pressure_seed = 3781                                                                            
-                end if                                                                                                  
-                                                                                                                        
-				write(*, '(a, i4 )' ) 'Pressure seed: ', pressure_seed                                  
-                                                                                                                        
-                if( .not. prm_get_real_by_key('pressure', pressure) ) then                                             
-                        pressure = one                                                                                  
-                end if                                                                                                  
-                write(*,9) pressure                                                                                     
-9	format ('Pressure = ',f10.3,'  bar')                                                                           
-                !convert pressure to strange internal unit                                                              
-                pressure = pressure * 1.43836e-5_prec                                                                   
-                yes = prm_get_logical_by_key('atom_based_scaling', atom_based_scaling, .false.)                         
-                if (atom_based_scaling) then                                                                            
-                        write (*,'(a)') 'Coordinate scaling on volume changes:  Atom based'                             
-                else                                                                                                    
-                        write (*,'(a)') 'Coordinate scaling on volume changes:  Molecule based'                         
-                end if                                                                                                  
-                                                                                                                        
-        else                                                                                                            
-                write(*,'(a)') 'NVT-ensemble'                                                                           
-                if( prm_get_line_by_key('control_box', instring) ) then                                                 
+        write(*,'(a)') 'Boundary: periodic box'
+        if( .not. prm_get_logical_by_key('rigid_box_centre', rigid_box_centre, .false. ) ) then
+                write(*,'(a)') '>>> Error: rigid_box_centre must be on or off'
+                initialize = .false.
+        end if
+        write(*,'(a,a3)') 'Rigid box centre ', onoff(rigid_box_centre)
+        if( .not. prm_get_logical_by_key('constant_pressure', constant_pressure, .false.) ) then
+                write(*,'(a)') '>>> Error: constant_pressure must be on or off'
+                initialize = .false.
+        end if
+        if( constant_pressure ) then
+                write(*,'(a)') 'NPT-ensemble'
+                volume_try = 0
+                volume_acc = 0
+                if( .not. prm_get_real_by_key('max_volume_displ', max_vol_displ) ) then
+                        initialize = .false.
+                        write(*,'(a)') '>>> ERROR: maximum volume displacement not specified (section PBC)'
+                else
+                        write(*,5) max_vol_displ
+                end if
+5	format ('Maximum volume displacemet = ', f10.3)
+                if( .not. prm_get_integer_by_key('pressure_seed', pressure_seed)) then
+                        pressure_seed = 3781
+                end if
+				write(*, '(a, i4 )' ) 'Pressure seed: ', pressure_seed 
+                if( .not. prm_get_real_by_key('pressure', pressure) ) then
+                        pressure = one
+                end if
+                write(*,9) pressure
+9	format ('Pressure = ',f10.3,'  bar')
+                !convert pressure to strange internal unit
+                pressure = pressure * 1.43836e-5_prec
+                yes = prm_get_logical_by_key('atom_based_scaling', atom_based_scaling, .false.)
+                if (atom_based_scaling) then
+                        write (*,'(a)') 'Coordinate scaling on volume changes:  Atom based'
+                else
+                        write (*,'(a)') 'Coordinate scaling on volume changes:  Molecule based'
+                end if 
+        else
+                write(*,'(a)') 'NVT-ensemble'
+                if( prm_get_line_by_key('control_box', instring) ) then
                         read(instring, *) new_boxl
-                        control_box = .true.                                                                            
-                        write(*,'(a, 3f10.3)')'Boxsize will be changed to: ', new_boxl                                  
-                else                                                                                                    
-                        control_box = .false.                                                                           
-                end if                                                                                                  
-                                                                                                                        
-                                                                                                                        
-        end if !section constant_pressure                                                                               
-                                                                                                                        
-	yes = prm_get_logical_by_key('put_solvent_back_in_box', put_solvent_back_in_box)                                
-                                                                                                                        
-	yes = prm_get_logical_by_key('put_solute_back_in_box', put_solute_back_in_box)                                  
-                                                                                                                        
-                                                                                                                        
-	if(put_solute_back_in_box .and. put_solvent_back_in_box) then                                                   
-           write(*,'(a)') 'Solute and solvent molecules will be put back in box.'                                       
+                        control_box = .true.
+                        write(*,'(a, 3f10.3)')'Boxsize will be changed to: ', new_boxl
+                else
+                        control_box = .false.
+                end if 
+        end if !section constant_pressure 
+	yes = prm_get_logical_by_key('put_solvent_back_in_box', put_solvent_back_in_box)
+	yes = prm_get_logical_by_key('put_solute_back_in_box', put_solute_back_in_box) 
+	if(put_solute_back_in_box .and. put_solvent_back_in_box) then
+           write(*,'(a)') 'Solute and solvent molecules will be put back in box.'
 	else
 		if (put_solute_back_in_box) then
            	write(*,'(a)') 'Only solute molecules will be put back in box.'
@@ -2012,8 +2054,9 @@ start_loop_time1 = rtime()
 ! new selection and subfunction for thermostats
 !if Berendsen thermostat was chosen, call two times for diff scaling
 if( thermostat == BERENDSEN ) then
-	call newvel_ber(dv_mod,Tscale_solute,1,nat_solute)
-	call newvel_ber(dv_mod,Tscale_solvent,nat_solute+1,natom)
+        do tgroup = 1, ntgroups
+        call newvel_ber(dv_mod,tscale(tgroup)%sfact,tscale(tgroup)%starta,tscale(tgroup)%enda)
+        end do
 else if (thermostat == LANGEVIN ) then
 	call newvel_lan(dv_mod,dv_friction,randva,randfa)
 else if (thermostat == NOSEHOOVER ) then
