@@ -117,6 +117,7 @@ logical                                         :: shake_all,shake_all_solvent,s
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
 integer                                         :: timeval(8)
+integer                                         :: tgroups
 ! this subroutine will init:
 !  nsteps, stepsize, dt
 !  Temp0, tau_T, iseed, Tmaxw
@@ -400,54 +401,70 @@ end if
 
 if(.not.prm_open_section('TGROUPS')) then
         if(separate_scaling) then
+                ! two groups, solute and solvent
                 ntgroups = 2
+                ntgroups_kind = DEFAULT_TWO
                 allocate(tscale(ntgroups))
-                tscale(1)%starta = 1
-                tscale(1)%enda   = nat_solute
-                tscale(2)%starta = nat_solute + 1
-                tscale(2)%enda   = natom
         else
+                ! one group only for all atoms
+                ntgroups = 1
+                ntgroups_kind = DEFAULT_ONE
                 allocate(tscale(ntgroups))
-                tscale(1)%starta = 1
-                tscale(1)%enda   = natom
         end if
         write(*,'(a)') 'Using default temperature coupling groups'
 else
         if(.not. separate_scaling) then
                 write(*,'(a)') 'Only one temperature coupling group requested, skipping'
+                ntgroups = 1
+                ntgroups_kind = DEFAULT_ONE
                 allocate(tscale(ntgroups))
-                tscale(1)%starta = 1
-                tscale(1)%enda   = natom
         else
                 ntgroups = prm_count('TGROUPS')
+                ! test for bad input, default to solute, solvent groups in this case
                 if(ntgroups .le. 1) then
                         write(*,'(a)') 'Weird values for temperature groups, defaulting to two groups'
                         ntgroups = 2
                         allocate(tscale(ntgroups))
-                        tscale(1)%starta = 1
-                        tscale(1)%enda   = nat_solute
-                        tscale(2)%starta = nat_solute + 1
-                        tscale(2)%enda   = natom
+                        ntgroups_kind = DEFAULT_TWO
+                else
+                ! actuallu use the user input for the groups        
+                        allocate(tscale(ntgroups))
+                        ntgroups_kind = USERSET
+                        write(*,'(a,i4)') 'Using this number of temperature control groups: ',ntgroups
+                ! check for later to see if all atoms are covered
+                        do tgroups = 1 , ntgroups
+                                yes = prm_get_line(text)
+                                read(text,*, iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda
+                                if(fstat /= 0) then
+                                        write(*,'(a,i4)') '>>> ERROR: Invalid data for temperature scaling group ',tgroups
+                                        initialize = .false.
+                                        exit
+                                end if
+                                if((tscale(tgroups)%starta .lt. 1).or.(tscale(tgroups)%enda .gt. natoms)) then
+                                        write(*,'(a,i4)') '>>> ERROR: Invalid atom specification for group ',tgroups
+                                        write(*,'(a,i4)') '>>> ERROR: First atom = ',tscale(tgroups)%starta
+                                        write(*,'(a,i4)') '>>> ERROR: Last atom = ',tscale(tgroups)%enda
+                                        initialize = .false.
+                                        exit
+                                endif
+                                ! check if groups overlap and remind the user that this does not work this way
+                                ! always this group against previous, might need more general test later
+                                ! groups need to be sequential at this point
+                                if(tgroups .ge. 2) then
+                                        if(tscale(tgroups)%starta .lt. tscale(tgroups-1)%enda) then
+                                                write(*,'(a,i4,a,i4)') '>>> ERROR: Overlapping atoms for groups ',tgroups,' and ',tgroups-1
+                                                initialize = .false.
+                                                exit
+                                        end if
+                                end if
+                                write(*,789) 'Temperature scaling group ',tgroups
+                                write(*,789) 'Starting atom = ',tscale(tgroups)%starta
+                                write(*,789) 'End atom = ',tscale(tgroups)%enda
+                        end do
                 end if
-                allocate(tscale(ntgroups))
-                write(*,'(a,i4)') 'Using this number of temperature control groups: ',ntgroups
-
-                do tgroups = 1 , ntgroups
-                        yes = prm_get_line(text)
-                        read(text,*, iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda
-                        if(fstat /= 0) then
-                                write(*,'(a,i4)') '>>> ERROR: Invalid data for temperature scaling group ',tgroups
-                                initialize = .false.
-                                exit
-                        end if
-                        write(*,789) 'Temperature scaling group ',tgroups
-                        write(*,789) 'Starting atom = ',tscale(tgroups)%starta
-                        write(*,789) 'End atom = ',tscale(tgroups)%enda
-                end do
+        end if
+end if
 789     format(a,i4)
-
-
-
 
 if(.not. prm_open_section('PBC')) then
 box = .false.
@@ -1650,64 +1667,41 @@ write (*,160)
 end function old_initialize
 !----------------------------------------------------------
 
-subroutine temperature(Tscale_solute,Tscale_solvent,Ekinmax)
+subroutine temperature(Temp,Tfree,tscale,Ekinmax)
 ! calculate the temperature
 !arguments
-real(kind=prec)						:: Tscale_solute,Tscale_solvent,Ekinmax
+TYPE(TGROUP_TYPE)                               :: tscale(:)
+real(kind=prec)                                 :: Temp,Tfree,Ekinmax
 
 !locals
 integer						::	i
 real(kind=prec)						::	Ekin
 
-Temp = zero
-Temp_solute = zero
-Tfree_solute = zero
-Texcl_solute = zero
-
-!get kinetic energies for solute atoms
-do i=1,nat_solute
+tscale(:)%temp  = zero
+tscale(:)%tfree = zero
+tscale(:)%texcl = zero
+Temp  = zero
+Tfree = zero
+!get kinetic energies for atoms in each temperature group
+do tgroups = 1, ntgroups
+do i=tscale(tgroups)%starta,tscale(tgroups)%enda
 Ekin = 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
-Temp_solute = Temp_solute + Ekin
+tscale(tgroups)%temp = tscale(tgroups)%temp + Ekin
 
 !******PWadded if
 if( use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)) ) ) then
-        Tfree_solute = Tfree_solute +Ekin
+        tscale(tgroups)%tfree = tscale(tgroups)%tfree + Ekin
 else
-        Texcl_solute = Texcl_solute +Ekin
+        tscale(tgroups)%texcl = tscale(tgroups)%excl  + Ekin
 end if
-!if ( .not. excl(i)) Tfree = Tfree + Ekin
 if ( Ekin .gt. Ekinmax ) then
         ! hot atom warning
         write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
 end if
 end do
 
-Tfree_solvent = zero
-Temp_solvent = zero
-Texcl_solvent = zero
-Ekin = zero
-
-
-!get kinetic energies for solvent atoms
-do i=nat_solute+1,natom
-Ekin = 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
-Temp_solvent = Temp_solvent + Ekin
-
-!******PWadded if
-if( use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)) ) ) then
-        Tfree_solvent = Tfree_solvent +Ekin
-else
-        Texcl_solvent = Texcl_solvent +Ekin
-end if
-!if ( .not. excl(i)) Tfree = Tfree + Ekin
-if ( Ekin .gt. Ekinmax ) then
-        ! hot atom warning
-        write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
-end if
-end do
-
-Tfree = Tfree_solvent + Tfree_solute
-Temp = Temp_solute + Temp_solvent
+Tfree = sum(tscale(:)%tfree)
+Temp  = sum(tscale(:)%temp)
 
 E%kinetic = Temp
 
@@ -1715,27 +1709,23 @@ Temp  = 2.0_prec*Temp/Boltz/real(Ndegf, kind=prec)
 Tfree = 2.0_prec*Tfree/Boltz/real(Ndegfree, kind=prec)
 
 if (detail_temps) then
-Temp_solute  = 2.0_prec*Temp_solute /Boltz/real(Ndegf_solute, kind=prec)
-Tfree_solute = 2.0_prec*Tfree_solute/Boltz/real(Ndegfree_solute, kind=prec)
-if ( Ndegf_solute .ne. Ndegfree_solute) Texcl_solute = 2.0_prec*Texcl_solute/Boltz/real(Ndegf_solute - Ndegfree_solute, kind=prec)
-
-Temp_solvent  = 2.0_prec*Temp_solvent /Boltz/real(Ndegf_solvent, kind =prec)
-Tfree_solvent = 2.0_prec*Tfree_solvent/Boltz/real(Ndegfree_solvent, kind=prec)
-if ( Ndegf_solvent .ne. Ndegfree_solvent) Texcl_solvent = 2.0_prec*Texcl_solvent/Boltz/real(Ndegf_solvent - Ndegfree_solvent,&
-                 kind=prec)
+        do tgroups = 1, ntgroups
+                tscale(tgroups)%temp  = 2.0_prec*tscale(tgroups)%temp &
+                        /Boltz/real(tscale(tgroups)%Ndegf, kind=prec)
+                tscale(tgroups)%tfree = 2.0_prec*tscale(tgroups)%tfree & 
+                        /Boltz/real(tscale(tgroups)%Ndegfree, kind=prec)
+                if ( tscale(tgroups)%Ndegf .ne. tscale(tgroups)%Ndegfree) &
+                        tscale(tgroups)%texcl = 2.0_prec*tscale(tgroups)%texcl &
+                        /Boltz/real(tscale(tgroups)%Ndegf - tscale(tgroups)%Ndegfree, kind=prec)
+        end do
 end if
 
 if (thermostat == BERENDSEN) then
-if (separate_scaling) then
-        if ( Tfree_solvent .ne. zero ) Tscale_solvent = Temp0/Tfree_solvent - one
-        Tscale_solvent = q_sqrt ( one + dt/tau_T * Tscale_solvent )
-        if ( Tfree_solute .ne. zero ) Tscale_solute = Temp0/Tfree_solute - one
-        Tscale_solute = q_sqrt ( one + dt/tau_T * Tscale_solute )
-else
-        if ( Tfree .ne. zero ) Tscale_solvent = Temp0/Tfree - one
-        Tscale_solvent = q_sqrt ( one + dt/tau_T * Tscale_solvent )
-        Tscale_solute = Tscale_solvent
-end if
+        do tgroups = 1, ntgroups
+        if(tscale(tgroups)%tfree.ne.zero) tscale(tgroups)%sfact = &
+                Temp0/tscale(tgroups)%tfree - one
+        tscale(tgroups)%sfact = q_sqrt( one + dt/tau_T * tscale(tgroups)%sfact )
+        end do
 end if
 
 180 format ('>>> WARNING: hot atom, i =',i10,' Temp(i)=',f10.2)

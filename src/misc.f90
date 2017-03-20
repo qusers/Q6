@@ -8,27 +8,26 @@ module MISC
 
 use SIZES
 
-	implicit none
+        implicit none
 
-	! version data
+        ! version data
 
-	! for enumeration of group contribution types
-	ENUM, bind(c)
-        	ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC,QCP_NORM,QCP_MASSP
-	END ENUM
-
-	ENUM, bind(c)
-		ENUMERATOR	:: ATOM,RESIDUE
-	END ENUM
-
+        ! for enumeration of group contribution types
+        ENUM, bind(c)
+                ENUMERATOR      :: ELECTRO,VDW,FULL,NOGC,QCP_NORM,QCP_MASSP
+        END ENUM
+        ENUM, bind(c)
+                ENUMERATOR      :: ATOM,RESIDUE
+        END ENUM
         ! enumerator for QCP, need number and falg at same time
         ENUM, bind(c)
                 ENUMERATOR      :: QCP_OFF,QCP_ON,QCP_ON_KIE
         END ENUM
-
         ENUM, bind(c)
                 ENUMERATOR      :: QCP_HYDROGEN,QCP_ALLATOM,QCP_FEPATOM
-
+        END ENUM
+        ENUM, bind(c)
+                ENUMERATOR      :: DEFAULT_ONE,DEFAULT_TWO,USERSET
         END ENUM
 contains
 

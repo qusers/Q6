@@ -564,11 +564,11 @@ real(kind=prec),allocatable				:: node_times(:)
 !-----------------------------------------------------------------------
 integer						:: Ndegf,Ndegfree
 logical						:: detail_temps			!controls whether or not solute and solvent temps are printed separately (true if solute and solvent degrees of freedom are both not zero)
-integer                                         :: ntgroups
+integer                                         :: ntgroups,ntgroups_kind
 TYPE TGROUP_TYPE
-        real(kind=prec)                         :: sfact
+        real(kind=prec)                         :: sfact,exclshk,temp,tfree,texcl
         integer                                 :: starta,enda
-        integer                                 :: Ndegf,Ndegfree
+        integer                                 :: Ndegf,Ndegfree,shake,nexcl
 end TYPE TGROUP_TYPE
 TYPE(TGROUP_TYPE),allocatable                   :: tscale(:)
 

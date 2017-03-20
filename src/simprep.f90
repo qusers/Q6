@@ -2095,7 +2095,6 @@ subroutine init_shake
 !
 !locals
 integer						::	mol, b, ia, ja, constr, angle, i
-real(kind=prec)						:: exclshk
 integer						::	src, trg
 integer						::	solute_shake_constraints
 logical                                         ::      shaken
@@ -2106,7 +2105,7 @@ call check_alloc('shake molecule array')
 
 shake_mol(:)%nconstraints = 0
 mol = 0
-exclshk = zero
+tscale(:)%exclshk = zero
 
 !count bonds to be constrained in each molecule
 !also count shake constraints involving excluded atoms
@@ -2150,8 +2149,21 @@ do b=1,nbonds
         end if
 
            if(shaken .and. ( .not. use_PBC) ) then
-                if(excl(ia)) exclshk = exclshk + 0.5_prec
-                if(excl(ja)) exclshk = exclshk + 0.5_prec
+                   ! need to go through coupling groups to assign correct values here :(
+                if(excl(ia)) then
+                        do tgroups = 1, ntgroups
+                        if((ia.ge.tscale(tgroups)%starta).and.&
+                                (ia.le.tscale(tgroups)%enda)) &
+                                tscale(tgroups)%exclshk = tscale(tgroups)%exclshk + 0.5_prec
+                        end do
+                end if
+                if(excl(ja)) then
+                        do tgroups = 1, ntgroups
+                        if((ja.ge.tscale(tgroups)%starta).and.&
+                                (ja.le.tscale(tgroups)%enda)) &
+                                tscale(tgroups)%exclshk = tscale(tgroups)%exclshk + 0.5_prec
+                        end do
+                end if
            end if
 
 end do
@@ -2251,8 +2263,18 @@ do b = 1, nqshake
 end do
 
 !get total number of shake constraints in solute (used for separate scaling of temperatures)
-solute_shake_constraints = sum(shake_mol(1:nmol-nwat)%nconstraints)
-
+!individual number for each scaling group used here
+do tgroups = 1, ntgroups
+        mol = 1
+        emol = 1
+        do while(tscale(tgroups)%starta .ge. istart_mol(mol+1))
+                mol = mol + 1
+        end do
+        do while(tscale(tgroups)%enda .ge. istart_mol(emol+1))
+                emol = emol + 1
+        end do
+        tscale(tgroups)%shake = sum(shake_mol(mol:emol)%nconstraints)
+end do
 
 !remove molecules with zero constraints from list
 trg = 1
@@ -2280,13 +2302,16 @@ write(*,101) shake_molecules
 Ndegf=3*natom-shake_constraints    !changed from Ndegf=3*natom-3-shake_constraints, center of mass position is NOT CONstrained in the simulation, but IS constrained for initial temperatures....
 Ndegfree=Ndegf-3*nexats+exclshk
 
-Ndegf_solvent = Ndegf - 3*nat_solute + solute_shake_constraints
-Ndegf_solute = Ndegf - Ndegf_solvent
+! now give the correct number of degrees of freedom according to group size
+do tgroups = 1, ntgroups
+        starta = tscale(tgroups)%starta
+        enda   = tscale(tgroups)%enda
+        tscale(tgroups)%Ndegf    = 3*(enda-starta+1) - tscale(tgroups)%shake
+        tscale(tgroups)%Ndegfree = tscale(tgroups)%Ndegf - 3*tscale(tgroups)%nexcl + &
+               tscale(tgroups)%exclshk 
+end do
 
-Ndegfree_solvent = 3*(natom - nat_solute) - (shake_constraints - solute_shake_constraints)
-Ndegfree_solute = Ndegfree - Ndegfree_solvent
-
-if (Ndegfree_solvent*Ndegfree_solute .eq. 0) then    ! if either solvent or solute have 0 degrees of freedom, turn off separate scaling (in case it's on) and do not print detailed temperatures
+if (product(tscale(:)%Ndegfree) .eq. 0) then    ! if either solvent or solute have 0 degrees of freedom, turn off separate scaling (in case it's on) and do not print detailed temperatures
 	detail_temps = .false.
 	separate_scaling = .false.
 else
@@ -3736,6 +3761,51 @@ allocate(ww_igrid(nwat))
 ! prepare internal nonbonded interactions for solvent
 call prep_sim_precompute_solvent
 
+! assign the temperature scaling groups according to the information provided
+! when reading in the input file
+! first check if water is present and change scaling groups if not
+if((nat_solute .eq. natom) .and. (ntgroups_kind .eq. DEFAULT_TWO) then
+        ntgroups_kind = DEFAULT_ONE
+        ntgroups = 1
+end if
+if(ntgroups_kind .eq. DEFAULT_ONE) then
+        ! default, one scaling group
+        tscale(1)%starta = 1
+        tscale(1)%enda   = natom
+else if(ntgroups_kind .eq. DEFAULT_TWO) then
+        ! default, solute - solvent groups
+        tscale(1)%starta = 1
+        tscale(1)%enda   = nat_solute
+        tscale(2)%starta = nat_solute + 1
+        tscale(2)%enda   = natom
+else
+        group_startatom = natom
+        group_endatom = 0
+        do tgroups = 1, ntgroups
+        if((tscale(tgroups)%starta.lt.).or.(tscale(tgroups%enda).gt.natom)) then
+                write(*,'(a,i4)') '>>>> ERROR: Invalid atom specification for group ',tgroups
+                write(*,'(a,i4)') '>>>> ERROR: First atom = ',tscale(tgroups)%starta
+                write(*,'(a,i4)') '>>>> ERROR: Last atom = ',tscale(tgroups)%enda
+                call die('Bad temperature control groups')
+        end if
+        if(tscale(tgroups)%starta .lt. group_startatom) group_startatom = tscale(tgroups)%starta
+        if(tscale(tgroups)%enda .gt. group_endatom)     group_endatom   = tscale(tgroups)%enda
+        end do
+        ! check at end if all atoms have been covered
+        if((group_startatom .ne. 1).or.(group_endatom .ne. natom)) then
+                write(*,'(a)') '>>>> ERROR: Not all atoms covered by temperature groups!'
+                call die('Bad temperature control groups')
+        end if
+end if
+        ! go through all atoms to find number of excluded atoms in each group
+if(.not. use_PBC) then
+        do tgroups = 1, ntgroups
+                tscale(tgroups)%nexcl = 0
+                do i = tscale(tgroups)%starta, tscale(tgroups)%enda
+                        if(excl(i)) tscale(tgroups)%nexcl = tscale(tgroups)%nexcl + 1
+                end do
+        end do
+end if
 ! final check to see if atom groups are too large for the cut-off settings used
 ! will loop through all atoms of each group and check for either pp or pw cut-off
 ! no check for qatoms, because cut-off should be inconsequent then
