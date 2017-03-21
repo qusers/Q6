@@ -569,6 +569,7 @@ TYPE TGROUP_TYPE
         real(kind=prec)                         :: sfact,exclshk,temp,tfree,texcl
         integer                                 :: starta,enda
         integer                                 :: Ndegf,Ndegfree,shake,nexcl
+        character(20)                           :: tname
 end TYPE TGROUP_TYPE
 TYPE(TGROUP_TYPE),allocatable                   :: tscale(:)
 

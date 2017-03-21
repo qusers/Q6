@@ -2094,11 +2094,12 @@ subroutine init_shake
 ! initialize shake constraints
 !
 !locals
-integer						::	mol, b, ia, ja, constr, angle, i
-integer						::	src, trg
-integer						::	solute_shake_constraints
+integer						::      mol, b, ia, ja, constr, angle, i
+integer						::      src, trg
+integer						::      solute_shake_constraints
 logical                                         ::      shaken
-
+integer                                         ::      enda,starta,emol,tgroups
+real(kind=prec)                                 ::      exclshk
 !allocate molecule list
 allocate(shake_mol(nmol), stat=alloc_status)
 call check_alloc('shake molecule array')
@@ -2274,6 +2275,7 @@ do tgroups = 1, ntgroups
                 emol = emol + 1
         end do
         tscale(tgroups)%shake = sum(shake_mol(mol:emol)%nconstraints)
+        exclshk = exclshk + tscale(tgroups)%exclshk
 end do
 
 !remove molecules with zero constraints from list
@@ -3456,6 +3458,7 @@ type(Q_ENE_HEAD)                                :: tempheader
 real(kind=prec)                                 :: rdist,curdist,maxdist
 type(qr_vec)                                    :: xcgp
 logical                                         :: willdie
+integer                                         :: group_endatom,group_startatom,tgroups
 
 if (nodeid .eq. 0) then
         write(*,*)
@@ -3764,7 +3767,7 @@ call prep_sim_precompute_solvent
 ! assign the temperature scaling groups according to the information provided
 ! when reading in the input file
 ! first check if water is present and change scaling groups if not
-if((nat_solute .eq. natom) .and. (ntgroups_kind .eq. DEFAULT_TWO) then
+if((nat_solute .eq. natom) .and. (ntgroups_kind .eq. DEFAULT_TWO)) then
         ntgroups_kind = DEFAULT_ONE
         ntgroups = 1
 end if
@@ -3772,17 +3775,20 @@ if(ntgroups_kind .eq. DEFAULT_ONE) then
         ! default, one scaling group
         tscale(1)%starta = 1
         tscale(1)%enda   = natom
+        tscale(1)%tname  = 'System'
 else if(ntgroups_kind .eq. DEFAULT_TWO) then
         ! default, solute - solvent groups
         tscale(1)%starta = 1
         tscale(1)%enda   = nat_solute
+        tscale(1)%tname  = 'Solute'
         tscale(2)%starta = nat_solute + 1
         tscale(2)%enda   = natom
+        tscale(2)%tname  = 'Solvent'
 else
         group_startatom = natom
         group_endatom = 0
         do tgroups = 1, ntgroups
-        if((tscale(tgroups)%starta.lt.).or.(tscale(tgroups%enda).gt.natom)) then
+        if((tscale(tgroups)%starta.lt.1).or.(tscale(tgroups)%enda.gt.natom)) then
                 write(*,'(a,i4)') '>>>> ERROR: Invalid atom specification for group ',tgroups
                 write(*,'(a,i4)') '>>>> ERROR: First atom = ',tscale(tgroups)%starta
                 write(*,'(a,i4)') '>>>> ERROR: Last atom = ',tscale(tgroups)%enda

@@ -434,19 +434,13 @@ else
                 ! check for later to see if all atoms are covered
                         do tgroups = 1 , ntgroups
                                 yes = prm_get_line(text)
-                                read(text,*, iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda
+                                read(text,'(i4,i4,a20)', iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda, &
+                                        tscale(tgroups)%tname
                                 if(fstat /= 0) then
                                         write(*,'(a,i4)') '>>> ERROR: Invalid data for temperature scaling group ',tgroups
                                         initialize = .false.
                                         exit
                                 end if
-                                if((tscale(tgroups)%starta .lt. 1).or.(tscale(tgroups)%enda .gt. natoms)) then
-                                        write(*,'(a,i4)') '>>> ERROR: Invalid atom specification for group ',tgroups
-                                        write(*,'(a,i4)') '>>> ERROR: First atom = ',tscale(tgroups)%starta
-                                        write(*,'(a,i4)') '>>> ERROR: Last atom = ',tscale(tgroups)%enda
-                                        initialize = .false.
-                                        exit
-                                endif
                                 ! check if groups overlap and remind the user that this does not work this way
                                 ! always this group against previous, might need more general test later
                                 ! groups need to be sequential at this point
@@ -1667,14 +1661,14 @@ write (*,160)
 end function old_initialize
 !----------------------------------------------------------
 
-subroutine temperature(Temp,Tfree,tscale,Ekinmax)
+subroutine temperature(tscale,Ekinmax)
 ! calculate the temperature
 !arguments
 TYPE(TGROUP_TYPE)                               :: tscale(:)
-real(kind=prec)                                 :: Temp,Tfree,Ekinmax
+real(kind=prec)                                 :: Ekinmax
 
 !locals
-integer						::	i
+integer						::	i,tgroups
 real(kind=prec)						::	Ekin
 
 tscale(:)%temp  = zero
@@ -1692,14 +1686,14 @@ tscale(tgroups)%temp = tscale(tgroups)%temp + Ekin
 if( use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)) ) ) then
         tscale(tgroups)%tfree = tscale(tgroups)%tfree + Ekin
 else
-        tscale(tgroups)%texcl = tscale(tgroups)%excl  + Ekin
+        tscale(tgroups)%texcl = tscale(tgroups)%texcl  + Ekin
 end if
 if ( Ekin .gt. Ekinmax ) then
         ! hot atom warning
         write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
 end if
 end do
-
+end do
 Tfree = sum(tscale(:)%tfree)
 Temp  = sum(tscale(:)%temp)
 
@@ -1814,10 +1808,9 @@ subroutine md_run
 integer				:: i,j,k,niter,iii
 real(kind=prec)                         :: Tlast
 real(kind=prec)                         ::Ekinmax
-real(kind=prec)				::Tscale_solute,Tscale_solvent
 !new for temperature control
-real(kind=prec)				::Tscale,dv_mod,dv_friction,dv_mod2,randnum
-integer				:: n_max = -1
+real(kind=prec)				::dv_mod,dv_friction,dv_mod2,randnum
+integer				:: n_max = -1,tgroups
 real(kind=prec),allocatable	::randva(:)
 TYPE(qr_vec),allocatable        ::randfa(:)
 !Random variable temperature control array
@@ -1870,7 +1863,7 @@ nat3=natom*3
 if (nodeid .eq. 0) then
 Ekinmax = 1000.0_prec*Ndegf*Boltz*Temp0/2.0_prec/real(natom, kind=prec)
 
-call temperature(Tscale_solute,Tscale_solvent,Ekinmax)
+call temperature(tscale,Ekinmax)
 !store old Temp
 Tlast = Temp
 end if
@@ -1880,9 +1873,9 @@ if (nodeid .eq. 0) then
 write (*,*)
 write (*,120) 'Initial', Temp, Tfree
         if ( detail_temps ) then
-                write (*,120) 'Solvent', Temp_solvent, Tfree_solvent
-                write (*,120) 'Solute', Temp_solute, Tfree_solute
-!			write (*,120) 'Excl solute, solvent', Texcl_solute, Texcl_solvent
+                do tgroups = 1, ntgroups
+                        write (*,120) tscale(tgroups)%tname, tscale(tgroups)%temp, tscale(tgroups)%tfree
+                end do
         end if
 120		format(a7,' temperatures are : Ttot =',f10.2,' Tfree =',f10.2)
 write (*,*)
@@ -2044,8 +2037,8 @@ start_loop_time1 = rtime()
 ! new selection and subfunction for thermostats
 !if Berendsen thermostat was chosen, call two times for diff scaling
 if( thermostat == BERENDSEN ) then
-        do tgroup = 1, ntgroups
-        call newvel_ber(dv_mod,tscale(tgroup)%sfact,tscale(tgroup)%starta,tscale(tgroup)%enda)
+        do tgroups = 1, ntgroups
+                call newvel_ber(dv_mod,tscale(tgroups)%sfact,tscale(tgroups)%starta,tscale(tgroups)%enda)
         end do
 else if (thermostat == LANGEVIN ) then
 	call newvel_lan(dv_mod,dv_friction,randva,randfa)
@@ -2074,7 +2067,7 @@ start_loop_time2 = rtime()
 #endif
 
         ! calculate temperature and scaling factor
-        call temperature(Tscale_solute,Tscale_solvent,Ekinmax)
+        call temperature(tscale,Ekinmax)
 #if defined (PROFILING)
 profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 #endif
