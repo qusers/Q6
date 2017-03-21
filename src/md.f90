@@ -434,7 +434,7 @@ else
                 ! check for later to see if all atoms are covered
                         do tgroups = 1 , ntgroups
                                 yes = prm_get_line(text)
-                                read(text,'(i4,i4,a20)', iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda, &
+                                read(text,*, iostat=fstat) tscale(tgroups)%starta,tscale(tgroups)%enda, &
                                         tscale(tgroups)%tname
                                 if(fstat /= 0) then
                                         write(*,'(a,i4)') '>>> ERROR: Invalid data for temperature scaling group ',tgroups

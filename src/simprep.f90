@@ -3794,6 +3794,13 @@ else
                 write(*,'(a,i4)') '>>>> ERROR: Last atom = ',tscale(tgroups)%enda
                 call die('Bad temperature control groups')
         end if
+        if(tgroups.ge.2) then
+        ! check for group overlap between neighbor groups
+                if(tscale(tgroups)%starta.le.tscale(tgroups-1)%enda) then
+                        write(*,'(a)') '>>>> ERROR: Overlapping atom groups for temperature control'
+                        call die('Bad temperature control groups')
+                end if
+        end if
         if(tscale(tgroups)%starta .lt. group_startatom) group_startatom = tscale(tgroups)%starta
         if(tscale(tgroups)%enda .gt. group_endatom)     group_endatom   = tscale(tgroups)%enda
         end do
