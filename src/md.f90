@@ -2108,7 +2108,9 @@ if (ierr .ne. 0) call die('MD Bcast x')
                         Tlast = Temp
                         write(*,201) istep, Temp, Tfree
 						if (detail_temps) then
-							write(*,2020) Tfree_solute, Tfree_solvent
+                                                        do tgroups = 1, ntgroups
+							        write(*,2020) trim(tscale(tgroups)%tname),tscale(tgroups)%tfree
+                                                        end do
 !							write(*,2030) Texcl_solute, Texcl_solvent
 
 						end if
@@ -2126,8 +2128,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
 
 end do ! time step
 201	 format('Temperature at step',i8,':         T_tot=',f10.1,'         T_free=',f10.1)
-2020 format('                             T_free_solute=',f10.1,' T_free_solvent=',f10.1)
-2030 format('                             T_excl_solute=',f10.1,' T_excl_solvent=',f10.1)
+2020 format('T_free_',a,'=',f10.1)
 
 
 !***********************************************************************
