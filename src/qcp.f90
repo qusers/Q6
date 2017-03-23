@@ -1553,6 +1553,15 @@ end do
 end if
 end if
 
+
+! we need some dummy stuff here to handle the temperature
+! just using one group and default settings
+! it is only used for the total system temperature, nothing else that would be important
+ntgroups = 1
+ntgroups_kind = DEFAULT_ONE
+allocate(tscale(ntgroups))
+
+
 ! final thing to get all atoms from trj
 yes = trj_store_mask('all')
 number = trj_commit_mask()
@@ -1851,12 +1860,7 @@ real(kind=prec)         :: qcp_T
 ! locals
 integer                 :: i
 Temp = zero
-do i = 1, nat_solute
-if (use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)))) then
-qcp_T = qcp_T + 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
-end if
-end do
-do i = nat_solute+1,natom
+do i = 1,natom
 if (use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)))) then
 qcp_T = qcp_T + 0.5_prec*iaclib(iac(i))%mass*(qvec_square(v(i)))
 end if

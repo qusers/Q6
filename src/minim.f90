@@ -855,6 +855,13 @@ end do
 end if
 end if
 
+
+! we need some dummy stuff here to handle the temperature
+! just using one group and default settings
+ntgroups = 1
+ntgroups_kind = DEFAULT_ONE
+allocate(tscale(ntgroups))
+
 call prm_close
 end function initialize
 
