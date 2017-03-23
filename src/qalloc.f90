@@ -283,6 +283,9 @@ deallocate(rstdis, stat=alloc_status)
 deallocate(rstang, stat=alloc_status)
 deallocate(rstwal, stat=alloc_status)
 
+! new temperature stuff
+if(allocated(tscale)) deallocate(tscale)
+
 ! excluded groups
 deallocate(ST_gc, stat=alloc_status)
 #ifdef _OPENMP

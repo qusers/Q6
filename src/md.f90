@@ -1871,13 +1871,13 @@ end if
 if (nodeid .eq. 0) then
 ! master node only: print initial temperatures
 write (*,*)
-write (*,120) 'Initial', Temp, Tfree
+write (*,120) 'Initial System total', Temp, Tfree
         if ( detail_temps ) then
                 do tgroups = 1, ntgroups
                         write (*,120) tscale(tgroups)%tname, tscale(tgroups)%temp, tscale(tgroups)%tfree
                 end do
         end if
-120		format(a7,' temperatures are : Ttot =',f10.2,' Tfree =',f10.2)
+120		format(a20,' temperatures are : Ttot =',f10.2,' Tfree =',f10.2)
 write (*,*)
 
 ! init timer
@@ -2106,10 +2106,11 @@ if (ierr .ne. 0) call die('MD Bcast x')
                         (mod(istep, itemp_cycle) == 0 .and. istep > 0)) then
                         ! temperatures
                         Tlast = Temp
-                        write(*,201) istep, Temp, Tfree
+                        write(*,201) 'Total System',istep, Temp
+                        write(*,201) 'Free System' ,istep, Tfree
 						if (detail_temps) then
                                                         do tgroups = 1, ntgroups
-							        write(*,2020) trim(tscale(tgroups)%tname),tscale(tgroups)%tfree
+							        write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree
                                                         end do
 !							write(*,2030) Texcl_solute, Texcl_solvent
 
@@ -2127,8 +2128,8 @@ if (ierr .ne. 0) call die('MD Bcast x')
 
 
 end do ! time step
-201	 format('Temperature at step',i8,':         T_tot=',f10.1,'         T_free=',f10.1)
-2020 format('T_free_',a,'=',f10.1)
+201	 format(a20,' temperature at step',i8,' T=',f10.1)
+!2020 format('T_free_',a,'=',f10.1)
 
 
 !***********************************************************************
