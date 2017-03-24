@@ -32,6 +32,7 @@ integer                     :: stat
 
 !print temperature if it changed more than 2% in one time step
 real(kind=prec), parameter				::	TEMP_PRINT_THRESHOLD=0.02_prec !TODO: it is not place for that
+logical         :: temp_spam = .false. ! controlling if temperatures should be spammed to the user
 
 
 !	Memory management

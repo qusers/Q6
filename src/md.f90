@@ -185,6 +185,16 @@ write (*,10) nsteps, stepsize
 dt=0.020462_prec*stepsize
 dt2=0.5_prec*dt
 ! --- Temperature, Thermostat etc.
+if(.not.prm_get_logical_by_key('verbose_temp',temp_spam)) then
+        write(*,*) 'Not being verbose in temperature print out'
+else
+        if(temp_spam) then
+                write(*,*) 'Spamming temperature if change larger than 2%'
+        else
+                write(*,*) 'Not being verbose in temperature print out'
+        end if
+end if
+
 if(.not. prm_get_real_by_key('temperature', Temp0)) then
 write(*,*) '>>> ERROR: temperature not specified (section MD)'
 initialize = .false.
@@ -1688,7 +1698,7 @@ if( use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)) ) ) then
 else
         tscale(tgroups)%texcl = tscale(tgroups)%texcl  + Ekin
 end if
-if ( Ekin .gt. Ekinmax ) then
+if ( (Ekin .gt. Ekinmax ) .and. (temp_spam)) then
         ! hot atom warning
         write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
 end if
@@ -2102,7 +2112,8 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 if ( mod(istep,1000) .eq. 0 ) then
                         call write_xfin
                 end if
-                if ( q_abs(Temp-Tlast)/Temp > TEMP_PRINT_THRESHOLD .or. &
+                if ( ((q_abs(Temp-Tlast)/Temp .gt. TEMP_PRINT_THRESHOLD ).and.&
+                        (temp_spam)) .or. &
                         (mod(istep, itemp_cycle) == 0 .and. istep > 0)) then
                         ! temperatures
                         Tlast = Temp
