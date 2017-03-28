@@ -1671,12 +1671,12 @@ write (*,160)
 end function old_initialize
 !----------------------------------------------------------
 
-subroutine temperature(tscale,Ekinmax)
+subroutine temperature(tscale,Ekinmax,print_step)
 ! calculate the temperature
 !arguments
 TYPE(TGROUP_TYPE)                               :: tscale(:)
 real(kind=prec)                                 :: Ekinmax
-
+logical                                         :: print_step
 !locals
 integer						::	i,tgroups
 real(kind=prec)						::	Ekin
@@ -1698,7 +1698,7 @@ if( use_PBC .or. ( (.not. use_PBC) .and. (.not. excl(i)) ) ) then
 else
         tscale(tgroups)%texcl = tscale(tgroups)%texcl  + Ekin
 end if
-if ( (Ekin .gt. Ekinmax ) .and. (temp_spam)) then
+if ( (Ekin .gt. Ekinmax) .and. (temp_spam .or. print_step )) then
         ! hot atom warning
         write (*,180) i,2.0_prec*Ekin/Boltz/3.0_prec
 end if
@@ -1820,6 +1820,7 @@ real(kind=prec)                         :: Tlast
 real(kind=prec)                         ::Ekinmax
 !new for temperature control
 real(kind=prec)				::dv_mod,dv_friction,dv_mod2,randnum
+logical                                 :: print_step
 integer				:: n_max = -1,tgroups
 real(kind=prec),allocatable	::randva(:)
 TYPE(qr_vec),allocatable        ::randfa(:)
@@ -1873,7 +1874,7 @@ nat3=natom*3
 if (nodeid .eq. 0) then
 Ekinmax = 1000.0_prec*Ndegf*Boltz*Temp0/2.0_prec/real(natom, kind=prec)
 
-call temperature(tscale,Ekinmax)
+call temperature(tscale,Ekinmax,.true.)
 !store old Temp
 Tlast = Temp
 end if
@@ -2077,7 +2078,9 @@ start_loop_time2 = rtime()
 #endif
 
         ! calculate temperature and scaling factor
-        call temperature(tscale,Ekinmax)
+        ! need to get value if we print out stuff
+        print_step = (mod(istep,itemp_cycle) .eq. 0 .and. istep .gt. 0)
+        call temperature(tscale,Ekinmax,print_step)
 #if defined (PROFILING)
 profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 #endif
@@ -2112,9 +2115,8 @@ if (ierr .ne. 0) call die('MD Bcast x')
                 if ( mod(istep,1000) .eq. 0 ) then
                         call write_xfin
                 end if
-                if ( ((q_abs(Temp-Tlast)/Temp .gt. TEMP_PRINT_THRESHOLD ).and.&
-                        (temp_spam)) .or. &
-                        (mod(istep, itemp_cycle) == 0 .and. istep > 0)) then
+                if (( temp_spam .and. (q_abs(Temp-Tlast)/Temp .gt. TEMP_PRINT_THRESHOLD )) .or. &
+                        (print_step)) then
                         ! temperatures
                         Tlast = Temp
                         write(*,201) 'Total System',istep, Temp
