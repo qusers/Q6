@@ -112,7 +112,7 @@ character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
-character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
+character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2,constraint_string
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
@@ -377,6 +377,33 @@ else
          shake_heavy   = .false.
 end if
 end if
+
+! find out if shake or lincs should be used, only if anything gets shaken
+if(shake_solvent .or. shake_solute) then
+        if(.not.prm_get_string_by_key('constraint_method',constraint_string)) then
+                ! defaulting to shake
+                const_method = SHAKE_CONST
+                write(*,*) 'Using Shake as the constraint algorithm'
+        else
+                if(constraint_string == 'SHAKE') then
+                        const_method = SHAKE_CONST
+                        write(*,*) 'Using Shake as the constraint algorithm'
+                else if(constraint_string == 'LINCS') then
+                        const_method = LINCS_CONST
+                        write(*,*) 'Using LINCS as the constraint algorithm'
+                end if
+        end if
+        if(const_method.eq.LINCS_CONST) then
+                if(.not.prm_get_integer_by_key('lincs_recursion',lincs_recursion)) then
+                        lincs_recursion = 4 ! default value for recursion
+                else if(lincs_recursion .lt. 2) then ! user does not know what to do
+                        ! default to 4 again to avoid idiotic behaviour
+                        lincs_recursion = 4
+                end if
+                write(*,987) lincs_recursion
+        end if
+end if
+987     format('Using ',i4,' LINCS recursion iterations')
 
 if(shake_solvent) then
 if(shake_heavy) write(*,17) 'solvent bonds','heavy atoms',onoff(shake_heavy)
@@ -2064,8 +2091,8 @@ profile(11)%time = profile(11)%time + rtime() - start_loop_time1
 #endif
 
         ! shake if necessary
-        if(shake_constraints > 0) then
-                niter=shake(xx, x)
+        if(constraints > 0) then
+                niter=constraint(const_method,xx, x)
                 v(:) = (x(:) - xx(:)) / dt
 		if ( thermostat == NOSEHOOVER ) then
 			call nh_prop !scaling velocities after applying SHAKE
@@ -2407,9 +2434,9 @@ if (nodeid .eq. 0 ) then
 		x(:) = x(:) + x_move(:)
 		
 		! shake if necessary
-		if(shake_constraints > 0) then
+		if(constraints > 0) then
 			xx(:) = xx(:) + x_move(:)
-			niter=shake(xx, x)
+			niter=constraint(const_method,xx, x)
 		end if
 
 	end if

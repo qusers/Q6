@@ -4343,15 +4343,13 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 			dhead = lib(res(thisres)%irc)%head
 			dtail = res(prevres)%start - 1 + dtail
 			dhead = res(thisres)%start - 1 + dhead
-			dtail = (dtail*3)-3
-			dhead = (dhead*3)-3
                         dist  = q_sqrt(q_dist4(xtop(dtail),xtop(dhead)))
 		end if
 	end if
         if(gap .or. &
 		(lib(res(prevres)%irc)%tail == 0) .or. &
 		(lib(res(thisres)%irc)%head == 0) .or. &
-		dist .gt. 5 ) then 
+		dist .gt. 5.0_prec ) then 
 		nmol = nmol + 1
 		if (nmol .gt. size(istart_mol)) then
 			allocate(start_temp(nmol))

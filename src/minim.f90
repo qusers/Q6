@@ -1049,7 +1049,7 @@ else if(retval .eq. 0) then
         call update_pos(scaling)
 end if
 
-        if(shake_constraints .gt.0) niter=shake(xx,x)
+        if(constraints .gt.0) niter=constraint(const_method,xx,x)
 
 end if !if(nodeid .eq. 0)
 

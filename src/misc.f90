@@ -29,6 +29,9 @@ use SIZES
         ENUM, bind(c)
                 ENUMERATOR      :: DEFAULT_ONE,DEFAULT_TWO,USERSET
         END ENUM
+        ENUM, bind(c)
+                ENUMERATOR      :: SHAKE_CONST,LINCS_CONST
+        END ENUM
 contains
 
 subroutine centered_heading(msg, fill)

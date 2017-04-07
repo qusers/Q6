@@ -1004,41 +1004,61 @@ end if
 
 end subroutine p_restrain
 !-----------------------------------------------------------------------
-subroutine initial_shaking
+subroutine initial_constraint(method)
 !
-! initial shaking
+! initial application of constraint algorithm, either Shake or LINCS
+! same entry point as before, with the constraint function as the new wrapper
 !
-integer						:: niter
+! arguments
+integer         :: method
+integer         :: niter
 
 
 xx(:)=x(:)
-niter=shake(xx, x)	
+niter=constraint(method,xx, x)
 write(*,100) 'x', niter
-100	format('Initial ',a,'-shaking required',i4,&
-' interations per molecule on average.')
+100     format('Initial ',a,'-constraint required',i4,&
+' iterations per molecule on average.')
 
 xx(:)=x(:)-v(:)*dt
-niter=shake(x, xx)	
+niter=constraint(method,x, xx)
 write(*,100) 'v', niter
 
 v(:)=(x(:)-xx(:))/dt
 
 
-end subroutine initial_shaking
+end subroutine initial_constraint
 
 !-----------------------------------------------------------------------
 
+integer function constraint(method,xx, x)
+! this function is nothing but a wrapper around the actual constraint
+! function that is either shake or LINCS
+! arguments
+integer         :: method
+TYPE(qr_vec)    :: xx(:),x(:)
+
+if (method .eq. SHAKE_CONST) then
+        constraint = shake(xx,x)
+else if(method .eq. LINCS_CONST) then
+        constraint = lincs(xx,x)
+else
+        constraint = 0
+end if
+
+end function constraint
+
 integer function shake(xx, x)
 !arguments
-TYPE(qr_vec)	::	xx(:), x(:)
+TYPE(qr_vec)    :: xx(:), x(:)
 !       returns no. of iterations
 
 ! *** local variables
-integer				:: i,j,mol,ic,nits
-real(kind=prec)			:: diff,corr,scp,dist
-TYPE(qr_dist5)			:: xij
-TYPE(qr_vec)			:: xxij
-logical				:: dead_shake =.false.
+integer                 :: i,j,mol,ic,nits
+real(kind=prec)         :: diff,corr,scp,dist
+TYPE(qr_dist5)          :: xij
+TYPE(qr_vec)            :: xxij
+logical                 :: dead_shake =.false.
 
 #if defined (PROFILING)
 real(kind=prec)                                         :: start_loop_time
@@ -1048,25 +1068,25 @@ start_loop_time = rtime()
 ! reset niter
 shake = 0
 
-do mol=1,shake_molecules
+do mol=1,const_molecules
         ! for every molecule:
         ! reset nits (iterations per molecule)
         nits = 0
         ! reset iready for every constraint
-        shake_mol(mol)%bond(:)%ready = .false.
+        const_mol(mol)%bond(:)%ready = .false.
         do while (.not.dead_shake) !iteration loop
-                do ic=1,shake_mol(mol)%nconstraints
+                do ic=1,const_mol(mol)%nconstraints
                         ! for every constraint:
 
-                        if (.not. shake_mol(mol)%bond(ic)%ready) then
+                        if (.not. const_mol(mol)%bond(ic)%ready) then
                                 ! repeat until done:
 
-                                i = shake_mol(mol)%bond(ic)%i
-                                j = shake_mol(mol)%bond(ic)%j
+                                i = const_mol(mol)%bond(ic)%i
+                                j = const_mol(mol)%bond(ic)%j
                                 xij     = q_dist5(x(j),x(i))
-                                diff    = shake_mol(mol)%bond(ic)%dist2 - xij%r2
-                                if(q_abs(diff) < SHAKE_TOL*shake_mol(mol)%bond(ic)%dist2) then
-                                        shake_mol(mol)%bond(ic)%ready = .true. ! in range
+                                diff    = const_mol(mol)%bond(ic)%dist2 - xij%r2
+                                if(q_abs(diff) < CONST_TOL*const_mol(mol)%bond(ic)%dist2) then
+                                        const_mol(mol)%bond(ic)%ready = .true. ! in range
                                 end if
                                 xxij = xx(i) - xx(j)
                                 scp  = q_dotprod(xij%vec,xxij)
@@ -1078,19 +1098,19 @@ do mol=1,shake_molecules
 
             nits = nits+1
                 ! see if every constraint is met
-                if(all(shake_mol(mol)%bond(1:shake_mol(mol)%nconstraints)%ready)) then
+                if(all(const_mol(mol)%bond(1:const_mol(mol)%nconstraints)%ready)) then
                         exit !from iteration loop
-                elseif(nits >= SHAKE_MAX_ITER) then
+                elseif(nits >= CONST_MAX_ITER) then
                         ! fail on too many iterations
-                        do ic=1,shake_mol(mol)%nconstraints
-                                if (.not. shake_mol(mol)%bond(ic)%ready) then
+                        do ic=1,const_mol(mol)%nconstraints
+                                if (.not. const_mol(mol)%bond(ic)%ready) then
                                         ! for every failed constraint
 
-                                        i = shake_mol(mol)%bond(ic)%i
-                                        j = shake_mol(mol)%bond(ic)%j
+                                        i = const_mol(mol)%bond(ic)%i
+                                        j = const_mol(mol)%bond(ic)%j
                                         dist = q_dist4(xx(i),xx(j))
                                         write (*,100) i,j,dist,&
-                                                q_sqrt(shake_mol(mol)%bond(ic)%dist2)
+                                                q_sqrt(const_mol(mol)%bond(ic)%dist2)
                                 end if
                         end do
                         dead_shake = .true.
@@ -1111,6 +1131,134 @@ profile(7)%time = profile(7)%time + rtime() - start_loop_time
 
 end function shake
 
+integer function lincs(xx, x)
+! adapted version from Alexandre Barrozo to work with new data structures in Q
+! and added some documentation
+! arguments
+TYPE(qr_vec)                    ::      xx(:), x(:)
+!	returns no. of iterations
+
+! *** local variables
+integer                         ::      i,j,ki,kj,mol,ic,irec,nrec,k,n,w
+real(kind=prec)                 ::      p 
+TYPE(qr_dist)                   ::      xij
+
+
+#if defined (PROFILING)
+real(kind=prec)                                         :: start_loop_time
+start_loop_time = rtime()
+#endif
+! lincs does not do the same kind of iterations as SHAKE
+! need to remove this in due time
+lincs = 1
+! number of times to perform LINCS recurrent algorithm
+nrec = lincs_recursion
+
+do mol=1,const_molecules
+        do ic=1,const_mol(mol)%nconstraints
+
+                i = const_mol(mol)%bond(ic)%i
+                j = const_mol(mol)%bond(ic)%j
+                xij = q_dist(xx(j),xx(i))
+                const_mol(mol)%lin%length2(ic) = xij%r2
+                const_mol(mol)%lin%length(ic)  = xij%r
+                const_mol(mol)%lin%B(ic) = xij%vec / xij%r
+        end do
+
+        do ic=1,const_mol(mol)%nconstraints
+
+                i = const_mol(mol)%bond(ic)%i
+                j = const_mol(mol)%bond(ic)%j
+                do n=1,const_mol(mol)%bond(ic)%ncc
+
+                        k  = const_mol(mol)%lin%con(ic,n)
+                        ki = const_mol(mol)%bond(k)%i
+                        kj = const_mol(mol)%bond(k)%j
+
+                        if ( i .eq. ki ) then
+                                const_mol(mol)%lin%coef(ic,n) = &
+                                        -one * winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                        else if ( j .eq. kj ) then
+                                const_mol(mol)%lin%coef(ic,n) = &
+                                        -one * winv(j) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                        else if ( i .eq. kj ) then
+                                const_mol(mol)%lin%coef(ic,n) = &
+                                        winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                        else
+                                const_mol(mol)%lin%coef(ic,n) = &
+                                        winv(j) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                        end if
+
+                        const_mol(mol)%lin%A(ic,n) = const_mol(mol)%lin%coef(ic,n) * &
+                                (q_dotprod(const_mol(mol)%lin%B(ic),const_mol(mol)%lin%B(k)))
+
+                end do
+
+                const_mol(mol)%lin%rhs(1,ic) = (const_mol(mol)%lin%S(ic) * &
+                        q_dotprod(const_mol(mol)%lin%B(ic),qvec_sub(x(i),x(j)))) - &
+                        q_sqrt(const_mol(mol)%bond(ic)%dist2)
+                        const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%rhs(1,ic)
+        end do
+! call to solver function to get values for coordinates
+        call lincs_solv(mol)
+
+        do ic=1,const_mol(mol)%nconstraints
+                i = const_mol(mol)%bond(ic)%i
+                j = const_mol(mol)%bond(ic)%j
+               
+                p = q_sqrt(2.0_prec*const_mol(mol)%bond(ic)%dist2 - &
+                        q_dist4(x(j),x(i)))
+                const_mol(mol)%lin%rhs(1,ic) = const_mol(mol)%lin%S(ic)*(q_sqrt(const_mol(mol)%bond(ic)%dist2)-p)
+                const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%rhs(1,ic)
+        end do
+! second call to solver to update coordinates
+        call lincs_solv(mol)
+end do
+
+#if defined (PROFILING)
+profile(7)%time = profile(7)%time + rtime() - start_loop_time
+#endif
+
+end function lincs
+
+
+!---------------------------------------------------------------
+
+
+subroutine lincs_solv(mol)
+! used to solve the change in coordinates for lincs
+! arguments
+integer                 :: mol
+! locals
+integer                 :: i,j,w,irec,n,ic,ind,nrec
+
+        nrec = lincs_recursion
+! w = 2 and w = 3 - w seem to be a way to alternate between indices 1 and 2 for the rhs subarray of the lincs object
+        w = 2
+        do irec=1,nrec
+                do ic=1,const_mol(mol)%nconstraints
+                        const_mol(mol)%lin%rhs(w,ic) = 0
+                        do n=1,const_mol(mol)%bond(ic)%ncc
+                        ! index of the other connected atoms
+                                ind = const_mol(mol)%lin%con(ic,n)
+                                const_mol(mol)%lin%rhs(w,ic) = const_mol(mol)%lin%rhs(w,ic) + &
+                                const_mol(mol)%lin%A(ic,ind) * const_mol(mol)%lin%rhs(3-w,ind)
+                        end do
+                        const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%sol(ic) + const_mol(mol)%lin%rhs(w,ic)
+                end do
+        w = 3-w
+        end do
+
+        do ic=1,const_mol(mol)%nconstraints
+                i = const_mol(mol)%bond(ic)%i
+                j = const_mol(mol)%bond(ic)%j
+                x(i) = x(i) - ((winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%sol(ic)) * &
+                        const_mol(mol)%lin%B(ic))
+                x(j) = x(j) + ((winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%sol(ic)) * &
+                        const_mol(mol)%lin%B(ic))
+        end do
+
+end subroutine lincs_solv
 
 end module BONDENE
 

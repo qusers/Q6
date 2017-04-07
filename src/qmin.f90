@@ -102,13 +102,13 @@ program Qmin5
 	call prep_sim_version(version_pass())
 	call close_input_files				! close input files
 
-	call init_shake
+	call init_constraints
 !the nb monitor now needs to be initialised after! we got the precomputed interactions
 !so it is moved in later 
 	call make_nbqqlist
 	call shrink_topology
 	call init_trj
-        call initial_shaking
+        call initial_constraint(const_method)
   end if
 
 #if defined (USE_MPI)

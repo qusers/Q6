@@ -232,7 +232,9 @@ end if
 		if(openit(f,filnam,'old','unformatted','read') /= 0) then
 			stop 'Qfep5 terminated abnormally: Failed to open energy file.'
 		end if
-
+                ! reset check for old/new file, if people mix them
+                ! bad idea in general, but works with same number of arrays
+                is_old_file = .false.
 		!get file header for the first time
 		read(f, iostat=filestat) canary,fileheader%arrays,fileheader%totresid
 		if ((canary .ne. 137).and.(canary.ne.1337).and.(canary.ne.13337)) then
@@ -245,7 +247,7 @@ end if
 			fileheader%version=' 5.06'
 			if(ifile.eq.1) then
 			allocate(fileheader%gcnum(fileheader%arrays),fileheader%types(fileheader%arrays),&
-				fileheader%numres(fileheader%totresid))
+				fileheader%numres(fileheader%totresid),fileheader%resid(fileheader%totresid))
 			end if
 		else if ( fileheader%arrays .lt. 1) then
 			write(*,*) 'Number of different types is < 1. Abort !'

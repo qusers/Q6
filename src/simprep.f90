@@ -1842,47 +1842,64 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast Ndegf')
 call MPI_Bcast(Ndegfree, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)    !bara i div init_
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast Ndegfree')
 
-call MPI_Bcast(shake_molecules,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(const_molecules,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake molecules')
 call MPI_Bcast(shake_constraints,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake constraints')
 
+call MPI_Bcast(const_method,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast const_method')
+call MPI_Bcast(lincs_recursion,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+if (ierr .ne. 0) call die('init_nodes/MPI_Bcast lincs recursion')
 !now we have to do some nasty stuff to get the shake data from master to the
 !slaves, we can not just send the shake arrays, as they contain pointers and are
 !thus not MPI transferable
 !so we first make temp arrays for shake on master and send those to the nodes
-if (shake_molecules .gt. 0) then
-allocate(shakeconsttmp(shake_molecules), stat=alloc_status)
+if (const_molecules .gt. 0) then
+allocate(shakeconsttmp(const_molecules), stat=alloc_status)
 call check_alloc('Temporary shake arrays')
 if (nodeid .eq. 0) then
 shakenumconst = 0
-do jj=1,shake_molecules
-shakeconsttmp(jj)=shake_mol(jj)%nconstraints
-shakenumconst = shakenumconst + shake_mol(jj)%nconstraints
+do jj=1,const_molecules
+shakeconsttmp(jj)=const_mol(jj)%nconstraints
+shakenumconst = shakenumconst + const_mol(jj)%nconstraints
 end do
 end if
 if (nodeid .ne.0 ) then
-allocate(shake_mol(nmol),stat = alloc_status)
+allocate(const_mol(nmol),stat = alloc_status)
 call check_alloc('Slave node shake main array')
 end if
 call MPI_Bcast(shakenumconst,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakenumconst')
-call MPI_Bcast(shakeconsttmp,shake_molecules,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+call MPI_Bcast(shakeconsttmp,const_molecules,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakeconsttmp')
 
 allocate(shakebondi(shakenumconst),shakebondj(shakenumconst),shakedist(shakenumconst),&
                 stat=alloc_status)
+call check_alloc('Temporary constraint arrays')
+if(const_method .eq. LINCS) then
+        ! allocate LINCS temporary arrays
+        allocate(shakebondncc(shakenumconst),shakebonds(shakenumconst),&
+                shakecon(shakenumconst**2),stat=alloc_status)
 call check_alloc('Temporary shake constraint arrays')
+end if
 if (nodeid .eq. 0 ) then
-shakenumconst = 0
-do jj = 1,shake_molecules
-        ii = 1
-        do while (ii .le. shake_mol(jj)%nconstraints)
+shakenumconst  = 0
+shakenumconst2 = 0
+do jj = 1,const_molecules
+        do ii = 1, const_mol(jj)%nconstraints
         shakenumconst = shakenumconst + 1
-        shakebondi(shakenumconst) = shake_mol(jj)%bond(ii)%i
-        shakebondj(shakenumconst) = shake_mol(jj)%bond(ii)%j
-        shakedist(shakenumconst) = shake_mol(jj)%bond(ii)%dist2
-        ii = ii +1
+        shakebondi(shakenumconst) = const_mol(jj)%bond(ii)%i
+        shakebondj(shakenumconst) = const_mol(jj)%bond(ii)%j
+        shakedist(shakenumconst) = const_mol(jj)%bond(ii)%dist2
+        if(const_method .eq. LINCS) then
+                shakebondncc(shakenumconst) = const_mol(jj)%bond(ii)%ncc
+                shakebonds(shakenumconst) = const_mol(jj)%lin%S(ii)
+                do kk = 1, const_mol(jj)%nconstraints
+                shakenumconst2 = shakenumconst2 + 1
+                shakecon(shakenumconst2) = const_mol(jj)%lin%con(ii,kk)
+                end do
+        end if
         end do
 end do
 end if
@@ -1892,29 +1909,62 @@ call MPI_Bcast(shakebondj,shakenumconst,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakebondj')
 call MPI_Bcast(shakedist,shakenumconst,QMPI_REAL,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakedist')
-
+if(const_method .eq. LINCS) then
+        call MPI_Bcast(shakebondncc,shakenumconst,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakebondncc')
+        call MPI_Bcast(shakebonds,shakenumconst,QMPI_REAL,0,MPI_COMM_WORLD,ierr)
+        if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakebonds')
+        call MPI_Bcast(shakecon,shakenumconst**2,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+        if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakecon')
+end if
 !yeah, now the slaves have all the shake information, need to put it now back
 !into the data structure
 if (nodeid .ne.0 ) then
-do jj = 1, shake_molecules
-shakenumconst = 0
-shake_mol(jj)%nconstraints = shakeconsttmp(jj)
-allocate(shake_mol(jj)%bond(shakeconsttmp(jj)),stat=alloc_status)
-call check_alloc('slave node shkae bond array')
-        ii = 1
-        do while (ii .le. shake_mol(jj)%nconstraints)
+do jj = 1, const_molecules
+shakenumconst  = 0
+shakenumconst2 = 0
+const_mol(jj)%nconstraints = shakeconsttmp(jj)
+allocate(const_mol(jj)%bond(shakeconsttmp(jj)),stat=alloc_status)
+call check_alloc('slave node shake bond array')
+if(const_method .eq. LINCS) then
+        allocate(const_mol(jj)%lin%con(shakeconsttmp(jj),shakeconsttmp(jj)), &
+                stat = alloc_status)
+        allocate(const_mol(jj)%lin%B(shakeconsttmp(jj)), stat = alloc_status)
+        allocate(const_mol(jj)%lin%A(shakeconsttmp(jj),shakeconsttmp(jj)), &
+                stat = alloc_status)
+        allocate(const_mol(jj)%lin%S(shakeconsttmp(jj)), stat = alloc_status)
+        allocate(const_mol(jj)%lin%sol(shakeconsttmp(jj)), stat = alloc_status)
+        allocate(const_mol(jj)%lin%rhs(2,shakeconsttmp(jj)), stat = alloc_status)
+        allocate(const_mol(jj)%lin%coef(shakeconsttmp(jj),shakeconsttmp(jj)), &
+                stat = alloc_status)
+        allocate(const_mol(jj)%lin%length(shakeconsttmp(jj)), stat = alloc_status)
+        allocate(const_mol(jj)%lin%length2(shakeconsttmp(jj)), stat = alloc_status)
+        call check_alloc('lincs bond array')
+end if
+! more allocations needed for LINCS
+        do ii=1, const_mol(jj)%nconstraints
         shakenumconst = shakenumconst + 1
-        shake_mol(jj)%bond(ii)%i = shakebondi(shakenumconst)
-        shake_mol(jj)%bond(ii)%j = shakebondj(shakenumconst)
-        shake_mol(jj)%bond(ii)%dist2 = shakedist(shakenumconst)
-        ii = ii + 1
+        const_mol(jj)%bond(ii)%i = shakebondi(shakenumconst)
+        const_mol(jj)%bond(ii)%j = shakebondj(shakenumconst)
+        const_mol(jj)%bond(ii)%dist2 = shakedist(shakenumconst)
+        if(const_method .eq. LINCS) then
+                const_mol(jj)%bond(ii)%ncc = shakebondncc(shakenumconst)
+                const_mol(jj)%lin%S(ii)  = shakebonds(shakenumconst)
+                do kk = 1, const_mol(jj)%nconstraints
+                shakenumconst2 = shakenumconst2 + 1
+                const_mol(jj)%lin%con(ii,kk) = shakecon(shakenumconst2)
+                end do
+        end if
+
         end do
 end do
 end if
 
 deallocate(shakeconsttmp,shakebondi,shakebondj,shakedist)
-
-end if ! shake_mol .gt. 0
+if (allocated(shakebondncc)) deallocate(shakebondncc)
+if (allocated(shakebonds)) deallocate(shakebonds)
+if (allocated(shakecon)) deallocate(shakecon)
+end if ! const_mol .gt. 0
 
 
 !And the last -> length of bytes to recieve from the EQ arrays
@@ -2089,22 +2139,22 @@ end subroutine set_mpi_types
 
 !-----------------------------------------------------------------------
 
-subroutine init_shake
+subroutine init_constraints
 !
-! initialize shake constraints
+! initialize shake or lincs constraints
 !
 !locals
 integer						::      mol, b, ia, ja, constr, angle, i
-integer						::      src, trg
+integer						::      src, trg, c, ic, jc
 integer						::      solute_shake_constraints
 logical                                         ::      shaken
 integer                                         ::      enda,starta,emol,tgroups
 real(kind=prec)                                 ::      exclshk
 !allocate molecule list
-allocate(shake_mol(nmol), stat=alloc_status)
-call check_alloc('shake molecule array')
+allocate(const_mol(nmol), stat=alloc_status)
+call check_alloc('constraint molecule array')
 
-shake_mol(:)%nconstraints = 0
+const_mol(:)%nconstraints = 0
 mol = 0
 tscale(:)%exclshk = zero
 
@@ -2125,12 +2175,12 @@ do b=1,nbonds
         if(shake_solute .and. (ia.le.nat_solute)) then
                 if(.not. heavy(ia) .or. .not. heavy(ja)) then
                         if(shake_hydrogens) then
-                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
                                 shaken = .true.
                         end if
                 else
                         if(shake_heavy) then
-                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
                                 shaken = .true.
                         end if
                 end if
@@ -2138,12 +2188,12 @@ do b=1,nbonds
         if(shake_solvent .and. (ia.gt.nat_solute)) then
                 if(.not. heavy(ia) .or. .not. heavy(ja)) then
                         if(shake_hydrogens) then
-                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
                                 shaken = .true.
                         end if
                 else
                         if(shake_heavy) then
-                                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+                                const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
                                 shaken = .true.
                         end if
                 end if
@@ -2175,15 +2225,29 @@ do b = 1, nqshake
         do while(ia >= istart_mol(mol+1))
                 mol = mol + 1
         end do
-        shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+        const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
 end do
 
 !allocate bond lists for each molecule
 do mol = 1, nmol
-        !allocate(sbtemp(nconstr(mol), status = alloc_status)
-        allocate(shake_mol(mol)%bond(shake_mol(mol)%nconstraints), stat = alloc_status)
-        call check_alloc('shake bond array')
-        !shake_mol(mol)%bonds => sbtemp
+        allocate(const_mol(mol)%bond(const_mol(mol)%nconstraints), stat = alloc_status)
+        call check_alloc('constraint bond array')
+        if(const_method .eq. LINCS_CONST) then
+        ! only need the following if using LINCS, useless for shake
+                allocate(const_mol(mol)%lin%con(const_mol(mol)%nconstraints,const_mol(mol)%nconstraints), &
+                        stat = alloc_status)
+                allocate(const_mol(mol)%lin%B(const_mol(mol)%nconstraints), stat = alloc_status)
+                allocate(const_mol(mol)%lin%A(const_mol(mol)%nconstraints,const_mol(mol)%nconstraints), &
+                        stat = alloc_status)
+                allocate(const_mol(mol)%lin%S(const_mol(mol)%nconstraints), stat = alloc_status)
+                allocate(const_mol(mol)%lin%sol(const_mol(mol)%nconstraints), stat = alloc_status)
+                allocate(const_mol(mol)%lin%rhs(2,const_mol(mol)%nconstraints), stat = alloc_status)
+                allocate(const_mol(mol)%lin%coef(const_mol(mol)%nconstraints,const_mol(mol)%nconstraints), &
+                        stat = alloc_status)
+                allocate(const_mol(mol)%lin%length(const_mol(mol)%nconstraints), stat = alloc_status)
+                allocate(const_mol(mol)%lin%length2(const_mol(mol)%nconstraints), stat = alloc_status)
+        call check_alloc('lincs bond array')
+        end if
 end do
 
 mol = 0
@@ -2195,7 +2259,7 @@ do b=1,nbonds
         do while(ia >= istart_mol(mol+1)) 
                 !new molecule
                 mol = mol +1
-                shake_mol(mol)%nconstraints = 0
+                const_mol(mol)%nconstraints = 0
         end do
         !skip redefined bonds
         if(bnd(b)%cod == 0) cycle
@@ -2224,16 +2288,42 @@ do b=1,nbonds
 
 
         if(shaken) then
-                shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
-                shake_mol(mol)%bond(shake_mol(mol)%nconstraints)%i = ia
-                shake_mol(mol)%bond(shake_mol(mol)%nconstraints)%j = ja
-                shake_mol(mol)%bond(shake_mol(mol)%nconstraints)%dist2 = &
+                const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
+                const_mol(mol)%bond(const_mol(mol)%nconstraints)%i = ia
+                const_mol(mol)%bond(const_mol(mol)%nconstraints)%j = ja
+                const_mol(mol)%bond(const_mol(mol)%nconstraints)%dist2 = &
                         bondlib(bnd(b)%cod)%bnd0**2
                 !set the bond code to -1 for shaken bonds
                 !bnd(b) will be deleted by shrink_topology
                 bnd(b)%cod = -1
         end if
 end do
+
+if (const_method .eq. LINCS_CONST) then
+        !initialize and count number of constraints connected to another constraint, and index them
+        do mol = 1, nmol
+                do b=1,const_mol(mol)%nconstraints
+                        const_mol(mol)%bond(b)%ncc = 0
+                end do
+        end do
+        do mol = 1, nmol
+                do b=1,const_mol(mol)%nconstraints
+                        ia = const_mol(mol)%bond(b)%i
+                        ja = const_mol(mol)%bond(b)%j
+                        const_mol(mol)%lin%S(b) = one / q_sqrt( winv(ia) + winv(ja) )
+                        do c=1,const_mol(mol)%nconstraints
+                                ic = const_mol(mol)%bond(c)%i
+                                jc = const_mol(mol)%bond(c)%j
+                                if ( (b .ne. c) .and. ( (ic .eq. ia) .or. (ic .eq. ja) .or. (jc .eq. ia) .or. (jc .eq. ja) ) ) then
+                                        const_mol(mol)%bond(b)%ncc = const_mol(mol)%bond(b)%ncc + 1
+                                        const_mol(mol)%lin%con(b,const_mol(mol)%bond(b)%ncc) = c
+
+                                end if
+                        end do
+                end do
+        end do
+end if
+
 
 !add extra shake constraints from fep file to appropriate molecule
 do b = 1, nqshake
@@ -2244,23 +2334,23 @@ do b = 1, nqshake
                 mol = mol + 1
         end do
         !see if already shaken
-        do constr = 1, shake_mol(mol)%nconstraints
-                if((ia == shake_mol(mol)%bond(constr)%i .and. &
-                        ja == shake_mol(mol)%bond(constr)%j) .or. &
-                   (ja == shake_mol(mol)%bond(constr)%i .and. &
-                        ia == shake_mol(mol)%bond(constr)%j)) then
+        do constr = 1, const_mol(mol)%nconstraints
+                if((ia == const_mol(mol)%bond(constr)%i .and. &
+                        ja == const_mol(mol)%bond(constr)%j) .or. &
+                   (ja == const_mol(mol)%bond(constr)%i .and. &
+                        ia == const_mol(mol)%bond(constr)%j)) then
                         !found it: will overwrite 
                         !also decrement number of constraints
-                        shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints - 1
+                        const_mol(mol)%nconstraints = const_mol(mol)%nconstraints - 1
                         exit
                 end if
         end do
         !constr now contains the right index
-        shake_mol(mol)%bond(constr)%i = ia
-        shake_mol(mol)%bond(constr)%j = ja
-        shake_mol(mol)%bond(constr)%dist2 = &
+        const_mol(mol)%bond(constr)%i = ia
+        const_mol(mol)%bond(constr)%j = ja
+        const_mol(mol)%bond(constr)%dist2 = &
                 dot_product(EQ(1:nstates)%lambda,qshake_dist(b,1:nstates))**2
-        shake_mol(mol)%nconstraints = shake_mol(mol)%nconstraints + 1
+        const_mol(mol)%nconstraints = const_mol(mol)%nconstraints + 1
 end do
 
 !get total number of shake constraints in solute (used for separate scaling of temperatures)
@@ -2274,7 +2364,7 @@ do tgroups = 1, ntgroups
         do while(tscale(tgroups)%enda .ge. istart_mol(emol+1))
                 emol = emol + 1
         end do
-        tscale(tgroups)%shake = sum(shake_mol(mol:emol)%nconstraints)
+        tscale(tgroups)%shake = sum(const_mol(mol:emol)%nconstraints)
         exclshk = exclshk + tscale(tgroups)%exclshk
 end do
 
@@ -2282,26 +2372,26 @@ end do
 trg = 1
 src = 2
 do while(src <= nmol)
-        if(shake_mol(trg)%nconstraints == 0) then
-                shake_mol(trg) = shake_mol(src)
+        if(const_mol(trg)%nconstraints == 0) then
+                const_mol(trg) = const_mol(src)
                 !clear source
-                shake_mol(src)%nconstraints = 0
+                const_mol(src)%nconstraints = 0
                 src = src + 1
         else
                 trg = trg + 1
                 if(trg == src) src = src + 1
         end if
 end do
-shake_molecules = trg
+const_molecules = trg
 
 !total number of constraints
-shake_constraints = sum(shake_mol(1:shake_molecules)%nconstraints)
-write(*,100) shake_constraints
-write(*,101) shake_molecules
+constraints = sum(const_mol(1:const_molecules)%nconstraints)
+write(*,100) constraints
+write(*,101) const_molecules
 100	format(/,'Number of shake constraints             = ',i10)
 101	format('No. molecules with shake constraints    = ',i10)
 ! calculate #degrees of freedom
-Ndegf=3*natom-shake_constraints    !changed from Ndegf=3*natom-3-shake_constraints, center of mass position is NOT CONstrained in the simulation, but IS constrained for initial temperatures....
+Ndegf=3*natom-constraints    !changed from Ndegf=3*natom-3-shake_constraints, center of mass position is NOT CONstrained in the simulation, but IS constrained for initial temperatures....
 Ndegfree=Ndegf-3*nexats+exclshk
 
 ! now give the correct number of degrees of freedom according to group size
@@ -2322,10 +2412,10 @@ end if
 
 
 !clear angles which are shaken (i and k atoms shaken)
-do mol=1, shake_molecules
-        do constr = 1, shake_mol(mol)%nconstraints
-        ia = shake_mol(mol)%bond(constr)%i
-        ja = shake_mol(mol)%bond(constr)%j
+do mol=1, const_molecules
+        do constr = 1, const_mol(mol)%nconstraints
+        ia = const_mol(mol)%bond(constr)%i
+        ja = const_mol(mol)%bond(constr)%j
                 do angle = 1, nangles
                         if((ang(angle)%i == ia .and. ang(angle)%k == ja) .or. &
                            (ang(angle)%i == ja .and. ang(angle)%k == ia)) then
@@ -2347,7 +2437,7 @@ if ( thermostat == NOSEHOOVER ) then
         qnh(1)=Ndegf*nhq
 end if
 
-end subroutine init_shake
+end subroutine init_constraints
 
 !-----------------------------------------------------------------------
 

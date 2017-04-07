@@ -488,27 +488,39 @@ type(LRF_TYPE), allocatable	::	old_lrf(:)  !for constant pressure: MC_volume rou
 type(node_assignment_type)	:: calculation_assignment
 
 
-!shake types & variables
+!constraint types & variables
 !convergence criterion (fraction of distance)
-real(kind=prec), parameter			::	SHAKE_TOL = 0.0001_prec
-integer, parameter			::	SHAKE_MAX_ITER = 1000
+real(kind=prec), parameter                      ::      CONST_TOL = 0.0001_prec
+integer, parameter                              ::      CONST_MAX_ITER = 1000
 
 
-type SHAKE_BOND_TYPE
-        integer(AI)				::	i,j
-        real(kind=prec)					::	dist2
-        logical					::	ready
-end type SHAKE_BOND_TYPE
+type CONST_BOND_TYPE
+        integer(AI)                             ::      i,j
+        ! new for LINCS, number of constraints per constraint
+        integer(AI)                             ::      ncc
+        real(kind=prec)                         ::      dist2
+        logical                                 ::      ready
+end type CONST_BOND_TYPE
+
+! additional variables needed for LINCS, mainly arrays of lengths and constants
+type LINCS_MOL_TYPE
+        integer(AI),allocatable                 ::      con(:,:)
+        TYPE(qr_vec),allocatable                ::      B(:)
+        real(kind=prec),allocatable             ::      A(:,:),S(:),coef(:,:)
+        real(kind=prec),allocatable             ::      rhs(:,:),sol(:),length(:),length2(:)
+end type LINCS_MOL_TYPE
+
+type CONST_MOL_TYPE
+        integer                                 ::      nconstraints
+        type(LINCS_MOL_TYPE)                    ::      lin
+        type(CONST_BOND_TYPE), allocatable      ::      bond(:)
+end type CONST_MOL_TYPE
 
 
-type SHAKE_MOL_TYPE
-        integer					::	nconstraints
-        type(SHAKE_BOND_TYPE), allocatable	:: bond(:)
-end type SHAKE_MOL_TYPE
-
-
-integer						::	shake_constraints, shake_molecules
-type(SHAKE_MOL_TYPE), allocatable :: shake_mol(:)
+integer                                         ::      constraints, const_molecules
+integer                                         ::      const_method = SHAKE_CONST
+integer                                         ::      lincs_recursion = 4
+type(CONST_MOL_TYPE), allocatable               ::      const_mol(:)
 
 
 ! variables for QCP calculations, concerning parameter read in and usage

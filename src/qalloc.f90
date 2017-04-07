@@ -220,11 +220,20 @@ deallocate (iqatom, stat=alloc_status)
 if(allocated(ljcod)) deallocate(ljcod, stat=alloc_status)
 
 ! shake stuff
-if(allocated(shake_mol)) then
+if(allocated(const_mol)) then
 	do ii=1,nmol
-		if (allocated(shake_mol(ii)%bond)) deallocate(shake_mol(ii)%bond)
+		if (allocated(const_mol(ii)%bond)) deallocate(const_mol(ii)%bond)
+                if (allocated(const_mol(ii)%lin%con))     deallocate(const_mol(ii)%lin%con)
+                if (allocated(const_mol(ii)%lin%length))  deallocate(const_mol(ii)%lin%length)
+                if (allocated(const_mol(ii)%lin%length2)) deallocate(const_mol(ii)%lin%length2)
+                if (allocated(const_mol(ii)%lin%S))       deallocate(const_mol(ii)%lin%S)
+                if (allocated(const_mol(ii)%lin%A))       deallocate(const_mol(ii)%lin%A)
+                if (allocated(const_mol(ii)%lin%B))       deallocate(const_mol(ii)%lin%B)
+                if (allocated(const_mol(ii)%lin%coef))    deallocate(const_mol(ii)%lin%coef)
+                if (allocated(const_mol(ii)%lin%rhs))     deallocate(const_mol(ii)%lin%rhs)
+                if (allocated(const_mol(ii)%lin%sol))     deallocate(const_mol(ii)%lin%sol)
 	end do
-	deallocate(shake_mol)
+	deallocate(const_mol)
 end if
 ! solvent stuff
 if(allocated(aLJ_solv)) deallocate(aLJ_solv)

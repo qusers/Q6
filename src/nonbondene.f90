@@ -120,7 +120,7 @@ calculation_assignment%ww%start = 1
 calculation_assignment%ww%end = nwat
 
 calculation_assignment%shake%start        = 1
-calculation_assignment%shake%end          = shake_molecules
+calculation_assignment%shake%end          = const_molecules
 calculation_assignment%natom%start        = 1
 calculation_assignment%natom%end          = natom
 calculation_assignment%nat_solute%start   = 1
@@ -395,7 +395,7 @@ end if
 if (nodeid .eq. 0) then
  ! print a status report
  write(*,98) 'solute-solute', 'solute-water', 'water-water', 'Q-solute', 'Q-water', '#Shake', '#Atoms', '#Molecules'
- write(*,99) 'total',ncgp_solute,ncgp_solute,nwat,ncgp_solute,nwat,shake_molecules,natom,nmol
+ write(*,99) 'total',ncgp_solute,ncgp_solute,nwat,ncgp_solute,nwat,const_molecules,natom,nmol
 if (numnodes .gt. 1) then
  do i=0,numnodes-1
     write(*,100) i, 'assigned cgps', &

@@ -102,7 +102,7 @@ program Qdyn5
 	call prep_sim_version(version_pass())
 	call close_input_files				! close input files
 
-	call init_shake
+	call init_constraints
 !the nb monitor now needs to be initialised after! we got the precomputed interactions
 !so it is moved in later 
 	call make_nbqqlist
@@ -112,7 +112,7 @@ program Qdyn5
     ! generate Maxwellian velocities and shake initial x and v if necessary
     if ( iseed > 0 ) then
       call maxwell
-	  call initial_shaking
+	  call initial_constraint(const_method)
  	  call stop_cm_translation
     end if
   end if
