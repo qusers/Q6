@@ -280,18 +280,18 @@ node_assignment(numnodes-1)%qw%end=nwat
 !each node, based on the number of shake constraints in each searched molecule
 icgp=0
 sum=0
-average_pairs=REAL((shake_constraints/numnodes),kind=prec)
+average_pairs=REAL((constraints/numnodes),kind=prec)
 do inode=0,numnodes-2
         node_assignment(inode)%shake%start=icgp+1
         less_than_sum = (inode+1)*average_pairs
-        do while ((sum .lt. less_than_sum).and.(icgp.lt.shake_molecules))
+        do while ((sum .lt. less_than_sum).and.(icgp.lt.const_molecules))
              icgp=icgp+1
-             sum=sum + shake_mol(icgp)%nconstraints
+             sum=sum + const_mol(icgp)%nconstraints
         end do
         node_assignment(inode)%shake%end=icgp
 end do
 node_assignment(numnodes-1)%shake%start=icgp+1
-node_assignment(numnodes-1)%shake%end=shake_molecules
+node_assignment(numnodes-1)%shake%end=const_molecules
 
 !assignment of atom numbers
 sum=0

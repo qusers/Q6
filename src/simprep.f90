@@ -1210,12 +1210,14 @@ subroutine init_nodes
 !  boxlength, inv_boxl, boxcentre, sc_lookup 
 !
 
-integer					:: nat3,j,jj,ii
+integer					:: nat3,j,jj,ii,kk
 !temp for shake
 integer,allocatable                     :: shakeconsttmp(:)
 integer,allocatable                     :: shakebondi(:)
 integer,allocatable                     :: shakebondj(:)
-integer                                 :: shakenumconst
+integer,allocatable                     :: shakebondncc(:),shakecon(:)
+real(kind=prec),allocatable             :: shakebonds(:)
+integer                                 :: shakenumconst,shakenumconst2
 real(kind=prec),allocatable             :: shakedist(:)
 real(kind=prec), allocatable		:: temp_lambda(:)
 integer, parameter                      :: maxint=2147483647
@@ -1844,7 +1846,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast Ndegfree')
 
 call MPI_Bcast(const_molecules,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake molecules')
-call MPI_Bcast(shake_constraints,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(constraints,1,MPI_INTEGER,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shake constraints')
 
 call MPI_Bcast(const_method,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
@@ -1877,7 +1879,7 @@ if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakeconsttmp')
 allocate(shakebondi(shakenumconst),shakebondj(shakenumconst),shakedist(shakenumconst),&
                 stat=alloc_status)
 call check_alloc('Temporary constraint arrays')
-if(const_method .eq. LINCS) then
+if(const_method .eq. LINCS_CONST) then
         ! allocate LINCS temporary arrays
         allocate(shakebondncc(shakenumconst),shakebonds(shakenumconst),&
                 shakecon(shakenumconst**2),stat=alloc_status)
@@ -1892,7 +1894,7 @@ do jj = 1,const_molecules
         shakebondi(shakenumconst) = const_mol(jj)%bond(ii)%i
         shakebondj(shakenumconst) = const_mol(jj)%bond(ii)%j
         shakedist(shakenumconst) = const_mol(jj)%bond(ii)%dist2
-        if(const_method .eq. LINCS) then
+        if(const_method .eq. LINCS_CONST) then
                 shakebondncc(shakenumconst) = const_mol(jj)%bond(ii)%ncc
                 shakebonds(shakenumconst) = const_mol(jj)%lin%S(ii)
                 do kk = 1, const_mol(jj)%nconstraints
@@ -1909,7 +1911,7 @@ call MPI_Bcast(shakebondj,shakenumconst,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakebondj')
 call MPI_Bcast(shakedist,shakenumconst,QMPI_REAL,0,MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakedist')
-if(const_method .eq. LINCS) then
+if(const_method .eq. LINCS_CONST) then
         call MPI_Bcast(shakebondncc,shakenumconst,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
         if (ierr .ne. 0) call die('init_nodes/MPI_Bcast shakebondncc')
         call MPI_Bcast(shakebonds,shakenumconst,QMPI_REAL,0,MPI_COMM_WORLD,ierr)
@@ -1926,7 +1928,7 @@ shakenumconst2 = 0
 const_mol(jj)%nconstraints = shakeconsttmp(jj)
 allocate(const_mol(jj)%bond(shakeconsttmp(jj)),stat=alloc_status)
 call check_alloc('slave node shake bond array')
-if(const_method .eq. LINCS) then
+if(const_method .eq. LINCS_CONST) then
         allocate(const_mol(jj)%lin%con(shakeconsttmp(jj),shakeconsttmp(jj)), &
                 stat = alloc_status)
         allocate(const_mol(jj)%lin%B(shakeconsttmp(jj)), stat = alloc_status)
@@ -1947,7 +1949,7 @@ end if
         const_mol(jj)%bond(ii)%i = shakebondi(shakenumconst)
         const_mol(jj)%bond(ii)%j = shakebondj(shakenumconst)
         const_mol(jj)%bond(ii)%dist2 = shakedist(shakenumconst)
-        if(const_method .eq. LINCS) then
+        if(const_method .eq. LINCS_CONST) then
                 const_mol(jj)%bond(ii)%ncc = shakebondncc(shakenumconst)
                 const_mol(jj)%lin%S(ii)  = shakebonds(shakenumconst)
                 do kk = 1, const_mol(jj)%nconstraints
