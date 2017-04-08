@@ -5462,8 +5462,6 @@ logical function set_solvent_sphere()
 		write(*,'(a,3f8.3)') 'Previous solvent centre:', xwcent
 	end if
 	call get_string_arg(line, '-----> Sphere centre (<x y z> or <residue:atom_name> or <"mass"> or <"boundary">): ')
-	call upcase(line)
-
 	if(scan(line, ':') > 0) then !got res:at
 		centre_atom=get_atom_from_descriptor(line)
 		if(centre_atom == 0) then
@@ -5472,14 +5470,16 @@ logical function set_solvent_sphere()
 			return
 		end if
 		xwcent = xtop(centre_atom)
-	elseif(line == 'MASS') then   !define center by center of mass
+	else
+                call upcase(line)
+                if(line == 'MASS') then   !define center by center of mass
 		if (.not. get_centre_by_mass(xwcent)) then
 			write(*,*) ('>>>>> ERROR: Could not create centre ')
 			return
 		end if
-	elseif(line == 'BOUNDARY') then   !define center same as boundary center
+	        elseif(line == 'BOUNDARY') then   !define center same as boundary center
 		xwcent = xpcent
-	else !got x
+	        else !got x
 		read(line, *, iostat=filestat) xwcent%x
 		if(filestat > 0) then !invalid x coordinate
 			return
@@ -5488,6 +5488,7 @@ logical function set_solvent_sphere()
 		xwcent%y = xwat_in
 		xwat_in=get_real_arg('-----> Sphere centre z: ')
 		xwcent%z = xwat_in
+        end if
 	end if
 
 	if (have_title) then !Print old radius if available
