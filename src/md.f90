@@ -1708,9 +1708,9 @@ logical                                         :: print_step
 integer						::	i,tgroups
 real(kind=prec)						::	Ekin
 
-tscale(:)%temp  = zero
-tscale(:)%tfree = zero
-tscale(:)%texcl = zero
+tscale(1:ntgroups)%temp  = zero
+tscale(1:ntgroups)%tfree = zero
+tscale(1:ntgroups)%texcl = zero
 Temp  = zero
 Tfree = zero
 !get kinetic energies for atoms in each temperature group
@@ -1731,8 +1731,8 @@ if ( (Ekin .gt. Ekinmax) .and. (temp_spam .or. print_step )) then
 end if
 end do
 end do
-Tfree = sum(tscale(:)%tfree)
-Temp  = sum(tscale(:)%temp)
+Tfree = sum(tscale(1:ntgroups)%tfree)
+Temp  = sum(tscale(1:ntgroups)%temp)
 
 E%kinetic = Temp
 
@@ -1901,7 +1901,7 @@ nat3=natom*3
 if (nodeid .eq. 0) then
 Ekinmax = 1000.0_prec*Ndegf*Boltz*Temp0/2.0_prec/real(natom, kind=prec)
 
-call temperature(tscale,Ekinmax,.true.)
+call temperature(tscale(1:ntgroups),Ekinmax,.true.)
 !store old Temp
 Tlast = Temp
 end if
@@ -2107,7 +2107,7 @@ start_loop_time2 = rtime()
         ! calculate temperature and scaling factor
         ! need to get value if we print out stuff
         print_step = (mod(istep,itemp_cycle) .eq. 0 .and. istep .gt. 0)
-        call temperature(tscale,Ekinmax,print_step)
+        call temperature(tscale(1:ntgroups),Ekinmax,print_step)
 #if defined (PROFILING)
 profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 #endif
