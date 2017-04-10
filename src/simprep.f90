@@ -3859,7 +3859,7 @@ call prep_sim_precompute_solvent
 ! assign the temperature scaling groups according to the information provided
 ! when reading in the input file
 ! first check if water is present and change scaling groups if not
-if((nat_solute .eq. natom) .and. (ntgroups_kind .eq. DEFAULT_TWO)) then
+if(((nat_solute .eq. natom).or.(nat_solute.eq.0)) .and. (ntgroups_kind .eq. DEFAULT_TWO)) then
         ntgroups_kind = DEFAULT_ONE
         ntgroups = 1
 end if
