@@ -1254,7 +1254,7 @@ integer                 :: i,j,w,irec,n,ic,ind,nrec
                 j = const_mol(mol)%bond%bond(ic)%j
                 x(i) = x(i) - ((winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%sol(ic)) * &
                         const_mol(mol)%linc%B(ic))
-                x(j) = x(j) + ((winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%sol(ic)) * &
+                x(j) = x(j) + ((winv(j) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%sol(ic)) * &
                         const_mol(mol)%linc%B(ic))
         end do
 
