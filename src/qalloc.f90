@@ -222,18 +222,23 @@ if(allocated(ljcod)) deallocate(ljcod, stat=alloc_status)
 ! shake stuff
 if(allocated(const_mol)) then
 	do ii=1,nmol
-		if (allocated(const_mol(ii)%bond)) deallocate(const_mol(ii)%bond)
-                if (allocated(const_mol(ii)%lin%con))     deallocate(const_mol(ii)%lin%con)
-                if (allocated(const_mol(ii)%lin%length))  deallocate(const_mol(ii)%lin%length)
-                if (allocated(const_mol(ii)%lin%length2)) deallocate(const_mol(ii)%lin%length2)
-                if (allocated(const_mol(ii)%lin%S))       deallocate(const_mol(ii)%lin%S)
-                if (allocated(const_mol(ii)%lin%A))       deallocate(const_mol(ii)%lin%A)
-                if (allocated(const_mol(ii)%lin%B))       deallocate(const_mol(ii)%lin%B)
-                if (allocated(const_mol(ii)%lin%coef))    deallocate(const_mol(ii)%lin%coef)
-                if (allocated(const_mol(ii)%lin%rhs))     deallocate(const_mol(ii)%lin%rhs)
-                if (allocated(const_mol(ii)%lin%sol))     deallocate(const_mol(ii)%lin%sol)
+                if (associated(const_mol(ii)%bond))     nullify(const_mol(ii)%bond)
+                if (associated(const_mol(ii)%linc))     nullify(const_mol(ii)%linc)
+                if (allocated(const_bonds(ii)%bond))    deallocate(const_bonds(ii)%bond)
+                if (allocated(const_lincs)) then
+                        if (allocated(const_lincs(ii)%con))     deallocate(const_lincs(ii)%con)
+                        if (allocated(const_lincs(ii)%length))  deallocate(const_lincs(ii)%length)
+                        if (allocated(const_lincs(ii)%length2)) deallocate(const_lincs(ii)%length2)
+                        if (allocated(const_lincs(ii)%S))       deallocate(const_lincs(ii)%S)
+                        if (allocated(const_lincs(ii)%A))       deallocate(const_lincs(ii)%A)
+                        if (allocated(const_lincs(ii)%B))       deallocate(const_lincs(ii)%B)
+                        if (allocated(const_lincs(ii)%coef))    deallocate(const_lincs(ii)%coef)
+                        if (allocated(const_lincs(ii)%rhs))     deallocate(const_lincs(ii)%rhs)
+                        if (allocated(const_lincs(ii)%sol))     deallocate(const_lincs(ii)%sol)
+                end if
 	end do
 	deallocate(const_mol)
+        if(allocated(const_lincs)) deallocate(const_lincs)
 end if
 ! solvent stuff
 if(allocated(aLJ_solv)) deallocate(aLJ_solv)

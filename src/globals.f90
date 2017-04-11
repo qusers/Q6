@@ -493,13 +493,16 @@ type(node_assignment_type)	:: calculation_assignment
 real(kind=prec), parameter                      ::      CONST_TOL = 0.0001_prec
 integer, parameter                              ::      CONST_MAX_ITER = 1000
 
-
-type CONST_BOND_TYPE
+type SHAKE_BOND_TYPE
         integer(AI)                             ::      i,j
         ! new for LINCS, number of constraints per constraint
         integer(AI)                             ::      ncc
         real(kind=prec)                         ::      dist2
         logical                                 ::      ready
+end type SHAKE_BOND_TYPE
+
+type CONST_BOND_TYPE
+        TYPE(SHAKE_BOND_TYPE),allocatable       ::      bond(:)
 end type CONST_BOND_TYPE
 
 ! additional variables needed for LINCS, mainly arrays of lengths and constants
@@ -512,9 +515,12 @@ end type LINCS_MOL_TYPE
 
 type CONST_MOL_TYPE
         integer                                 ::      nconstraints
-        type(LINCS_MOL_TYPE)                    ::      lin
-        type(CONST_BOND_TYPE), allocatable      ::      bond(:)
+        type(LINCS_MOL_TYPE), POINTER           ::      linc
+        type(CONST_BOND_TYPE), POINTER          ::      bond
 end type CONST_MOL_TYPE
+
+type(CONST_BOND_TYPE),TARGET,allocatable        ::      const_bonds(:)
+type(LINCS_MOL_TYPE),TARGET,allocatable         ::      const_lincs(:)
 
 
 integer                                         ::      constraints, const_molecules

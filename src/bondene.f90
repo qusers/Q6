@@ -1073,20 +1073,20 @@ do mol=1,const_molecules
         ! reset nits (iterations per molecule)
         nits = 0
         ! reset iready for every constraint
-        const_mol(mol)%bond(:)%ready = .false.
+        const_mol(mol)%bond%bond(:)%ready = .false.
         do while (.not.dead_shake) !iteration loop
                 do ic=1,const_mol(mol)%nconstraints
                         ! for every constraint:
 
-                        if (.not. const_mol(mol)%bond(ic)%ready) then
+                        if (.not. const_mol(mol)%bond%bond(ic)%ready) then
                                 ! repeat until done:
 
-                                i = const_mol(mol)%bond(ic)%i
-                                j = const_mol(mol)%bond(ic)%j
+                                i = const_mol(mol)%bond%bond(ic)%i
+                                j = const_mol(mol)%bond%bond(ic)%j
                                 xij     = q_dist5(x(j),x(i))
-                                diff    = const_mol(mol)%bond(ic)%dist2 - xij%r2
-                                if(q_abs(diff) < CONST_TOL*const_mol(mol)%bond(ic)%dist2) then
-                                        const_mol(mol)%bond(ic)%ready = .true. ! in range
+                                diff    = const_mol(mol)%bond%bond(ic)%dist2 - xij%r2
+                                if(q_abs(diff) < CONST_TOL*const_mol(mol)%bond%bond(ic)%dist2) then
+                                        const_mol(mol)%bond%bond(ic)%ready = .true. ! in range
                                 end if
                                 xxij = xx(i) - xx(j)
                                 scp  = q_dotprod(xij%vec,xxij)
@@ -1098,19 +1098,19 @@ do mol=1,const_molecules
 
             nits = nits+1
                 ! see if every constraint is met
-                if(all(const_mol(mol)%bond(1:const_mol(mol)%nconstraints)%ready)) then
+                if(all(const_mol(mol)%bond%bond(1:const_mol(mol)%nconstraints)%ready)) then
                         exit !from iteration loop
                 elseif(nits >= CONST_MAX_ITER) then
                         ! fail on too many iterations
                         do ic=1,const_mol(mol)%nconstraints
-                                if (.not. const_mol(mol)%bond(ic)%ready) then
+                                if (.not. const_mol(mol)%bond%bond(ic)%ready) then
                                         ! for every failed constraint
 
-                                        i = const_mol(mol)%bond(ic)%i
-                                        j = const_mol(mol)%bond(ic)%j
+                                        i = const_mol(mol)%bond%bond(ic)%i
+                                        j = const_mol(mol)%bond%bond(ic)%j
                                         dist = q_dist4(xx(i),xx(j))
                                         write (*,100) i,j,dist,&
-                                                q_sqrt(const_mol(mol)%bond(ic)%dist2)
+                                                q_sqrt(const_mol(mol)%bond%bond(ic)%dist2)
                                 end if
                         end do
                         dead_shake = .true.
@@ -1140,8 +1140,8 @@ TYPE(qr_vec)                    ::      xx(:), x(:)
 
 ! *** local variables
 integer                         ::      i,j,ki,kj,mol,ic,irec,nrec,k,n,w
-real(kind=prec)                 ::      p 
-TYPE(qr_dist)                   ::      xij
+real(kind=prec)                 ::      p,r
+TYPE(qr_dist5)                  ::      xij
 
 
 #if defined (PROFILING)
@@ -1152,64 +1152,64 @@ start_loop_time = rtime()
 ! need to remove this in due time
 lincs = 1
 ! number of times to perform LINCS recurrent algorithm
-nrec = lincs_recursion
-
 do mol=1,const_molecules
         do ic=1,const_mol(mol)%nconstraints
 
-                i = const_mol(mol)%bond(ic)%i
-                j = const_mol(mol)%bond(ic)%j
-                xij = q_dist(xx(j),xx(i))
-                const_mol(mol)%lin%length2(ic) = xij%r2
-                const_mol(mol)%lin%length(ic)  = xij%r
-                const_mol(mol)%lin%B(ic) = xij%vec / xij%r
+                i = const_mol(mol)%bond%bond(ic)%i
+                j = const_mol(mol)%bond%bond(ic)%j
+                xij = q_dist5(xx(j),xx(i))
+                const_mol(mol)%linc%length2(ic) = xij%r2
+                r = q_sqrt(xij%r2)
+                const_mol(mol)%linc%length(ic)  = r
+                const_mol(mol)%linc%B(ic) = xij%vec / r
         end do
 
         do ic=1,const_mol(mol)%nconstraints
 
-                i = const_mol(mol)%bond(ic)%i
-                j = const_mol(mol)%bond(ic)%j
-                do n=1,const_mol(mol)%bond(ic)%ncc
+                i = const_mol(mol)%bond%bond(ic)%i
+                j = const_mol(mol)%bond%bond(ic)%j
+                do n=1,const_mol(mol)%bond%bond(ic)%ncc
 
-                        k  = const_mol(mol)%lin%con(ic,n)
-                        ki = const_mol(mol)%bond(k)%i
-                        kj = const_mol(mol)%bond(k)%j
+                        k  = const_mol(mol)%linc%con(ic,n)
+                        ki = const_mol(mol)%bond%bond(k)%i
+                        kj = const_mol(mol)%bond%bond(k)%j
 
                         if ( i .eq. ki ) then
-                                const_mol(mol)%lin%coef(ic,n) = &
-                                        -one * winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                                const_mol(mol)%linc%coef(ic,n) = &
+                                        -one * winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%S(n)
                         else if ( j .eq. kj ) then
-                                const_mol(mol)%lin%coef(ic,n) = &
-                                        -one * winv(j) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                                const_mol(mol)%linc%coef(ic,n) = &
+                                        -one * winv(j) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%S(n)
                         else if ( i .eq. kj ) then
-                                const_mol(mol)%lin%coef(ic,n) = &
-                                        winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                                const_mol(mol)%linc%coef(ic,n) = &
+                                        winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%S(n)
                         else
-                                const_mol(mol)%lin%coef(ic,n) = &
-                                        winv(j) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%S(n)
+                                const_mol(mol)%linc%coef(ic,n) = &
+                                        winv(j) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%S(n)
                         end if
 
-                        const_mol(mol)%lin%A(ic,n) = const_mol(mol)%lin%coef(ic,n) * &
-                                (q_dotprod(const_mol(mol)%lin%B(ic),const_mol(mol)%lin%B(k)))
+                        const_mol(mol)%linc%A(ic,n) = const_mol(mol)%linc%coef(ic,n) * &
+                                (q_dotprod(const_mol(mol)%linc%B(ic),const_mol(mol)%linc%B(k)))
 
                 end do
 
-                const_mol(mol)%lin%rhs(1,ic) = (const_mol(mol)%lin%S(ic) * &
-                        q_dotprod(const_mol(mol)%lin%B(ic),qvec_sub(x(i),x(j)))) - &
-                        q_sqrt(const_mol(mol)%bond(ic)%dist2)
-                        const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%rhs(1,ic)
+                const_mol(mol)%linc%rhs(1,ic) = const_mol(mol)%linc%S(ic) * &
+                        (q_dotprod(const_mol(mol)%linc%B(ic),qvec_sub(x(i),x(j))) - &
+                        q_sqrt(const_mol(mol)%bond%bond(ic)%dist2))
+                        const_mol(mol)%linc%sol(ic) = const_mol(mol)%linc%rhs(1,ic)
         end do
 ! call to solver function to get values for coordinates
         call lincs_solv(mol)
 
         do ic=1,const_mol(mol)%nconstraints
-                i = const_mol(mol)%bond(ic)%i
-                j = const_mol(mol)%bond(ic)%j
+                i = const_mol(mol)%bond%bond(ic)%i
+                j = const_mol(mol)%bond%bond(ic)%j
                
-                p = q_sqrt(2.0_prec*const_mol(mol)%bond(ic)%dist2 - &
+                p = q_sqrt((2.0_prec*const_mol(mol)%bond%bond(ic)%dist2) - &
                         q_dist4(x(j),x(i)))
-                const_mol(mol)%lin%rhs(1,ic) = const_mol(mol)%lin%S(ic)*(q_sqrt(const_mol(mol)%bond(ic)%dist2)-p)
-                const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%rhs(1,ic)
+                const_mol(mol)%linc%rhs(1,ic) = const_mol(mol)%linc%S(ic)* &
+                        (q_sqrt(const_mol(mol)%bond%bond(ic)%dist2)-p)
+                const_mol(mol)%linc%sol(ic)   = const_mol(mol)%linc%rhs(1,ic)
         end do
 ! second call to solver to update coordinates
         call lincs_solv(mol)
@@ -1237,25 +1237,25 @@ integer                 :: i,j,w,irec,n,ic,ind,nrec
         w = 2
         do irec=1,nrec
                 do ic=1,const_mol(mol)%nconstraints
-                        const_mol(mol)%lin%rhs(w,ic) = 0
-                        do n=1,const_mol(mol)%bond(ic)%ncc
+                        const_mol(mol)%linc%rhs(w,ic) = zero
+                        do n=1,const_mol(mol)%bond%bond(ic)%ncc
                         ! index of the other connected atoms
-                                ind = const_mol(mol)%lin%con(ic,n)
-                                const_mol(mol)%lin%rhs(w,ic) = const_mol(mol)%lin%rhs(w,ic) + &
-                                const_mol(mol)%lin%A(ic,ind) * const_mol(mol)%lin%rhs(3-w,ind)
+                                ind = const_mol(mol)%linc%con(ic,n)
+                                const_mol(mol)%linc%rhs(w,ic) = const_mol(mol)%linc%rhs(w,ic) + &
+                                const_mol(mol)%linc%A(ic,ind) * const_mol(mol)%linc%rhs(3-w,ind)
                         end do
-                        const_mol(mol)%lin%sol(ic) = const_mol(mol)%lin%sol(ic) + const_mol(mol)%lin%rhs(w,ic)
+                        const_mol(mol)%linc%sol(ic) = const_mol(mol)%linc%sol(ic) + const_mol(mol)%linc%rhs(w,ic)
                 end do
         w = 3-w
         end do
 
         do ic=1,const_mol(mol)%nconstraints
-                i = const_mol(mol)%bond(ic)%i
-                j = const_mol(mol)%bond(ic)%j
-                x(i) = x(i) - ((winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%sol(ic)) * &
-                        const_mol(mol)%lin%B(ic))
-                x(j) = x(j) + ((winv(i) * const_mol(mol)%lin%S(ic) * const_mol(mol)%lin%sol(ic)) * &
-                        const_mol(mol)%lin%B(ic))
+                i = const_mol(mol)%bond%bond(ic)%i
+                j = const_mol(mol)%bond%bond(ic)%j
+                x(i) = x(i) - ((winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%sol(ic)) * &
+                        const_mol(mol)%linc%B(ic))
+                x(j) = x(j) + ((winv(i) * const_mol(mol)%linc%S(ic) * const_mol(mol)%linc%sol(ic)) * &
+                        const_mol(mol)%linc%B(ic))
         end do
 
 end subroutine lincs_solv
