@@ -52,6 +52,11 @@ end TYPE qr_dist5
 
 real(kind=prec) :: pi, deg2rad, rad2deg
 
+! type to calculate simple statistics
+TYPE STAT_TYPE
+        real(kind=prec)         :: ave,dev
+end TYPE STAT_TYPE
+
 interface operator(+)
         module procedure qvec_add,qarray_add,qvec_realadd
 end interface
@@ -600,6 +605,27 @@ subroutine math_initialize
         deg2rad = pi/180.0_prec
         rad2deg = 180.0_prec/pi
 end subroutine math_initialize
+
+! function to compute standard deviations from sum and sum of squares
+TYPE(STAT_TYPE) function get_stddev(val,val2,num)
+! arguments
+! sum and sum of square
+real(kind=prec)         :: val,val2
+! number of points
+integer                 :: num
+! locals
+real(kind=prec)         :: tmp
+
+tmp = val/real(num,kind=prec)
+get_stddev%ave = tmp
+tmp = val2/num - tmp**2
+if(tmp.gt.zero) then
+        get_stddev%dev = tmp
+else
+        get_stddev%dev = zero
+end if
+end function get_stddev
+
 
 #ifdef DEBUG
 !function that returns sum of a given qr_vec array

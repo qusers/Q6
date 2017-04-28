@@ -645,32 +645,32 @@ logical function qatom_load_fep(fep_file)
   character(len=200)		::	line
   integer					::	i,j,k,l,iat,st,ii
   integer					::	nqcrg=0,nqbcod=0,nqacod=0,nqtcod=0,nqicod=0
-  character(len=40)			::	section
-  logical, allocatable, dimension(:)		::	type_read
-  integer					::	type_count, filestat
-  real(kind=prec)                   ::  el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
+  character(len=40)                     :: section
+  logical, allocatable, dimension(:)    :: type_read
+  integer                               :: type_count, filestat
+  real(kind=prec)                       :: el_scale(max_states) !local variable for scaling of different states "masoud Oct_2013"
   integer                   ::  stat
 !New temporary variables for sanity checks
 !Paul October 2014, ICM meeting used for something useful
-  integer				:: test_state,broken_state
-  logical,allocatable			:: testarray(:)
-  type(Q_SANITYCHECK),allocatable	:: break_bonds(:)
-  type(Q_SAN_CHECK),allocatable		:: break_angles(:)
-  type(Q_SAN_CHECK),allocatable		:: break_torsions(:)
-  type(Q_SAN_CHECK),allocatable		:: break_impropers(:)
-  integer				:: nbreak_ang=-1
-  integer				:: nbreak_tor=-1
-  integer				:: nbreak_imp=-1
-  logical				:: have_break = .false.,angle_set = .false.,torsion_set = .false.
-  logical				:: improper_set = .false.
-  integer				:: ibreak,jbreak,kbreak,lbreak,istate,jstate,cbreak,abreak
-  integer				:: nbreak_bnd = 0
-  type(ANGLIB_TYPE),allocatable		:: tmp_qanglib(:)
-  type(QANGLE_TYPE),allocatable			:: tmp_qang(:)
-  type(QTORLIB_TYPE),allocatable		:: tmp_qtorlib(:)
-  type(QTORSION_TYPE),allocatable		:: tmp_qtor(:)
-  type(QIMPLIB_TYPE),allocatable		:: tmp_qimplib(:)
-  type(QTORSION_TYPE),allocatable		:: tmp_qimp(:)
+  integer                               :: test_state,broken_state
+  logical,allocatable                   :: testarray(:)
+  type(Q_SANITYCHECK),allocatable       :: break_bonds(:)
+  type(Q_SAN_CHECK),allocatable         :: break_angles(:)
+  type(Q_SAN_CHECK),allocatable         :: break_torsions(:)
+  type(Q_SAN_CHECK),allocatable         :: break_impropers(:)
+  integer                               :: nbreak_ang=-1
+  integer                               :: nbreak_tor=-1
+  integer                               :: nbreak_imp=-1
+  logical                               :: have_break = .false.,angle_set = .false.,torsion_set = .false.
+  logical                               :: improper_set = .false.
+  integer                               :: ibreak,jbreak,kbreak,lbreak,istate,jstate,cbreak,abreak
+  integer                               :: nbreak_bnd = 0
+  type(ANGLIB_TYPE),allocatable         :: tmp_qanglib(:)
+  type(QANGLE_TYPE),allocatable         :: tmp_qang(:)
+  type(QTORLIB_TYPE),allocatable        :: tmp_qtorlib(:)
+  type(QTORSION_TYPE),allocatable       :: tmp_qtor(:)
+  type(QIMPLIB_TYPE),allocatable        :: tmp_qimplib(:)
+  type(QTORSION_TYPE),allocatable       :: tmp_qimp(:)
 !for setting vdW arrays to default
   logical					:: vdw_from_topo = .false., found
   integer                                       :: tmp_qcp_num,dummy
@@ -1219,7 +1219,7 @@ logical function qatom_load_fep(fep_file)
 			write(*,266) istate,abreak,cbreak
 266		format('in state',2x,i6,2x,'angle',2x,i6,2x,'angle code',2x,i6)
 			write(*,267)
-267		format('Trying to get parameters from Topology!')
+                        267		format('Trying to get parameters from Topology for error fixing! Program will terminate!')
 !make temporary list of qangle types 
 !make sure there are angles set, could be none
 !user error avoided
@@ -1277,6 +1277,7 @@ logical function qatom_load_fep(fep_file)
 			nqangle = nqangle + 1
 			write(*,261) ('state',ii,ii=1,nstates)
                         write (*,262) qang(nqangle)%i,qang(nqangle)%j,qang(nqangle)%k, qang(nqangle)%cod(1:nstates)
+                        qatom_load_fep = .false.
 		end if
 	end do
 	if(allocated(break_angles)) then
@@ -1469,6 +1470,7 @@ logical function qatom_load_fep(fep_file)
 	                write(*,361) ('state',ii,ii=1,nstates)
                         write (*,362) qtor(nqtor+1)%i,qtor(nqtor+1)%j,qtor(nqtor+1)%k,qtor(nqtor+1)%l,qtor(nqtor+1)%cod(1:nstates)
                         nqtor = nqtor + 1
+                        qatom_load_fep =.false.
                 end if
         end do
 	if(allocated(break_torsions)) then
@@ -1662,6 +1664,7 @@ logical function qatom_load_fep(fep_file)
 	                write(*,461) ('state',ii,ii=1,nstates)
                         write (*,462) qimp(nqimp+1)%i,qimp(nqimp+1)%j,qimp(nqimp+1)%k,qimp(nqimp+1)%l,qimp(nqimp+1)%cod(1:nstates)
                         nqimp = nqimp + 1
+                        qatom_load_fep = .false.
                 end if
         end do
         if(allocated(break_impropers)) then

@@ -2433,7 +2433,9 @@ do tgroups = 1, ntgroups
                tscale(tgroups)%exclshk 
 end do
 
-if (product(tscale(1:ntgroups)%Ndegfree) .eq. 0) then    ! if either solvent or solute have 0 degrees of freedom, turn off separate scaling (in case it's on) and do not print detailed temperatures
+if ((product(tscale(1:ntgroups)%Ndegfree) .eq. 0).or.(ntgroups.eq.1)) then    
+! if either solvent or solute have 0 degrees of freedom, 
+! turn off separate scaling (in case it's on) and do not print detailed temperatures
 	detail_temps = .false.
 	separate_scaling = .false.
 else

@@ -1706,7 +1706,7 @@ real(kind=prec)                                 :: Ekinmax
 logical                                         :: print_step
 !locals
 integer						::	i,tgroups
-real(kind=prec)						::	Ekin
+real(kind=prec)						::	Ekin,val
 
 tscale(1:ntgroups)%temp  = zero
 tscale(1:ntgroups)%tfree = zero
@@ -1745,6 +1745,13 @@ if (detail_temps) then
                         /Boltz/real(tscale(tgroups)%Ndegf, kind=prec)
                 tscale(tgroups)%tfree = 2.0_prec*tscale(tgroups)%tfree & 
                         /Boltz/real(tscale(tgroups)%Ndegfree, kind=prec)
+                val = tscale(tgroups)%temp
+                tscale(tgroups)%stat%tot   = tscale(tgroups)%stat%tot  + val
+                tscale(tgroups)%stat%tot2  = tscale(tgroups)%stat%tot2 + val**2
+                val = tscale(tgroups)%tfree
+                tscale(tgroups)%stat%free  = tscale(tgroups)%stat%free  + val
+                tscale(tgroups)%stat%free2 = tscale(tgroups)%stat%free2 + val**2
+                tscale(tgroups)%stat%step  = tscale(tgroups)%stat%step  + 1
                 if ( tscale(tgroups)%Ndegf .ne. tscale(tgroups)%Ndegfree) &
                         tscale(tgroups)%texcl = 2.0_prec*tscale(tgroups)%texcl &
                         /Boltz/real(tscale(tgroups)%Ndegf - tscale(tgroups)%Ndegfree, kind=prec)
@@ -1849,14 +1856,16 @@ real(kind=prec)                         ::Ekinmax
 real(kind=prec)				::dv_mod,dv_friction,dv_mod2,randnum
 logical                                 :: print_step
 integer				:: n_max = -1,tgroups
+!Random variable temperature control array
 real(kind=prec),allocatable	::randva(:)
 TYPE(qr_vec),allocatable        ::randfa(:)
-!Random variable temperature control array
 real(kind=prec)				:: time0, time1, time_per_step, startloop
 integer(4)				:: time_completion
-
 !Local variables for file writing to energy files
 integer				:: loc_arrays
+!data for temperature statistics print out
+TYPE(TSTAT_TYPE)                :: Tstat
+
 #if defined(PROFILING)
 real(kind=prec)                                         :: start_loop_time1, start_loop_time2
 
@@ -1904,6 +1913,10 @@ Ekinmax = 1000.0_prec*Ndegf*Boltz*Temp0/2.0_prec/real(natom, kind=prec)
 call temperature(tscale(1:ntgroups),Ekinmax,.true.)
 !store old Temp
 Tlast = Temp
+Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
+do tgroups = 1, ntgroups
+        tscale(tgroups)%stat = TSTAT_TYPE(zero,zero,zero,zero,0)
+end do
 end if
 
 if (nodeid .eq. 0) then
@@ -2108,6 +2121,11 @@ start_loop_time2 = rtime()
         ! need to get value if we print out stuff
         print_step = (mod(istep,itemp_cycle) .eq. 0 .and. istep .gt. 0)
         call temperature(tscale(1:ntgroups),Ekinmax,print_step)
+        Tstat%tot   = Tstat%tot   + Temp
+        Tstat%free  = Tstat%free  + Tfree 
+        Tstat%tot2  = Tstat%tot2  + Temp**2
+        Tstat%free2 = Tstat%free2 + Tfree**2
+        Tstat%step  = Tstat%step  + 1 
 #if defined (PROFILING)
 profile(12)%time = profile(12)%time + rtime() - start_loop_time2
 #endif
@@ -2146,15 +2164,18 @@ if (ierr .ne. 0) call die('MD Bcast x')
                         (print_step)) then
                         ! temperatures
                         Tlast = Temp
-                        write(*,201) 'Total System',istep, Temp
-                        write(*,201) 'Free System' ,istep, Tfree
-						if (detail_temps) then
-                                                        do tgroups = 1, ntgroups
-							        write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree
-                                                        end do
-!							write(*,2030) Texcl_solute, Texcl_solvent
+                        write(*,201) 'Total System',istep, Temp, get_stddev(Tstat%tot,Tstat%tot2,Tstat%step)
+                        write(*,201) 'Free System' ,istep, Tfree, get_stddev(Tstat%free,Tstat%free2,Tstat%step)
+                        if (detail_temps) then
+                                do tgroups = 1, ntgroups
+                                        Tstat = tscale(tgroups)%stat
+                                        tscale(tgroups)%stat = TSTAT_TYPE(zero,zero,zero,zero,0)
+                                        write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree,&
+                                                get_stddev(Tstat%free,Tstat%free2,Tstat%step)
+                                end do
+                        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
+                        end if
 
-						end if
 
                         ! test for NaN
                         if (Temp.ne.Temp) then 
@@ -2168,8 +2189,7 @@ if (ierr .ne. 0) call die('MD Bcast x')
 
 
 end do ! time step
-201	 format(a20,' temperature at step',i8,' T=',f10.1)
-!2020 format('T_free_',a,'=',f10.1)
+201	 format(a20,' temperature at step',i8,' T=',f10.1,' Average = ',f8.3,' +- ',f8.3)
 
 
 !***********************************************************************

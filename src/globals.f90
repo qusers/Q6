@@ -584,7 +584,16 @@ real(kind=prec),allocatable				:: node_times(:)
 integer						:: Ndegf,Ndegfree
 logical						:: detail_temps			!controls whether or not solute and solvent temps are printed separately (true if solute and solvent degrees of freedom are both not zero)
 integer                                         :: ntgroups,ntgroups_kind
+! new type for temperature control groups
+! contains info for print out statistics
+! type for statistics print out
+TYPE TSTAT_TYPE
+        real(kind=prec)                         :: tot,tot2,free,free2
+        integer                                 :: step
+end TYPE TSTAT_TYPE
+
 TYPE TGROUP_TYPE
+        TYPE(TSTAT_TYPE)                        :: stat
         real(kind=prec)                         :: sfact,exclshk,temp,tfree,texcl
         integer                                 :: starta,enda
         integer                                 :: Ndegf,Ndegfree,shake,nexcl
