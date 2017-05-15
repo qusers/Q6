@@ -1497,7 +1497,7 @@ subroutine nbpplist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,jgr
+integer						:: i,j,ig,jg,ia,ja,nl,jgr,is
 real(kind=prec)						:: rcut2,r2
 integer						:: LJ_code
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
@@ -1541,8 +1541,8 @@ igloop: do ig = calculation_assignment%pp%start, calculation_assignment%pp%end
 ! for every assigned charge group:
 
 ! skip if excluded group
-        ia = cgp(ig)%iswitch
-        if ( excl(ia) ) cycle igloop
+        is = cgp(ig)%iswitch
+        if ( excl(is) ) cycle igloop
 #ifdef USE_GRID
 iagrid = pp_igrid(ig)
 gridnum = 0
@@ -1567,7 +1567,7 @@ jgloop: do jgr = 1, ncgp_solute
 ! skip if excluded group
                 ja = cgp(jgr)%iswitch
                 if ( excl(ja) ) cycle jgloop
-		r2 = q_dist4(x(ia),x(ja))
+		r2 = q_dist4(x(is),x(ja))
 
 ! skip if outside cutoff
                 if ( r2 .gt. rcut2 ) cycle jgloop
