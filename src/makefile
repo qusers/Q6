@@ -23,10 +23,10 @@ ifeq ($(COMP),ifort)
 	PREC=		-DQDOUBLE
 	FC=			ifort 
 	FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline \
-				-unroll-aggressive -finline-limit=1000000000\
+				-unroll-aggressive -finline-limit=1000\
 				-no-prec-div -no-inline-max-per-compile \
-				-no-inline-max-per-routine -no-inline-max-size \
-				-no-inline-max-total-size -no-inline-min-size \
+				-no-inline-max-per-routine \
+				-no-inline-max-total-size \
 				-auto
 	FFLAGS=		${PREC}
 	FFLAGS_R8=	
