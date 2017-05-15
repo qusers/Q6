@@ -850,6 +850,7 @@ if ( .not. use_PBC .and. excl(ia) ) cycle igloop
 
 
 jgloop:	do jg = 1, ncgp_solute
+  ia = cgp(ig)%iswitch
   ja = cgp(jg)%iswitch
  
    ! skip if excluded group
