@@ -24,13 +24,11 @@ module CALC_RDF
 		integer									::	atoms_in_mask1					! center atom idx
 		integer									::	frames = 0				! # frames used
 		integer									::	Nbins					! Divide rdf_radius into Nbins bins
-		real(8)									::	rdf_radius				! Calculate RDF within this radius
-		real(8),pointer							::	bins(:)					! RDF bins
+		real(kind=prec)									::	rdf_radius				! Calculate RDF within this radius
+		real(kind=prec),pointer							::	bins(:)					! RDF bins
 	end type RDF_CALC_TYPE
 
 	type(RDF_CALC_TYPE), private, save				::  rdf_calcs(MAX_MASKS)	! stores data for indivdual RDF calcs
-	real(8)										::	pi
-
 	type RDF_LIST_TYPE
 		integer							::  number_of_pairs
 		integer, pointer				::	atom1(:), atom2(:)
@@ -49,7 +47,7 @@ subroutine RDF_finalize(i)
 
 	! locals			
 	integer				::	j		! atom index
-	real(8)				::	volume	! shell volume
+	real(kind=prec)				::	volume	! shell volume
 
 	! write output header 1
 	write (*,3) i
@@ -59,12 +57,10 @@ subroutine RDF_finalize(i)
 	write (*,4)
 4	format('    Bin  r_max    RDF')
 	
-	pi = 4. * atan(1.)				! pi = 3.1416.....
-
 	! normalize the contents of each bin with respect to shell
 	! volume and # processed frames and print the results
 	do j = 1, rdf_calcs(i)%Nbins
-		volume = 4 * pi / 3 * ((j * rdf_calcs(i)%rdf_radius / &
+		volume = 4.0_prec * pi / 3.0_prec * ((j * rdf_calcs(i)%rdf_radius / &
 		rdf_calcs(i)%Nbins)**3 - ((j-1) * rdf_calcs(i)%rdf_radius / rdf_calcs(i)%Nbins)**3)
 		rdf_calcs(i)%bins(j) = rdf_calcs(i)%bins(j) / volume / &
 		rdf_calcs(i)%frames / rdf_calcs(i)%atoms_in_mask1
@@ -154,7 +150,7 @@ subroutine RDF_calc(i)
 	!locals
 	integer				::	j		! atom index
 	integer				::	binidx	! bin index
-	real				::	dist	! distance
+	real(kind=prec)			::	dist	! distance
 
 !	do j = 1, nat_pro
 !		if(target_masks(i)%mask(j))	then					! if atom j in this target_mask
@@ -196,7 +192,7 @@ end subroutine RDF_heading
 !*****************************************************
 ! r(a,b) calculates the distance between atoms a and b
 !*****************************************************
-real function r(a,b)
+real(kind=prec) function r(a,b)
 	! arguments
 	integer				::	a,b		!atom indices
 
@@ -207,9 +203,9 @@ real function r(a,b)
 
 	! if PBC then adjust lengths according to periodicity - MA
 	if( use_PBC ) then
-		delta(1) = delta(1) - boxlength(1)*nint( delta(1)/boxlength(1) )
-		delta(2) = delta(2) - boxlength(2)*nint( delta(2)/boxlength(2) )
-		delta(3) = delta(3) - boxlength(3)*nint( delta(3)/boxlength(3) )
+		delta(1) = delta(1) - boxlength%x*nint( delta(1)/boxlength%x )
+		delta(2) = delta(2) - boxlength%y*nint( delta(2)/boxlength%y )
+		delta(3) = delta(3) - boxlength%z*nint( delta(3)/boxlength%z )
 	end if
 
 	r = sqrt(dot_product(delta,delta))

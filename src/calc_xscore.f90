@@ -28,12 +28,12 @@ module CALC_XSCORE
 		integer ::  valid
 		character(len=256) :: name
 		character(len=256) :: formula
-		real ::  weight
+		real(kind=prec) ::  weight
 		integer ::  num_hb_atom
 		integer(2) ::  num_rotor
-		real ::  logp
-		real ::  surface,nsur,psur
-		real ::  volume
+		real(kind=prec) ::  logp
+		real(kind=prec) ::  surface,nsur,psur
+		real(kind=prec) ::  volume
 
 		integer ::  num_atom
 		type(tXAtom),pointer :: atom(:)
@@ -60,7 +60,7 @@ module CALC_XSCORE
 	type tXProtein	! full version
 		integer :: xtool_format
 		character(len=256)	:: name
-		real ::  surface,bnsur,bpsur
+		real(kind=prec) ::  surface,bnsur,bpsur
 
 		integer	::  num_atom
 		type(tXAtom),pointer :: atom(:)
@@ -75,15 +75,15 @@ module CALC_XSCORE
 
 	! ATOMIC BINDING SCORE
 	type tABS    
-		 real ::  pkd1,pkd2,pkd3
-		 real ::  vdw,hb,hm,hp,hs,rt
-		 real ::  score
+		 real(kind=prec) ::  pkd1,pkd2,pkd3
+		 real(kind=prec) ::  vdw,hb,hm,hp,hs,rt
+		 real(kind=prec) ::  score
 	end type tABS
 
 	type tXLigand
-		real ::  bind_score,chem_score
-		real ::  vdw,sb,hb,hp,hm,hs,ar,rt,pmf,uhb,bnsur,bpsur
-		real ::  pkd1,pkd2,pkd3
+		real(kind=prec) ::  bind_score,chem_score
+		real(kind=prec) ::  vdw,sb,hb,hp,hm,hs,ar,rt,pmf,uhb,bnsur,bpsur
+		real(kind=prec) ::  pkd1,pkd2,pkd3
 	
 		integer	:: cofactor_offset	! index of first cofactor atom in protein
 	
@@ -125,12 +125,12 @@ module CALC_XSCORE
 		character(len=10)::  name
 		character(len=10)::  ttype
 		character(len=10)::  xtype
-		real ::  r
-		real ::  eps
-		real ::  q
+		real(kind=prec) ::  r
+		real(kind=prec) ::  eps
+		real(kind=prec) ::  q
 		character(len=3)::  hb
-		real ::  logp
-		real ::  solv
+		real(kind=prec) ::  logp
+		real(kind=prec) ::  solv
 		integer ::  ring
 		character(len=3)::  pmftype
 	end type tAtomStruct
@@ -143,23 +143,23 @@ module CALC_XSCORE
 	
 	type tAtom_Def
 		 character(len=10)::  ttype
-		 real ::  weight
-		 real ::  r
-		 real ::  eps
-		 real ::  q
+		 real(kind=prec) ::  weight
+		 real(kind=prec) ::  r
+		 real(kind=prec) ::  eps
+		 real(kind=prec) ::  q
 		 character(len=3)::  hb
 	end type tAtom_Def
 	
 	type tXatom_Def
 		 character(len=20) ::  ttype
-		 real ::  logp
+		 real(kind=prec) ::  logp
 	end type tXatom_Def
 	
 	type tBond_Def
 		 character(len=10)::  atom_1
 		 character(len=10)::  atom_2
 		 character(len=3)::  ttype
-		 real ::  length
+		 real(kind=prec) ::  length
 	end type tBond_Def
 	
 	type tTors_Def
@@ -168,7 +168,7 @@ module CALC_XSCORE
 		 character(len=10)::  atom_3
 		 character(len=10)::  atom_4
 		 character(len=3)::  ttype
-		 real ::  V         ! twisting force constant
+		 real(kind=prec) ::  V         ! twisting force constant
 		 integer ::  n     ! periodicity
 		 integer ::  S     ! sign of torsion angle type
 	end type tTors_Def
@@ -176,24 +176,24 @@ module CALC_XSCORE
 	type tPMF_Def
 		 character(len=3)::  ltype
 		 character(len=3)::  ptype
-		 real,dimension(0:59) ::  d		! distance
-		 real,dimension(0:59) ::  p		! PMF potential
+		 real(kind=prec),dimension(0:59) ::  d		! distance
+		 real(kind=prec),dimension(0:59) ::  p		! PMF potential
 	end type tPMF_Def
 	
 	type tHB_Def
 		 character(len=10)::  ttype
-		 real ::  low_cutoff_d, high_cutoff_d, step_d
-		 real ::  low_cutoff_a1, high_cutoff_a1, step_a1
-		 real ::  low_cutoff_a2, high_cutoff_a2, step_a2
+		 real(kind=prec) ::  low_cutoff_d, high_cutoff_d, step_d
+		 real(kind=prec) ::  low_cutoff_a1, high_cutoff_a1, step_a1
+		 real(kind=prec) ::  low_cutoff_a2, high_cutoff_a2, step_a2
 		 integer ::  num_bin_d, num_bin_a1, num_bin_a2, num_bin_total
-		 real, pointer :: pmf(:)
+		 real(kind=prec), pointer :: pmf(:)
 	end type
 	
 	type tWPMF_Def
 		 character(len=10)::  ttype
-		 real ::  low_cutoff, high_cutoff, step
+		 real(kind=prec) ::  low_cutoff, high_cutoff, step
 		 integer ::  num_bin
-		 real,pointer :: pmf(:)
+		 real(kind=prec),pointer :: pmf(:)
 	end type
 	
 	type tResidue_Def
@@ -257,29 +257,29 @@ module CALC_XSCORE
 
 		integer						::	qatom
 
-		real ::  hpscore_cvdw
-		real ::  hpscore_chb
-		real ::  hpscore_chp
-		real ::  hpscore_crt
-		real ::  hpscore_c0
+		real(kind=prec) ::  hpscore_cvdw
+		real(kind=prec) ::  hpscore_chb
+		real(kind=prec) ::  hpscore_chp
+		real(kind=prec) ::  hpscore_crt
+		real(kind=prec) ::  hpscore_c0
 
-		real ::  hmscore_cvdw
-		real ::  hmscore_chb
-		real ::  hmscore_chm
-		real ::  hmscore_crt
-		real ::  hmscore_c0
+		real(kind=prec) ::  hmscore_cvdw
+		real(kind=prec) ::  hmscore_chb
+		real(kind=prec) ::  hmscore_chm
+		real(kind=prec) ::  hmscore_crt
+		real(kind=prec) ::  hmscore_c0
 
-		real ::  hsscore_cvdw
-		real ::  hsscore_chb
-		real ::  hsscore_chs
-		real ::  hsscore_crt
-		real ::  hsscore_c0
+		real(kind=prec) ::  hsscore_cvdw
+		real(kind=prec) ::  hsscore_chb
+		real(kind=prec) ::  hsscore_chs
+		real(kind=prec) ::  hsscore_crt
+		real(kind=prec) ::  hsscore_c0
 	end type tXInput
 
 	type tLogPFactor
 		character(len=30) :: symbol
-		real ::  num 
-		real ::  coeff 
+		real(kind=prec) ::  num 
+		real(kind=prec) ::  coeff 
 	end type tLogPFactor
 
 	type tXAtom
@@ -297,19 +297,19 @@ module CALC_XSCORE
 		integer							:: atom_res_id	!	 atom number within residue
 		integer							:: iscofactor		!  flag indicating if atom is part of a cofactor (1) or not (0)
 		character						:: chain        !  chain label
-		real,dimension(0:2)	:: coor					!* coordinates
-		real,dimension(0:2)	:: root					!* HB root's coordinates 
-		real								:: weight       !* atomic weight
-		real								:: r            !* vdw radius
-		real								:: eps          !* vdw epsilon value
-		real								:: q						!* partial atomic charge
-		real								:: XR						!  X radius
-		real								:: logp         !* atomic hydrophobic scale
-		real								:: solv					!* atomic solvation parameter
+		real(kind=prec),dimension(0:2)	:: coor					!* coordinates
+		real(kind=prec),dimension(0:2)	:: root					!* HB root's coordinates 
+		real(kind=prec)								:: weight       !* atomic weight
+		real(kind=prec)								:: r            !* vdw radius
+		real(kind=prec)								:: eps          !* vdw epsilon value
+		real(kind=prec)								:: q						!* partial atomic charge
+		real(kind=prec)								:: XR						!  X radius
+		real(kind=prec)								:: logp         !* atomic hydrophobic scale
+		real(kind=prec)								:: solv					!* atomic solvation parameter
 		character(len=3)		:: hb           !* HB property
-		real								:: occupancy		!  occupancy probability, for protein atoms
-		real								:: bfactor			!  B-factor, for protein atoms
-		real								:: score        !  atomic binding score
+		real(kind=prec)								:: occupancy		!  occupancy probability, for protein atoms
+		real(kind=prec)								:: bfactor			!  B-factor, for protein atoms
+		real(kind=prec)								:: score        !  atomic binding score
 		integer							:: ring					!  ring indicator: 1=normal 2=aromatic
 		integer							:: origin				!  atom origin indicator: 1=ligand 2=protein 
 		integer							:: part					!  component indicator: 
@@ -328,14 +328,14 @@ module CALC_XSCORE
 		character(len=10)		:: type				!	atom type
 		character(len=10)		:: xtype	!  another atom type
 		character(len=10)		:: residue       !  residue name
-		real,dimension(0:3) :: coor    !  coordinates
-		real								:: r    !  vdw radius
-		real								:: eps        !  vdw epsilon value
-		real 								:: q    !  partial atomic charge
-		real 								:: logp       !  atomic hydrophobic scale
+		real(kind=prec),dimension(0:3) :: coor    !  coordinates
+		real(kind=prec)								:: r    !  vdw radius
+		real(kind=prec)								:: eps        !  vdw epsilon value
+		real(kind=prec) 								:: q    !  partial atomic charge
+		real(kind=prec) 								:: logp       !  atomic hydrophobic scale
 		character(len=3)		:: hb       !  HB property
-		real 								:: depth		!  buried depth
-		real 								:: score		!  score value
+		real(kind=prec) 								:: depth		!  buried depth
+		real(kind=prec) 								:: score		!  score value
 	end type
 
 	type tXBond	!  full version
@@ -346,7 +346,7 @@ module CALC_XSCORE
 		character(len=3) :: ttype     !  bond type
 		integer :: part   !  ID of the component
 		integer :: ring   !  ring indicator
-		real :: length     !  bond length
+		real(kind=prec) :: length     !  bond length
 		integer :: num_neib     !  number of neighboring bonds
 		integer,dimension(0:5) :: neib     !  ID of neighboring bonds
 	end type
@@ -358,10 +358,10 @@ module CALC_XSCORE
 		type(tXAtom) atom_4
 		character(len=3) :: ttype     !  type of the torsion between 2-3
 		integer :: angle  !  torsion angle, in degree
-		real :: V    !  potential barrier
+		real(kind=prec) :: V    !  potential barrier
 		integer :: n      !  periodicity
 		integer :: S      !  sign
-		real :: e    !  torsion energy
+		real(kind=prec) :: e    !  torsion energy
 	end type
 
 	type tXGroup	!  full version
@@ -397,14 +397,14 @@ module CALC_XSCORE
 		integer :: latom	!  id of the ligand atom
 		integer :: patom	!  id of the protein atom
 
-		type(tXAtom) H,D,A		! not pointers to atoms but real atoms
+		type(tXAtom) H,D,A		! not pointers to atoms but real(kind=prec) atoms
 
-		real :: dd	!  D-A distance
-		real :: a0	!  D-H-A angle
-		real :: a1	!  DR-D-A angle
-		real :: a2	!  D-A-AR angle
+		real(kind=prec) :: dd	!  D-A distance
+		real(kind=prec) :: a0	!  D-H-A angle
+		real(kind=prec) :: a1	!  DR-D-A angle
+		real(kind=prec) :: a2	!  D-A-AR angle
 
-		real :: score	!  strength of this HBond
+		real(kind=prec) :: score	!  strength of this HBond
 	end type
 
 	type tXRing
@@ -419,25 +419,25 @@ module CALC_XSCORE
 		integer										:: bond_count = 0	! actual count
 		integer										:: bond_max = 0		! size of allocated mem
 
-		real,dimension(0:3) :: centroid
+		real(kind=prec),dimension(0:3) :: centroid
 	end type
 
 	type tXDot
 		integer							:: valid		!  status indicator
 		character(len=10)		:: ttype		!  type
-		real,dimension(0:3) :: coor			!  coordinates
-		real								:: unit			!  contribution, in either A^2 or A^3
-		real								:: score		!  score on this dot
+		real(kind=prec),dimension(0:3) :: coor			!  coordinates
+		real(kind=prec)								:: unit			!  contribution, in either A^2 or A^3
+		real(kind=prec)								:: score		!  score on this dot
 	end type
 
 	type tXDotSet 
 		integer							:: num_dot = 0	! current number of dots
 		integer							:: max_dot = 0	! number of dots for which mem is allocated
 		type(tXDot),pointer	:: dot(:)				! array of dots
-		real								:: r
+		real(kind=prec)								:: r
 		character(len=10)		:: ttype
-		real								:: unit					!  default contribution of each dot to total
-		real								:: total				!  total volume or surface
+		real(kind=prec)								:: unit					!  default contribution of each dot to total
+		real(kind=prec)								:: total				!  total volume or surface
 	end type
 
 	type tXResidue
@@ -458,14 +458,14 @@ module CALC_XSCORE
 
 	type tXScore
 		integer	:: frame
-		real		:: total
-		real		:: vdw
-		real		:: hb
-		real		:: rt
-		real		:: hp
-		real		:: hs
-		real		:: hm
-		real		:: score
+		real(kind=prec)		:: total
+		real(kind=prec)		:: vdw
+		real(kind=prec)		:: hb
+		real(kind=prec)		:: rt
+		real(kind=prec)		:: hp
+		real(kind=prec)		:: hs
+		real(kind=prec)		:: hm
+		real(kind=prec)		:: score
 	end type tXScore
 
 	type donor
@@ -474,11 +474,11 @@ module CALC_XSCORE
 
 	type wat
 		integer(AI)			::	O, H1, H2		!topology numbers
-		real						::	score			!H-bond score with receptor
+		real(kind=prec)						::	score			!H-bond score with receptor
 	end type wat
 
 	type ATOM_DATA_TYPE
-		real						::	radius
+		real(kind=prec)						::	radius
 	end type ATOM_DATA_TYPE
 	type(ATOM_DATA_TYPE), allocatable ::atom_data(:)
 
@@ -500,7 +500,6 @@ module CALC_XSCORE
 		integer						:: a,b					! topology indecies of bond atoms
 	end type heavybond
 
-	character*80		:: top_file!, fep_file
 	character*80		:: atom_data_file
 	character*80		:: coord_file	
 
@@ -511,7 +510,7 @@ module CALC_XSCORE
 	type(q_atom),private,allocatable,target	::	aHQ(:)			! heavy atoms in ligand
 	type(q_bond),private,allocatable,target	::	aHB(:)			! heavy bonds in ligand
 																!else number in iqseq (ligand)
-	integer	:: nHQ		! number of heavy q-atoms
+	integer	:: numHQ		! number of heavy q-atoms
 	integer	:: nHB		! number of bonds between heavy q-atoms
 
 	integer(AI), allocatable	::	lph_r(:)	!topology number for all lipophilic atoms in the receptor
@@ -567,25 +566,24 @@ module CALC_XSCORE
 	integer :: MAX_BOND_NEIB = 10
 	integer :: MAX_ATOM_NEIB = 6
 
-	real ::  LOGP_HYDROPHOBIC_CARBON = 0.211
-	real ::  LOGP_INTERNAL_HBOND = 0.429
-	real ::  LOGP_HALOGEN_PAIR = 0.137
-	real ::  LOGP_NAR_PAIR = 0.485
-	real ::  LOGP_O3_PAIR = -0.268
-	real ::  LOGP_ACCEPTOR_PAIR = 0.580
-	real ::  LOGP_AMINO_ACID = -2.166
-	real ::  LOGP_SALICYLIC_ACID = 0.554
-	real ::  LOGP_SULFONIC_ACID = -0.501
+	real(kind=prec) ::  LOGP_HYDROPHOBIC_CARBON = 0.211_prec
+	real(kind=prec) ::  LOGP_INTERNAL_HBOND = 0.429_prec
+	real(kind=prec) ::  LOGP_HALOGEN_PAIR = 0.137_prec
+	real(kind=prec) ::  LOGP_NAR_PAIR = 0.485_prec
+	real(kind=prec) ::  LOGP_O3_PAIR = -0.268_prec
+	real(kind=prec) ::  LOGP_ACCEPTOR_PAIR = 0.580_prec
+	real(kind=prec) ::  LOGP_AMINO_ACID = -2.166_prec
+	real(kind=prec) ::  LOGP_SALICYLIC_ACID = 0.554_prec
+	real(kind=prec) ::  LOGP_SULFONIC_ACID = -0.501_prec
 	type(tLogPFactor), dimension(0:9),public	::	logp_factor
 
-	real ::  LARGE = 1.0e+6
-	real ::  DIST_CUTOFF = 8.00
-	real ::  WATER_R = 1.40
-	real ::  POCKET_DEPTH = 4.00
-	real ::  LAYER_DEPTH = 3.00
+	real(kind=prec) ::  LARGE = 1.0e+6_prec
+	real(kind=prec) ::  DIST_CUTOFF = 8.0_prec
+	real(kind=prec) ::  WATER_R = 1.4_prec
+	real(kind=prec) ::  POCKET_DEPTH = 4.0_prec
+	real(kind=prec) ::  LAYER_DEPTH = 3.0_prec
 
 	integer, parameter		::	max_atlib = 500
-	real									::  PI = 3.1416
 
 	integer,public				:: err								! public allocation error indicator
 	integer, private			:: warn								! flag to inidacte if warnings were displayd
@@ -596,6 +594,9 @@ subroutine xscore_initialize
 	nXScores = 0
 	maxXScores = 16
 	allocate(xscores(maxXScores))
+        calc_xtop(1:3*nat_pro-2:3) = xtop(1:nat_pro)%x
+        calc_xtop(2:3*nat_pro-1:3) = xtop(1:nat_pro)%y
+        calc_xtop(3:3*nat_pro  :3) = xtop(1:nat_pro)%z
 end subroutine xscore_initialize
 
 subroutine xscore_finalize
@@ -1401,8 +1402,8 @@ subroutine XReadInputQatom
 	character(len=256)	:: buf, head, chVal
 	integer							:: res
 
-	if(input%show_q_abs(1:6).eq.'QATOM=') then
-		chVal = input%show_q_abs(7:20)
+	if(input%show_abs(1:6).eq.'QATOM=') then
+		chVal = input%show_abs(7:20)
 
 		p = index(chVal,':')
 		if(p.ne.0) then
@@ -1436,7 +1437,7 @@ subroutine xscore_precalc
 	integer							:: i,j, p
 	character(len=256)	:: chBuf
 	character(len=256)	:: filename
-	real								:: score
+	real(kind=prec)								:: score
 
 	! ======================================
 	! 0. READ PARAMETERS AND DO PREPARATIONS
@@ -1546,7 +1547,7 @@ subroutine xscore_precalc
 			allocate(top2prot(1:nat_solute))						! top -> protein index translation matrix
 
 !			call xprotein_translate(protein, offset, xtop)
-			call xprotein_translate(protein, nat_solute, xtop,nbonds_solute,bnd)
+			call xprotein_translate(protein, nat_solute, calc_xtop,nbonds_solute,bnd)
 			protein%name = adjustl(trim(title))
 
 			! Need to value cofactor-protein atoms using Molecule_Value_Atom instead
@@ -1570,7 +1571,7 @@ subroutine xscore_precalc
 			allocate(cofactor(1:num_cofactor))
 			do i = 1, num_cofactor
 !				call xextract_cofactor(cofactor(i),cofactor_def(i),i,offset, nbonds,xtop,bnd)
-				call xextract_cofactor(cofactor(i),cofactor_def(i),i,nat_solute, nbonds_solute,xtop,bnd)
+				call xextract_cofactor(cofactor(i),cofactor_def(i),i,nat_solute, nbonds_solute,calc_xtop,bnd)
 
 				if(cofactor(i)%mol%num_atom.eq.0) then
 					write(*,'(a,a,a)') '>>>>ERROR: Cofactor definition ', adjustl(trim(cofactor_def(i))), ' is empty.'
@@ -1601,7 +1602,7 @@ subroutine xscore_precalc
 				end do
 			end do
 
-			call Protein_Define_Pocket(protein, ff,ligand, 10.0)
+			call Protein_Define_Pocket(protein, ff,ligand, 10.0_prec)
 
 			j = 0
 			do i = 0,protein%num_atom -1
@@ -1667,7 +1668,7 @@ subroutine xextract_cofactor(cf,cf_def,conumber,nAtoms,nBonds,coordinates,bonds)
 	character(len=80)		:: cf_def
 	integer							:: conumber
 	integer							:: nAtoms,nBonds
-	real(8)							:: coordinates(:)
+	real(kind=prec)							:: coordinates(:)
 	type(BOND_TYPE)			:: bonds(:)
 
 	integer							:: i,j,count,mark,floating_offset
@@ -1912,7 +1913,7 @@ subroutine xscore_calc(iCalc, iFrame)	! calc topmost routine
 	!arguments
 	integer, intent(in)	:: iCalc				! calculation index, not used
 	integer, intent(in)	:: iFrame				! frame index
-	real				:: score				! scoring results
+	real(kind=prec)				:: score				! scoring results
 	integer			:: i
 
 	! Update coordinates
@@ -1930,7 +1931,7 @@ subroutine xscore_calc(iCalc, iFrame)	! calc topmost routine
 
 	call Ligand_Value_Atom(ligand,1)
 	call Protein_Value_Atom(protein, 1,1)		! do lite run
-	call Protein_Define_Pocket(protein, ff,ligand, 10.0)					
+	call Protein_Define_Pocket(protein, ff,ligand, 10.0_prec)
 
 	score = Ligand_Calculate_Binding_Score(ligand,input,protein)	
 
@@ -1974,7 +1975,7 @@ subroutine xlog_frame(iFrame,ligand)				! logs scoring results for frame
 end subroutine xlog_frame
 
 subroutine xscore_mean
-	real(8)					:: vdw,hb,rt,hp,hs,hm,score
+	real(kind=prec)					:: vdw,hb,rt,hp,hs,hm,score
 	integer					:: i
 	
 	do i = 1,nXScores
@@ -2042,10 +2043,10 @@ end subroutine Molecule_SurDot_Clear
 
 subroutine Molecule_Generate_Surface_Dots(molecule,probe_r)
 	type(tXMolecule)	:: molecule
-	real							:: probe_r
+	real(kind=prec)							:: probe_r
 	integer						:: i,j,k,cc 
 	integer						:: mark 
-	real							:: d,dd,dmin 
+	real(kind=prec)							:: d,dd,dmin 
 	type(tXDotSet)		:: tmp_set 
 	type(tXDot)				:: tmp_dot 
 	integer,allocatable ::  ligand_check_list(:)
@@ -3481,13 +3482,13 @@ integer function Molecule_Get_Num_HB_Atom(molecule)
 	Molecule_Get_Num_HB_Atom = num 
 end function Molecule_Get_Num_HB_Atom
 
-real function Molecule_Count_Rotor(molecule)
+real(kind=prec) function Molecule_Count_Rotor(molecule)
 ! if a single bond is normal, bond%valid=1 
 ! if a single bond is a rotor, bond%valid=2 
 	type(tXMolecule)	::	molecule
 	integer						::  i,mark,tmp 
 	integer						::  id1,id2 
-	real							::  sum 
+	real(kind=prec)							::  sum 
 
 	! clean the variables
 	molecule%atom(:)%score=0.000 
@@ -3680,10 +3681,10 @@ integer function Molecule_Get_Atom_Hybridizing_Type(molecule,ttype)
 	Molecule_Get_Atom_Hybridizing_Type = mark 
 end function Molecule_Get_Atom_Hybridizing_Type
 
-real function Molecule_Calculate_LogP(molecule)
+real(kind=prec) function Molecule_Calculate_LogP(molecule)
 	type(tXMolecule)	:: molecule
 	integer						:: i,flag 
-	real							:: xlogp 
+	real(kind=prec)							:: xlogp 
 	character(len=20) :: ttype
 	
 	! coordinates are not used in this routine
@@ -3744,7 +3745,7 @@ real function Molecule_Calculate_LogP(molecule)
 	Molecule_Calculate_LogP = xlogp 
 end function Molecule_Calculate_LogP
 
-real function Molecule_Count_Sulfonic_Acid(molecule,flag)
+real(kind=prec) function Molecule_Count_Sulfonic_Acid(molecule,flag)
 	type(tXMolecule)	:: molecule
 	integer						:: flag
 	integer ::  i,j,num,tmp1,tmp2 
@@ -3780,7 +3781,7 @@ real function Molecule_Count_Sulfonic_Acid(molecule,flag)
 	Molecule_Count_Sulfonic_Acid = num 
 end function Molecule_Count_Sulfonic_Acid
 
-real function Molecule_Count_Salicylic_Acid(molecule,flag)
+real(kind=prec) function Molecule_Count_Salicylic_Acid(molecule,flag)
 	type(tXMolecule)	:: molecule
 	integer						:: flag
 	integer ::  i,j,num,tmp,mark 
@@ -3831,7 +3832,7 @@ real function Molecule_Count_Salicylic_Acid(molecule,flag)
 	Molecule_Count_Salicylic_Acid =  num 
 end function Molecule_Count_Salicylic_Acid
 
-real function Molecule_Count_Amino_Acid(molecule,flag)
+real(kind=prec) function Molecule_Count_Amino_Acid(molecule,flag)
 	type(tXMolecule)	:: molecule
 	integer						:: flag
   integer ::  i,j,tmp,num,mark 
@@ -3895,7 +3896,7 @@ real function Molecule_Count_Amino_Acid(molecule,flag)
 	Molecule_Count_Amino_Acid = num 
 end function Molecule_Count_Amino_Acid
 
-real function Molecule_Count_Acceptor_1_5_Pair(molecule,flag)
+real(kind=prec) function Molecule_Count_Acceptor_1_5_Pair(molecule,flag)
 	type(tXMolecule)	:: molecule
 	integer						:: flag
   integer ::  i,j,num,tmp1,tmp2 
@@ -3940,11 +3941,11 @@ real function Molecule_Count_Acceptor_1_5_Pair(molecule,flag)
   Molecule_Count_Acceptor_1_5_Pair = num 
 end function Molecule_Count_Acceptor_1_5_Pair
 
-real function Molecule_Count_O3_1_4_Pair(molecule,flag)
+real(kind=prec) function Molecule_Count_O3_1_4_Pair(molecule,flag)
 	type(tXMolecule) :: molecule
 	integer					 :: flag
 	integer ::  i,j 
-	real ::  num 
+	real(kind=prec) ::  num 
 	integer ,allocatable::  trecord(:) 
 
 	allocate(trecord(0:molecule%num_atom -1),stat=err)
@@ -4011,7 +4012,7 @@ integer function Molecule_Adjacent_Aromatic_Check(molecule,id_in)
 	Molecule_Adjacent_Aromatic_Check = mark 
 end function Molecule_Adjacent_Aromatic_Check
 
-real function Molecule_Count_Nar_1_4_Pair(molecule,flag)
+real(kind=prec) function Molecule_Count_Nar_1_4_Pair(molecule,flag)
 	type(tXMolecule) :: molecule
 	integer					 :: flag
 	integer ::  i,j,num,tmp1,tmp2,tmp3,tmp4 
@@ -4061,7 +4062,7 @@ real function Molecule_Count_Nar_1_4_Pair(molecule,flag)
 	Molecule_Count_Nar_1_4_Pair = num 
 end function Molecule_Count_Nar_1_4_Pair
 
-real function Molecule_Count_Halogen_1_3_Pair(molecule,flag)
+real(kind=prec) function Molecule_Count_Halogen_1_3_Pair(molecule,flag)
 	type(tXMolecule)	:: molecule
 	integer						:: flag
 	integer ::  i,j 
@@ -4137,11 +4138,11 @@ integer function Molecule_Adjacent_Ring_Check(molecule,id_in)
   Molecule_Adjacent_Ring_Check = mark 
 end function Molecule_Adjacent_Ring_Check
 
-real function Molecule_Count_Internal_HBond(molecule,flag)
+real(kind=prec) function Molecule_Count_Internal_HBond(molecule,flag)
 	type(tXMolecule) :: molecule
 	integer	:: flag
 	integer ::  i,j,mark1,mark2 
-	real ::  num 
+	real(kind=prec) ::  num 
 	integer,allocatable ::  trecord(:)
 
 	allocate(trecord(0:molecule%num_atom -1),stat=err)
@@ -4229,7 +4230,7 @@ real function Molecule_Count_Internal_HBond(molecule,flag)
 	Molecule_Count_Internal_HBond = num 
 end function Molecule_Count_Internal_HBond
 
-real function Molecule_Count_Hydrophobic_Carbon(molecule,flag)
+real(kind=prec) function Molecule_Count_Hydrophobic_Carbon(molecule,flag)
 	type(tXMolecule) :: molecule
 	integer	:: flag
 	integer :: i,num 
@@ -4965,7 +4966,7 @@ subroutine Ligand_Scoring_Stats(ligand,iAtom)
 	type(tXLigand)	:: ligand
 	integer,optional:: iAtom
 	integer					:: i
-	real						:: vdw, hb, hp, hm, hs, rt, score
+	real(kind=prec)						:: vdw, hb, hp, hm, hs, rt, score
 
 	vdw = 0
 	hb = 0
@@ -5009,14 +5010,14 @@ subroutine Ligand_Scoring_Stats(ligand,iAtom)
 
 end subroutine Ligand_Scoring_Stats
 
-real function Ligand_Calculate_Binding_Score(ligand,input,protein)
+real(kind=prec) function Ligand_Calculate_Binding_Score(ligand,input,protein)
 	type(tXLigand)		:: ligand
 	type(tXInput)			:: input
 	type(tXProtein)		:: protein
 	integer						:: i 
 	type(tXLigand)		:: bak 
 	integer						:: num_nonh=0
-	real							:: sum=0.000 
+	real(kind=prec)							:: sum=0.000 
 
 	bak = ligand   ! backup the atomic charge information
 
@@ -5174,14 +5175,14 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 	type(tXHBond)		:: candidate(0:999)
 	type(tXHBond)		:: tmp_hbond		! used in swap
 	integer					:: i,j,k,count,limit,latom,patom 
-	real						:: angle,v1(0:2),v2(0:2) 
+	real(kind=prec)						:: angle,v1(0:2),v2(0:2) 
 	type(tXGroup)		:: tmp_group 
 
 	! Step 1: rank candidates according their strength in decreasing order
 	! note 'fabs' is applied because SB strength could be negative
 	do i = 0,num_candidate-1 -1 
 		do j = i+1,num_candidate -1 
-			if(q_abs(candidate(i)%score)>=q_abs(candidate(j)%score)) goto 1
+			if(abs(candidate(i)%score)>=abs(candidate(j)%score)) goto 1
 !			write(*,*) 'swapping ', i, j
 			!call SWAP(candidate(i),candidate(j))
 			call HBond_operator_copy(tmp_hbond,candidate(i))
@@ -5205,7 +5206,7 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 				v2(k) = protein%atom(patom-1)%coor(k)-ligand%mol%atom(latom-1)%coor(k) 
 			end do
 
-			angle=q_abs(Angle_of_Two_Vectors(v1,v2)) 
+			angle=abs(Angle_of_Two_Vectors(v1,v2)) 
 
 			if(angle<45.0) then
 				candidate(j)%score=0.000 
@@ -5228,7 +5229,7 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 !				v2(k) = ligand%mol%atom(latom-1)%coor(k)-protein%atom(patom-1)%coor(k) 
 !      end do
 !
-!      angle=q_abs(Angle_of_Two_Vectors(v1,v2)) 
+!      angle=abs(Angle_of_Two_Vectors(v1,v2)) 
 !      if(angle<45.0) then
 !				candidate(j)%score=0.000 
 !      else 
@@ -5297,12 +5298,12 @@ subroutine Ligand_Sum_HBonds(ligand, protein, num_candidate, candidate)
 6	end do
 end subroutine Ligand_Sum_HBonds
 
-real function Ligand_Calculate_RT(ligand,protein)
+real(kind=prec) function Ligand_Calculate_RT(ligand,protein)
 	type(tXLigand) :: ligand
 	type(tXProtein) :: protein
 	integer ::  i,j,mark,tmp 
 	integer ::  id1,id2 
-	real ::  sum 
+	real(kind=prec) ::  sum 
 
 	! if a single bond is normal, bond%valid=1 
 	! if a single bond is a rotor, bond%valid=2 
@@ -5422,12 +5423,12 @@ real function Ligand_Calculate_RT(ligand,protein)
 	Ligand_Calculate_RT = sum 
 end function Ligand_Calculate_RT
 
-real function Ligand_Calculate_HP(ligand,protein)
+real(kind=prec) function Ligand_Calculate_HP(ligand,protein)
 	type(tXLigand)	:: ligand
 	type(tXProtein)	:: protein 
 	integer					:: i,j 
-	real						:: d,d1,d2,cutoff 
-	real						:: tmp,asum,sum 
+	real(kind=prec)						:: d,d1,d2,cutoff 
+	real(kind=prec)						:: tmp,asum,sum 
 
 	sum=0.000 
 	ligand%mol%atom(:)%score=0.000 
@@ -5475,11 +5476,11 @@ real function Ligand_Calculate_HP(ligand,protein)
 	Ligand_Calculate_HP = sum 
 end function Ligand_Calculate_HP
 
-real function Ligand_Calculate_HM(ligand,protein)
+real(kind=prec) function Ligand_Calculate_HM(ligand,protein)
 	type(tXLigand)	:: ligand
 	type(tXProtein)	:: protein
 	integer ::  i,j 
-	real ::  asum,sum,tmp,d,d1,d2,total,cutoff 
+	real(kind=prec) ::  asum,sum,tmp,d,d1,d2,total,cutoff 
 
 	ligand%mol%atom(:)%score=0.000 
 
@@ -5532,12 +5533,12 @@ real function Ligand_Calculate_HM(ligand,protein)
  Ligand_Calculate_HM = sum 
 end function Ligand_Calculate_HM
 
-real function Ligand_Calculate_HS(ligand,protein)
+real(kind=prec) function Ligand_Calculate_HS(ligand,protein)
 	type(tXLigand)	:: ligand
 	type(tXProtein)	:: protein
 	integer ::  i 
-	real ::  sum,total,buried
-	real :: slask
+	real(kind=prec) ::  sum,total,buried
+	real(kind=prec) :: slask
 
 	! clear the variables first
 	sum=0.000 
@@ -5566,11 +5567,11 @@ real function Ligand_Calculate_HS(ligand,protein)
   Ligand_Calculate_HS = sum 
 end function Ligand_Calculate_HS
 
-real function Ligand_Calculate_VDW(ligand,protein)
+real(kind=prec) function Ligand_Calculate_VDW(ligand,protein)
 	type(tXLigand)	:: ligand
 	type(tXProtein)	:: protein
 	integer ::  i,j 
-	real ::  cutoff,d0,d,tmp,tmp1,tmp2,sum,asum 
+	real(kind=prec) ::  cutoff,d0,d,tmp,tmp1,tmp2,sum,asum 
 
 	! clear the variables
   cutoff=DIST_CUTOFF
@@ -5618,11 +5619,11 @@ real function Ligand_Calculate_VDW(ligand,protein)
 	Ligand_Calculate_VDW = sum 
 end function Ligand_Calculate_VDW
 
-real function Ligand_Calculate_HB(ligand,protein)
+real(kind=prec) function Ligand_Calculate_HB(ligand,protein)
 	type(tXLigand)	:: ligand
 	type(tXProtein) :: protein
 	integer		::  i
-	real			::  sum 
+	real(kind=prec)			::  sum 
 	integer		::  num_candidate 
 	type(tXHBond),allocatable :: candidate(:)
 
@@ -5646,7 +5647,7 @@ real function Ligand_Calculate_HB(ligand,protein)
 
 	! then sum their contributions
 	do i = 0,num_candidate -1 
-		if(q_abs(candidate(i)%score)<0.01) then
+		if(abs(candidate(i)%score)<0.01) then
 			goto 1
 		else
 	 	 sum=sum+candidate(i)%score 
@@ -5664,7 +5665,7 @@ integer function Ligand_Get_HBond_Pair_PL(ligand,protein,candidate)
 	type(tXHBond)		:: candidate(0:999)
 	integer ::  i,j,num,ttype ,slask
 	integer ::  sb 
-	real ::  d,cutoff 
+	real(kind=prec) ::  d,cutoff 
 	type(tXHbond)	:: tmp_candidate 
 
 	num=0
@@ -5742,7 +5743,7 @@ integer function Ligand_Get_HBond_Pair_PL(ligand,protein,candidate)
 		 ! this section is used to differentiate HB and SB
 		 if((ligand%mol%atom(i)%ttype.eq.'O.co2').and.(protein%atom(j)%ttype.eq.'O.co2')) then
 			 sb=0
-	 	 elseif(q_abs(ligand%mol%atom(i)%q)>0.01.and.q_abs(protein%atom(j)%q)>0.01)  then
+	 	 elseif(abs(ligand%mol%atom(i)%q)>0.01.and.abs(protein%atom(j)%q)>0.01)  then
 			 sb=1
 		 else 
 			 sb=0
@@ -5768,7 +5769,7 @@ integer function Ligand_Get_HBond_Pair_PL(ligand,protein,candidate)
 
 		 slask = HBond_Value_HBond_2(tmp_candidate) 
 
-		 if(q_abs(tmp_candidate%score)>0.000) then
+		 if(abs(tmp_candidate%score)>0.000) then
 			candidate(num)=tmp_candidate
 			num = num +1
 		 else
@@ -5802,7 +5803,7 @@ end subroutine Ligand_Value_Atom
 subroutine Ligand_Calculate_HB_Root(lig)
 	type(tXLigand) :: lig
 	integer :: i,j,tmp,num_nonh
-	real :: tmpx,tmpy,tmpz
+	real(kind=prec) :: tmpx,tmpy,tmpz
 
 	do i = 0,lig%mol%num_atom -1
 		if(lig%mol%atom(i)%valid==0) then
@@ -5883,9 +5884,9 @@ atom_res_id=0
 		ligand%mol%atom(i)%id				 = i +1
 		ligand%mol%atom(i)%topindex		= iqseq(i+1)
 		ligand%mol%atom(i)%name			 = ''
-		ligand%mol%atom(i)%coor(0)	 = xtop(3*(iqseq(i+1)-1) +1)
-		ligand%mol%atom(i)%coor(1)	 = xtop(3*(iqseq(i+1)-1) +2)
-		ligand%mol%atom(i)%coor(2)	 = xtop(3*(iqseq(i+1)-1) +3)
+		ligand%mol%atom(i)%coor(0)	 = calc_xtop(3*(iqseq(i+1)-1) +1)
+		ligand%mol%atom(i)%coor(1)	 = calc_xtop(3*(iqseq(i+1)-1) +2)
+		ligand%mol%atom(i)%coor(2)	 = calc_xtop(3*(iqseq(i+1)-1) +3)
 		ligand%mol%atom(i)%origin		 = 1	! This is a ligand atom
 		ligand%mol%atom(i)%ttype		 = tac(iac(iqseq(i+1)))
 		ligand%mol%atom(i)%weight		 = iaclib(iac(iqseq(i+1)))%mass
@@ -5951,16 +5952,16 @@ atom_res_id=0
 
 end subroutine xligand_translate
 
-real function Ligand_Atom_Buried_Surface(ligand,protein,id_in, total, buried)
+real(kind=prec) function Ligand_Atom_Buried_Surface(ligand,protein,id_in, total, buried)
 	type(tXLigand)	:: ligand
 	type(tXProtein)	:: protein
 	integer	:: id,id_in
-	real		:: total
-	real		:: buried
+	real(kind=prec)		:: total
+	real(kind=prec)		:: buried
 
 	integer ::  j,k,num 
 	integer ::  mark 
-	real ::  d,ratio 
+	real(kind=prec) ::  d,ratio 
 	integer,allocatable :: atom_check_list(:)
 
 	id = id_in
@@ -6112,8 +6113,8 @@ end subroutine ForceField_Read_SURFACE_DEF
 
 type(tXDotSet) function ForceField_Get_Surface_Dot(atom, r)
 	type(tXAtom)		:: atom
-	real						:: r
-	real						:: bigR 
+	real(kind=prec)						:: r
+	real(kind=prec)						:: bigR 
 	type(tXDotSet)	:: tmp_set 
 
 	bigR=atom%R+r
@@ -6129,11 +6130,11 @@ type(tXDotSet) function ForceField_Get_Surface_Dot(atom, r)
 end function ForceField_Get_Surface_Dot
 
 type(tXDotSet) function ForceField_Get_Surface_Dot_Rxyz(bigR, x, y, z)
-	real						:: bigR,x,y,z
+	real(kind=prec)						:: bigR,x,y,z
 	integer					:: i,j,num 
 	integer					:: mark 
-	real						:: tmp,theta,phi,theta_step,phi_step 
-	real						:: r,d,total 
+	real(kind=prec)						:: tmp,theta,phi,theta_step,phi_step 
+	real(kind=prec)						:: r,d,total 
 	type(tXDotSet)	:: tmp_set 
 	type(tXDot)			:: tmp_dot 
 
@@ -6141,7 +6142,7 @@ type(tXDotSet) function ForceField_Get_Surface_Dot_Rxyz(bigR, x, y, z)
   mark=0
 
   do i = 0,ff%num_sdot_type -1
-    if(q_abs(bigR-ff%sdot(i)%r)>0.025) then
+    if(abs(bigR-ff%sdot(i)%r)>0.025) then
 			goto 1
     else
 			!tmp_set=ff%sdot(i)
@@ -6431,11 +6432,11 @@ subroutine ForceField_Read_XATOM_DEF(filename)
 		stop
 end subroutine ForceField_Read_XATOM_DEF
 
-real function FF_Get_Atom_LogP(ttype)
+real(kind=prec) function FF_Get_Atom_LogP(ttype)
 	character(len=20):: ttype
 	integer :: i
 	integer ::mark
-	real ::logp
+	real(kind=prec) ::logp
 
 	mark=0
 	do i = 0,ff%num_xatomtype -1
@@ -6688,11 +6689,11 @@ subroutine Bond_Copy(b1,b2)
 	b1%neib(0:5)	= b2%neib(0:5)
 end subroutine 
 
-real function Angle(a,b,c)	
+real(kind=prec) function Angle(a,b,c)	
 	! the a-b-c angle in degree 0-180
-	real,dimension(0:2) :: a,b,c
+	real(kind=prec),dimension(0:2) :: a,b,c
 	integer :: i
-	real,dimension(0:2)	:: v1,v2
+	real(kind=prec),dimension(0:2)	:: v1,v2
 
 	do i=0,2
 		v1(i)=b(i)-a(i)
@@ -6704,11 +6705,11 @@ end function Angle
 
 !integer function HBond_Value_HBond(hbond)
 !	type(tXHBond)	:: hbond
-!	real ::  d,d0,d1,d2,d3,d4 
-!	real ::  a0,a1,a2,angle1,angle2,angle3,angle4 
-!	real ::  tmp1,tmp2,tmp3,tmp4 
+!	real(kind=prec) ::  d,d0,d1,d2,d3,d4 
+!	real(kind=prec) ::  a0,a1,a2,angle1,angle2,angle3,angle4 
+!	real(kind=prec) ::  tmp1,tmp2,tmp3,tmp4 
 !	integer ::  mark0,mark1,mark2 
-!	real ::  a,b,c,bigA,bigC 
+!	real(kind=prec) ::  a,b,c,bigA,bigC 
 !
 !	! first, calculate the necessary parameters
 !	d=Distance(hbond%D%coor,hbond%A%coor) 
@@ -6721,7 +6722,7 @@ end function Angle
 !	 	 ! align H to the optimal position and then recalculate <D-H-bigA 
 !	 	 b=0.98  ! D-H length 
 !	 	 c=d 	 ! D-bigA length 
-!	 	 bigA=q_abs(Angle(hbond%D%root,hbond%D%coor,hbond%A%coor)-109.0)  
+!	 	 bigA=abs(Angle(hbond%D%root,hbond%D%coor,hbond%A%coor)-109.0)  
 !	 	 a=sqrt(b*b+c*c-2*b*c*cos(bigA/180.0)) 	! H-bigA length
 !		 bigC=acos((a*a+b*b-c*c)/(2*a*b))/PI*180.0 
 !	 	 a0=180.0-bigC 
@@ -6862,9 +6863,9 @@ end function Angle
 
 integer function HBond_Value_HBond_2(hbond)
 	type(tXHBond)	:: hbond
-	real ::  d,d0,d1,d2,d3,d4 
-	real ::  a1,a2,angle1,angle2,angle3,angle4 
-	real ::  tmp1,tmp3,tmp4 
+	real(kind=prec) ::  d,d0,d1,d2,d3,d4 
+	real(kind=prec) ::  a1,a2,angle1,angle2,angle3,angle4 
+	real(kind=prec) ::  tmp1,tmp3,tmp4 
 	integer ::  mark1,mark2 
 
 	! first, calculate the necessary parameters
@@ -7082,10 +7083,10 @@ integer function Atom_Get_Acceptor_Type(atom)
 end function Atom_Get_Acceptor_Type
 
 
-real function Angle_of_Two_Vectors(v1, v2)
-	real, dimension(0:2)	:: v1,v2
-  real angle
-  real l1,l2,tmp1,tmp2
+real(kind=prec) function Angle_of_Two_Vectors(v1, v2)
+	real(kind=prec), dimension(0:2)	:: v1,v2
+  real(kind=prec) angle
+  real(kind=prec) l1,l2,tmp1,tmp2
 
 	if((v1(0).eq.v2(0)).and.(v1(1).eq.v2(1)).and.(v1(2).eq.v2(2))) then					! need to treat this case
 		Angle_of_Two_Vectors = 0
@@ -7410,9 +7411,9 @@ subroutine Ring_Clear(ring,size)
 	ring%centroid(2)=0.000
 end subroutine Ring_Clear
 
-real function Distance(a, b)
-	real,dimension(0:2)	:: a,b
-	real								:: d,tmpx,tmpy,tmpz
+real(kind=prec) function Distance(a, b)
+	real(kind=prec),dimension(0:2)	:: a,b
+	real(kind=prec)								:: d,tmpx,tmpy,tmpz
 
 	tmpx = (a(0)-b(0))*(a(0)-b(0))
 	tmpy = (a(1)-b(1))*(a(1)-b(1))
@@ -7450,7 +7451,7 @@ end subroutine Protein_Merge_Cofactor
 subroutine xprotein_translate(protein,nAtoms,coordinates,num_bond,bond)
 	type(tXProtein)		:: protein
 	integer						:: nAtoms				! nat_solute being sent in
-	real(8)						:: coordinates(:)
+	real(kind=prec)						:: coordinates(:)
 	integer						:: num_bond
 	type(BOND_TYPE)		:: bond(:)
 	integer						:: i,j,mark,offset
@@ -7695,9 +7696,9 @@ subroutine Protein_Define_Pocket(protein,ff, ligand, cutoff)
 	type(tXProtein)	:: protein
 	type(tXLigand)	:: ligand
 	type(tXFF)			:: ff
-	real						:: cutoff
+	real(kind=prec)						:: cutoff
 	integer					:: i,j,mark,count 
-	real						:: d 
+	real(kind=prec)						:: d 
 	integer					:: num_pocket_res  
   type(tXResidue),pointer	:: pocket_res(:)
 	type(tXRing)		:: tmp_ring 
@@ -7927,7 +7928,7 @@ end subroutine Protein_Value_Atom
 subroutine Protein_Calculate_HB_Root(protein)
 	type(tXProtein)	:: protein
 	integer ::  i,j,id,count 
-	real ::  tmpx,tmpy,tmpz 
+	real(kind=prec) ::  tmpx,tmpy,tmpz 
 
 	! (1) we do calculate root for polar hydrogens 
 	! (2) we do NOT calculate root for non-HB atoms
@@ -7985,7 +7986,7 @@ subroutine Protein_Detect_Connections(protein,lite_run)
 	integer,optional	:: lite_run
 	integer ::  i,j,k,count,id 
 	integer ::  mark 
-	real ::  cutoff,d 
+	real(kind=prec) ::  cutoff,d 
 
 	! build the connections for regular atoms first
 	cutoff=2.00   ! covalent bond distance cutoff

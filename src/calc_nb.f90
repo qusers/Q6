@@ -427,7 +427,7 @@ subroutine nb_make_list(mask1, mask2, nb_list, nbq_list)
 	
 					!Are atoms of pair in 1-4 position?
 !					if(iqatom(atomj) == 0 .and. iqatom(atomk) == 0) then !neither atom is q_atom
-					if (q_abs(atomk-atomj) .le. max_nbr_range ) then
+					if (iabs(atomk-atomj) .le. max_nbr_range ) then
 						if (atomj .gt. atomk ) then
 							if ( list14(atomj-atomk, atomk) ) LJ_code = 3 !3 means 1-4
 																			!list14 contains 1-4 neighbors
@@ -915,6 +915,9 @@ integer function nb_qp_add(desc)
 	call mask_finalize(masks(1))
 	call mask_finalize(masks(2))
 	nb_qp_add = 1
+
+	write(desc, 21) qp_calc%p_first, qp_calc%p_last
+21	format('nonbond monitor for residues ',i6,' to ',i6)
 end function nb_qp_add
 
 

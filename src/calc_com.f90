@@ -15,19 +15,18 @@ module CALC_COM
 	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
 	integer, private			::	Nmasks = 0
 	type COM_COORD_TYPE
-                TYPE(qr_vec),pointer     :: xyz(:)
-		real(kind=prec), pointer :: mass(:)
+		real(kind=prec), pointer		::	x(:), y(:), z(:), mass(:)
 	end type COM_COORD_TYPE
 	type(COM_COORD_TYPE), private	::	coords_mass(MAX_MASKS)
 	
 	type COORD_TYPE
-		TYPE(qr_vec), pointer		::	xyz(:)
+		real(kind=prec), pointer		::	xyz(:)
 	end type COORD_TYPE
 	type(COORD_TYPE), private	::	coords(MAX_MASKS)
 
 
 	type MASS_AVE_TYPE
-		TYPE(qr_vec)		::	xyz
+		real(kind=prec)		::	x,y,z
 	end type MASS_AVE_TYPE
 	type(MASS_AVE_TYPE), private	::	mass_ave(MAX_MASKS)
 	
@@ -70,10 +69,12 @@ integer function COM_add(desc)
 		return
 	end if
 
-	allocate(coords(Nmasks)%xyz(ats))
-	allocate(coords_mass(Nmasks)%xyz(ats),coords_mass(Nmasks)%mass(ats))
+	allocate(coords(Nmasks)%xyz(3*ats))
+	allocate(coords_mass(Nmasks)%x(ats), coords_mass(Nmasks)%y(ats), coords_mass(Nmasks)%z(ats), coords_mass(Nmasks)%mass(ats))
 
-	coords_mass(Nmasks)%xyz(:)  = zero
+	coords_mass(Nmasks)%x(:) = zero
+	coords_mass(Nmasks)%y(:) = zero
+	coords_mass(Nmasks)%z(:) = zero
 	coords_mass(Nmasks)%mass(:) = zero
 	coords(Nmasks)%xyz(:) = zero
 	
@@ -87,26 +88,33 @@ integer function COM_add(desc)
 subroutine COM_calc(i)
 	!arguments
 	integer, intent(in)			::	i
-
+        integer                 :: ats
 	!locals
 
 	if(i < 1 .or. i > Nmasks) return
 
-	call mask_get(masks(i), xin, coords(i)%xyz)
+        ats = masks(i)%included
+        allocate(tmp_coords(ats))
+        tmp_coords = translate_coords(coords(i)%xyz)
+	call mask_get(masks(i), translate_coords(xin), tmp_coords)
+        coords(i)%xyz = btranslate_coords(tmp_coords)
+        deallocate(tmp_coords)
 
 	!split coords into x, y, and z coords
-	coords_mass(i)%xyz = coords(i)%xyz
+	coords_mass(i)%x = coords(i)%xyz(1::3)
+	coords_mass(i)%y = coords(i)%xyz(2::3)
+	coords_mass(i)%z = coords(i)%xyz(3::3)
 	
 
 	!calculate center of mass
-	mass_ave(i)%xyz%x = dot_product(coords_mass(i)%xyz(:)%x,coords_mass(i)%mass)/tot_mass(i)
-        mass_ave(i)%xyz%y = dot_product(coords_mass(i)%xyz(:)%y,coords_mass(i)%mass)/tot_mass(i)
-        mass_ave(i)%xyz%z = dot_product(coords_mass(i)%xyz(:)%z,coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%x = dot_product(coords_mass(i)%x(:),coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%y = dot_product(coords_mass(i)%y(:),coords_mass(i)%mass)/tot_mass(i)
+	mass_ave(i)%z = dot_product(coords_mass(i)%z(:),coords_mass(i)%mass)/tot_mass(i)
 	
 	
 
 	
- 	write(*,100, advance='no') mass_ave(i)%xyz
+ 	write(*,100, advance='no') mass_ave(i)%x,mass_ave(i)%y,mass_ave(i)%z
 100	format(3f9.4)
 end subroutine COM_calc
 

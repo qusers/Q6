@@ -69,13 +69,17 @@ subroutine RMSF_calc(i)
 
 	!locals
 	real(kind=prec)						::	r
+        integer :: ats
 
 	if(i < 1 .or. i > Nmasks) return
 
 	frames(i)=frames(i) + 1
-
-	call mask_get(masks(i), xin, coords(i)%x)
-
+        ats = masks(i)%included
+        allocate(tmp_coords(ats))
+        tmp_coords = translate_coords(coords(i)%x)
+	call mask_get(masks(i), translate_coords(xin), tmp_coords)
+        coords(i)%x = btranslate_coords(tmp_coords)
+        deallocate(tmp_coords)
 	!calculate the sum of the squared coordinates up to this frame
 	coords(i)%x2 = coords(i)%x2 + (coords(i)%x)**2
 
@@ -97,10 +101,15 @@ end subroutine RMSF_calc
 
 
 subroutine RMSF_make_ref(i)
-	integer						::	i,at
+	integer						::	i,at,ats
 
 	if(i < 1 .or. i > Nmasks) return
-	call mask_get(masks(i), xtop, coords(i)%x0)
+        ats = masks(i)%included
+        allocate(tmp_coords(ats))
+        tmp_coords = translate_coords(coords(i)%x0)
+	call mask_get(masks(i), xtop, tmp_coords)
+        coords(i)%x0 = btranslate_coords(tmp_coords)
+        deallocate(tmp_coords)
 
 end subroutine RMSF_make_ref
 

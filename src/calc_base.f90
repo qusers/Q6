@@ -10,17 +10,17 @@ module CALC_BASE
 	use PRMFILE
 	implicit none
 	
-	real(8), allocatable	::	xin(:)           ! All functions share this vector which contains a frame (J)
+	real(kind=prec), allocatable :: xin(:)       ! All functions share this vector which contains a frame (J)
+        real(kind=prec), allocatable :: calc_xtop(:) ! Needed because of new data structures
+        TYPE(qr_vec),allocatable     :: tmp_coords(:),xin2(:)
    ! real(8), allocatable    ::  xin2d(:,:)       ! Schlitters formula needs all coordinates at the same time
 	!for FEP file loading
-	real(8)					:: lamda(max_states)
-	integer(TINY), allocatable              ::      iqatom(:)
-	integer                                 ::      alloc_stat_gen
-	integer					:: states
-	character(80)					:: fep_file
-	logical						::use_fep
-        real*8                                  :: totlambda=0
-        real*8,parameter                        :: eps=0.000001
+	real(kind=prec)                         :: lamda(max_states)
+	integer                                 :: alloc_stat_gen
+	integer                                 :: states
+	logical                                 :: use_fep
+        real(kind=prec)                         :: totlambda=zero
+        real(kind=prec),parameter               :: eps=QREAL_EPS
 
    ! place FEP file loading routine here so all processes can use it
 
@@ -196,7 +196,7 @@ do k = 1, nexspec
                                 write(*,594) k
                                 call die_general('invalid special exclusion data')
                         else !exlcude in all states
-                                if(q_abs(j-i) <= max_nbr_range) then
+                                if(iabs(j-i) <= max_nbr_range) then
                                         if(i < j) then
                                                 listex(j-i,i) = .true.
                                         else
@@ -215,5 +215,33 @@ end do
 594	format('>>>>> ERROR: Non-Q-atom special excl. pair ',i2,' must be on in all or no states')
 end subroutine get_fep
 
+! need this to keep qcalc working with new data structures, before someone else cleans
+! up the whole mess that is qcalc
+! returnes a qr_vec object of the correct size for the current operation, to be used in subroutines
+! that are no longer retarded
+function translate_coords(incoords)
+! arguments
+real(kind=prec),INTENT(IN) :: incoords(:)
+! locals and returns
+TYPE(qr_vec) :: translate_coords(SIZEOF(incoords)/3)
+integer      :: length
+length = SIZEOF(incoords)/3
+translate_coords(1:length)%x = incoords(1:length*3-2:3)
+translate_coords(1:length)%y = incoords(2:length*3-1:3)
+translate_coords(1:length)%z = incoords(3:length*3  :3)
+end function translate_coords
+
+function btranslate_coords(incoords)
+! arguments
+TYPE(qr_vec),INTENT(IN) :: incoords(:)
+! locals and returns
+real(kind=prec) :: btranslate_coords(SIZEOF(incoords)*3)
+integer      :: length
+length = SIZEOF(incoords)*3
+btranslate_coords(1:length*3-2:3) = incoords(1:length)%x 
+btranslate_coords(2:length*3-1:3) = incoords(2:length)%y 
+btranslate_coords(3:length*3  :3) = incoords(3:length)%z 
+
+end function btranslate_coords
 
 end module CALC_BASE

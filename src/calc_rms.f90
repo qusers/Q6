@@ -1,92 +1,117 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
-! calc_rms.f90
-! by John Marelius
-! root mean square coordinate deviation
-!TODO: precision not fixed
-
-module CALC_RMS
-	use CALC_BASE
-	use MASKMANIP
-	implicit none
+!------------------------------------------------------------------------------!
+!  (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+!  calc_rms.f90
+!  by John Marelius
+!  root mean square coordinate deviation
+!  TODO: precision not fixed
+!------------------------------------------------------------------------------!
+module calc_rms
+  use calc_base
+  use maskmanip
+  implicit none
 
 !constants
-	integer, parameter			::	MAX_MASKS = 10
+  integer, parameter              :: MAX_MASKS = 10
+
 !module variables
-	type(MASK_TYPE), private, target	::	masks(MAX_MASKS)
-	integer, private			::	Nmasks = 0
-	type RMS_COORD_TYPE
-		real(kind=prec), pointer		::	x(:), x0(:)
-	end type RMS_COORD_TYPE
-	type(RMS_COORD_TYPE), private	::	coords(MAX_MASKS)
+  type(MASK_TYPE), private, target :: masks(MAX_MASKS)
+  integer, private                 :: Nmasks = 0
+  type RMS_COORD_TYPE
+    real(kind=prec), pointer       :: x(:), x0(:)
+  end type RMS_COORD_TYPE
+  type(RMS_COORD_TYPE), private    :: coords(MAX_MASKS)
+  character(80)                    :: rms_basename(MAX_MASKS)
 contains
 
-subroutine RMS_initialize
-end subroutine RMS_initialize
+subroutine rms_initialize
+end subroutine rms_initialize
 
-subroutine RMS_finalize(i)
-	integer						::	i
+subroutine rms_finalize(i)
+  integer                         :: i
+  call mask_finalize(masks(i))
+end subroutine rms_finalize
 
-	call mask_finalize(masks(i))
-end subroutine RMS_finalize
+integer function rms_add(desc)
+  !arguments
+  character(*)                    :: desc
+  integer                         :: ats,fn
+  if(Nmasks == MAX_MASKS) then
+    write(*,10) MAX_MASKS
+    return
+  end if
+10      format('Sorry, the maximum number of RMSD calculations is ',i2)
+  !add a new RMSD mask
+  Nmasks = Nmasks + 1
+  call mask_initialize(masks(Nmasks))
+  ats =  maskmanip_make(masks(Nmasks))
+  !discard if no atoms in mask
+  if(ats == 0) then
+    call mask_finalize(masks(Nmasks))
+    Nmasks = Nmasks - 1
+    RMS_add = 0
+    return
+  end if
 
-integer function RMS_add(desc)
-	!arguments
-	character(*)				::	desc
-	integer						::	ats
-	if(Nmasks == MAX_MASKS) then
-		write(*,10) MAX_MASKS
-		return
-	end if
-10	format('Sorry, the maximum number of RMS calculations is ',i2)
-	!add a new RMS mask
-	Nmasks = Nmasks + 1
-	call mask_initialize(masks(Nmasks))
-	ats =  maskmanip_make(masks(Nmasks))
-	!discard if no atoms in mask
-	if(ats == 0) then
-		call mask_finalize(masks(Nmasks))
-		Nmasks = Nmasks - 1
-		RMS_add = 0
-		return
-	end if
+  allocate(coords(Nmasks)%x(3*ats), coords(Nmasks)%x0(3*ats))
 
-	allocate(coords(Nmasks)%x(3*ats), coords(Nmasks)%x0(3*ats))
-
-	call RMS_make_ref(Nmasks)
-	RMS_add = Nmasks
-	write(desc, 20) masks(Nmasks)%included
-20	format('RMS coordinate deviation for ',i6,' atoms')
- end function RMS_add
-
-
-subroutine RMS_calc(i)
-	!arguments
-	integer, intent(in)			::	i
-
-	!locals
-	real(kind=prec)						::	r
-
-	if(i < 1 .or. i > Nmasks) return
-
-	call mask_get(masks(i), xin, coords(i)%x)                            
-	r = sqrt(  sum((coords(i)%x-coords(i)%x0)**2)/(masks(i)%included) )  ! removed 3 in front of mask(i)   
-	write(100,*) r
- 	write(*,100, advance='no') r
-100	format(f10.3)
-end subroutine RMS_calc
+  call rms_make_ref(Nmasks)
+  RMS_add = Nmasks
+  ! get name for file print out
+  call getlin(rms_basename(Nmasks),'--> RMSD print out filename: ')
+  ! open and close file to overwrite current saved data
+  ! this needs to be changed
+  fn = freefile()
+  open(fn,file=rms_basename(Nmasks),status='replace',action='write')
+21      format('RMSD calculation ',i6)
+  write(fn,20) masks(Nmasks)%included
+  write(fn,21) Nmasks
+  close(fn)
+  write(desc, 20) masks(Nmasks)%included
+20      format('Root Mean Square Deviation for ',i6,' atoms')
+ end function rms_add
 
 
-subroutine RMS_make_ref(i)
-	integer						::	i,at
+subroutine rms_calc(i)
+  !arguments
+  integer, intent(in)             :: i
 
-	if(i < 1 .or. i > Nmasks) return
-	call mask_get(masks(i), xtop, coords(i)%x0)
+  !locals
+  real(kind=prec)                 :: r
+  integer                         :: fn,ats
 
-end subroutine RMS_make_ref
+  fn = freefile()
+  if(i < 1 .or. i > Nmasks) return
+  open(fn,file=rms_basename(i),status='old',action='write',position='append')
+  ats = masks(i)%included
+  allocate(tmp_coords(ats))
+  tmp_coords(:) = translate_coords(coords(i)%x)
+  call mask_get(masks(i), translate_coords(xin), tmp_coords)
+  coords(i)%x = btranslate_coords(tmp_coords)
+  deallocate(tmp_coords)
+  r = sqrt(  sum((coords(i)%x-coords(i)%x0)**2)/(masks(i)%included) )  ! removed 3 in front of mask(i)
+  write(*,100, advance='no') r
+  write(fn, 100, advance='yes') r
+  close(fn)
+100 format(f8.6)
+end subroutine rms_calc
 
-subroutine RMS_heading(i)
-	integer						::	i
 
-	write(*,'(a)', advance='no') 'RMSd(A)'
-end subroutine RMS_heading
-end module CALC_RMS
+subroutine rms_make_ref(i)
+  integer                         :: i,at,ats
+  if(i < 1 .or. i > Nmasks) return
+  ats = masks(i)%included
+  allocate(tmp_coords(ats))
+  tmp_coords(:) = translate_coords(coords(i)%x0)
+  call mask_get(masks(i), xtop, tmp_coords)
+  coords(i)%x0 = btranslate_coords(tmp_coords)
+  deallocate(tmp_coords)
+end subroutine rms_make_ref
+
+
+subroutine rms_heading(i)
+  integer                         :: i
+  write(*,'(a)', advance='no') ' RMSD(A)'
+end subroutine rms_heading
+
+
+end module calc_rms

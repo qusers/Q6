@@ -58,7 +58,7 @@ module CALC_PMF
 	end type q_bond
 
 	type tABSDetail
-		real										:: score,r
+		real(kind=prec)								:: score,r
 		integer									:: atom_id,m
 		character(len=3)				:: k,l
 	end type
@@ -129,7 +129,7 @@ module CALC_PMF
 
 	type tPMFMolecule
 		character(len=64)				:: name
-		real										:: score
+		real(kind=prec)					:: score
 
 		integer									:: num_subst
 
@@ -178,8 +178,8 @@ module CALC_PMF
 	end type donor
 
 	type tPMFScore
-		integer	:: frame
-		real		:: score
+		integer         :: frame
+		real(kind=prec) :: score
 	end type tPMFScore
 
 	type(tPMFRule), pointer							:: protRule(:)
@@ -196,7 +196,6 @@ module CALC_PMF
 	integer, public						:: AROMATIC = 3
 	integer, public						:: AMIDE		= 4
 
-	character*80		:: top_file!, fep_file
 	character*80		:: atom_data_file
 	character*80		:: coord_file	
 
@@ -207,7 +206,7 @@ module CALC_PMF
 	type(q_atom),private,allocatable,target	::	aHQ(:)			! heavy atoms in ligand
 	type(q_bond),private,allocatable,target	::	aHB(:)			! heavy bonds in ligand
 																!else number in iqseq (ligand)
-	integer	:: nHQ		! number of heavy q-atoms
+	integer	:: numHQ		! number of heavy q-atoms
 	integer	:: nHB		! number of bonds between heavy q-atoms
 
 	integer(AI), allocatable	::	lph_r(:)	!topology number for all lipophilic atoms in the receptor
@@ -536,8 +535,8 @@ subroutine pmfRead_InputQatom
 	character(len=256)	:: buf, head, chVal
 	integer							:: res
 
-	if(input%show_q_abs(1:6).eq.'QATOM=') then
-		chVal = input%show_q_abs(7:20)
+	if(input%show_abs(1:6).eq.'QATOM=') then
+		chVal = input%show_abs(7:20)
 
 		p = index(chVal,':')
 		if(p.ne.0) then
@@ -800,7 +799,7 @@ end subroutine
 subroutine pmf_precalc
 	character(len=256)	:: buf
 	integer							:: i,j,iRes,iNextRes
-	real								:: score
+	real(kind=prec)						:: score
 
 
 	! ============================
@@ -865,7 +864,7 @@ subroutine pmf_precalc
 
 			allocate(top2prot(1:nat_solute))						! top -> protein index translation matrix
 !			call pmfProtein_Translate(protein, offset, xtop, bnd,nbonds_solute)
-			call pmfProtein_Translate(protein, nat_solute, xtop, bnd,nbonds_solute)
+			call pmfProtein_Translate(protein, nat_solute, calc_xtop, bnd,nbonds_solute)
 
 			protein%name = adjustl(trim(title))
 			write(*,'(a,i5,a,i5,a)') 'Translated ', protein%num_atom, ' atoms and ', protein%num_bond, ' bonds to protein'
@@ -936,7 +935,7 @@ real function PMF_Score(lig,prot,inp)
 	type(tPMFMolecule)	:: lig,prot
 	type(tPMFInput)			:: inp
 	integer							:: i,j,k,l,m
-	real								:: r, cutoff, resolution, score, sum
+	real(kind=prec)						:: r, cutoff, resolution, score, sum
 
 	resolution = 0.2
 
@@ -980,7 +979,7 @@ real function PMF_Score(lig,prot,inp)
 			
 			score = pmfdata(k,l,m)
 			lig%atom(i)%abs  = lig%atom(i)%abs + score
-			if(q_abs(score)>0.000001) lig%atom(i)%nonzero_score = 1
+			if(q_abs(score)>QREAL_EPS) lig%atom(i)%nonzero_score = 1
 
 			if(input%show_detailed_abs.eq.'YES') then
 				lig%atom(i)%abscount = lig%atom(i)%abscount +1						! save detailed score info
@@ -1194,9 +1193,9 @@ subroutine pmfLigand_Translate(ligand,nAtoms,nBonds,aQ,aB,offset)
 
 		ligand%atom(i)%id				 = i +1
 !		ligand%atom(i)%name			 = ''
-		ligand%atom(i)%coor(0)	 = xtop(3*(iqseq(i+1)-1) +1)
-		ligand%atom(i)%coor(1)	 = xtop(3*(iqseq(i+1)-1) +2)
-		ligand%atom(i)%coor(2)	 = xtop(3*(iqseq(i+1)-1) +3)
+		ligand%atom(i)%coor(0)	 = calc_xtop(3*(iqseq(i+1)-1) +1)
+		ligand%atom(i)%coor(1)	 = calc_xtop(3*(iqseq(i+1)-1) +2)
+		ligand%atom(i)%coor(2)	 = calc_xtop(3*(iqseq(i+1)-1) +3)
 		ligand%atom(i)%origin		 = 1	! This is a ligand atom
 		ligand%atom(i)%ttype		 = ' .'
 		ligand%atom(i)%qtype		 = tac(iac(iqseq(i+1)))
@@ -1503,7 +1502,7 @@ integer function pmfEval_Rule(atom,mol,r)
 		end if
 	end if
 
-	if(invert.eq.1) mark = q_abs(1-mark)
+	if(invert.eq.1) mark = iabs(1-mark)
 	pmfEval_Rule = mark
 end function
 
@@ -2661,6 +2660,9 @@ subroutine pmf_initialize
 	nPMFScores = 0
 	maxPMFScores = 16
 	allocate(pmfscores(maxPMFScores))
+        calc_xtop(1:3*nat_pro-2:3) = xtop(1:nat_pro)%x
+        calc_xtop(2:3*nat_pro-1:3) = xtop(1:nat_pro)%y
+        calc_xtop(3:3*nat_pro  :3) = xtop(1:nat_pro)%z
 
 	warn = 0
 end subroutine pmf_initialize

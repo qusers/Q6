@@ -6,16 +6,17 @@
 
 module CALC_ENTROPY
     
-	use CALC_BASE
-	use MASKMANIP
-    use TRJ
-	use CALC_FIT
-	use CALC_GEOM
+        use CALC_BASE
+        use MASKMANIP
+        use TRJ
+        use CALC_FIT
+        use CALC_GEOM
+        use QMATH
 implicit none
 
 ! Constants
 
-real(kind=prec)										:: pi_val, hs, R, ref_vol, e, u, kb, cm   ! pi, plancs constant, R, reference_volume
+real(kind=prec)										:: hs, R, ref_vol, euler, u, kb, cm   ! pi, plancs constant, R, reference_volume
 
 !module variables
 
@@ -113,7 +114,7 @@ integer function entropy_add(desc)
 	read(*,*) coords(Nmasks)%interval
     
 	! Temperature set to default 300 
-	coords(Nmasks)%Temperature = 300
+	coords(Nmasks)%Temperature = 300.0_prec
 
 	WRITE(*, '(a)') &
     'Set no frames:'
@@ -164,14 +165,13 @@ subroutine construct_trajectory(t, Temp, startframe, endframe, no_atoms, Calc_ty
 subroutine ENTROPY_initialize
 
 ! Set constants
- pi_val = 4 * atan(1.)								 ! pi
- e = exp(1.0)										 ! Eulers number
- R = 1.9855026										 ! In cal/mol
- kb=1.38066											 ! Boltzmann konstant  *10**(-23) 
- hs=1.0545727										 ! Plancs constant     *10**(-34) 
- u=1.6605402										 ! Atomic mass constant *10**(-27) from u to Kg
- ref_vol = 1660.0									 ! Corresponds to a 1M concentration
- cm = 3.3356410/(2*pi_val)						     ! Constant for vibrational frequencies calculation 
+ euler = q_exp(one)     ! Eulers number
+ R = 1.9855026_prec     ! In cal/mol
+ kb=1.38066_prec        ! Boltzmann konstant  *10**(-23) 
+ hs=1.0545727_prec      ! Plancs constant     *10**(-34) 
+ u=1.6605402_prec       ! Atomic mass constant *10**(-27) from u to Kg
+ ref_vol = 1660.0_prec  ! Corresponds to a 1M concentration
+ cm = 3.3356410_prec/(2.0_prec*pi)   ! Constant for vibrational frequencies calculation 
 
  ! Other variables
  entropy_frame = 1
@@ -203,7 +203,7 @@ end subroutine entropy_heading
 subroutine entropy_calc(i)
 
  integer, intent(in)		:: i
- integer					:: j,k,l,n,m,o
+ integer					:: j,k,l,n,m,o,ats
  real(kind=prec)					:: det, gauss, uniform !, ref_vol
  type(trajectory)			:: t                                                                     
 
@@ -240,8 +240,11 @@ subroutine entropy_calc(i)
    end select
   
   ! Locate which atoms to make the calculation on
-   call mask_get(masks(i), xin, coords(i)%x)    
-   
+   ats = masks(i)%included
+   allocate(tmp_coords(ats))
+   tmp_coords = translate_coords(coords(i)%x)
+   call mask_get(masks(i), translate_coords(xin), tmp_coords)    
+   coords(i)%x = btranslate_coords(tmp_coords)
   ! Uppdate COV_DATA for Schlitters formula and Quasiharmonics   
   if(  t%Calc_type == 1 .OR. t%Calc_type == 2 ) then 
   
@@ -286,8 +289,8 @@ subroutine entropy_calc(i)
     case(1)                                              
       call CovarianceMatrix(t)
       call SchlittersFormula(t,det)  
-	  write(*,*) 0.5*R*det
-      write(100,*) entropy_frame, 0.5*1.9855026*det 
+	  write(*,*) 0.5_prec*R*det
+      write(100,*) entropy_frame, 0.5_prec*1.9855026_prec*det 
    
     !------------------------
     ! Quasiharmonic analysis 
@@ -309,8 +312,8 @@ subroutine entropy_calc(i)
 	 call CovarianceMatrix(t)
 	 call SchlittersFormula(t, det)   
      
-	 write(*,*) 0.5*R*det
-     write(100,*) 0.5*R*det 
+	 write(*,*) 0.5_prec*R*det
+     write(100,*) 0.5_prec*R*det 
    
     !-----------------------------------------------
     ! Principal RMS fluctuations for center of mass 
@@ -321,8 +324,8 @@ subroutine entropy_calc(i)
    ! ref_vol = 1660.0   !34.123**3        !1660.0         !133.565**3
 
     call PCA(t,det)
-	gauss = R*log( sqrt(det)*(2*pi_val*exp(1.0))**(1.5)/ref_vol )
-	uniform = R*log( sqrt(det)*(12)**(1.5)/ref_vol )
+	gauss = R*q_logarithm( q_sqrt(det)*(2.0_prec*pi*euler)**(1.5_prec)/ref_vol )
+	uniform = R*q_logarithm( q_sqrt(det)*(12_prec)**(1.5_prec)/ref_vol )
     write(*,*) 'Gaussian approximation:  dS(transl) =', gauss
     write(*,*) 'Uniform approximation:      dS(transl) =', uniform
     write(100,*) gauss, uniform
@@ -334,8 +337,8 @@ subroutine entropy_calc(i)
    case(5) 
      
 	 call PCA(t,det)
-     gauss = R*log( sqrt(det)*sin(t%COV_DATA(1,1)%Ex)*(2*pi_val*exp(1.0))**(1.5)/(8*pi_val**2) )
-	 uniform = R*log( sqrt(det)*sin(t%COV_DATA(1,1)%Ex)*(12)**(1.5)/(8*pi_val**2) )
+     gauss = R*q_logarithm( q_sqrt(det)*q_sin(t%COV_DATA(1,1)%Ex)*(2.0_prec*pi*euler)**(1.5_prec)/(8.0_prec*pi**2) )
+	 uniform = R*q_logarithm( q_sqrt(det)*q_sin(t%COV_DATA(1,1)%Ex)*(12.0_prec)**(1.5_prec)/(8.0_prec*pi**2) )
 	 write(*,*) 'Gaussian approximation:  dS(rot) =', gauss
      write(*,*) 'Uniform approximation:   dS(rot) =', uniform
 	 write(100,*) entropy_frame, gauss, uniform
@@ -391,9 +394,9 @@ subroutine SchlittersFormula(t, det)
  call CholeskyFactorization(t)       !  Coleskyfactorized matrix, L (C = L*L ), is stored in C 
  
  ! Calculate entropy
- det = 0.0
+ det = zero
  do i=1,t%no_atoms*3
-  det = det + 2*log(t%C(i,i))        !  det L*L =  2 * det L 
+  det = det + 2*q_logarithm(t%C(i,i))        !  det L*L =  2 * det L 
  end do                                               
 
  deallocate(t%C) ! Deallocate covariance matrix
@@ -417,18 +420,18 @@ subroutine MultiplyMatrices(t)
  ! e=2.718281828       ! Euler number
  ! u=1.6605402      ! Atomic mass constant *10**(-27) from u to Kg
    
-  c=(e**2)*kb*(t%Temperature)*u*0.01/(hs**2)        ! 0.01 is Å to m, u is u to kg (hs*hs) to hs**2
+  c=(euler**2)*kb*(t%Temperature)*u*0.01_prec/(hs**2)        ! 0.01 is Ã… to m, u is u to kg (hs*hs) to hs**2
   
   do i=1,t%no_atoms*3
      do j=1,i                     !t%no_atoms*3	   
 	       
        ! Multiply with constant
-          t%C(i,j) = c*t%C(i,j)*sqrt(t%massvector(i)*t%massvector(j))                                  
+          t%C(i,j) = c*t%C(i,j)*q_sqrt(t%massvector(i)*t%massvector(j))                                  
      	  t%C(j,i) = t%C(i,j)     ! Symmetrix matrix
 	   
        ! Add diagonal matrix to massweigted matrix        	   
   	   if( i == j ) then
-         t%C(i,i) = t%C(i,i) + 1.0          
+         t%C(i,i) = t%C(i,i) + one          
        endif
 
     enddo
@@ -455,10 +458,10 @@ subroutine CholeskyFactorization(t)
        t%C(i,j) = t%C(i,j) - t%C(i,k)*t%C(j,k)
      enddo
    enddo
-        if( t%C(j,j) < 0.0 ) then
+        if( t%C(j,j) < zero ) then
           print*, "Matrix is not positive definite!"         ! Should hold.
         endif
-        t%C(j,j) = sqrt(t%C(j,j)) 
+        t%C(j,j) = q_sqrt(t%C(j,j)) 
    do k=j+1,t%no_atoms*3
         t%C(k,j) = t%C(k,j)/t%C(j,j)
    end do
@@ -480,8 +483,8 @@ subroutine RotationAndTranslation(t,i)
  type(trajectory)      :: t
  
 	!calc. mass centre of xin
-	xcm(:) = 0.
-	totmass = 0
+	xcm(:) = zero
+	totmass = zero
 	do at = 1, nat_pro
 		if(masks(i)%mask(at)) then                          ! Take only the ones specified in mask
 			xcm(:) = xcm(:) + xin(3*at-2:3*at)*iaclib(iac(at))%mass                 
@@ -568,9 +571,9 @@ subroutine fit_make_reference(i)
 
 	if(i < 1 .or. i > Nmasks) return
 	!calc centre vector of mass
-	 coords(i)%xrcm(:) = 0.
+	 coords(i)%xrcm(:) = zero
 
-   	totmass = 0.0
+   	totmass = zero
 
 	do at = 1, nat_pro
 		if(masks(i)%mask(at)) then    
@@ -622,7 +625,7 @@ subroutine massweight(t)             ! Massweighting of coordinates
  
  do i=1,t%no_atoms*3
    do j = 1,i               ! Symmetrix matrix
-    t%C(i,j) = sqrt(t%massvector(i)*t%massvector(j))*t%C(i,j)
+    t%C(i,j) = q_sqrt(t%massvector(i)*t%massvector(j))*t%C(i,j)
     t%C(j,i) = t%C(i,j)
 
 !	if( i == j ) then
@@ -670,7 +673,7 @@ real(kind=prec) :: det, hswkT, w, cm, scaling ! , hs, kb, u, ,pi
 ! hs = 1.05457266			! 10**(-34)
 ! u  = 1.6605402		    ! 10**(-27), u to Kg
 ! pi = acos(-1.0)			! Pi
- cm = 3.3356410/(2*pi)      ! 10**(-11), s**(-1) to cm**(-1)
+ cm = 3.3356410_prec/(2*pi)      ! 10**(-11), s**(-1) to cm**(-1)
  
 ! Different number of eigenvalues are used depending if
 ! any degrees of freedom have been removed
@@ -688,11 +691,11 @@ real(kind=prec) :: det, hswkT, w, cm, scaling ! , hs, kb, u, ,pi
   '------------------------------------------------------------------------',&
   '         Frequency (cm**(-1))		  S (cal/mol Kelvin)'                                    
 
-   det = 0.0
+   det = zero
    do i= 1,no_freq       
      k = i*(i+1)/2                                          ! Transformation to VIZ format
-     w = sqrt(kb*t%Temperature/(u*t%VIZ(k)))    ! Removed -1.0 since i don't have to shift  ! 10**(12) = sqrt(10**(-23, kb)/(10**(-27, u)*10**(-20, Å**2 to m**2))
-     hswkT = 10*hs*w/(kb*t%Temperature)                     ! 10**(1) = 10**(-34, h)*10**(12, w)/10**(-23, kb)
+     w = q_sqrt(kb*t%Temperature/(u*t%VIZ(k)))    ! Removed -1.0 since i don't have to shift  ! 10**(12) = sqrt(10**(-23, kb)/(10**(-27, u)*10**(-20, Ã…**2 to m**2))
+     hswkT = 10.0_prec*hs*w/(kb*t%Temperature)                     ! 10**(1) = 10**(-34, h)*10**(12, w)/10**(-23, kb)
      
     write(*,'(i10,a,3f8.3)', advance='no') i,'. ',10*cm*w   ! 10**(1) = 10**(12,w)*10**(-11,cm)
     write(*,'(a)', advance='no') '			'
@@ -739,7 +742,7 @@ endif
 ! Remove masses from covariance calculation
 
  do i=1,3
-  t%massvector(i) = 1.0
+  t%massvector(i) = one
  enddo
 
  call CovarianceMatrix(t)

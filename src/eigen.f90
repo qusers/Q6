@@ -1,4 +1,129 @@
-!TODO: precision not fixed
+module QEIGEN
+	use QMATH
+        implicit none
+
+contains
+
+integer function LSQSTR (NR,W,XP,X,E,U)
+
+
+!CCCCC W.F. VAN GUNSTEREN, CAMBRIDGE, JULY 1979 CCCCCCCCCCCCCCCCCCCCCCCC
+!																	   C
+!	  SUBROUTINE LSQSTR (NR,W,XP,X,E,IROT)							   C
+!																	   C
+!OMMENT   LSQSTR ROTATES THE ATOMS WITH COORDINATES X ABOUT THE ORIGIN C
+!	  SUCH THAT THE FUNCTION E = 0.5 * SUM OVER ALL NR ATOMS OF 	   C
+!	  W*(X-XP)**2 HAS A MINIMUM. HERE W DENOTES THE WEIGHT FACTORS AND C
+!	  XP ARE THE REFERENCE COORDINATES. FOR A DESCRIPTION OF THE	   C
+!	  METHOD SEE A.D. MCLACHLAN, J. MOL. BIOL. 128 (1979) 49.		   C
+!	  IF THE SUBROUTINE FAILS, IT IS RETURNED WITH A MESSAGE AND	   C
+!	  IROT=0.														   C
+!																	   C
+!	  NR = NUMBER OF ATOMS											   C
+!	  W(1..NR) = ATOMIC WEIGHT FACTORS								   C
+!	  XP(1..3*NR) = REFERENCE ATOM COORDINATES						   C
+!	  X(1..3*NR) = ATOM COORDINATES; DELIVERED WITH THE ROTATED ONES   C
+!	  If present,
+!	  E is DELIVERED WITH THE MINIMUM VALUE OF THE FUNCTION E          C
+!																	   C
+!	  LSQSTR USES SUBR. EIGEN.										   C
+!																	   C
+!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+!
+!	converted to F90 function by John Marelius, July 2000
+!	returns 0 on success, 1 if Det(U) < 1e-9, 2 if Det(U) < 0 and Omega has
+!	degenerate eigenvalues
+!	Weight vector W has been made logical
+!arguments
+	integer, intent(in)			::	NR
+	logical(1), intent(in)		::	W(:)
+	real(kind=prec), intent(in)			::	XP(:)
+	real(kind=prec), intent(inout)		::	X(:)
+	real(kind=prec), optional, intent(out)::	E
+   
+!locals
+	real(kind=prec), optional           ::	U(3,3)  
+	real(kind=prec)						::	COM(21), OM(6,6)
+	real(kind=prec)						::	VH(3,3), VK(3,3)
+	real(kind=prec)						::	DU
+	real(kind=prec)						::	SIG
+	integer						::	I, J, M, M1, M2
+
+
+!
+!*****CALCULATE THE MATRIX U AND ITS DETERMINANT
+	U(:,:) = zero
+	DO J=1,NR
+		if(W(J)) then
+			U(:,:) = U(:,:) + matmul(reshape(X(3*J-2:3*J),(/3,1/)), &
+				reshape(XP(3*J-2:3*J),(/1,3/)))
+		end if
+	END DO
+!
+	DU= U(1,1)*U(2,2)*U(3,3)+U(1,3)*U(2,1)*U(3,2) &
+		+U(1,2)*U(2,3)*U(3,1)-U(3,1)*U(2,2)*U(1,3) &
+		-U(3,3)*U(2,1)*U(1,2)-U(3,2)*U(2,3)*U(1,1)
+	IF ( ABS(DU) < QREAL_EPS) then
+		LSQSTR = 1
+		return
+	end if
+
+!*****CONSTRUCT OMEGA, DIAGONALIZE IT AND DETERMINE H AND K
+	M=0
+	DO M1=1,6
+		DO M2=1,M1
+			M=M+1
+			IF(M1 > 3 .AND. M2 <= 3) then
+				COM(M)=U(M2,M1-3)
+			else
+				COM(M)=zero
+			end if
+		END DO
+	END DO
+!
+	CALL EIGEN (COM,OM,6,0)
+	IF (DU < zero .AND. ABS(COM(3)-COM(6)) < QREAL_EPS) then
+		LSQSTR = 2
+		return
+	end if
+!
+	VH(:,:) = sqrt(2.0_prec) * OM(1:3, 1:3)
+	VK(:,:) = sqrt(2.0_prec) * OM(4:6, 1:3)
+
+	SIG= (VH(2,1)*VH(3,2)-VH(3,1)*VH(2,2))*VH(1,3) &
+		+(VH(3,1)*VH(1,2)-VH(1,1)*VH(3,2))*VH(2,3) &
+		+(VH(1,1)*VH(2,2)-VH(2,1)*VH(1,2))*VH(3,3)
+	IF(SIG <= 0.) then
+		VH(:,3) = -VH(:,3)
+		VK(:,3) = -VK(:,3)
+	end if
+!
+!*****DETERMINE R AND ROTATE X
+	DO M2=1,3
+		DO M1=1,3
+			U(M1,M2)=VK(M1,1)*VH(M2,1)+VK(M1,2)*VH(M2,2) &
+				+sign(1.0_prec,DU)*VK(M1,3)*VH(M2,3)
+		end do
+	END DO
+!
+	DO J=1,NR
+		X(3*J-2:3*J) = matmul(U,X(3*J-2:3*J))
+	END DO
+	LSQSTR = 0 !OK
+!
+!*****CALCULATE E, WHEN REQUIRED
+	if(present(E)) then
+		E=zero
+		DO J=1,NR
+			if(W(J)) E=E+sum((X(3*J-2:3*J)-XP(3*J-2:3*J))**2)
+		end do
+		E=E/2.0_prec
+	end if
+
+END function LSQSTR
+
+      SUBROUTINE EIGEN (A,R,N,MV) 
+!                                                                       
 !CCCCC W.F. VAN GUNSTEREN, CAMBRIDGE, JUNE 1979 CCCCCCCCCCCCCCCCCCCCCCCC
 !                                                                      C
 !     SUBROUTINE EIGEN (A,R,N,MV)                                      C
@@ -22,30 +147,34 @@
 !        = 1 : ONLY EIGENVALUES ARE COMPUTED                           C
 !                                                                      C
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-!    
-MODULE EIGEN                               
-use QMATH                                    
-      SUBROUTINE EIGEN (A,R,N,MV) 
+!                                                                       
+        !implicit double precision (A-H, O-Z)
+        real(kind=prec) :: A,B,C,D,E,F,G,H,O,P,Q,R,S,T,U,V,W,X,Y,Z
+	real(kind=prec) :: anorm, anrmx, thr, sinx, sinx2, cosx, cosx2, sincs
 
-      implicit real(kind=prec) (A-H, O-Z)
-      DIMENSION A(1),R(1) 
+
+        !implicit integer (I-N)
+        integer         :: I,J,K,L,M,N, range, mv, iq, ij, ia, ind, mq, lq, lm, ll, mm, ilq, imq, im, il, ilr, imr, jq
+
+
+    DIMENSION A(1),R(1) 
 
 !                                                                       
 !*****GENERATE IDENTITY MATRIX                                          
-    5 RANGE=1.E-12_prec
+    5 RANGE=1.E-12 
       IF (MV-1) 10,25,10 
    10 IQ=-N 
       DO 20 J=1,N 
       IQ=IQ+N 
       DO 20 I=1,N 
       IJ=IQ+I 
-      R(IJ)=zero
+      R(IJ)=0.E0 
       IF (I-J) 20,15,20 
-   15 R(IJ)=one 
+   15 R(IJ)=1.E0 
    20 CONTINUE 
 !                                                                       
 !*****COMPUTE INITIAL AND FINAL NORMS (ANORM AND ANRMX)                 
-   25 ANORM=zero
+   25 ANORM=0.E0 
       DO 35 I=1,N 
       DO 35 J=I,N 
       IF (I-J) 30,35,30 
@@ -53,13 +182,13 @@ use QMATH
       ANORM=ANORM+A(IA)*A(IA) 
    35 CONTINUE 
       IF (ANORM) 165,165,40 
-   40 ANORM=q_sqrt(2.0_prec)* q_sqrt(ANORM) 
-      ANRMX=ANORM*RANGE/FLOAT(kind=prec,N) 
+   40 ANORM=1.414E0* SQRT(ANORM) 
+      ANRMX=ANORM*RANGE/FLOAT(N) 
 !                                                                       
 !*****INITIALIZE INDICATORS AND COMPUTE THRESHOLD, THR                  
       IND=0 
       THR=ANORM 
-   45 THR=THR/FLOAT(kind=prec,N) 
+   45 THR=THR/FLOAT(N) 
    50 L=1 
    55 M=L+1 
 !                                                                       
@@ -71,13 +200,13 @@ use QMATH
    65 IND=1 
       LL=L+LQ 
       MM=M+MQ 
-      X=0.5_prec*(A(LL)-A(MM)) 
-   68 Y=-A(LM)/ q_sqrt(A(LM)*A(LM)+X*X) 
+      X=0.5E0*(A(LL)-A(MM)) 
+   68 Y=-A(LM)/ SQRT(A(LM)*A(LM)+X*X) 
       IF (X) 70,75,75 
    70 Y=-Y 
-   75 SINX=Y/ q_sqrt(2.0_prec*(one+( q_sqrt(one-Y*Y)))) 
+   75 SINX=Y/ SQRT(2.E0*(1.E0+( SQRT(1.E0-Y*Y)))) 
       SINX2=SINX*SINX 
-   78 COSX= q_sqrt(one-SINX2) 
+   78 COSX= SQRT(1.E0-SINX2) 
       COSX2=COSX*COSX 
       SINCS=SINX*COSX 
 !                                                                       
@@ -105,7 +234,7 @@ use QMATH
       R(IMR)=R(ILR)*SINX+R(IMR)*COSX 
       R(ILR)=X 
   125 END DO 
-      X=2.0_prec*A(LM)*SINCS 
+      X=2.E0*A(LM)*SINCS 
       Y=A(LL)*COSX2+A(MM)*SINX2-X 
       X=A(LL)*SINX2+A(MM)*COSX2+X 
       A(LM)=(A(LL)-A(MM))*SINCS+A(LM)*(COSX2-SINX2) 
@@ -153,4 +282,8 @@ use QMATH
   185 CONTINUE 
 !                                                                       
       RETURN 
-      END                                           
+      END subroutine eigen                                           
+                                          
+
+end module QEIGEN
+

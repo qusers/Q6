@@ -128,7 +128,7 @@ logical function get_topology()
 	call getlin(topfile, '--> Topology file: ')
 	write(*,100) trim(topfile)
 100	format('Loading topology ',a)
-	get_topology = topo_load(topfile, require_version=4.)
+	get_topology = topo_load(topfile, require_version=4.0_prec)
 end function get_topology
 
 logical function get_fepfile()
@@ -168,7 +168,7 @@ character*80				:: lambda
 		write(*,666) 'Lambda in state ', states, ' = ', lamda(states)
 666	format(a,i2,a,f10.3)
         end do
-        if(( q_abs(1._8 - totlambda)).gt.eps)  then
+        if(( abs(one - totlambda)).gt.eps)  then
                 write(*,*) 'Lambda values do not add up to one, aborting'
 667	format(a,f10.3)
                 write(*,667) 'Total value is ',totlambda
@@ -178,7 +178,8 @@ character*80				:: lambda
 	end if
 end function get_fepfile
 subroutine initialize
-	allocate(xin(nat_pro))   ! contains all coordinates, no_atoms, vector format
+        call math_initialize
+	allocate(xin(3*nat_pro),calc_xtop(3*nat_pro),xin2(nat_pro))   ! contains all coordinates, 3*no_atoms
 	call rms_initialize
 	call rmsf_initialize
 	call fit_initialize
@@ -216,6 +217,8 @@ subroutine finalize
 	integer						::	c, i
 
 	deallocate(xin)
+        deallocate(calc_xtop)
+        deallocate(xin2)
 	do c=1, Ncalcs
 		if(cdef(calcs(c)%typ)%output) then
 			i = calcs(c)%i
@@ -319,7 +322,8 @@ subroutine process_data
 			end if
 		else
 			! trajectory file
-			do while(trj_read(xin))
+			do while(trj_read(xin2))
+                                xin = btranslate_coords(xin2)
 				! coordinates for frame "frame" are now in xin(:)
 				frame = frame+1
 !				write(*,*) 'frame= ', frame
@@ -435,7 +439,7 @@ logical function get_coordfile(cf, fn, frames)
 					!write the reference coordinates into xin 
 					!so that atoms not in the trajectory
 					!get their reference coordinates
-					xin(:) = xtop(:)
+					xin(:) = calc_xtop(:)
 				end if
 			else !is's a restrart file
 				backspace(fn)
@@ -481,7 +485,7 @@ logical function load_restart(fn)
 	else
 		rewind(fn)
                 if (.not.old_restart) read(fn) canary
-		read(fn) nat3, xin(1:nat_pro:3)
+		read(fn) nat3, xin(:)
 		load_restart = .true.
 	end if
 	close(fn)
@@ -562,12 +566,12 @@ subroutine add_calcs
 end subroutine add_calcs
 
 subroutine make_ref_all(x)
-	TYPE(qr_vec)			::	x(:)
+	real(kind=prec)						::	x(:)
 
-	integer				::	i
+	integer						::	i
 	
 	!copy current coordinates to xtop
-	xtop(:) = xin(:)
+	calc_xtop(:) = xin(:)
 
 	do i = 1, Ncalcs
 		select case(cdef(calcs(i)%typ)%key)

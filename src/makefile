@@ -212,7 +212,7 @@ qfep5: qfep.o
 
 qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
-	calc_entropy.o calc_nb.o calc_xscore.o eigen.o qcalc.o
+	calc_entropy.o calc_nb.o calc_xscore.o qcalc.o eigen.o globals.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
 qdyn5 qdum5 qpi5 qmin5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
@@ -269,7 +269,7 @@ calc_chemscore.o: calc_chemscore.f90 maskmanip.o trj.o prmfile.o index.o qatom.o
 calc_entropy.o:calc_entropy.f90 calc_base.o maskmanip.o trj.o calc_fit.o
 	${FC} ${FFLAGS} -c $<
 
-calc_fit.o:calc_fit.f90 calc_base.o maskmanip.o
+calc_fit.o:calc_fit.f90 calc_base.o maskmanip.o eigen.o
 	${FC} ${FFLAGS} -c $<
 
 calc_geom.o:calc_geom.f90 calc_base.o
