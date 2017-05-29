@@ -179,7 +179,7 @@ sed -i s/"invalid-boundary"/"\[PBC\]\nput_solvent_back_in_box\ton\nput_solute_ba
 sed -i s/"invalid-qatom"/"q_atom\t24"/g *inp
 sed -i s/"invalid-lrf"/"lrf\t24"/g *inp
 else
-sed -i s/"invalid-boundary"/"\[sphere\]\nshell_radius\t16\nshell_force\t20"/g *inp
+sed -i s/"invalid-boundary"/"\[sphere\]\nshell_radius\t16\nshell_force\t20\n\[solvent\]\npol_update\t100"/g *inp
 sed -i s/"invalid-qatom"/"q_atom\t99"/g *inp
 sed -i s/"invalid-lrf"/"lrf\t99"/g *inp
 fi
@@ -192,11 +192,11 @@ sed -i s/"invalid-thermostat"/"$2"/g *inp
 #function that creates the different directories and places the files in them
 #argument is the run type serial parallel hybrid benchmark
 function make_dirs() {
-for i in PBC SPH
+for i in SPH # other option is PBC
 do
-for j in leap-frog velocity-verlet
+for j in leap-frog # other option is velocity-verlet
 do
-for g in berendsen langevin nose-hoover
+for g in berendsen # other options are langevin nose-hoover
 do
 thisdir=`pwd`
 if [ "$1" != "benchmark" ] ; then

@@ -300,11 +300,11 @@ done
 #This part runs the actual analysis ...
 
 
-for iii in SPH  PBC 
+for iii in SPH #  PBC 
 do
-for jjj in velocity-verlet leap-frog
+for jjj in leap-frog # velocity-verlet
 do
-for ggg in berendsen langevin nose-hoover
+for ggg in berendsen # langevin nose-hoover
 do
 thisdir=`pwd`
 if ! [ -f ${iii}_${jjj}_${ggg}_benchmark.en ] ; then
