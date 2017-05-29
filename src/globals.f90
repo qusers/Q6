@@ -24,9 +24,9 @@ character(80)	                ::	MD_VERSION = ''
 character(80)	                ::	MD_DATE    = ''
 ! no hard coded values for something like this
 ! rho will now be read from the topology, as it should be
-real(kind=prec) 		::  rho_wat = -1.0_prec  ! molecules / A**3, set from topo
+real(kind=prec) 		::  rho_wat = -one  ! molecules / A**3, set from topo
 real(kind=prec), parameter		::  Boltz = 0.001986_prec !TODO: it is not place for that
-
+real(kind=prec), parameter      ::  magic_step_conv = 0.020462_prec ! magic conversion number for step size
 !Read status
 integer                     :: stat
 
@@ -184,6 +184,10 @@ type(SHELL_TYPE_QUAD), allocatable:: wshell_quad(:)
 #endif
 ! constants & default values
 integer, parameter			::	itdis_update		= 100
+! this seems to assumer a step size of 1 fs, for one update every 100fs
+! does not work for any other step size this way, needs to be corrected
+! new variable introduced that scales itdis correctly
+real(kind=prec)                         :: itdis = -one
 real(kind=prec),  parameter			::	wpolr_layer			= 3.0001_prec !TODO: it is not place for that
 real(kind=prec), parameter				::	drout				= 0.5_prec !TODO: it is not place for that
 real(kind=prec), parameter			::	tau_T_default		= 100.0_prec

@@ -104,7 +104,7 @@ real(kind=prec)						::	rjunk
 integer						::	ijunk
 
 ! local parameters
-integer						:: num_args
+integer						:: num_args,tmp_itdis
 character(200)				:: infilename
 logical						::	yes
 logical						::	need_restart
@@ -181,8 +181,12 @@ end if
 write (*,10) nsteps, stepsize
 10	format ('Number of MD steps =',i10,'  Stepsize (fs)    =',f10.3)
 
+! set polarization correction update to correct value for the used
+! step size, to still only update every 100 fs
+itdis = real(itdis_update,kind=prec) / stepsize
+
 ! convert to internal time units once and for all.
-dt=0.020462_prec*stepsize
+dt=magic_step_conv*stepsize
 dt2=0.5_prec*dt
 ! --- Temperature, Thermostat etc.
 if(.not.prm_get_logical_by_key('verbose_temp',temp_spam)) then
@@ -698,6 +702,9 @@ if(.not. inlog) then       !defaults
         wpol_restr = wpol_restr_default
         wpol_born = wpol_restr_default
         fkwpol = -one
+        write(*,'(a)') 'Polarization force update at default 10/ps'
+        write(*,'(a,i4,a)') 'Update every ',nint(itdis),' steps'
+
 else
         if(prm_get_real_by_key('radius', rwat_in)) then
                 write(*,'(a,f8.2)') 'Target solvent radius =',rwat_in
@@ -730,6 +737,23 @@ else
   if(prm_get_string_by_key('model', instring)) then
         write(*,30) 'model'
   end if
+  if(wpol_restr) then
+  if(.not. prm_get_integer_by_key('pol_update',tmp_itdis)) then
+        write(*,'(a)') 'Polarization force update at default 10/ps'
+        write(*,'(a,i4,a)') 'Update every ',nint(itdis),' steps'
+  else
+        if(tmp_itdis .lt. 1) then
+           write(*,'(a)') '>>> ERROR: Can not update polarization more than once every step'
+           initialize = .false.
+        else
+           itdis = real(tmp_itdis,kind=prec)
+           write(*,'(a,i4,a)') 'Polarization force update at ',nint(&
+                   one/((real(tmp_itdis,kind=prec)*stepsize)/1000.0_prec)),'/ps'
+           write(*,'(a,i4,a)') 'Update polarization force every ',tmp_itdis,' steps' 
+        end if
+   end if
+   end if ! wpol_restr
+
 end if !if (.not. inlog)
 end if !if( .not. box )
 

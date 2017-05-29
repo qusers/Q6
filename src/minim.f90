@@ -171,7 +171,8 @@ yes = prm_get_real_by_key('initialsize', stepsize,size_default)
 write (*,10) nsteps, stepsize
 10	format ('Number of Minimization steps =',i10,'  Initial Stepsize    =',f10.3)
 dt = stepsize
-
+itdis = one
+! update polarization restraints at every step
 if(.not. prm_get_real_by_key('Ecut',energy_cutoff)) then
         energy_cutoff = Ecut_default
         write(*,'(a,f8.3)') 'Energy end cutoff set to default, ',energy_cutoff

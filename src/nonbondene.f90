@@ -6519,7 +6519,7 @@ TYPE(qr_vec)                            :: f1,f2,f3,rmu,rcu,rmc
 
 ! global variables used:
 !  E, wshell, bndw0, deg2rad, angw0, nwat, theta, theta0, nat_pro, x, xwcent,
-!  tdum, nwpolr_shell, list_sh, pi, nsort, istep, itdis_update, fkwpol, d
+!  tdum, nwpolr_shell, list_sh, pi, nsort, istep, itdis, fkwpol, d
 
 ! reset wshell%n_insh
 if (md) then
@@ -6612,12 +6612,12 @@ end do
 end if ! if md
 
 ! calculate energy and force
-if ( istep .ne. 0 .and. mod(istep,itdis_update) .eq. 0 .and. md) then
+if ( istep .ne. 0 .and. mod(istep,nint(itdis)) .eq. 0 .and. md) then
 call centered_heading('Solvent polarisation restraint data', '-')
 write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
-wshell(is)%avtheta = wshell(is)%avtheta / real (itdis_update, kind=prec)
-wshell(is)%avn_insh = wshell(is)%avn_insh / real (itdis_update, kind=prec)
+wshell(is)%avtheta = wshell(is)%avtheta / itdis
+wshell(is)%avn_insh = wshell(is)%avn_insh / itdis
 wshell(is)%theta_corr = wshell(is)%theta_corr + wshell(is)%avtheta-q_acos(wshell(is)%cstb)
 write (*,10) is,wshell(is)%avn_insh,wshell(is)%avtheta/deg2rad, &
      q_acos(wshell(is)%cstb)/deg2rad,wshell(is)%theta_corr/deg2rad
