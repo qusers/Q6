@@ -2112,7 +2112,7 @@ subroutine nbpwlis2(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,ig,jg,ia,ja, inside,jgr,j
+integer						:: i,ig,jg,ia,ja, inside,jgr,j,is
 real(kind=prec)						:: rcut2,r2
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
 #ifdef _OPENMP
@@ -2169,8 +2169,8 @@ jgloop: do jgr = 1, nwat
                 inside = 0
                 ia = cgp(ig)%first
                 do while ((ia .le. cgp(ig)%last) .and. (inside .eq. 0))
-                        i = cgpatom(ia)
-			r2 = q_dist4(x(ia),x(ja))
+                        is = cgpatom(ia)
+			r2 = q_dist4(x(is),x(ja))
 
                         if ( r2 .le. rcut2 ) then
 ! inside cutoff, raise the flag
@@ -2533,7 +2533,7 @@ jgloop: do jgr = 1, nwat
                 inside = 0
                 ia = cgp(ig)%first
                 do while ((ia .le. cgp(ig)%last) .and. (inside .eq. 0 ))
-                        i = cgpatom(ia)
+                        is = cgpatom(ia)
 			r2 = q_dist4(x(is),x(ja))
                         if ( r2 .le. rcut2 ) then
 ! inside cutoff, raise the flag
