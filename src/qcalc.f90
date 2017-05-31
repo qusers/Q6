@@ -133,7 +133,7 @@ end function get_topology
 
 logical function get_fepfile()
 integer					:: str_start, str_end, totlen
-character*80				:: lambda 
+character*80				:: lambda,tmp 
 	write(*,*) 'To load a fep file, enter the name, or enter . for no FEP file'
 	call getlin(fep_file, '--> FEP file: ')
 	fep_file=trim(fep_file)
@@ -142,6 +142,15 @@ character*80				:: lambda
 		use_fep = .false.
 		get_fepfile=.true.
 	else
+                write(*,*) 'Define number of FEP states to be used, must match FEP file information'
+                call getlin(tmp, '--> FEP states: ')
+                nstates = strtoi(tmp)
+                if(nstates .lt. 0) then
+                        write(*,'(a,i4)') 'Invalid number of FEP states: ',nstates
+                        stop 666
+                else 
+                        write(*,'(a,i4)') 'Number of FEP states = ',nstates
+                end if
 		get_fepfile=prm_open(fep_file)
 		use_fep=.true.
 		write(*,*) 'Loaded FEP file ',fep_file
@@ -168,7 +177,7 @@ character*80				:: lambda
 		write(*,666) 'Lambda in state ', states, ' = ', lamda(states)
 666	format(a,i2,a,f10.3)
         end do
-        if(( abs(one - totlambda)).gt.eps)  then
+        if(( q_abs(one - totlambda)).gt.eps)  then
                 write(*,*) 'Lambda values do not add up to one, aborting'
 667	format(a,f10.3)
                 write(*,667) 'Total value is ',totlambda

@@ -4,12 +4,12 @@ module QEIGEN
 
 contains
 
-integer function LSQSTR (NR,W,XP,X,E,U)
+integer function LSQSTR (NR,W,XP,XE,E,U)
 
 
 !CCCCC W.F. VAN GUNSTEREN, CAMBRIDGE, JULY 1979 CCCCCCCCCCCCCCCCCCCCCCCC
 !																	   C
-!	  SUBROUTINE LSQSTR (NR,W,XP,X,E,IROT)							   C
+!	  SUBROUTINE LSQSTR (NR,W,XP,XE,E,IROT)							   C
 !																	   C
 !OMMENT   LSQSTR ROTATES THE ATOMS WITH COORDINATES X ABOUT THE ORIGIN C
 !	  SUCH THAT THE FUNCTION E = 0.5 * SUM OVER ALL NR ATOMS OF 	   C
@@ -38,7 +38,7 @@ integer function LSQSTR (NR,W,XP,X,E,U)
 	integer, intent(in)			::	NR
 	logical(1), intent(in)		::	W(:)
 	real(kind=prec), intent(in)			::	XP(:)
-	real(kind=prec), intent(inout)		::	X(:)
+	real(kind=prec), intent(inout)		::	XE(:)
 	real(kind=prec), optional, intent(out)::	E
    
 !locals
@@ -55,7 +55,7 @@ integer function LSQSTR (NR,W,XP,X,E,U)
 	U(:,:) = zero
 	DO J=1,NR
 		if(W(J)) then
-			U(:,:) = U(:,:) + matmul(reshape(X(3*J-2:3*J),(/3,1/)), &
+			U(:,:) = U(:,:) + matmul(reshape(XE(3*J-2:3*J),(/3,1/)), &
 				reshape(XP(3*J-2:3*J),(/1,3/)))
 		end if
 	END DO
@@ -107,7 +107,7 @@ integer function LSQSTR (NR,W,XP,X,E,U)
 	END DO
 !
 	DO J=1,NR
-		X(3*J-2:3*J) = matmul(U,X(3*J-2:3*J))
+		XE(3*J-2:3*J) = matmul(U,XE(3*J-2:3*J))
 	END DO
 	LSQSTR = 0 !OK
 !
@@ -115,7 +115,7 @@ integer function LSQSTR (NR,W,XP,X,E,U)
 	if(present(E)) then
 		E=zero
 		DO J=1,NR
-			if(W(J)) E=E+sum((X(3*J-2:3*J)-XP(3*J-2:3*J))**2)
+			if(W(J)) E=E+sum((XE(3*J-2:3*J)-XP(3*J-2:3*J))**2)
 		end do
 		E=E/2.0_prec
 	end if

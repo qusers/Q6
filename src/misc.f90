@@ -214,6 +214,14 @@ real(kind=prec) function strtod(s)
   read(s,fmt), strtod
 end function strtod
 
+integer function strtoi(s)
+   character(len=*), intent(in) :: s
+   character(len=32) :: fmt
+      write(fmt,'("(I",I0,")")'), len_trim(s)
+   read(s,fmt), strtoi
+end function strtoi
+
+
 
 end module MISC
 
