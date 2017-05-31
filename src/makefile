@@ -1,11 +1,11 @@
 ################################################################################
-#  Q V.5.06 Makefile                                                           #
+#  Q V.6.0 Makefile                                                            #
 #  code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
 #  Isabella Feierberg, Peter Hanspers, Anders Kaplan, Karin Kolmodin,          #
 #  Kajsa Ljunjberg, John Marelius, Martin Nervall                              #
 #  keeper of the code:                                                         #
 #  maintainers: Beat Amrein, Alexandre Barrozo                                 #
-#  latest update: Oct 17, 2014                                                 #
+#  latest update: May 31, 2017                                                 #
 #  make [option] [COMP=compiler]                                               #
 ################################################################################
 
@@ -147,100 +147,100 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qpi5 qfep5 qprep5 qdum5 qcalc5 qmin5 move1 move2
+	qpi qfep qprep qdum qcalc qmin move1 move2
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
-	qdyn5 move1 moveqdyn
+	qdyn move1 moveqdyn
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qpi5 qdyn5 qfep5 qprep5 qdum5 qcalc5 qmin5 move1 move2 moveqdyn
+	qpi qdyn qfep qprep qdum qcalc qmin move1 move2 moveqdyn
 
 prof:
 	@make FFLAGS="${PROF}" \
-	qfep5 qprep5 qdyn5 qdum5 qcalc5 move1 move2
+	qfep qprep qdyn qdum qcalc move1 move2
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	qdyn5p qpi5p qmin5p move1 move3
+	qdynp qpip qminp move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	qdyn5p qpi5p qmin5p move1 move3 
+	qdynp qpip qminp move1 move3 
 hybrid:
 	@make FFLAGS="${MPFLAG}" \
-	qdyn5h move1 move4
+	qdynh move1 move4
 
 hybriddebug:
 	@make FFLAGS="${DEBUGMP}" \
-	qdyn5h move1 move4
+	qdynh move1 move4
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il *.oo
 
 nuke:
-	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep5 qdyn5h qdyn5p qdyn5 qprep5 qcalc5 qdum5 ../bin ../obj
+	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep qdynh qdynp qdyn qprep qcalc qdum qmin qminp qpi qpip ../bin ../obj
 
-qcalc5 qprep5 qfep5: mpiglob.o
+qcalc qprep qfep: mpiglob.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qfep5 qpi5 qpi5p qmin5 qmin5p: version.o misc.o math.o
+qcalc qdyn qdum qdynp qdynh qprep qfep qpi qpip qmin qminp: version.o misc.o math.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qprep5 qpi5 qpi5p qmin5 qmin5p: mask.o prmfile.o sizes.o topo.o trj.o index.o
+qcalc qdyn qdum qdynp qdynh qprep qpi qpip qmin qminp: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc5 qdyn5 qdum5 qdyn5p qdyn5h qfep5 qpi5 qpi5p qmin5 qmin5p: nrgy.o
+qcalc qdyn qdum qdynp qdynh qfep qpi qpip qmin qminp: nrgy.o
 
-qcalc5: qatom.o
+qcalc: qatom.o
 
-qcalc5 qprep5 qfep5: parse.o
+qcalc qprep qfep: parse.o
 
-qcalc5 qprep5: maskmanip.o
+qcalc qprep: maskmanip.o
 
-qdyn5 qdum5: qdyn.o
+qdyn qdum: qdyn.o
 
-qmin5: qmin.o
+qmin: qmin.o
 
-qdyn5 qdum5 qdyn5p qdyn5h qpi5 qpi5p qmin5 qmin5p: qatom.o exc.o globals.o
+qdyn qdum qdynp qdynh qpi qpip qmin qminp: qatom.o exc.o globals.o
 
-qprep5: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
+qprep: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qfep5: qfep.o 
+qfep: qfep.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qcalc5: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
+qcalc: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
 	calc_entropy.o calc_nb.o calc_xscore.o qcalc.o eigen.o globals.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5 qdum5 qpi5 qmin5: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
+qdyn qdum qpi qmin: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
 	bonded.o bondene.o mpiglob.o 
 
-qdyn5p qdyn5h qpi5p qmin5p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
+qdynp qdynh qpip qminp: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
 	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o
 
-qdyn5 : md.o 
+qdyn : md.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qmin5 : minim.o
+qmin : minim.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qmin5p :qmin_mpi.o minim_mpi.o
+qminp :qmin_mpi.o minim_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdum5 : md_dum.o
+qdum : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5p : md_mpi.o qdyn_mpi.o 
+qdynp : md_mpi.o qdyn_mpi.o 
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn5h : md_mpi.o qdyn_mpi.o
+qdynh : md_mpi.o qdyn_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qpi5   : qpi.o
+qpi   : qpi.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qpi5p  : qpi_mpi.o
+qpip  : qpi_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
@@ -455,20 +455,20 @@ version.o: version.f90
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c $<
 
 moveqdyn:
-	mkdir -p ../bin ; mv qdyn5 ../bin/qdyn5_r8
+	mkdir -p ../bin ; mv qdyn ../bin/qdyn
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
 	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep5 qprep5 qdum5 qcalc5 qpi5 qmin5 ../bin/
+	mkdir -p ../bin ; mv qfep qprep qdum qcalc qpi qmin ../bin/
 
 move3:
-	mkdir -p ../bin ; mv qdyn5p qpi5p qmin5p ../bin/
+	mkdir -p ../bin ; mv qdynp qpip qminp ../bin/
 
 move4:
-	mkdir -p ../bin ; mv qdyn5h ../bin/
+	mkdir -p ../bin ; mv qdynh ../bin/
 
 
 
@@ -485,13 +485,13 @@ what:
 	@echo "Use: make [target] [COMP=compiler]"
 	@echo
 	@echo "[target] is one of:"
-	@echo "all              Everything, including non optimized and optimized qdyn5/qdyn5p"
-	@echo "tools            Non speed optimized versions of qdyn5, qdum5, qfep5, qcalc5 and qprep5"
+	@echo "all              Everything, including optimized and optimized qdyn/qdynp"
+	@echo "tools            Speed optimized versions of qdyn, qdum, qfep, qcalc and qprep"
 	@echo "debug            Tools with debug information (stacktraces)."
-	@echo "mpi              qdyn5p using a currently loaded MPI library"
-	@echo "mpidebug         qdyn5p with debug information (stacktraces)."
-	@echo "hybrid           qdyn5h using a currently loaded MPI library and OpenMP library"
-	@echo "hybriddebug      qdyn5h with debug information (stacktraces)."
+	@echo "mpi              qdynp using a currently loaded MPI library"
+	@echo "mpidebug         qdynp with debug information (stacktraces)."
+	@echo "hybrid           qdynh using a currently loaded MPI library and OpenMP library"
+	@echo "hybriddebug      qdynh with debug information (stacktraces)."
 	@echo
 	@echo "For compiler/os pick one of:"
 	@echo "ifort            Intel Fortran compiler"
