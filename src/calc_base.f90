@@ -223,24 +223,24 @@ function translate_coords(incoords)
 ! arguments
 real(kind=prec),INTENT(IN) :: incoords(:)
 ! locals and returns
-TYPE(qr_vec) :: translate_coords(SIZEOF(incoords)/3)
+TYPE(qr_vec) :: translate_coords(SIZE(incoords)/3)
 integer      :: length
-length = SIZEOF(incoords)/3
-translate_coords(1:length)%x = incoords(1:length*3-2:3)
-translate_coords(1:length)%y = incoords(2:length*3-1:3)
-translate_coords(1:length)%z = incoords(3:length*3  :3)
+length = SIZE(incoords)/3
+translate_coords(1:length)%x = incoords(1:(length*3)-2:3)
+translate_coords(1:length)%y = incoords(2:(length*3)-1:3)
+translate_coords(1:length)%z = incoords(3:(length*3)  :3)
 end function translate_coords
 
 function btranslate_coords(incoords)
 ! arguments
 TYPE(qr_vec),INTENT(IN) :: incoords(:)
 ! locals and returns
-real(kind=prec) :: btranslate_coords(SIZEOF(incoords)*3)
+real(kind=prec) :: btranslate_coords(SIZE(incoords)*3)
 integer      :: length
-length = SIZEOF(incoords)*3
-btranslate_coords(1:length*3-2:3) = incoords(1:length)%x 
-btranslate_coords(2:length*3-1:3) = incoords(2:length)%y 
-btranslate_coords(3:length*3  :3) = incoords(3:length)%z 
+length = SIZE(incoords)
+btranslate_coords(1:(length*3)-2:3) = incoords(1:length)%x 
+btranslate_coords(2:(length*3)-1:3) = incoords(1:length)%y 
+btranslate_coords(3:(length*3)  :3) = incoords(1:length)%z 
 
 end function btranslate_coords
 
