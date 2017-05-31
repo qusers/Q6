@@ -36,7 +36,7 @@ program QCALC
 	
 	!data types  
 	type CALC_TYPE
-		character(len=60)		::	desc
+		character(len=80)		::	desc
 		integer					::	i
 		integer					::	typ
 	end type CALC_TYPE
