@@ -133,7 +133,7 @@ end function get_topology
 
 logical function get_fepfile()
 integer					:: str_start, str_end, totlen
-character*80				:: lambda,tmp 
+character*80				:: lambda
 	write(*,*) 'To load a fep file, enter the name, or enter . for no FEP file'
 	call getlin(fep_file, '--> FEP file: ')
 	fep_file=trim(fep_file)
@@ -142,9 +142,21 @@ character*80				:: lambda,tmp
 		use_fep = .false.
 		get_fepfile=.true.
 	else
-                write(*,*) 'Define number of FEP states to be used, must match FEP file information'
-                call getlin(tmp, '--> FEP states: ')
-                nstates = strtoi(tmp)
+                write(*,*)'Give a value for the reaction coordinate (lambda values)'
+                call getlin(lambda,'')
+        !        write(*,*) lambda	
+                str_start = 1
+                totlen = len_trim(lambda)
+                nstates = 0
+                do while(str_start < totlen)
+                        str_end = string_part(lambda, ' ', str_start)
+                        nstates=nstates+1
+                        lamda(nstates)=strtod(lambda(str_start:str_end))
+                        str_start = str_end + 2
+                end do
+!                write(*,*) 'Define number of FEP states to be used, must match FEP file information'
+!                call getlin(tmp, '--> FEP states: ')
+!                nstates = strtoi(tmp)
                 if(nstates .lt. 0) then
                         write(*,'(a,i4)') 'Invalid number of FEP states: ',nstates
                         stop 666
@@ -155,23 +167,6 @@ character*80				:: lambda,tmp
 		use_fep=.true.
 		write(*,*) 'Loaded FEP file ',fep_file
 		call get_fep
-	write(*,*)'Give a value for the reaction coordinate (lambda values)'
-	call getlin(lambda,'')
-!        write(*,*) lambda	
-        str_start = 1
-        totlen = len_trim(lambda)
-        do while(str_start < totlen)
-                str_end = string_part(lambda, ' ', str_start)
-		states=states+1
-                lamda(states)=strtod(lambda(str_start:str_end))
-                str_start = str_end + 2
-        end do
-!	write(*,*)(lamda(str_start),str_start=1,states)
-        if (states.ne.nstates) then
-                write(*,*)'Number of lambda values not equal to states in FEP file'
-                write(*,'(i5,a,i5)') states,' lambda states not equal to FEP file states ', nstates
-                stop 666
-        end if
         do states = 1, nstates
                 totlambda = totlambda + lamda(states)
 		write(*,666) 'Lambda in state ', states, ' = ', lamda(states)
