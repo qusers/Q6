@@ -173,6 +173,9 @@ need_restart = .false. !flag for restart file required
 if(.not. prm_get_integer_by_key('steps', nsteps)) then
 write(*,*) '>>> ERROR: steps not specified (section MD)'
 initialize = .false.
+else if (nsteps .lt. 1 ) then
+        write(*,*) '>>> ERROR: Need at least one step of dynamics'
+        initialize = .false.
 end if
 if(.not. prm_get_real_by_key('stepsize', stepsize)) then
 write(*,*) '>>> ERROR: stepsize not specified (section MD)'

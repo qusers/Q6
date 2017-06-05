@@ -166,6 +166,9 @@ need_restart = .false. !flag for restart file required
 if(.not. prm_get_integer_by_key('steps', nsteps)) then
 write(*,*) '>>> ERROR: steps not specified (section MINIM)'
 initialize = .false.
+else if (nsteps .lt. 1 ) then
+        write(*,*) '>>> ERROR: Need at least one step of minimization'
+        initialize = .false.
 end if
 yes = prm_get_real_by_key('initialsize', stepsize,size_default)
 write (*,10) nsteps, stepsize
