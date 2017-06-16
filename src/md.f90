@@ -1766,24 +1766,22 @@ E%kinetic = Temp
 Temp  = 2.0_prec*Temp/Boltz/real(Ndegf, kind=prec)
 Tfree = 2.0_prec*Tfree/Boltz/real(Ndegfree, kind=prec)
 
-if (detail_temps) then
-        do tgroups = 1, ntgroups
-                tscale(tgroups)%temp  = 2.0_prec*tscale(tgroups)%temp &
-                        /Boltz/real(tscale(tgroups)%Ndegf, kind=prec)
-                tscale(tgroups)%tfree = 2.0_prec*tscale(tgroups)%tfree & 
-                        /Boltz/real(tscale(tgroups)%Ndegfree, kind=prec)
-                val = tscale(tgroups)%temp
-                tscale(tgroups)%stat%tot   = tscale(tgroups)%stat%tot  + val
-                tscale(tgroups)%stat%tot2  = tscale(tgroups)%stat%tot2 + val**2
-                val = tscale(tgroups)%tfree
-                tscale(tgroups)%stat%free  = tscale(tgroups)%stat%free  + val
-                tscale(tgroups)%stat%free2 = tscale(tgroups)%stat%free2 + val**2
-                tscale(tgroups)%stat%step  = tscale(tgroups)%stat%step  + 1
-                if ( tscale(tgroups)%Ndegf .ne. tscale(tgroups)%Ndegfree) &
-                        tscale(tgroups)%texcl = 2.0_prec*tscale(tgroups)%texcl &
-                        /Boltz/real(tscale(tgroups)%Ndegf - tscale(tgroups)%Ndegfree, kind=prec)
-        end do
-end if
+do tgroups = 1, ntgroups
+        tscale(tgroups)%temp  = 2.0_prec*tscale(tgroups)%temp &
+                /Boltz/real(tscale(tgroups)%Ndegf, kind=prec)
+        tscale(tgroups)%tfree = 2.0_prec*tscale(tgroups)%tfree & 
+                /Boltz/real(tscale(tgroups)%Ndegfree, kind=prec)
+        val = tscale(tgroups)%temp
+        tscale(tgroups)%stat%tot   = tscale(tgroups)%stat%tot  + val
+        tscale(tgroups)%stat%tot2  = tscale(tgroups)%stat%tot2 + val**2
+        val = tscale(tgroups)%tfree
+        tscale(tgroups)%stat%free  = tscale(tgroups)%stat%free  + val
+        tscale(tgroups)%stat%free2 = tscale(tgroups)%stat%free2 + val**2
+        tscale(tgroups)%stat%step  = tscale(tgroups)%stat%step  + 1
+        if ( tscale(tgroups)%Ndegf .ne. tscale(tgroups)%Ndegfree) &
+                tscale(tgroups)%texcl = 2.0_prec*tscale(tgroups)%texcl &
+                /Boltz/real(tscale(tgroups)%Ndegf - tscale(tgroups)%Ndegfree, kind=prec)
+end do
 
 if (thermostat == BERENDSEN) then
         do tgroups = 1, ntgroups
