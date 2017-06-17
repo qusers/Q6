@@ -1148,6 +1148,8 @@ else
         write(*,'(a)') '>>> ERROR: charge_correction on requires polarisation on (section solvent)'
         qcp_initialize = .false.
   end if
+  ! set polarization update such as that it won't happen in QCP calculation
+  itdis = 999999999.0_prec
   if(.not. prm_get_real_by_key('polarisation_force', fkwpol)) then
         write(*,'(a)') 'Solvent polarisation force constant set to default'
         fkwpol = -1 ! this will be set in water_sphere, once target radius is known

@@ -6612,7 +6612,7 @@ end do
 end if ! if md
 
 ! calculate energy and force
-if ( istep .ne. 0 .and. mod(istep,nint(itdis)) .eq. 0 .and. md) then
+if ( istep .gt. 0 .and. mod(istep,nint(itdis)) .eq. 0 .and. md) then
 call centered_heading('Solvent polarisation restraint data', '-')
 write(*,'(a)') 'shell    <n>    <theta>    theta_0 theta_corr'
 do is = 1, nwpolr_shell
