@@ -29,14 +29,14 @@ module	SIZES
 #ERROR Can not define multiple precision values
 #endif
         integer, parameter :: prec = doubleprecision
-        real(kind=prec),parameter :: QREAL_EPS = 1.E-14_prec
+        real(kind=prec),parameter :: QREAL_EPS = 1.E-10_prec
 #endif
 #ifdef QUADRUPLE 
 #if defined QSINGLE || defined QDOUBLE 
 #ERROR Can not define multiple precision values
 #endif
         integer, parameter :: prec = quadprecision
-        real(kind=prec),parameter :: QREAL_EPS = 1.E-32_prec
+        real(kind=prec),parameter :: QREAL_EPS = 1.E-20_prec
 #endif
 
 	real(kind=prec),parameter	:: zero = 0.0_prec
