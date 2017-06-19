@@ -620,7 +620,7 @@ write (*,'(79a)') ('!',i=1,79)
 call close_output_files
 
 ! apologise
-write(*,'(a)') 'ABNORMAL TERMINATION of Qdyn5'
+write(*,'(a)') 'ABNORMAL TERMINATION of Q'
 if (present(cause)) then
         write(*,'(79a)') 'Terminating due to ', cause
         endif
@@ -643,7 +643,7 @@ call md_deallocate
 call MPI_Abort(MPI_COMM_WORLD, 255, ierr)
 #else
 ! stop with a message to stderr
-stop 'Qdyn5 terminated abnormally'
+stop 'Q terminated abnormally'
 #endif
 
 end subroutine die

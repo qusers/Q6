@@ -29,21 +29,17 @@ real(kind=prec),allocatable :: qcp_sqmass(:)
 ! one Q energy array for every FEP lambda?
 ! added in the end to global EQ as last entry in ene_header%array
 TYPE(OQ_ENERGIES),allocatable   :: EQtmp(:),EQsave(:),EQpot_ave(:),qcp_EQbead_old(:,:),qcp_EQbead_new(:,:)
-real(kind=prec),allocatable     :: qcp_Ebeta(:),qcp_EQbeta(:,:),total_EQPI(:)
-TYPE(ENERGIES)                          :: qcp_E_tot
+real(kind=prec),allocatable     :: qcp_EQbeta(:,:),total_EQPI(:)
 TYPE(OQ_ENERGIES),allocatable           :: qcp_EQ_tot(:)
-real(kind=prec)                         :: total_EPI,Epot_ave,qcp_Ering_ave,Esave,Etmp,qcp_Ebead
+real(kind=prec)                         :: qcp_Ering_ave
 real(kind=prec)                         :: qcp_Ering_new,qcp_Ering_old,qcp_Ering
-real(kind=prec),allocatable             :: qcp_Ebead_old(:),qcp_Ebead_new(:)
 
 ! second set for mass perturbation
 TYPE(OQ_ENERGIES),allocatable   :: EQtmp2(:),EQsave2(:),EQpot_ave2(:),qcp_EQbead_old2(:,:),qcp_EQbead_new2(:,:)
-real(kind=prec),allocatable     :: qcp_Ebeta2(:),qcp_EQbeta2(:,:),total_EQPI2(:)
-TYPE(ENERGIES)                          :: qcp_E_tot2
+real(kind=prec),allocatable     :: qcp_EQbeta2(:,:),total_EQPI2(:)
 TYPE(OQ_ENERGIES),allocatable           :: qcp_EQ_tot2(:)
-real(kind=prec)                         :: total_EPI2,Epot_ave2,qcp_Ering_ave2,Esave2,Etmp2,qcp_Ebead2
+real(kind=prec)                         :: qcp_Ering_ave2
 real(kind=prec)                         :: qcp_Ering_new2,qcp_Ering_old2,qcp_Ering2
-real(kind=prec),allocatable             :: qcp_Ebead_old2(:),qcp_Ebead_new2(:)
 
 ! random number
 integer                         :: qcp_seed = -1
@@ -76,27 +72,23 @@ call check_alloc('QCP_arrays 2')
 ! allocate bead coordinate array
 allocate(qcp_coord(qcp_atnum,qcp_size),qcp_coord_old(qcp_atnum,qcp_size),stat=alloc_status)
 call check_alloc('QCP_arrays 3')
-allocate(qcp_Ebeta(maxval(qcp_steps)),qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
+allocate(qcp_EQbeta(maxval(qcp_steps),nstates),EQsave(nstates),total_EQPI(nstates),&
         EQpot_ave(nstates),EQtmp(nstates),stat=alloc_status)
 call check_alloc('QCP_arrays 4')
 allocate(qcp_EQbead_old(qcp_size,nstates),qcp_EQbead_new(qcp_size,nstates),stat=alloc_status)
 call check_alloc('QCP_arrays 5')
 allocate(qcp_EQ_tot(nstates),x_save(natom),d_save(natom),stat=alloc_status)
 call check_alloc('QCP_arrays 6')
-allocate(qcp_Ebead_old(qcp_size),qcp_Ebead_new(qcp_size),stat=alloc_status)
-call check_alloc('QCP_arrays 7')
 
 
 if (use_qcp_mass) then
         allocate(qcp_sqmass(qcp_atnum))
 ! allocate bead coordinate array
         allocate(qcp_coord2(qcp_atnum,qcp_size))
-        allocate(qcp_Ebeta2(maxval(qcp_steps)))
         allocate(qcp_EQbeta2(maxval(qcp_steps),nstates),EQsave2(nstates),total_EQPI2(nstates),&
                 EQpot_ave2(nstates),EQtmp2(nstates))
         allocate(qcp_EQbead_old2(qcp_size,nstates),qcp_EQbead_new2(qcp_size,nstates))
         allocate(qcp_EQ_tot2(nstates))
-        allocate(qcp_Ebead_old2(qcp_size),qcp_Ebead_new2(qcp_size))
 end if
 
 ! set wl values for every atom
@@ -282,11 +274,6 @@ call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
 if(use_qcp_mass) call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
 end do
 qcp_EQ_tot    = zero
-qcp_Ebead_old = zero
-qcp_Ebead_new = zero
-qcp_Ebead     = zero
-Etmp  = zero
-Esave = zero
 EQtmp = zero
 do i = 1, qcp_size
 qcp_EQbead_old(i,:) = zero
@@ -294,11 +281,6 @@ qcp_EQbead_new(i,:) = zero
 end do
 if (use_qcp_mass) then
 qcp_EQ_tot2    = zero
-qcp_Ebead_old2 = zero
-qcp_Ebead_new2 = zero
-qcp_Ebead2     = zero
-Etmp2  = zero
-Esave2 = zero
 EQtmp2 = zero
 do i = 1, qcp_size
 qcp_EQbead_old2(i,:) = zero
@@ -345,9 +327,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 call pot_energy(qcp_E,qcp_EQ,.false.)
 ! rest set to zero
 if (nodeid.eq.0) then
-        Etmp = Etmp + qcp_E%potential
         EQtmp(:) = EQtmp(:) + qcp_EQ(:)
-        qcp_Ebead_old(i) = qcp_E%potential
         do  istate = 1, nstates
                 qcp_EQbead_old(i,istate) = qcp_EQ(istate)
         end do
@@ -372,9 +352,7 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 call pot_energy(qcp_E,qcp_EQ,.false.)
 ! rest set to zero
 if (nodeid.eq.0) then
-        Etmp2 = Etmp2 + qcp_E%potential
         EQtmp2(:) = EQtmp2(:) + qcp_EQ(:)
-        qcp_Ebead_old2(i) = qcp_E%potential
         do  istate = 1, nstates
                 qcp_EQbead_old2(i,istate) = qcp_EQ(istate)
         end do
@@ -386,13 +364,9 @@ end do ! qcp_size
 
 ! what is factor? CHFACN is one for not using strange CHIN method stuff
 if (nodeid.eq.0) then
-        Esave = Etmp / real(qcp_size,kind=prec)
-        Etmp  = Esave
         EQsave(:) = EQtmp(:) / real(qcp_size,kind=prec)
         EQtmp     = EQsave
         if(use_qcp_mass) then
-                Esave2 = Etmp2 / real(qcp_size,kind=prec)
-                Etmp2  = Esave2
                 EQsave2(:) = EQtmp2(:) / real(qcp_size,kind=prec)
                 EQtmp2     = EQsave2
         end if
@@ -411,15 +385,11 @@ qcp_Ering_old = qcp_Ering
 if (use_qcp_mass) qcp_Ering_old2 = qcp_Ering2
 ! set some average values
 ! why another one of those
-total_EPI     = zero
 qcp_Ering_ave = zero
-Epot_ave      = zero
 EQpot_ave     = zero
 total_EQPI    = zero
 if (use_qcp_mass) then
-        total_EPI2     = zero
         qcp_Ering_ave2 = zero
-        Epot_ave2      = zero
         EQpot_ave2     = zero
         total_EQPI2    = zero
 end if
@@ -488,14 +458,11 @@ if (bfactor .ge. irand) then
 ! energy only calculated for sampling, not for equilibration? weird!
         if(qcp_loop .eq. 2) then
                 if(nodeid .eq.0) then
-                        Esave  = Etmp
                         EQsave = EQtmp
                         if (use_qcp_mass) then
-                                Esave2  = Etmp2
                                 EQsave2 = EQtmp2
                         end if
                         if(qcp_veryverbose) then
-                        write(*,'(a,i4,a,f12.6,a,f12.6)') 'Values at step ',step,' for Esave = ',Esave,' , and Etmp = ',Etmp
                                 do istate = 1 ,nstates
                                 write(*,'(a,i4,a,i4)') 'Values at step ',step,' state = ',istate
                                 write(*,'(a,f12.6,a,f12.6)') 'EQsave = ',EQsave(istate)%total,&
@@ -517,12 +484,9 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 
                 call pot_energy(qcp_E,qcp_EQ,.false.)
                 if (nodeid.eq.0) then
-                        qcp_Ebead_new(i) = qcp_E%potential
                         qcp_EQbead_new(i,:) = qcp_EQ(:)
-                        Esave = Esave + ((qcp_Ebead_new(i)-qcp_Ebead_old(i))/real(qcp_size,kind=prec))
                         EQsave(:) = EQsave(:) + ((qcp_EQbead_new(i,:) - qcp_EQbead_old(i,:)) &
                                 /real(qcp_size,kind=prec))
-                        qcp_Ebead_old(i) = qcp_Ebead_new(i)
                         qcp_EQbead_old(i,:) = qcp_EQbead_new(i,:)
                 end if
                 if (use_qcp_mass) then
@@ -539,12 +503,9 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 
                         call pot_energy(qcp_E,qcp_EQ,.false.)
                         if (nodeid.eq.0) then
-                                qcp_Ebead_new2(i) = qcp_E%potential
                                 qcp_EQbead_new2(i,:) = qcp_EQ(:)
-                                Esave2 = Esave2 + ((qcp_Ebead_new2(i)-qcp_Ebead_old2(i))/real(qcp_size,kind=prec))
                                 EQsave2(:) = EQsave2(:) + ((qcp_EQbead_new2(i,:) - qcp_EQbead_old2(i,:)) &
                                         /real(qcp_size,kind=prec))
-                                qcp_Ebead_old2(i) = qcp_Ebead_new2(i)
                                 qcp_EQbead_old2(i,:) = qcp_EQbead_new2(i,:)
                         end if
                 end if
@@ -553,13 +514,6 @@ if (ierr .ne. 0) call die('QCP Bcast x')
 
                 ! sum up some stuff
                 if (nodeid .eq.0) then
-                        qcp_Ebeta(step) = q_exp(-beta*(Etmp-E_init%potential))
-                        if(use_qcp_mass) qcp_Ebeta2(step) = q_exp(-beta*(Etmp2-E_init%potential))
-                        if(qcp_veryverbose) then
-                                write(*,'(a,i4,a,f12.6)') 'Current beta for step ',step,' = ',qcp_Ebeta(step)
-                                write(*,'(a,f12.6)') 'Etmp = ',Etmp
-                                write(*,'(a,f12.6)') 'E_init = ',E_init%potential
-                        end if
                         do istate = 1, nstates
                         qcp_EQbeta(step,istate) = q_exp(-beta*(EQtmp(istate)%total-EQ_init(istate)%total))
                         if(use_qcp_mass) qcp_EQbeta2(step,istate) = q_exp(-beta*(EQtmp2(istate)%total-EQ_init(istate)%total))
@@ -572,18 +526,12 @@ if (ierr .ne. 0) call die('QCP Bcast x')
                         end if
 
                         end do
-                        total_EPI = total_EPI + MCrepeat * qcp_Ebeta(step)
                         total_EQPI(:) = total_EQPI(:) + MCrepeat * qcp_EQbeta(step,:)
-                        Epot_ave  = Epot_ave  + MCrepeat * Etmp
                         EQpot_ave(:) = EQpot_ave(:) + (EQtmp(:) * MCrepeat)
-                        Etmp = Esave
                         EQtmp = EQsave
                         if(use_qcp_mass) then
-                                total_EPI2     = total_EPI2 + MCrepeat * qcp_Ebeta2(step)
                                 total_EQPI2(:) = total_EQPI2(:) + MCrepeat * qcp_EQbeta2(step,:)
-                                Epot_ave2      = Epot_ave2  + MCrepeat * Etmp2
                                 EQpot_ave2(:)  = EQpot_ave2(:) + (EQtmp2(:) * MCrepeat)
-                                Etmp2          = Esave2
                                 EQtmp2         = EQsave2
                         end if
 
@@ -612,7 +560,6 @@ if (nodeid.eq.0 .and. qcp_veryverbose .and. qcp_loop .eq. 2) then
         write(*,'(a)') 'Information for individual step of QCP PI'
         write(*,'(a)') 'Current status is free particle sampling'
         write(*,'(a,i4)') 'Current conformation = ',step
-        write(*,'(a,f12.6)') 'Current total particle energy = ',Esave
         write(*,'(a,10f12.6)') 'Current Q particle energy, for each state = ',EQsave(:)%total
         write(*,'(a,f12.6)') 'Current ring polymer energy = ',qcp_Ering_new
 end if
@@ -647,13 +594,9 @@ end do ! qcp_loop
 
 if (nodeid .eq.0) then
 
-total_EPI     = total_EPI     / MCaccept
-Epot_ave      = Epot_ave      / MCaccept
 total_EQPI(:) = total_EQPI(:) / MCaccept
 EQpot_ave(:)  = EQpot_ave(:)  / MCaccept
 if (use_qcp_mass) then
-        total_EPI2     = total_EPI2     / MCaccept
-        Epot_ave2      = Epot_ave2      / MCaccept
         total_EQPI2(:) = total_EQPI2(:) / MCaccept
         EQpot_ave2(:)  = EQpot_ave2(:)  / MCaccept
 end if
@@ -663,8 +606,6 @@ EQpot_ave(:)%lambda = EQ(:)%lambda
 if (use_qcp_mass) EQpot_ave2(:)%lambda = EQ(:)%lambda
 
 if(qcp_veryverbose) then
-        write(*,'(a,f12.6)') 'Total PI energy = ',total_EPI
-        write(*,'(a,f12.6)') 'Final PI potential energy = ',Epot_ave
         do i = 1 , nstates
         write(*,'(a,i4)') 'Total QPI energy for state ',i
         write(*,'(f12.6)') total_EQPI(i)
@@ -2061,9 +2002,7 @@ if(allocated(qcp_EQ)) deallocate(qcp_EQ)
 if(allocated(qcp_coord)) deallocate(qcp_coord)
 if(allocated(qcp_coord2)) deallocate(qcp_coord2)
 if(allocated(qcp_coord_old)) deallocate(qcp_coord_old)
-if(allocated(qcp_Ebeta)) deallocate(qcp_Ebeta)
 if(allocated(qcp_EQbeta)) deallocate(qcp_EQbeta)
-if(allocated(qcp_Ebeta2)) deallocate(qcp_Ebeta2)
 if(allocated(qcp_EQbeta2)) deallocate(qcp_EQbeta2)
 if(allocated(EQsave)) deallocate(EQsave)
 if(allocated(EQtmp)) deallocate(EQtmp)
@@ -2079,10 +2018,6 @@ if(allocated(qcp_EQ_tot)) deallocate(qcp_EQ_tot)
 if(allocated(qcp_EQbead_old2)) deallocate(qcp_EQbead_old2)
 if(allocated(qcp_EQbead_new2)) deallocate(qcp_EQbead_new2)
 if(allocated(qcp_EQ_tot2)) deallocate(qcp_EQ_tot2)
-if(allocated(qcp_Ebead_old)) deallocate(qcp_Ebead_old)
-if(allocated(qcp_Ebead_new)) deallocate(qcp_Ebead_new)
-if(allocated(qcp_Ebead_old2)) deallocate(qcp_Ebead_old2)
-if(allocated(qcp_Ebead_new2)) deallocate(qcp_Ebead_new2)
 if(allocated(qcp_sqmass)) deallocate(qcp_sqmass)
 if(allocated(qcp_atom)) deallocate(qcp_atom)
 if(allocated(qcp_mass)) deallocate(qcp_mass)

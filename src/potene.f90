@@ -106,7 +106,7 @@ start_loop_time2 = rtime()
 #ifdef DEBUG
 call q_vecsum(d,nat_pro,'Initial')
 #endif
-call pot_energy_nonbonds(E_loc,EQ_loc(:))
+call pot_energy_nonbonds(E_loc,EQ_loc(:),in_md)
 #ifdef DEBUG
 call q_vecsum(d,nat_pro,'Classical Nonbonded')
 #endif
@@ -121,13 +121,13 @@ if (nodeid .eq. 0) then
 #if defined (PROFILING)
 start_loop_time1 = rtime()
 #endif
-call pot_energy_bonds(E_loc)
+if (in_md) call pot_energy_bonds(E_loc)
 #if defined (PROFILING)
 profile(8)%time = profile(8)%time + rtime() - start_loop_time1
 #endif
 
 ! various restraints
-if( .not. use_PBC ) then
+if( .not. use_PBC .and. in_md ) then
    call fix_shell(E_loc%restraint)     !Restrain all excluded atoms plus heavy solute atoms in the inner shell.
 #ifdef DEBUG
 call q_vecsum(d,nat_pro,'Shell')
@@ -138,7 +138,7 @@ call p_restrain(E_loc%restraint%protein,EQ_loc(:)%restraint,EQ(:)%lambda)
 call q_vecsum(d,nat_pro,'Restraints')
 #endif
 !Seq. restraints, dist. restaints, etc
-if( .not. use_PBC ) then
+if( .not. use_PBC .and. in_md) then
         if(nwat > 0) then
           call restrain_solvent(E_loc%restraint)
 #ifdef DEBUG
@@ -297,10 +297,11 @@ end select
 end subroutine pot_energy_bonds
 
 !-----------------------------------------------------------------------
-subroutine pot_energy_nonbonds(E_loc,EQ_loc)
+subroutine pot_energy_nonbonds(E_loc,EQ_loc,md)
 ! arguments
 TYPE(ENERGIES)                  :: E_loc
 TYPE(OQ_ENERGIES)               :: EQ_loc(:)
+logical                         :: md
 !nonbonded interactions
 !$omp parallel default(none) shared(use_PBC,ivdw_rule,natom,nat_solute,solvent_type,use_LRF,ntors,ntors_solute) &
 !$omp reduction(+:d)
@@ -309,23 +310,23 @@ if( use_PBC ) then !periodic box
                 if((ivdw_rule.eq.VDW_GEOMETRIC).and. &
                         (solvent_type == SOLVENT_SPC)) then
                         call nonbond_qw_spc_box(EQ_loc(:)%qw,EQ_loc(:)%lambda)
-                        call nonbond_ww_spc_box(E_loc%ww)
+                        if(md) call nonbond_ww_spc_box(E_loc%ww)
                 else
                         call nonbond_qw_box(EQ_loc(:)%qw,EQ_loc(:)%lambda)
-                        call nonbond_ww_box(E_loc%ww)
+                        if(md) call nonbond_ww_box(E_loc%ww)
                 end if
-                if(ntors>ntors_solute) then
+                if(ntors>ntors_solute .and. md) then
                         call nonbond_solvent_internal_box(E_loc%ww)
                 end if
-                call nonbond_pw_box(E_loc%pw)
+                if (md) call nonbond_pw_box(E_loc%pw)
         end if
-        call nonbond_pp_box(E_loc%pp)
+        if(md) call nonbond_pp_box(E_loc%pp)
         call nonbond_qp_box(EQ_loc(:)%qp,EQ_loc(:)%lambda)
 else
         if(natom > nat_solute) then
                 if((ivdw_rule.eq.VDW_GEOMETRIC).and. &
                         (solvent_type == SOLVENT_SPC)) then
-                        call nonbond_ww_spc(E_loc%ww)
+                        if(md) call nonbond_ww_spc(E_loc%ww)
 #ifdef DEBUG
 call q_vecsum(d,nat_pro,'Nonbond ww')
 #endif
@@ -335,23 +336,23 @@ call q_vecsum(d,nat_pro,'Nonbond qw')
 #endif
                 else
                         call nonbond_qw(EQ_loc(:)%qw,EQ_loc(:)%lambda)
-                        call nonbond_ww(E_loc%ww)
+                        if(md) call nonbond_ww(E_loc%ww)
                 end if
 ! now we get started on the funky stuff with solvent torsions
 ! only run this if we have torsions in the solvent
 ! because it means we have at least 1-4 interactions
-                if(ntors>ntors_solute) then
+                if(ntors>ntors_solute .and. md) then
                         call nonbond_solvent_internal(E_loc%ww)
                 end if
-                call nonbond_pw(E_loc%pw)
+                if(md) call nonbond_pw(E_loc%pw)
         end if
-        call nonbond_pp(E_loc%pp)
+        if(md) call nonbond_pp(E_loc%pp)
         call nonbond_qp(EQ_loc(:)%qp,EQ_loc(:)%lambda)
 end if
 
 !LRF
 !$omp single
-if (use_LRF) then
+if (use_LRF.and.md) then
         call lrf_taylor(E_loc%lrf)
 end if
 !$omp end single
