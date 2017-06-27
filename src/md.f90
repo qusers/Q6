@@ -2214,7 +2214,6 @@ if (ierr .ne. 0) call die('MD Bcast x')
 
 
 end do ! time step
-201	 format(a20,' temperature at step',i8,' T=',f10.1,' Average = ',f8.3,' +- ',f8.3)
 
 
 !***********************************************************************
@@ -2240,8 +2239,26 @@ if (nodeid .eq. 0) then
         write(*,*)
         call write_out
         call write_xfin
+        print_step = .true.
+        call temperature(tscale(1:ntgroups),Ekinmax,print_step)
+        Tstat%tot   = Tstat%tot   + Temp
+        Tstat%free  = Tstat%free  + Tfree 
+        Tstat%tot2  = Tstat%tot2  + Temp**2
+        Tstat%free2 = Tstat%free2 + Tfree**2
+        Tstat%step  = Tstat%step  + 1 
+        write(*,201) 'Total System',istep, Temp, get_stddev(Tstat%tot,Tstat%tot2,Tstat%step)
+        write(*,201) 'Free System' ,istep, Tfree, get_stddev(Tstat%free,Tstat%free2,Tstat%step)
+        if (detail_temps) then
+                do tgroups = 1, ntgroups
+                        Tstat = tscale(tgroups)%stat
+                        tscale(tgroups)%stat = TSTAT_TYPE(zero,zero,zero,zero,0)
+                        write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree,&
+                                get_stddev(Tstat%free,Tstat%free2,Tstat%step)
+                end do
+        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
+        end if
 end if
-
+201     format(a20,' temperature at step',i8,' T=',f10.1,' Average = ',f8.3,' +- ',f8.3)
 
 
 if (nodeid .eq. 0) then
