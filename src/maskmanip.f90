@@ -19,7 +19,7 @@ integer function maskmanip_make(mask)
 
 	!locals
 	character(len=200)			::	line
-	integer						::	included, inthis
+	integer						::	inthis
 	
 	call mask_clear(mask)
 
@@ -74,7 +74,7 @@ integer function maskmanip_make_pretop(mask)
 
 	!locals
 	character(len=200)			::	line
-	integer						::	included, inthis
+	integer						::	inthis
 	logical                     ::  pretop=.true.
 
 	call mask_clear(mask)

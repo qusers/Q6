@@ -291,7 +291,6 @@ logical function prm_get_field(field, skip)
 	type(LINE_TYPE), pointer, save :: my_line
 	character, save				::	TAB = char(9)
 	integer						::	start_field, end_field
-	logical						::	prm_res
 
 	prm_get_field = .false.
 
@@ -364,9 +363,7 @@ integer function prm_max_enum(section, count_out)
 	character(*),intent(in)	::	section
 	integer, optional, intent(out):: count_out
 !locals
-	character(200)				::	line
 	integer						::	max_enum, enum, count
-	logical						::	dummy
 
 	max_enum = 0
 	count = 0
@@ -391,9 +388,8 @@ integer function prm_max_enum2(section, count_out)
 	character(*),intent(in)	::	section
 	integer, optional, intent(out):: count_out
 !locals
-	character(200)				::	line, tmp_str
+	character(200)				::	tmp_str
 	integer						::	max_enum, enum, count
-	logical						::	dummy
 
 	max_enum = 0
 	count = 0
@@ -605,11 +601,8 @@ logical function find_section(section)
 !arguments
 	character(*), intent(in)	::	section
 !locals
-	character(200)				::	line
-	logical						::	rewound
 	character(80)				::	ucase_section
 	integer						::	sec_len
-	integer :: filestat
 
 	type(SECTION_TYPE), pointer::	new_sec
 
@@ -722,8 +715,7 @@ end subroutine clear
 
 subroutine prm_dump
 !locals
-	type(SECTION_TYPE), pointer	::	sp_next
-	type(LINE_TYPE), pointer	::	lp_next, lp_current
+	type(LINE_TYPE), pointer	::	lp_current
 
 	!start with first section
 	call rewind_title

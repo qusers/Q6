@@ -235,7 +235,7 @@ TYPE(IMPLIB_TYPE)                               :: imp_lib(:)
 ! local variables
 integer						::	ip,i,j,k,l,ic
 TYPE(tors_val)					::	calc
-real(kind=prec)					::	dv,arg,phi
+real(kind=prec)					::	dv,arg
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -306,7 +306,7 @@ TYPE(TOR_TYPE)                                  :: impropers(:)
 TYPE(IMPLIB_TYPE)                               :: imp_lib(:)
 ! local variables
 integer						::	ip,i,j,k,l,ic
-real(kind=prec)					::	dv,arg,phi
+real(kind=prec)					::	dv,arg
 TYPE(tors_val)					::	calc
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -493,7 +493,7 @@ integer						::	istate
 ! local variables
 integer						::	ib,i,j,ic
 TYPE(bond_val)					::	calc
-real(kind=prec)					::	b,db,be,dv,fexp,tmp
+real(kind=prec)					::	db,be,dv,fexp
 
 do ib = 1, nqbond
 
@@ -675,7 +675,7 @@ TYPE(TOR_TYPE)                                  :: torsions(:)
 TYPE(TORLIB_TYPE)                               :: tor_lib(:)
 ! local variables
 integer						::	ip,ic,i,j,k,l
-real(kind=prec)					::	scp,phi,dv,arg,f1
+real(kind=prec)					::	dv,arg
 TYPE(tors_val)					::	calc
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -748,9 +748,9 @@ subroutine p_restrain(E_loc,EQ_rest,lambda)
 real(kind=prec)                         :: E_loc, EQ_rest(:),lambda(:)
 ! *** Local variables
 integer :: ir,i,j,k,istate, n_ctr
-real(kind=prec) :: fk,r2,erst,Edum,wgt,b,db,dv, totmass 
+real(kind=prec) :: fk,r2,erst,Edum,wgt,db,dv, totmass 
 real(kind=prec)						::	fexp
-TYPE(qr_vec)	:: dr,shift
+TYPE(qr_vec)	:: dr
 TYPE(bond_val)	:: distres
 TYPE(angl_val)	:: anglres
 ! global variables used:
@@ -1139,7 +1139,7 @@ TYPE(qr_vec)                    ::      xx(:), x(:)
 !	returns no. of iterations
 
 ! *** local variables
-integer                         ::      i,j,ki,kj,mol,ic,irec,nrec,k,n,w
+integer                         ::      i,j,ki,kj,mol,ic,k,n
 real(kind=prec)                 ::      p,r
 TYPE(qr_dist5)                  ::      xij
 

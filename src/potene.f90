@@ -28,8 +28,10 @@ logical                                 :: in_md
 ! local variables
 
 
-integer					:: istate, i, nat3
-integer					:: is, j
+integer					:: istate
+#ifdef USE_MPI
+integer :: i
+#endif
 #if defined (PROFILING)
 real(kind=prec)					:: start_loop_time1
 real(kind=prec)					:: start_loop_time2
@@ -367,7 +369,7 @@ subroutine fix_shell(E_loc)
 ! arguments
 TYPE(RESTRAINT_ENERGIES)                        :: E_loc
 ! local variables
-integer						::	i,i3
+integer						::	i
 real(kind=prec)					::	fk,r2,erst
 TYPE(qr_dist5)                                  ::      dist
 ! global variables used:
@@ -381,7 +383,7 @@ fk = fk_fix
 if ( freeze ) then
 v(i) = zero
 x(i) = xtop(i)
-fk = 0
+fk = zero
 endif
 else
 fk = fk_pshell

@@ -978,9 +978,7 @@ end subroutine q_gauss
 !-----------------------------------------------------------------------
 subroutine get_fep
 ! local variables
-character(len=200)			::	libtext
-character(len=2)			::	qaname
-integer					::	i,j,k,iat
+integer				::	i,j,k
 !temp. array for reallocating long-range exclusion list
 integer(AI), pointer	::	tempexlong(:,:)
 
@@ -1210,7 +1208,7 @@ subroutine init_nodes
 !  boxlength, inv_boxl, boxcentre, sc_lookup 
 !
 
-integer					:: nat3,j,jj,ii,kk
+integer					:: jj,ii,kk
 !temp for shake
 integer,allocatable                     :: shakeconsttmp(:)
 integer,allocatable                     :: shakebondi(:)
@@ -1222,7 +1220,6 @@ real(kind=prec),allocatable             :: shakedist(:)
 real(kind=prec), allocatable		:: temp_lambda(:)
 integer, parameter                      :: maxint=2147483647
 real(kind=prec), parameter              :: maxreal=1E35_prec
-integer  :: MPI_AI_INTEGER, MPI_TINY_INTEGER, i_loop
 
 !external MPI_Address
 !external MPI_Bcast
@@ -1525,7 +1522,7 @@ call MPI_Bcast(winv,natom,QMPI_REAL,0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast winv')
 
 !Broadcast iqatom
-call MPI_Bcast(iqatom, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr) !(TINY)
+call MPI_Bcast(iqatom, natom, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr) !(TINY)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iqatom')
 
 call MPI_Bcast(num_atyp,1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
@@ -1543,7 +1540,7 @@ if (nodeid .ne. 0) then
 allocate(qconn(nstates,nat_solute, nqat),stat=alloc_status)
 call check_alloc('qconn')
 end if
-call MPI_Bcast(qconn, size(qconn), MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr) ! (TINY)
+call MPI_Bcast(qconn, size(qconn), MPI_INTEGER, 0, MPI_COMM_WORLD, ierr) ! (TINY)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast qconn')
 
 
@@ -1613,7 +1610,7 @@ call MPI_Bcast(istart_mol, nmol+1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast istart_mol')
 
 ! Bcast iac, crg and cgpatom 
-call MPI_Bcast(iac, natom, MPI_INTEGER2, 0, MPI_COMM_WORLD, ierr)
+call MPI_Bcast(iac, natom, MPI_INTEGER4, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast iac')
 call MPI_Bcast(crg, natom, QMPI_REAL, 0, MPI_COMM_WORLD, ierr)
 if (ierr .ne. 0) call die('init_nodes/MPI_Bcast crg')
@@ -2156,7 +2153,6 @@ subroutine init_constraints
 !locals
 integer						::      mol, b, ia, ja, constr, angle, i
 integer						::      src, trg, c, ic, jc
-integer						::      solute_shake_constraints
 logical                                         ::      shaken
 integer                                         ::      enda,starta,emol,tgroups
 real(kind=prec)                                 ::      exclshk
@@ -2422,15 +2418,15 @@ write(*,101) const_molecules
 101	format('No. molecules with shake constraints    = ',i10)
 ! calculate #degrees of freedom
 Ndegf=3*natom-constraints    !changed from Ndegf=3*natom-3-shake_constraints, center of mass position is NOT CONstrained in the simulation, but IS constrained for initial temperatures....
-Ndegfree=Ndegf-3*nexats+exclshk
+Ndegfree=int(Ndegf-3*nexats+exclshk)
 
 ! now give the correct number of degrees of freedom according to group size
 do tgroups = 1, ntgroups
         starta = tscale(tgroups)%starta
         enda   = tscale(tgroups)%enda
         tscale(tgroups)%Ndegf    = 3*(enda-starta+1) - tscale(tgroups)%shake
-        tscale(tgroups)%Ndegfree = tscale(tgroups)%Ndegf - 3*tscale(tgroups)%nexcl + &
-               tscale(tgroups)%exclshk 
+        tscale(tgroups)%Ndegfree = int(tscale(tgroups)%Ndegf - 3*tscale(tgroups)%nexcl + &
+               tscale(tgroups)%exclshk) 
 end do
 
 if ((product(tscale(1:ntgroups)%Ndegfree) .eq. 0).or.(ntgroups.eq.1)) then    
@@ -2475,7 +2471,7 @@ end subroutine init_constraints
 
 subroutine maxwell
 ! *** local variables
-integer						:: i,j,k
+integer						:: i
 real(kind=prec)					:: sd,kT
 TYPE(qr_vec)                                    :: vg
 !	Generate Maxwellian velocities 
@@ -2494,7 +2490,7 @@ end subroutine maxwell
 subroutine nh_prop
 
 real(kind=prec)				:: dt4, dt8, expf, s
-integer				:: i, i3
+integer				:: i
 
 !initializing all the constants to be used
 dt4=0.5_prec*dt2
@@ -2656,7 +2652,7 @@ if (.not. use_PBC) then
 	    rexcl_i = rexcl_i * rexcl_o  !translate to Angstrom
 	  end if 
 	  if(iuse_switch_atom == 1) then
-	     call make_shell(nwat)
+	     call make_shell
 	  else
 	     call make_shell2(nwat)
 	  end if
@@ -3054,7 +3050,7 @@ end subroutine pp_int_comp
 subroutine pw_int_comp
 ! locals
 integer                         :: ig,jg,ia,a_ind,b_ind
-integer                         :: hval,lval,it,i
+integer                         :: hval,lval,i
 
 lval = nat_solute
 hval = 0
@@ -3096,7 +3092,7 @@ end subroutine pw_int_comp
 
 subroutine qp_int_comp
 ! locals
-integer                         :: ig,jq,ia,a_ind,is,vdw,j,k
+integer                         :: ig,jq,is,vdw,k
 
 
 allocate(qp_precomp(nat_solute,nqat,nstates),stat=alloc_status)
@@ -3255,7 +3251,7 @@ end subroutine qq_int_comp
 
 subroutine qw_int_comp
 ! locals
-integer                         :: iq,jg,ia,a_ind,b_ind
+integer                         :: iq,jg,a_ind,b_ind
 
 allocate(qw_precomp(nqat,solv_atom,nstates),stat=alloc_status)
 call check_alloc('QAtom-Solvent precomputation array')
@@ -3279,7 +3275,7 @@ end subroutine qw_int_comp
 
 subroutine ww_int_comp
 ! locals
-integer                         :: ig,jg,ia,a_ind,b_ind
+integer                         :: ig,jg,a_ind,b_ind
 
 allocate(ww_precomp(solv_atom,solv_atom),stat=alloc_status)
 call check_alloc('Solvent-Solvent precomputation array')
@@ -3575,7 +3571,7 @@ end subroutine precompute_set_values_ww
 !-----------------------------------------------------------------------
 subroutine prep_sim
 ! local variables
-integer                                         :: i, j, ig, istate,runvar,iw,irc_solvent,ia
+integer                                         :: i, j, ig, istate,runvar,iw,ia
 type(Q_ENE_HEAD)                                :: tempheader
 real(kind=prec)                                 :: rdist,curdist,maxdist
 type(qr_vec)                                    :: xcgp
@@ -4159,7 +4155,7 @@ end subroutine prep_sim_version
 subroutine put_back_in_box
 
 TYPE(qr_vec)				::	boxc,old_boxc
-integer				::	i, j, starten, slutet
+integer				::	i, j, slutet
 !the borders of the periodic box
 TYPE(qr_vec)                            :: maxn,minn
 TYPE(qr_vec)                            :: cm
@@ -4502,9 +4498,8 @@ end subroutine stop_cm_translation
 !-----------------------------------------------------------------------
 subroutine topology
 ! local variables
-integer					::	nat3
 integer					::	i
-real(kind=prec)					::	box_min, vtemp, vtemp1
+real(kind=prec)				::	box_min
 
 !
 ! read topology
@@ -4595,9 +4590,8 @@ end subroutine topology
 
 subroutine wat_sphere
 ! local variables
-integer					:: i,i3,kr,isort,int_wat,istate
-real(kind=prec)					:: rc,rnwat
-real(kind=prec)					:: crgexcl
+integer					:: i,istate
+real(kind=prec)				:: crgexcl
 
 !possibly override target sphere radius from topology
 if(rwat_in > zero) rwat = rwat_in
@@ -4857,7 +4851,7 @@ rshell = (0.5_prec*(rout**3+ri**3))**(one/3.0_prec)
         rout = rout - dr
 end do
 
-n_max_insh = n_max_insh * 1.5_prec !take largest and add some extra
+n_max_insh = int(n_max_insh * 1.5_prec) !take largest and add some extra
 call allocate_watpol_arrays
 
 end subroutine wat_shells

@@ -206,7 +206,7 @@ subroutine md_deallocate
 ! deallocatde this module's own arrays. Called by shutdown
 
 ! local variables for deallocation loop
-	integer			:: ii, jj
+	integer			:: ii
 ! use status to avoid errors if not allocated
 
 ! atom arrays
@@ -666,7 +666,6 @@ write(*,2) 'Energy summary', istep
 end if
 2 format('======================= ',A15,' at step ',i6,' ========================')
 3 format('=========================== FINAL ',A15,' =============================')
-633     format('=========================== ',A,' =============================')
 ! legend line
 write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
 4 format(16X, 6A10)

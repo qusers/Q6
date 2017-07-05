@@ -44,7 +44,7 @@ integer						::	alloc_status
 integer						::	natom
 integer                     :: nat3
 ! --- q-atom number or 0 for non-q
-integer(TINY), allocatable		::	iqatom(:)
+integer, allocatable		::	iqatom(:)
 ! --- water topology
 ! atoms of water, total water molecules, excluded water molecules
 integer						::	nwat
@@ -402,7 +402,7 @@ type(NB_TYPE), allocatable, target::nbpw(:)
 
 type(NB_TYPE), allocatable, target::old_nbpw(:)
 integer						::	nbqq_max !max number of q-q pairs in any state
-integer(TINY), allocatable	::	qconn(:,:,:) !Q-atom connectivity list
+integer(AI), allocatable	::	qconn(:,:,:) !Q-atom connectivity list
 integer,allocatable		:: nbqq_pair(:),nbqqp_pair(:)
 type(NBQ_TYPE), allocatable ::nbqq(:,:)
 type(NBQP_TYPE), allocatable ::nbqqp(:,:)

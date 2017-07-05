@@ -502,8 +502,6 @@ integer function bondcode(taci, tacj)
 ! *** local variables
 	character(len=KEYLENGTH)		::	ti, tj
 	integer i
-	integer						::	leni, lenj
-	integer						::	score, max_score = 0, max_cod
 !.......................................................................
 
 	ti = wildcard_tac(taci)
@@ -1092,7 +1090,7 @@ subroutine impr_ene(emax, nlarge, av_ene, mode)
 ! *** local variables
 	integer		:: i, j, k, l, ip, ic, nlarge, mode
 	TYPE(tors_val)	:: calc
-	real(kind=prec)	:: pe, dv, arg, f1
+	real(kind=prec)	:: pe, dv, arg
 	real(kind=prec) emax, av_ene
 
 !.......................................................................
@@ -1259,7 +1257,7 @@ end subroutine make14list
 
 subroutine makeangles
 ! *** local variables
-	integer ib, jb, ia, i, j, k, iaci, iacj, iack
+	integer ib, jb, ia, i
 	logical						::	used(nang_prm+max_extrabnd)
 	integer						::	itrans(nang_prm+max_extrabnd)
 
@@ -1394,7 +1392,6 @@ end subroutine make_solute_bonds
 subroutine makebonds
 	!locals
 	integer						::	nbonds_solvent, nbonds_extra
-	integer						::	i
 
 	!clear bonds
 	nbonds = 0
@@ -1421,7 +1418,7 @@ end subroutine makebonds
 
 integer function makeextrabonds()
 	!locals
-	integer						::	ix, ib,iaci, iacj
+	integer						::	ix, ib
 	character(len=KEYLENGTH)	::	taci, tacj
 
 ! --- Add extra bonds like S-S bridges
@@ -1500,7 +1497,7 @@ integer function makesomebonds(startres, endres)
 	integer						::	startres, endres
 
 ! *** local variables
-	integer						::	i, ib, ires, imol
+	integer						::	i, ires, imol
 
 	makesomebonds = 0
 
@@ -1672,7 +1669,7 @@ integer function genH(j, residue)
 !arguments
 	integer, intent(in)			::	j, residue
 !locals
-	TYPE(qr_vec)			:: xj, xk, old_xH, xH, dV, dvLast, dx, dVtot
+	TYPE(qr_vec)			:: xj, xk, xH, dV, dvLast, dx, dVtot
 	real(kind=prec)			:: V, Vtot, gamma, VtotLast, dx_line, rms_dV
 	integer				::	ligand, H, kt, lt
 	real(kind=prec),parameter	::	convergence_criterum = 0.1_prec
@@ -1687,14 +1684,13 @@ integer function genH(j, residue)
 	integer						::	Hang_code(max_conn)
 	integer						::	rule
 	type(LIB_ENTRY_TYPE), pointer:: lp
-	integer					::	a, b, axis
-	real(kind=prec)				::	db, bond_length
-	real(kind=prec)				::	scp, angle_deg, dVangle, da, f1
+	integer					::	a, b
+	real(kind=prec)				::	bond_length
+	real(kind=prec)				::	angle_deg, dVangle, da
         TYPE(angl_val)                          :: angle
         TYPE(tors_val)                          :: torsion
-	TYPE(qr_vec)				::	xkt, xlt, rjkt, rktlt, rnj, rnk,rjH
-	real(kind=prec)				::	bj, bk
-	real(kind=prec)				::	phi, phi_deg, sgn, dVtors, arg
+	TYPE(qr_vec)				::	xkt, xlt, rjH
+	real(kind=prec)				::	dVtors, arg
 	logical					::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
@@ -1773,7 +1769,6 @@ integer function genH(j, residue)
 			do setH = 1,nsetH
 			do cgiter = 1, max_cg_iterations
 !				write(*,9, advance='no') cgiter
-9	format('cg step',i3,':')
 				!do line search
 				dx_line = max_dx*2.0_prec**(-cgiter)
 				flipped = .false.
@@ -1885,8 +1880,8 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 	type(MISSING_ANGLE_TYPE),intent(in)	::	missing_angles(:)
         type(MISSING_TOR_TYPE),intent(in)       ::      missing_torsions(:)
 !locals
-        TYPE(qr_vec)						::	xj, xk,old_xH,xH,dV,dvLast,dVtot,dx
-	integer						::	ligand, H, kt, lt
+        TYPE(qr_vec)						::	xj, xk,xH,dV,dvLast,dVtot,dx
+	integer						::	H
 	real(kind=prec)						::	V, Vtot, gamma
 	real(kind=prec)						::	VtotLast
 	real(kind=prec)						::	dx_line, rms_dV
@@ -1894,7 +1889,6 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 	real(8),parameter			::	dV_scale = 0.025_prec
 	real(8),parameter			::	max_dx = 1.0_prec !max_dx is max distance of line search step in first CG iteration (Å)
 	real(kind=prec)						::	local_min = 30
-	real(kind=prec)						::	tors_fk = 10.0_prec
 	integer, parameter			::	max_cg_iterations = 100, max_line_iterations = 35
 	integer						::	cgiter, lineiter
 	real(kind=prec)						:: bnd0
@@ -1902,32 +1896,29 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
              real(kind=prec)                                    ::      ang0,fk
         end type TMP_ANGLE_TYPE
         type TMP_TOR_TYPE
-                real(kind=prec)                                 ::      fk(10),mult(10),delt(10),path(10),ntor
+                real(kind=prec)                                 ::      fk(10),mult(10),delt(10),path(10)
+                integer                                         ::      ntor
         end type TMP_TOR_TYPE
         TYPE(TOR_CODES)                                         ::      tmp_tor_codes
         integer                                                 ::      tmp_bnd_code,tmp_ang_code
         type(TMP_ANGLE_TYPE)                            ::      tmp_ang(max_conn)
         type(TMP_TOR_TYPE)                              ::      tmp_tor(max_conn*3)
 	integer						::	nHang, Hang_atom(max_conn), ator
-	integer						::	Hang_code(max_conn),mtor,nHtor,icod
+	integer						::	mtor,nHtor,icod
         character(KEYLENGTH)                            ::      taci,tacj,tack,tacl
         integer                                         ::      Htor_latom(max_conn*4),Htor_katom(max_conn*4)
         logical                                         ::      opt_only
-	integer						::	rule
-	type(LIB_ENTRY_TYPE), pointer:: lp
-	integer						::	a, b, axis
-        TYPE(qr_vec)                                    :: rjH,rjk,xkt,xlt,rjkt,rktlt,rnj,rnk,dH,xl
+	integer						::	a
+        TYPE(qr_vec)                                    :: rjH,xl
         TYPE(angl_val)                                  :: angle
         TYPE(tors_val)                                  :: torsion
-	real(kind=prec)						::	bond_length, db
-	real(kind=prec)						::	bjHinv, bjkinv
-	real(kind=prec)						::	scp, angle_deg, dVangle, da, f1
-	real(kind=prec)						::	bj, bk
-	real(kind=prec)						::	phi, phi_deg, sgn, dVtors, arg
+	real(kind=prec)						::	bond_length
+	real(kind=prec)						::	angle_deg, dVangle, da
+	real(kind=prec)						::	dVtors, arg
 	logical						::	flipped
 	integer                     :: setH
 	integer, parameter          :: nsetH = 5   !number of times to flip, if local min, and retry
-        integer                                                 :: addatom,mbond,mangle,miss,j
+        integer                                                 :: addatom,mbond,mangle,miss
         type(MISSING_TYPE),allocatable                          :: missing_local(:)        
 
         
@@ -2066,7 +2057,6 @@ integer function genHeavy(waterarray,missing_heavy,missing_bonds,missing_angles,
 		do setH = 1,nsetH
 		do cgiter = 1, max_cg_iterations
 !				write(*,9, advance='no') cgiter
-9	format('cg step',i3,':')
 			!do line search
 			dx_line = max_dx*2.0_prec**(-cgiter)
 			flipped = .false.
@@ -2209,7 +2199,7 @@ end subroutine makeimps
 
 subroutine imp_params
 ! *** local variables
-	integer i, ii, iaci, iacj, iack, iacl
+	integer i, iaci, iacj, iack, iacl
 	integer iused(nimp_prm+max_extrabnd), itrans(nimp_prm+max_extrabnd)
 
 
@@ -2319,7 +2309,7 @@ end function find_atom
 subroutine makeimps_explicit
 !generate impropers using definitions in library file
 ! *** local variables
-	integer						::	ires, irc, iimp, i
+	integer						::	ires, irc, iimp
 
 	nimps = 0
 	nimps_solute = 0
@@ -2529,7 +2519,7 @@ end subroutine makeconn
 
 subroutine maketors
 ! *** local variables
-	integer i, j, ic, jc, ib, it, iaci, iacj, iack, iacl
+	integer i, j, ic, jc, ib, iaci, iacj, iack, iacl
 	integer iused(ntor_prm+max_extrabnd), itrans(ntor_prm+max_extrabnd)
 	type(TOR_CODES)				::	torcodes
 	integer						::	icod
@@ -2639,7 +2629,7 @@ end subroutine prompt
 
 !-----------------------------------------------------------------------
 
-real FUNCTION randm(seed, seed_only)
+real(kind=prec) FUNCTION randm(seed, seed_only)
 !arguments
 	integer, intent(in),optional::	seed
 	logical, intent(in), optional::	seed_only
@@ -2652,7 +2642,10 @@ real FUNCTION randm(seed, seed_only)
 	if(present(seed)) then
 		irand = mod(iabs(seed), m)
 	end if
-	if(present(seed_only)) return
+	if(present(seed_only)) then
+		randm = zero
+		return
+	end if
 !
 ! --- multiply irand by mult, but take into account that overflow must
 ! --- be discarded, and do not generate an error.
@@ -2828,30 +2821,29 @@ subroutine readlib(file)
 !arguments
 	character(*), optional		::	file
 ! *** local variables
-	CHARACTER					::	line*80, filnam*80
-	integer						::	irec, i, iat, ires, j, igp, ntot
-	real(kind=prec)						::	qtot, qgrp, qtot_grp
-	character(len=80)			::	resnam
-	integer						::	res_count
-	logical						::	prm_res
-	integer						::	cgp_read(max_atcgplib)
+	CHARACTER                               :: line*80, filnam*80
+	integer                                 :: i, iat, igp, ntot
+	real(kind=prec)                         :: qtot, qgrp, qtot_grp
+	character(len=80)                       :: resnam
+	integer                                 :: res_count
+	logical                                 :: prm_res
 
 	!some extra arrays used only for allocation. This circumvents
 	!an unaligned access error on Digital UNIX 4.0 / Digital FORTRAN
 	!(Compiler bug?)
 
-	character(len=KEYLENGTH), pointer::	tac_lib(:)
-	character(len=4), pointer	::	atnam(:)
-	real(kind=prec), pointer				::	crg_lib(:)
-	integer(AI), pointer		::	natcgp(:), switch(:)
-	integer(AI), pointer		::	atcgp(:,:)
-	type(LIB_BOND_TYPE), pointer::	bnd(:)
-	type(LIB_IMP_TYPE), pointer	::	imp(:)
-	logical						::	lib_exists
-	character(len=8)			::	atnam1, atnam2, atnam3, atnam4
-	integer						::	atno1, atno2, atno3, atno4
-	logical						::	yes
-	integer						::	atoms_in_rule, readstat
+	character(len=KEYLENGTH), pointer       :: tac_lib(:)
+	character(len=4), pointer               :: atnam(:)
+	real(kind=prec), pointer                :: crg_lib(:)
+	integer(AI), pointer                    :: natcgp(:), switch(:)
+	integer(AI), pointer                    :: atcgp(:,:)
+	type(LIB_BOND_TYPE), pointer            :: bnd(:)
+	type(LIB_IMP_TYPE), pointer             :: imp(:)
+	logical                                 :: lib_exists
+	character(len=8)                        :: atnam1, atnam2
+	integer                                 :: atno1, atno2
+	logical                                 :: yes
+	integer                                 :: atoms_in_rule, readstat
 
 1	format(10a7)
 2	format(a4)
@@ -3194,184 +3186,9 @@ subroutine check_overload(resnam)
 end subroutine check_overload
 
 !---------------------------------------------------------------------------------
-
-subroutine oldreadparm(flag)
-!	arguments
-	LOGICAL flag
-! *** local variables
-	integer i, ityp, filestat
-	character(200)				::	line
-	character(len=KEYLENGTH)	::	taci, tacj, tack, tacl
-	integer						::	iaci, iacj, iack, iacl
-!.......................................................................
-
-	!set default values for options which are not available in old param. file
-	iuse_switch_atom = 1 !this is the default. It can be overridden
-	!in old libraries by setting switch atoms to 0
-	!new parameter files have the keyword switch_atoms (sec. options)
-	!to control this
-	coulomb_constant = 332.0
-	imp_explicit = .false.
-	imp_type = 1 !harmonic impropers
-	ff_type = FF_GROMOS
-
-	flag = .true.
-	CALL skip_comments(2)
-
-	i = 0
-	READ(2, *, err = 1000) nbnd_prm
-	CALL skip_comments(2)
-	if(allocated(bnd_prm)) deallocate(bnd_prm)
-	if(allocated(bnd_types)) deallocate(bnd_types)
-	allocate(bnd_prm(nbnd_prm), stat=alloc_status)
-	allocate(bnd_types(nbnd_prm), stat=alloc_status)
-	call check_alloc('bond parameters')
-	do i = 1, nbnd_prm
-		READ(2, *, err = 1000) iaci, iacj, bnd_prm(i)%prm%fk, bnd_prm(i)%prm%bnd0
-		bnd_types(i)%taci = tac(iaci)
-		bnd_types(i)%tacj = tac(iacj)
-		bnd_prm(i)%SYBYLtype = '1 ' !set to default
-	enddo
-	write( * , 110) nbnd_prm, 'bond types'
-	CALL skip_comments(2)
-	i = 0
-	READ(2, *, err = 1010) nang_prm
-	CALL skip_comments(2)
-	if(allocated(ang_prm)) deallocate(ang_prm)
-	allocate(ang_prm(nang_prm), stat=alloc_status)
-	if(allocated(ang_types)) deallocate(ang_types)
-	allocate(ang_types(nang_prm), stat=alloc_status)
-	call check_alloc('angle parameters')
-	!set optional parameters to 0.
-	ang_prm(:)%ureyfk = 0.
-	ang_prm(:)%ureyr0 = 0.
-	do i = 1, nang_prm
-		read(2, '(a80)', err=1010) line
-		read(line, *, iostat=filestat) iaci, iacj, iack, ang_prm(i)
-		ang_types(i)%taci = tac(iaci)
-		ang_types(i)%tacj = tac(iacj)
-		ang_types(i)%tack = tac(iack)
-		!accept missing parameters but not read error
-		if(filestat > 0) goto 1010
-	enddo
-	write( * , 110) nang_prm, 'angle types'
-
-	CALL skip_comments(2)
-	i = 0
-	READ(2, *, err = 1020) ntor_prm
-	CALL skip_comments(2)
-	if(allocated(tor_prm)) deallocate(tor_prm)
-	allocate(tor_prm(ntor_prm), stat=alloc_status)
-	if(allocated(tor_types)) deallocate(tor_types)
-	allocate(tor_types(ntor_prm), stat=alloc_status)
-	call check_alloc('torsion parameters')
-	do i = 1, ntor_prm
-		READ(2, *, err = 1020) iaci, iacj, iack, iacl, tor_prm(i)
-		tor_types(i)%taci = tac(iaci)
-		tor_types(i)%tacj = tac(iacj)
-		tor_types(i)%tack = tac(iack)
-		tor_types(i)%tacl = tac(iacl)
-	enddo
-	write(*, 110) ntor_prm, 'torsion types'
-
-	CALL skip_comments(2)
-	i = 0
-	READ(2, *, err = 1030) nimp_prm
-	CALL skip_comments(2)
-	if(allocated(imp_prm)) deallocate(imp_prm)
-	allocate(imp_prm(nimp_prm), stat=alloc_status)
-	call check_alloc('improper parameters')
-	do i = 1, nimp_prm
-		READ(2, *, err = 1030) iacj, iack, imp_prm(i)%prm
-		imp_prm(i)%taci = '' !not used
-		imp_prm(i)%tacj = tac(iacj)
-		imp_prm(i)%tack = tac(iack)
-		imp_prm(i)%tacl = '' !not used
-	enddo
-	write( * , 110) nimp_prm, 'improper types'
-
-	CALL skip_comments(2)
-	i = 0
-	READ(2, *, err = 1040) natyps
-
-	READ(2, *, err = 1040) ivdw_rule
-	READ(2, *, err = 1040) el14_scale
-	CALL skip_comments(2)
-
-	!if no PDB file read (blank topology)
-	if(allocated(iaclib)) deallocate(iaclib)
-	max_atyps = max_old_atyps
-	allocate(iaclib(max_atyps))
-	if(allocated(SYBYL_atom_type)) deallocate(SYBYL_atom_type)
-	allocate(SYBYL_atom_type(max_atyps))
-	if(allocated(tac)) deallocate(tac)
-	allocate(tac(max_atyps))
-	!clear atom type parameters
-	do i=1,max_atyps
-		iaclib(i)%avdw(:) = 0.
-		iaclib(i)%bvdw(:) = 0.
-		iaclib(i)%mass = 0.
-		SYBYL_atom_type(i) = '     '
-		tac(i) = ''
-	end do
-
-	call index_create(natyps)
-	do i = 1, natyps
-		READ(2, *, err = 1040) ityp, iaclib(ityp)%avdw(1), iaclib(ityp)%avdw(2), &
-			iaclib(ityp)%bvdw(1), iaclib(ityp)%avdw(3), iaclib(ityp)%bvdw(3), &
-			iaclib(ityp)%mass
-		iaclib(ityp)%bvdw(2) = iaclib(ityp)%bvdw(1)
-		write(taci,'(i4)') ityp
-		tac(ityp) = adjustl(taci)
-		if(.not. index_add(tac(ityp), ityp)) then
-			write(*,130) tac(i)
-		end if
-	enddo
-	write( * , 110) natyps, 'atom types'
-
-	CALL skip_comments(2)
-	i = 0
-	READ(2, *, err = 1050) nlj2
-	CALL skip_comments(2)
-	if(allocated(lj2)) deallocate(lj2)
-	allocate(lj2(nlj2))
-	do i = 1, nlj2
-	READ(2, *, err = 1050) lj2(i)%i, lj2(i)%j
-	enddo
-	write( * , 110) nlj2, 'LJ type 2 pairs'
-
-	write( * , '(a,/)') 'Force field parameters successfully read.'
-	return
-
-  110 format ('Read ',i4,' ', a)
-  120 format ('>>> ERROR: Failed to read ',a,' number ',i4)
-  130 format ('>>> ERROR: Could not enumerate atom type ',a, '. Duplicate name?')
-
- 1000 write( * , 120) 'bond type', i
-	flag = .false.
-	return
-
- 1010 write( * , 120) 'angle type', i
-	flag = .false.
-	return
-
- 1020 write( * , 120) 'torsion type', i
-	flag = .false.
-	return
-
- 1030 write( * , 120) 'improper type', i
-	flag = .false.
-	return
-
- 1040 write( * , 120) 'atom type', i
-	flag = .false.
-	return
-
- 1050 write( * , 120) 'LJ type 2 pair', i
-	flag = .false.
-	return
-!.......................................................................
-end subroutine oldreadparm
+! old file formats are no longer supported!
+! subroutine oldreadparm(flag)
+! end subroutine oldreadparm -> nuked from orbit
 
 !-----------------------------------------------------------------------
 
@@ -3389,10 +3206,10 @@ subroutine readff
 10	format('>>>>> ERROR: ',a,' does not exist.')
 	if(.not. prm_open(prm_file)) then
 		!if reading fails try old format
-		write(*,'(a)') '>>>>>WARNING: Attempting to read old-style parameter file.'
+		write(*,'(a)') '>>>>>ERROR: Can not read file.'
 		if(openit(2, prm_file, 'old', 'formatted', 'read') /= 0) return
-		CALL oldreadparm(ff_ok)
 		close(2)
+		return
 	else
 		call readparm(prm_file) !this will set global flag topo_ok
 		call prm_close
@@ -3406,18 +3223,18 @@ subroutine readparm(filnam)
 	character(*)				::	filnam
 
 ! *** local variables
-	integer						::	i, ityp, j
-	character(len=200)			::	line, restofline
-	real(kind=prec)						::	rdummy
-	logical						::	ldummy
+	integer				::	i, ityp, j
+	character(len=200)		::	line
+	real(kind=prec)			::	rdummy
+	logical				::	ldummy
 	character(len=KEYLENGTH)	::	taci, tacj, tack, tacl
-	integer						::	iaci, iacj, iack, iacl
-	character(len=80)			::	section
-	logical						::	SYBYL_warn = .false.
-	integer						::	naliases
-	type(BOND_PRM_TYPE)			::	bnd_prm_tmp
-	type(ANGLIB_TYPE)			::	ang_prm_tmp
-	type(TORLIB_TYPE)			::	tor_prm_tmp
+	integer				::	iaci, iacj, iack, iacl
+	character(len=80)		::	section
+	logical				::	SYBYL_warn = .false.
+	integer				::	naliases
+	type(BOND_PRM_TYPE)		::	bnd_prm_tmp
+	type(ANGLIB_TYPE)		::	ang_prm_tmp
+	type(TORLIB_TYPE)		::	tor_prm_tmp
 !.......................................................................
 	ff_ok = .false.
 
@@ -3426,10 +3243,9 @@ subroutine readparm(filnam)
 !parameter file is opened by maketop
 	if(.not. prm_open_section('options')) then
 		write(*,*) '>>> WARNING: Options section not found in parameter file.'
-		write(*,*) '    Trying to read old style parameter file:'
+		write(*,*) '    Aborting parameter file read'
 		call prm_close()
 		if(openit(2, filnam, 'old', 'formatted', 'read') /= 0) return
-		CALL oldreadparm(ff_ok)
 		close(2)
 		return
 	end if
@@ -4322,7 +4138,7 @@ type(RETTYPE) function is_new_mol(thisres,prevres,gap,old,tnam,tnum,firstres)
 	logical					:: gap
 	character*4				:: tnam
 	! *** local variables
-	real*8					:: dist,xdist,ydist,zdist
+	real(kind=prec)				:: dist
 	integer					:: dhead,dtail
 	integer,allocatable			:: start_temp(:)
 	type(RETTYPE)				:: local
@@ -4378,12 +4194,12 @@ end function  is_new_mol
 
 subroutine readtop
 	! *** local variables
-	character(len=80)			::	filnam
-	character(len=200)			::	files_to_load
-	integer						::	 i, j, ires
-	logical						::	loaded, res_found
-	integer						::	fn_start, fn_end, totlen
-	character(len=4)            ::  resnam_tmp
+	character(len=80)		:: filnam
+	character(len=200)		:: files_to_load
+	integer				:: i, ires
+	logical				:: res_found
+	integer                         :: fn_start, fn_end, totlen
+	character(len=4)                :: resnam_tmp
 
 	CALL get_string_arg(filnam, '-----> Give name of(old) topology file: ')
 	if(openit(10, filnam, 'old', 'formatted', 'read') /= 0) return
@@ -4457,7 +4273,6 @@ subroutine readx
 ! needs to be done for all functions
 ! *** local variables
 	CHARACTER(len=80)			::	filnam
-	integer						::	i
 	integer(4)					::	nat3,canary
 	integer						::	u
         logical                                         :: old_restart = .false.
@@ -4499,8 +4314,6 @@ end subroutine readx
 !-----------------------------------------------------------------------
 
 subroutine readnext
-	integer						::	filestat, nat3
-	logical						::	isopen
 	character(len=10)			::	buf
 
 	!trj_frame is the number of the record about to be read
@@ -4596,11 +4409,10 @@ end subroutine modify_mask
 
 subroutine set_cgp
 ! *** local variables
-	integer ires, igp, i, ntot, ntot_solute, i3
+	integer ires, igp, i, ntot, ntot_solute
 	integer						::	switchatom, ia, ncgp_skipped = 0
 	real(kind=prec)						::	r2
         TYPE(qr_vec)						::	cgp_cent
-	integer						::	nheavy
 
 	ntot = 0
 	ntot_solute = 0
@@ -4859,7 +4671,7 @@ integer function get_atom_from_descriptor(aid)
 	character(len=20)			::	res_str
 	character(len=5)			::	atom_str
 	integer						::	filestat
-	integer						::	resnum, atnum
+	integer						::	resnum
 
 	get_atom_from_descriptor = 0
 
@@ -4903,6 +4715,7 @@ logical function set_boundary_condition()
 		!set the center and radius of the sphere
 		if(.not. set_simulation_sphere()) then
 			call parse_reset !clear command line
+			set_boundary_condition = .false.
 			return
 		end if
 		boundary_set = .true.
@@ -4913,6 +4726,7 @@ logical function set_boundary_condition()
 		!set the center and radius of the box
 		if(.not. set_solvent_box()) then
 			call parse_reset !clear command line
+			set_boundary_condition = .false.
 			return
 		end if
 		boundary_set = .true.
@@ -4991,7 +4805,6 @@ end function set_simulation_sphere
 logical function set_solvent_box()
 
 	!locals
-	integer					::	i !loop index
 	character(len=80)		::	line
 	integer					::	centre_atom
 	integer					::	filestat
@@ -5120,11 +4933,11 @@ subroutine solvate_box_grid
 !solvate sphere using grid
 
 	!locals
-        TYPE(qr_vec)                                            :: minc,maxc,grid
-	integer						::	max_wat !max number of molecules
-	integer						::	waters_in_box
-	real(kind=prec)						::	radius2, solvent_grid
-	character(len=200)			::	solvent
+        TYPE(qr_vec)                            :: minc,maxc,grid
+	integer					:: max_wat !max number of molecules
+	integer					:: waters_in_box
+	real(kind=prec)				:: solvent_grid
+	character(len=200)			:: solvent
 
 	!set water residue name
 	call get_string_arg(solvent, &
@@ -5148,7 +4961,7 @@ subroutine solvate_box_grid
         boxlength = q_nint(boxlength/solvent_grid)*solvent_grid
 
 !Calculate max number of waters possible
-	max_wat = lib(irc_solvent)%density * boxlength%x * boxlength%y * boxlength%z
+	max_wat = int(real((lib(irc_solvent)%density * boxlength%x * boxlength%y * boxlength%z),kind=prec))
 
 	allocate(xw(lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
 	call check_alloc('water sphere co-ordinate array')
@@ -5540,7 +5353,7 @@ subroutine solvate_sphere_grid
 		return
 	end if
 
-	max_wat = (2.0_prec*rwat+solvent_grid)**3 / solvent_grid**3
+	max_wat = int(real(((2.0_prec*rwat+solvent_grid)**3 / solvent_grid**3),kind=prec))
 	radius2 = rwat**2
 
 	allocate(xw(lib(irc_solvent)%nat,max_wat), keep(max_wat), stat=alloc_status)
@@ -5607,12 +5420,8 @@ subroutine solvate_sphere_file(shift)
 	integer					::	box
 	character(len=1)			::	atomnames
 	integer					::	filestat
-	character(len=10)			::	filepos
 	integer,allocatable			::	resno(:)
 	character(len=4),allocatable		::	resnam(:)
-
-        TYPE(qr_vec)				::	xwtmp(max_atlib)
-	integer					::	at_id(max_atlib)
 
 	call get_string_arg(xwat_file, '-----> Solvent file name: ')
 	open (unit=13, file=xwat_file, status='old', form='formatted', &
@@ -5815,7 +5624,7 @@ subroutine solvate_restart
 	integer						::	u, fstat
         TYPE(qr_vec),allocatable			::	xtmp(:)
 	character(len=200)			::	solvent
-	integer					::	headercheck,i,j,l,cindex
+	integer					::	headercheck,j,l,cindex
 	logical					::	old_restart
         TYPE(qr_vecs),allocatable	::	xtmp_single(:)
         TYPE(qr_vecd),allocatable	::	xtmp_double(:)
@@ -5938,7 +5747,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	logical						::	wheavy(max_atlib), restart
 	real(kind=prec)					::	r2
 	integer						::	next_wat, next_atom, num_heavy, added_heavy
-	integer						::	heavy_bonds, heavy_angles, added, i, j, k, l, h
+	integer						::	heavy_bonds, heavy_angles, added, i, j, h
         integer                                         ::      heavy_torsions
 	type(MISSING_TYPE),allocatable			::	missing_heavy(:)
 	type(MISSING_BOND_TYPE),allocatable		::	missing_bonds(:)
@@ -6657,14 +6466,13 @@ end subroutine writepdb
 
 subroutine writemol2
 ! *** local variables
-	CHARACTER filnam*80, reply*1
-	character					::	mol_name*16, ti*1, tj*1
-	integer						::	i, cnt, j, iat
+	CHARACTER filnam*80
+	character					::	mol_name*16
+	integer						::	i, j, iat
 	integer						::	u
-	integer						::	mol, mol_start, mol_end, nat_mol, nbnd_mol
-	integer						::	at_start, at_end, res_start, res_end
-	integer						::	bnd_start, bnd_end, new_last, new_res
-	logical						::	iwrite_h, iwrite_w
+	integer						::	nbnd_mol
+	integer						::	at_start
+	integer						::	new_res
 	integer						::	nres_mol,res_atoms(nres), new_num(nat_pro)
 	integer						::	new_resnum(nres)
 	integer						::	dict_type
@@ -6810,7 +6618,6 @@ end subroutine writemol2
 subroutine writetop
 ! *** local variables
 	CHARACTER filnam * 80
-	integer i, j, ig
 	CHARACTER answer * 10
 
 ! --- Warn if missing parameters were found by maketop
@@ -6865,7 +6672,7 @@ end subroutine make_shell2_wrap
 logical function get_centre_by_mass(centre)
 type(qr_vec), intent(OUT)   :: centre
 type(MASK_TYPE)        :: mask
-integer                :: ats, imaskat, iat
+integer                :: ats,iat
 real(kind=prec)                :: totmass, mass
 get_centre_by_mass = .false.
 centre = zero

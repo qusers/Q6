@@ -96,13 +96,11 @@ end function grid_add
 logical function initialize()                  
 ! local variables
 character					:: text*200
-integer						:: i,j,length,ii
+integer						:: i,ii
 real(kind=prec)						:: stepsize
 real(kind=prec)						:: lamda_tmp(max_states)
 integer						:: fu, fstat
 real(kind=prec)						::	rjunk
-integer						::	ijunk
-
 ! local parameters
 integer						:: num_args,tmp_itdis
 character(200)				:: infilename
@@ -112,7 +110,7 @@ character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
-character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2,constraint_string
+character(len=200)				:: gc_mask_tmp(maxmaskrows),str,constraint_string
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
@@ -164,7 +162,7 @@ call prm_close
 fu = freefile()
 open(unit=fu, file=infilename, action='read', form='formatted', status='old', iostat=fstat)
 if (fstat .ne. 0) call die('error opening input file '//infilename)
-        initialize = old_initialize(fu)
+        initialize = .false.
         close(fu)
 return
 else
@@ -1343,386 +1341,9 @@ end function initialize
 
 !-----------------------------------------------------------------------------------
 
-
-logical function old_initialize(fu)
-!arguments
-integer						::	fu
-! local variables
-integer						::	iuse_indip, shake_flag
-character					:: text*200, watmodel*80
-integer						:: i,j,length
-integer						:: irestart
-real(kind=prec)						:: stepsize
-real(kind=prec)						:: lamda_tmp(max_states)
-integer						:: fstat
-integer						::	NBMethod
-integer						::	iwpol_restr
-real(kind=prec)						::	rjunk
-
-!this is called by initialize to read old-style input file which is 
-!alreadu open as unit fu
-
-! this subroutine will init:
-!  nsteps, stepsize, dt
-!  Temp0, tau_T, iseed, Tmaxw
-!  usr_LRF, NBcycle, Rcpp, Rcww, Rcpw, Rcq
-!  shake_solvent, shake_solute, shake_hydrogens
-!  fk_pshell
-
-
-!  fk_wsphere=-1, wpol_restr, wpol_born fkwpol=-1, Dwmz=-1, awmz=-1
-!    (values initialized to -1 will be set in water_sphere, 
-!    once target radius is known)
-!  top_file
-!  restart, [restart_file]
-!  xfin_file
-!  itrj_cycle, iene_cycle, iout_cycle, itemp_cycle [trj_file], [ene_file]
-!  fep_file
-!  nstates, EQ (allocating memory for EQ)
-!  implicit_rstr_from_file, [exrstr_file]
-!  nrstr_seq, [rstseq] (allocating memory for rstseq)
-!  nrstr_pos, [rstpos] (allocating memory for rstpos)
-!  nrstr_dist, [rstdis] (allocating memory for rstdis)
-!  nrstr_wall, [rstwal] (allocating memory for rstwal)
-
-
-write(*,1)
-1	format('>>> WARNING: Entering unsupported compatibility mode',/ &
-   '             to read version 2 input file.',/,&
-   '             New features unavailable.')
-
-old_initialize = .true. 
-
-!use default values for new features not in old kind of input.
-RcLRF = 999.0_prec
-exclude_bonded = .false.
-force_rms = .false.
-shake_hydrogens = .false.
-itemp_cycle = iout_cycle_default
-awmz = -1
-
-! --- nsteps, stepsize
-!read (fu,*, iostat=stat) nsteps,stepsize
-if (.not. prm_get_int_real(nsteps,stepsize)) then
-old_initialize = .false.
-        call die("Wrong input format.")
-end if
-
-write (*,10) nsteps, stepsize
-10	format ('Number of MD steps =',i10,'  Stepsize (fs)    =',f10.3)
-
-! convert to internal time units once and for all.
-dt=0.020462_prec*stepsize
-dt2=0.5_prec*dt
-
-! --- Temp0, tau_T, iseed, Tmaxw
-read(fu,'(a80)') text !read line into buffer
-!now read buffer (avoid reading more lines from inpunt in search for more values)
-read(text,*, err=17, end=17) Temp0,tau_T, iseed,Tmaxw 
-17	write (*,15) Temp0,tau_T
-if(Temp0 <= 0) then
-write(*,'(a)') &
-        '>>> Error: No dynamics at zero temperature! Aborting.'
-old_initialize = .false.
-end if
-
-15	format ('Target temperature =',f10.2,'  T-relax time     =',f10.2)
-if (iseed > 0) write (*,16) Tmaxw, iseed
-16	format ('Initial velocities will be generated from Maxwell distribution:',&
-        /,'Maxwell temperature=',f10.2,' Random number seed=',i10)
-tau_T=0.020462_prec*tau_T
-if(tau_T < dt) then
-write(*,'(a)') '>>> Error: tau_t must be >= stepsize.'
-old_initialize = .false.
-end if
-
-! --- NBmethod, NBcycle, Rcpp, Rcww, Rcpw, Rcq
-read (fu,*) NBmethod,NBcycle,Rcpp,Rcww,Rcpw,Rcq
-if(NBMethod == 2) then
-use_LRF = .true.
-else 
-use_LRF = .false.
-end if
-write (*,20) NBmethod,NBcycle
-20	format ('Nonbonded method   =',i10,'  NB update cycle  =',i10,/)
-write (*,25) Rcpp,Rcww,Rcpw,Rcq
-25	format ('Cutoffs are: Rcpp  =',f6.2,'  Rcww =',f6.2,'  Rcpw =', &
-f6.2,'  Rcqp =',f6.2,/)
-
-! --- shake_flag
-read (fu,*) shake_flag
-shake_solvent = .false.
-shake_solute = .false.
-if(shake_flag >= 1) then
-shake_solvent = .true.
-end if
-if(shake_flag == 2) then
-shake_solute = .true.
-end if
-
-write (*,30) shake_flag
-30	format ('Shake method       =',i10)
-
-! --- iuse_indip
-read (fu,*) 
-write (*,35) 
-35	format ('Ignoring induced dipole flag.')
-
-! --- protein center: xpcent(:)
-read (fu,*) 
-write (*,40)
-40	format ('Ignoring solute centre.')
-
-! --- rexcl_o, rexcl_i, fk_pshell
-read (fu,*) rjunk, rjunk, fk_pshell
-write(*,44)
-write (*,45) fk_pshell
-44	format ('Ignoring exclusion and shell radii.')
-45	format ('Restrained shell force const.          =',f8.2)
-
-! --- water center: xwcent(:)
-read (fu,*) 
-write (*,50) 
-50	format ('Ignoring solvent centre.')
-
-! set default values before reading
-! done this way because the SGI compiler initialises values to be read to zero
-
-read(fu,'(a80)') text ! read line into buffer
-! now read buffer (avoid reading more lines from input in search for more values)
-read(text, fmt=*, err=58, end=58) rjunk, rjunk, fk_wsphere, iwpol_restr, fkwpol, Dwmz
-goto 59
-
-! set default values:
-58	Dwmz = -1
-if (fkwpol .eq. 0) then
-fkwpol = -1
-if (fk_wsphere .eq. 0) then
-  fk_wsphere = -1
-end if
-end if
-59	if(iwpol_restr == 0) then
-wpol_restr = .false.
-wpol_born = .false.
-elseif(iwpol_restr == 1) then
-wpol_restr = .true.
-wpol_born = .true.
-elseif(iwpol_restr == 2) then
-wpol_restr = .true.
-wpol_born = .false.
-else
-call die('unknown water polarisation restraining mode')
-end if
-write(*,57)
-57	format('Ignoring solvent radius and min. packing distance.')
-! --- top_file
-read (fu,'(a80)') text
-call get_fname (text,length,top_file)
-write (*,60) top_file(1:length)
-60	format ('Topology file      = ',a)
-
-! --- restart, [restart_file]
-read (fu,*) irestart
-if ( irestart .eq. 1 ) then
-restart = .true.
-read (fu,'(a80)') text
-call get_fname (text,length,restart_file)
-write (*,65) restart_file(1:length)
-else
-restart = .false.
-write (*,'(a)') 'Initial coordinates taken from topology.'
-if(iseed == 0) then
-        write(*,'(a)') &
-                'Error: Need a random number seed to generate initial velocities, aborting.'
-        call die('invalid data in input')
-end if
-end if
-65 format ('Initial coord. file= ',a)
-
-! --- xfin_file
-read (fu,'(a80)') text
-call get_fname (text,length,xfin_file)
-write (*,80) xfin_file(1:length)
-80 format ('Final coord. file  = ',a,/)
-
-! --- itrj_cycle, iene_cycle, iout_cycle, [trj_file], [ene_file]
-read (fu,*) itrj_cycle, iene_cycle, iout_cycle
-write (*,85) itrj_cycle, iene_cycle, iout_cycle
-85 format ('Trajectory, Energy and Output cycles   =',3i8,/)
-
-if ( itrj_cycle .gt. 0 ) then
-read (fu,'(a80)') text
-call get_fname (text,length,trj_file)
-write (*,90) trj_file(1:length)
-else
-write (*,'(a)') 'No trajectory written.'
-itrj_cycle = -999999999 !make sure mod(istep, itrj_cycle) never = 0
-end if
-90 format ('Trajectory file    = ',a)
-
-if ( iene_cycle .gt. 0 ) then
-read (fu,'(a80)') text
-call get_fname (text,length,ene_file)
-write (*,94) ene_file(1:length)
-else
-write (*,'(a)') 'No energy file written'
-iene_cycle = -999999999 ! make sure mod(istep, iene_cycle) never = 0
-end if
-94 format ('Energy output file = ',a)
-
-if(iout_cycle == 0) then
-write(*,'(a)') 'No energy summaries written.'
-iout_cycle = -999999999 ! make sure mod(istep, iout_cycle) never = 0
-end if
-
-! --- fep_file
-read (fu,'(a80)') text
-call get_fname (text,length,fep_file)
-write (*,95) fep_file(1:length)
-95 format ('FEP input file     = ',a,/)
-
-! --- nstates, EQ
-read (fu,*) nstates, (lamda_tmp(i),i=1,nstates)
-if ( nstates .gt. 0 ) then
-! allocate memory for EQ
-allocate(EQ(nstates), stat=alloc_status)
-call check_alloc('Q-atom energy array')
-
-! init EQ%lambda
-EQ(1:nstates)%lambda = lamda_tmp(1:nstates)
-write (*,98) (EQ(i)%lambda,i=1,nstates)
-98  format ('lambda-values      = ',10f8.5)
-end if
-
-!	--- restraints:
-write (*,'(/,a)') 'Listing of restraining data:'
-
-! --- implicit_rstr_from_file, [exrstr_file]
-read (fu,*) implicit_rstr_from_file
-write (*,101) implicit_rstr_from_file
-101 format ('Read rstr file     =',i10)
-if ( implicit_rstr_from_file .eq. 1 ) then
-read (fu,'(a80)') text
-call get_fname (text,length,exrstr_file)
-write (*,104) exrstr_file(1:length)
-else
-write (*,105)
-end if
-104 format ('External rstr file = ',a,/)
-105 format ('Implicit positional restraints from topology.',/)
-
-! --- nrstr_seq, [rstseq]
-read (fu,*) nrstr_seq
-write (*,109) nrstr_seq
-109 format (/,'No. sequence rstrs =',i10)
-if ( nrstr_seq .gt. 0 ) then
-! allocate memory for rstseq
-allocate(rstseq(nrstr_seq), stat=alloc_status)
-call check_alloc('restraint list')
-write (*,110)
-110 format (1x,'  atom_i  atom_j      fc  H-flag to_centre')
-end if
-do i=1,nrstr_seq
-! read rstseq(i)
-read (fu,'(a80)') text
-rstseq(i)%to_centre = 0 
-read(text,*, end=111, err=111) rstseq(i)
-111	write(*,112) rstseq(i)
-112 format (2i8,f8.2,i8,i10)
-end do
-
-! --- nrstr_pos, [rstpos]
-read (fu,*) nrstr_pos
-write (*,115) nrstr_pos
-115 format (/,'No. position rstrs =',i10)
-if ( nrstr_pos .gt. 0 ) then
-! allocate memory for rstpos
-allocate(rstpos(nrstr_pos), stat=alloc_status)
-call check_alloc('restraint list')
-write (*,120)
-end if
-120 format ('atom_i      x0      y0      z0     fcx     fcy     fcz  istate')
-do i=1,nrstr_pos
-! read rstpos(i)
-read (fu,*) rstpos(i)%i,rstpos(i)%x, &
-rstpos(i)%fk, rstpos(i)%ipsi
-write (*,122) rstpos(i)%i,rstpos(i)%x, &
-rstpos(i)%fk, rstpos(i)%ipsi
-end do
-122 format (i6,6f8.2,i8)
-
-! --- nrstr_dist, [rstdis]
-read (fu,*) nrstr_dist
-write (*,125) nrstr_dist
-125 format ('No. distance rstrs =',i10)
-if ( nrstr_dist .gt. 0 ) then
-! allocate memory for rstdis
-allocate(rstdis(nrstr_dist), stat=alloc_status)
-call check_alloc('restraint list')
-write (*,130)
-end if
-130 format ('atom_i atom_j   dist.      fc  istate') 
-do i=1,nrstr_dist
-! read rstdis(i)
-read (fu,*) rstdis(i)%i,rstdis(i)%j,rstdis(i)%d1,rstdis(i)%fk, &
-rstdis(i)%ipsi
-rstdis(i)%d2 = rstdis(i)%d1 !no flat-bottom
-write (*,132) rstdis(i)%i,rstdis(i)%j,rstdis(i)%d1,rstdis(i)%fk, &
-rstdis(i)%ipsi
-end do
-132 format (i6,1x,i6,2f8.2,i8)
-! --- nrstr_ang, [rstang]
-read (fu,*) nrstr_angl
-write (*,135) nrstr_angl
-135 format ('No. angle rstrs =',i10)
-if ( nrstr_angl .gt. 0 ) then
-! allocate memory for rstang
-allocate(rstang(nrstr_angl), stat=alloc_status)
-call check_alloc('restraint list')
-write (*,140)
-end if
-140 format ('atom_i atom_j atom_k   angle      fc  istate')
-do i=1,nrstr_angl
-! read rstang(i)
-read (fu,*) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang, &
-rstang(i)%fk,rstang(i)%ipsi
-write (*,142) rstang(i)%i,rstang(i)%j,rstang(i)%k,rstang(i)%ang, &
-rstang(i)%fk,rstang(i)%ipsi
-end do
-142 format (i6,1x,i6,1x,i6,2f8.2,i8)
-
-! --- nrstr_wall, [rstwal]
-read (fu,*) nrstr_wall
-write (*,145) nrstr_wall
-145 format ('No. wall seq. rstrs=',i10)
-if ( nrstr_wall .gt. 0) then
-
-
-! allocate memory for rstwal
-allocate(rstwal(nrstr_wall), stat=alloc_status)
-call check_alloc('restraint list')
-write (*,150)
-end if
-150 format ('atom_i atom_j   dist.      fc  H-flag')
-do i=1,nrstr_wall
-! read rstwal(:)
-read (fu,*) rstwal(i)%i,rstwal(i)%j,rstwal(i)%d,rstwal(i)%fk, &
-rstwal(i)%ih
-write (*,152) rstwal(i)%i,rstwal(i)%j,rstwal(i)%d,rstwal(i)%fk, &
-rstwal(i)%ih     
-end do
-152 format (i6,1x,i6,2f8.2,i8)
-
-read (fu,'(a80)') text
-write (*,157) 
-157 format ('Ignoring water file.')
-
-! --- determine water model
-read (fu,'(a80)') text
-write (*,160) 
-160 format ('Ignoring water model.')
-
-end function old_initialize
+! old initialize disabled forever -> will not work anyway with new functions
+! logical function old_initialize(fu)
+! end function old_initialize -> nuked from orbit
 !----------------------------------------------------------
 
 subroutine temperature(tscale,Ekinmax,print_step)
@@ -1819,7 +1440,7 @@ real(kind=prec)                 :: step,lfriction,randnum
 real(kind=prec)                 :: rands(:)
 TYPE(qr_vec)                    :: rande(:)
 !locals
-integer                         :: i,j
+integer                         :: i
 
 
 if (.not.langevin_gauss_rand) then
@@ -1855,7 +1476,7 @@ subroutine newvel_nos(step)
 real(kind=prec)                 :: step
 
 !locals
-integer                         :: i,i3
+integer                         :: i
 
 do i=1,natom
 v(i)  = (v(i) - d(i) * winv(i) *step)
@@ -1874,18 +1495,21 @@ end subroutine newvel_nos
 subroutine md_run
 
 ! local variables
-integer				:: i,j,k,niter,iii
-real(kind=prec)                         :: Tlast
-real(kind=prec)                         ::Ekinmax
+integer				:: niter
+real(kind=prec)                 :: Tlast
+real(kind=prec)                 ::Ekinmax
 !new for temperature control
-real(kind=prec)				::dv_mod,dv_friction,dv_mod2,randnum
-logical                                 :: print_step
-integer				:: n_max = -1,tgroups
+real(kind=prec)			::dv_mod,dv_friction
+logical                         :: print_step
+integer				:: tgroups
 !Random variable temperature control array
 real(kind=prec),allocatable	::randva(:)
 TYPE(qr_vec),allocatable        ::randfa(:)
-real(kind=prec)				:: time0, time1, time_per_step, startloop
-integer(4)				:: time_completion
+#ifdef TIME
+real(kind=prec)			:: time0, time1, time_per_step
+integer(4)			:: time_completion
+#endif
+real(kind=prec)			:: startloop,time1
 !Local variables for file writing to energy files
 integer				:: loc_arrays
 !data for temperature statistics print out
@@ -1956,11 +1580,12 @@ write (*,120) 'Initial System total', Temp, Tfree
 120		format(a20,' temperatures are : Ttot =',f10.2,' Tfree =',f10.2)
 write (*,*)
 
+#ifdef TIME
 ! init timer
 time0 = rtime()
-
-        ! Init timer of total loop time
-        startloop = rtime()
+#endif
+! Init timer of total loop time
+startloop = rtime()
 end if
 
 !set thermostat variables to the values needed in the time steps
@@ -2090,7 +1715,7 @@ call pot_energy(E,EQ,.true.)
 ! exc are only done on master, while qcp is spread to nodes
 if ( mod(istep, iene_cycle) == 0 .and. istep > 0) then
         if (use_excluded_groups) call calculate_exc
-        if (use_qcp) call qcp_run(Tfree,E,EQ)
+        if (use_qcp) call qcp_run(Tfree,EQ)
 end if
 
 
@@ -2322,20 +1947,20 @@ subroutine MC_volume()
 
 TYPE(qr_vec)                    :: old_x(nat_pro), old_xx(nat_pro), x_move(nat_pro)
 TYPE(qr_vec)                    :: old_boxl, old_inv, cm, old_dMorse_i(max_qat), old_dMorse_j(max_qat)
-TYPE(qr_vec)                    :: newvec, movevec
+TYPE(qr_vec)                    :: movevec
 
-real(kind=prec)									:: old_V, new_V, deltaLength
-real(kind=prec)									:: deltaV, deltaE, deltaW
-real(kind=prec)									:: box_min
-integer									:: starten, slutet, i, j, sw_no !indeces
-real(kind=prec)									:: randomno !random number
-logical									:: acc
-integer									:: longest , niter
-real(kind=prec)									:: cubr_vol_ratio
-real(kind=prec)									::	old_EMorseD(max_qat)
-integer									:: old_nbww_pair, old_nbpw_pair , old_nbpw_cgp_pair 
-integer									:: old_nbpp_pair , old_nbpp_cgp_pair , old_nbqp_pair , old_nbqp_cgp_pair
-integer									:: old_ww_max, old_pw_max, old_pp_max, old_qp_max
+real(kind=prec)			:: old_V, new_V
+real(kind=prec)			:: deltaV, deltaE, deltaW
+real(kind=prec)			:: box_min
+integer				:: i, j !indeces
+real(kind=prec)			:: randomno !random number
+logical				:: acc
+integer				:: niter
+real(kind=prec)			:: cubr_vol_ratio
+real(kind=prec)			::	old_EMorseD(max_qat)
+integer				:: old_nbww_pair, old_nbpw_pair , old_nbpw_cgp_pair 
+integer				:: old_nbpp_pair , old_nbpp_cgp_pair , old_nbqp_pair , old_nbqp_cgp_pair
+integer				:: old_ww_max, old_pw_max, old_pp_max, old_qp_max
 
 if (nodeid .eq. 0) then
 write(*,8) 'Volume change', istep
@@ -2343,7 +1968,6 @@ write(*,*)
 write(*,'(a)') '---------- Before move'
 8 format('======================== ',A14,' at step ',i6,' ========================')
 4 format(16X, 3A10)
-6 format(A,T17, 3F10.3)
 end if  !(nodeid .eq. 0)
 
 !save the old energies,coordinates and forces

@@ -181,10 +181,6 @@ character(*), optional          :: cause
 !
 ! exit with an error message
 !
-
-
-! local vars
-integer                                         :: i
 ! flush stuff
 integer(4), parameter                   :: stdout_unit = 6
 ! external flush disabled for gfortran

@@ -33,7 +33,7 @@ subroutine version_check(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
       if ( flag .eq. '-v' .or. flag .eq. '-version' .or. flag .eq. '--version') fin = .true. 
     end if
 
-    call version_print(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
+    call version_print(Q_PROGRAM, Q_VERSION, Q_SUFFIX)
     
     call lowcase(Q_PROGRAM)
     
@@ -112,16 +112,14 @@ elemental subroutine lowcase(word)
 
 end subroutine lowcase
 
-subroutine version_print(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
+subroutine version_print(Q_PROGRAM, Q_VERSION, Q_SUFFIX)
 
 ! arguments
   character(*)  :: Q_PROGRAM
   character(*)  :: Q_VERSION
-  character(*)  :: Q_DATE
   character(*)  :: Q_SUFFIX
 
 ! local
-  integer  :: i
   integer  :: datum(8)
 
 ! start-of-header
@@ -146,9 +144,8 @@ subroutine version_print(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
   write(*,'(a,a)') '      on     ', BUILD_HOSTNAME
   write(*,'(a,a)') '      git id ', BUILD_SOURCE
   write(*,'(a,a)') '      with   ', BUILD_COMPILER
-#else
-  write(*,'(a,a,a,a,a)')  trim(Q_PROGRAM), ' version ', trim(Q_VERSION), trim(Q_SUFFIX),' initialising'
 #endif
+  write(*,'(a,a,a,a,a)')  trim(Q_PROGRAM), ' version ', trim(Q_VERSION), trim(Q_SUFFIX),' initialising'
   call date_and_time(values=datum)
   write(*,130) datum(1),datum(2),datum(3),datum(5),datum(6),datum(7)
 130	format('Current date ',i4,'-',i2,'-',i2,' and time ',i2,':',i2,':',i2)

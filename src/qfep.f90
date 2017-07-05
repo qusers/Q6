@@ -10,10 +10,8 @@ use NRGY
 use PARSE
 use QMATH
 implicit none
-	character(10)	::	QFEP_NAME    = 'Qfep'
-	character(80)	::	QFEP_VERSION = ''
-	character(80)	::	QFEP_DATE    = ''
-	character(10)	::	QFEP_SUFFIX  = ''
+        character(80)   ::      QFEP_VERSION = ''
+        character(80)   ::      QFEP_DATE    = ''
 
 	integer		:: mxpts=200,mxbin=10,mxstates=4
 	character(80)      ::filnam, line
@@ -23,7 +21,7 @@ implicit none
 	type(OFFDIAG_SAVE),allocatable		:: offd(:)
 
         real(kind=prec) ::rt,gaprange, &
-                        xint,dvg,dGa,dGb,dGg,alpha_B,scale_Hij, &
+                        xint,dvg,dGg,scale_Hij, &
                         veff,min
 	real(kind=prec),allocatable		:: sumg(:),sumg2(:),avdvg(:),avc1(:),avc2(:),avr(:)
 	real(kind=prec),allocatable		:: binsum(:,:)
@@ -40,7 +38,6 @@ implicit none
 
 
 
-	real(kind=prec),dimension(3)		::u,y
 	real(kind=prec),allocatable             :: dgf(:,:), dgr(:,:), dgfsum(:,:), dgrsum(:,:), dG(:,:)
 	real(kind=prec),allocatable		:: gapmin(:), gapmax(:), sum(:), dv(:), veff1(:), veff2(:)
 	real(kind=prec),allocatable		:: A(:,:), mu(:,:), eta(:,:), rxy0(:,:)
@@ -478,8 +475,8 @@ end if
 						FEPtmp%c2(j,ipt)=1-FEPtmp%c1(j,ipt)
 					end if
 				else
-					call tred2(Hij(:,:,j),nstates,nstates,d,e)
-					call tqli(d,e,nstates,nstates,Hij(:,:,j))
+					call tred2(Hij(:,:,j),nstates,d,e)
+					call tqli(d,e,nstates,Hij(:,:,j))
 					FEPtmp%vg(j,ipt)=MINVAL(d)
 				end if
 
@@ -924,7 +921,7 @@ end subroutine prompt
 
 !------------------------------
 
-SUBROUTINE TRED2(A,N,NP,D,E)
+SUBROUTINE TRED2(A,N,D,E)
 !------------------------------------------------------------
 ! This subroutine reduces a symmetric matrix to tridiagonal
 ! form. The tridiagonal matrix can further be diagonalized by
@@ -935,7 +932,7 @@ SUBROUTINE TRED2(A,N,NP,D,E)
 !------------------------------------------------------------
 	  real(kind=prec),dimension(:)      ::D,E
 	  real(kind=prec),dimension(:,:)    ::A
-      integer                   ::NP,I,J,K,L,N,ERR
+          integer                   ::I,J,K,L,N
 	  real(kind=prec)                   ::SCALE,F,G,H,HH
 
       IF(N.GT.1)THEN
@@ -1018,7 +1015,7 @@ END subroutine TRED2
 
 !-----------------------------------
 
-SUBROUTINE TQLI(D,E,N,NP,Z)
+SUBROUTINE TQLI(D,E,N,Z)
 !------------------------------------------------------------
 ! This subroutine diagonalizes a tridiagonal matrix which has
 ! been prepared by the subroutine tred2.
@@ -1029,7 +1026,7 @@ SUBROUTINE TQLI(D,E,N,NP,Z)
    implicit none
       real(kind=prec),dimension(:)               ::D,E
 	  real(kind=prec),dimension(:,:)             ::Z
-	  integer                            ::I,N,NP,K,L,M,ITER
+	  integer                            ::I,N,K,L,M,ITER
 	  real(kind=prec)                            ::DD,G,R,S,C,P,F,B
 
         IF (N.GT.1) THEN

@@ -55,7 +55,7 @@ implicit none
 
 	type QBOND_TYPE
 		integer(AI)		::	i,j
-		integer(TINY)		::	cod(max_states)
+		integer(AI)		::	cod(max_states)
 	end type QBOND_TYPE
 
 	type QBONDLIB_TYPE
@@ -71,7 +71,7 @@ implicit none
 
 	type QANGLE_TYPE
 		integer(AI)				::	i,j,k
-		integer(TINY)			::	cod(max_states)
+		integer(AI)			::	cod(max_states)
 	end type QANGLE_TYPE
 
 	integer						::	nqangle
@@ -84,7 +84,7 @@ implicit none
 !Paul October 2014
 	type QTORSION_TYPE
 		integer(AI)			:: i,j,k,l
-		integer(TINY)			:: cod(max_states)
+		integer(AI)			:: cod(max_states)
 	end type QTORSION_TYPE
 
 	type QTORLIB_TYPE
@@ -166,13 +166,13 @@ implicit none
 !Paul Ocyober 2014
 	type Q_SANITYCHECK
 		integer		::	i,j
-		integer(TINY)	::	brk_state,set_state
+		integer(AI)	::	brk_state,set_state
 	end type Q_SANITYCHECK
 	type Q_SAN_CHECK
 		integer(AI)		:: i,j,k,l
 		integer(AI)		:: istate,jstate,abreak,cbreak
 		integer(AI)		:: num,code
-		integer(TINY)		:: brk_state,set_state
+		integer(AI)		:: brk_state,set_state
 	end type Q_SAN_CHECK
 !Added memory management stuff
 	integer			:: alloc_status_qat
@@ -223,10 +223,6 @@ subroutine qatom_startup
 	! initialise used modules
 	call prmfile_startup
 	call nrgy_startup
-
-	! initialise constants
-
-100	format(a,' module',t30,'version ',a,t50,'(modified on ',a,')')
 end subroutine qatom_startup
 
 !-------------------------------------------------------------------------
@@ -278,7 +274,7 @@ logical function qatom_old_load_atoms(fep_file)
 !arguments
 	character(*), intent(in)	::	fep_file
   ! *** local variables
-  integer					::	i,j,k,iat
+  integer					::	i
   !.......................................................................
 	qatom_old_load_atoms = .false.
 
@@ -310,9 +306,8 @@ logical function qatom_load_atoms(fep_file)
 	!arguments
 	character(*), intent(in)	::	fep_file
 	! *** local variables
-	integer					::	i,j,k,iat,ires,iatq
+	integer					::	i,j,iat,ires,iatq
 	integer					::	s, topno, icase, stat, last, add_res
-	integer					::	qflag(max_states)
 	integer					::	type_count !counts number of parameters
 	logical					::	yes
 	character(len=4)		::	offset_name
@@ -622,7 +617,6 @@ logical function qatom_load_atoms(fep_file)
 
 20 format ('No. of fep/evb states    = ',i5)
 21 format ('Default fep/evb states   = ',i5)
-25	format('Offset for topology atom numbers = ',i5)
 30 format ('No. of fep/evb atoms     = ',i5)
 31 format ('Assigning q-atoms from residues: ',5i6)
 40 format ('Atom nos.:',10i6)
@@ -643,8 +637,8 @@ logical function qatom_load_fep(fep_file)
 	character(*), intent(in)	::	fep_file
   ! *** local variables
   character(len=200)		::	line
-  integer					::	i,j,k,l,iat,st,ii
-  integer					::	nqcrg=0,nqbcod=0,nqacod=0,nqtcod=0,nqicod=0
+  integer(AI)                           :: i,j,k,l,iat,ii
+  integer(AI)                           :: nqcrg=0,nqbcod=0,nqacod=0,nqtcod=0,nqicod=0
   character(len=40)                     :: section
   logical, allocatable, dimension(:)    :: type_read
   integer                               :: type_count, filestat
@@ -652,7 +646,7 @@ logical function qatom_load_fep(fep_file)
   integer                   ::  stat
 !New temporary variables for sanity checks
 !Paul October 2014, ICM meeting used for something useful
-  integer                               :: test_state,broken_state
+  integer(AI)                         :: test_state,broken_state
   logical,allocatable                   :: testarray(:)
   type(Q_SANITYCHECK),allocatable       :: break_bonds(:)
   type(Q_SAN_CHECK),allocatable         :: break_angles(:)
@@ -672,8 +666,8 @@ logical function qatom_load_fep(fep_file)
   type(QIMPLIB_TYPE),allocatable        :: tmp_qimplib(:)
   type(QTORSION_TYPE),allocatable       :: tmp_qimp(:)
 !for setting vdW arrays to default
-  logical					:: vdw_from_topo = .false., found
-  integer                                       :: tmp_qcp_num,dummy
+  logical					:: vdw_from_topo = .false.
+  integer                                       :: tmp_qcp_num
 	!temp. array to read integer flags before switching to logicals
 	integer					::	exspectemp(max_states)
 	character(len=keylength)	:: qtac_tmp(max_states)
@@ -1981,7 +1975,6 @@ logical function qatom_load_fep(fep_file)
 
 
 1630		format('No softcore section found. Using normal LJ potentials.')
-1631		format('>>>>> Erroneous softcore section.')
 
 	!********END*****Softcore section****END********  MPA
 

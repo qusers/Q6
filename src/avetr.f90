@@ -21,7 +21,7 @@ contains
 !Main subroutine
 !******************************************************
 subroutine avetr_calc
-  integer :: i, allocation_status
+  integer :: allocation_status
   character(len=1) :: ans
   logical :: fin
   N_sets = 0

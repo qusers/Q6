@@ -65,7 +65,6 @@ TYPE(angl_val) function angle_calc(a,b,c)
 ! args
 TYPE(qr_vec) :: a,b,c
 ! locals
-TYPE(qr_dist)   :: tempab,tempbc
 real(kind=prec) :: inv_angl,scalar,abdist,bcdist,ab2dist,bc2dist
 TYPE(qr_vec)    :: abvec,bcvec,afvec,cfvec
 

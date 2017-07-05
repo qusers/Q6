@@ -17,13 +17,11 @@ implicit none
 	character(*), private, parameter	:: MODULE_VERSION = '0.01'
 	character(*), private, parameter	:: MODULE_DATE    = '2014-04-21'
 
-	integer, private						::	mask_rows=0
 	integer,parameter						:: 	max_rows=20
 	character*80							::	mask_row(max_rows)
 
 		
 	!mask 	
-	integer, private							::	ncoords
         logical,allocatable             :: tempmask(:,:)
 contains
 
@@ -49,7 +47,7 @@ subroutine gc_make_array(ST_gc_local)
 	!arguments
 	type(EXC_PARAMS)			:: ST_gc_local
 	!locals
-	integer						:: i,j,length,stat,alloc_status
+	integer						:: i,length
 	integer,parameter				:: max_length=80
 	character*80					:: str1,str2
 
@@ -76,32 +74,11 @@ integer function get_from_mask(ST_gc_local,nres)
 	!locals
 !	        integer                                         :: i,j,length,
 !        integer,parameter                               :: max_length=80
-        character*10                                    :: str1,str2
+        character*10                                    :: str1
 	str1 = trim(ST_gc_local%maskarray(nres))
 	read(str1,*) get_from_mask
 end function get_from_mask
 
-!subroutine set_gc_energies(atomi,atomj,Vel,VvdW,totVel,totVvdW,mask,gctype)
-!	!parameters
-!	integer				:: atomi,atomj,gctype
-!	real(kind=prec)				:: Vel, VvdW
-!        logical(1),pointer                 :: mask(:)
-!	real(kind=prec)			        :: totVel,totVvdw
-!	
-!        if(((mask(atomi)).or.(mask(atomj)))) then
-!		select case (gctype)
-!			case (FULL)
-!			!Do nothing
-!			case (ELECTRO)
-!			totVvdW = totVvdW + VvdW
-!			case (VDW)
-!			totVel = totVel  + Vel
-!		end select
-!	else
-!                totVel = totVel  + Vel
-!                totVvdW = totVvdW + VvdW
-!        end if
-!end subroutine set_gc_energies
 subroutine excluded_shutdown(nexc)
 !arguments
 integer                 :: nexc

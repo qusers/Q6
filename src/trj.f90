@@ -144,7 +144,6 @@ logical function trj_create(filename, append)
 	character(*)				::	filename
 	logical, optional			::	append
 !locals
-	integer						::	filestat
 	character(len=10)			::	writemode
 	character(len=80)			::	titlerow
 
@@ -199,9 +198,9 @@ logical function trj_write(x)
 	!extract coordinates
 	call mask_get(mask, x, xmasked)
 	!now need to copy to array of smaller real kind to keep dcd format
-	xloc(1:3*ncoords:3)=xmasked(1:ncoords)%x
-        xloc(2:3*ncoords:3)=xmasked(1:ncoords)%y
-        xloc(3:3*ncoords:3)=xmasked(1:ncoords)%z
+	xloc(1:3*ncoords:3)=real(xmasked(1:ncoords)%x,4)
+        xloc(2:3*ncoords:3)=real(xmasked(1:ncoords)%y,4)
+        xloc(3:3*ncoords:3)=real(xmasked(1:ncoords)%z,4)
 	!write x record
 	write(lun, err=900) xloc(1:3*ncoords:3)
 	!write y record
@@ -232,9 +231,9 @@ logical function trj_read(x)
         !now copy the coords to the second mask xmasked that has precision
         !kind=prec
         !copy records
-        xmasked(1:ncoords)%x = xloc(1:3*ncoords:3)
-        xmasked(1:ncoords)%y = xloc(2:3*ncoords:3)
-        xmasked(1:ncoords)%z = xloc(3:3*ncoords:3)
+        xmasked(1:ncoords)%x = real(xloc(1:3*ncoords:3),kind=prec)
+        xmasked(1:ncoords)%y = real(xloc(2:3*ncoords:3),kind=prec)
+        xmasked(1:ncoords)%z = real(xloc(3:3*ncoords:3),kind=prec)
 
 	!assign masked coordinates to right atom in topology
 	call mask_put(mask, x, xmasked)
@@ -360,7 +359,6 @@ logical function trj_open(filename)
 		return
 	end if
 !	write(*,456) r1%n_frames
-456 format(i10)
 	read(lun, err=920) mask_rows, titlerow, topology, mask_row(1:mask_rows-2)
 	if(titlerow(1:16) /= 'Q DCD trajectory') then
 		write(*,941)

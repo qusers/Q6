@@ -50,9 +50,6 @@ subroutine qprep_from_inputfile(filename)
 
 	character(200)	::	filename
 	character(200)	::	command
-	logical         ::  readable
-	integer			:: INPF_U = 0
-	integer			:: stat
 
 
 !Fixa så att filen läses per line och parsas på samma sätt som med command line

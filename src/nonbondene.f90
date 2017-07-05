@@ -63,12 +63,13 @@ subroutine distribute_nonbonds
 !locals
 integer					:: npp, npw, nqp, nww, nqw
 type(NODE_ASSIGNMENT_TYPE),allocatable  :: node_assignment(:)
-real					:: avgload, old_avgload
-integer					:: i, last_cgp, last_pair
-integer                                 :: average_pairs,inode,icgp,sum,less_than_sum
+integer					:: i
+#ifdef USE_MPI
+integer                                 :: average_pairs,inode,icgp,less_than_sum, sum
 integer                                 :: n_bonded, n_nonbonded, master_assign
-real                                    :: percent
 integer                                 :: master_sum
+real(kind=prec)                         :: percent
+#endif
 
 
 ! count the number of nonbonded interactions and distribute them among the nodes
@@ -155,7 +156,7 @@ sum=0
  !First assign master a small part
 node_assignment(0)%pp%start=icgp+1
 percent=REAL(totnbpp, kind=prec)/n_nonbonded
-less_than_sum = master_assign*percent  ! No. of pp-type to assign master
+less_than_sum = int(master_assign*percent)  ! No. of pp-type to assign master
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
    sum=sum + nbpp_per_cgp(icgp)
@@ -181,7 +182,7 @@ icgp=0
 sum=0
 node_assignment(0)%pw%start=icgp+1
 percent=REAL(totnbpw, kind=prec)/n_nonbonded
-less_than_sum = master_assign*percent
+less_than_sum = int(master_assign*percent)
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
    sum=sum + nbpw_per_cgp(icgp)
@@ -206,7 +207,7 @@ icgp=0
 sum=0
 node_assignment(0)%qp%start=icgp+1
 percent=REAL(totnbqp, kind=prec)/n_nonbonded
-less_than_sum = master_assign*percent
+less_than_sum = int(master_assign*percent)
 do while((icgp .lt. ncgp_solute) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
    sum=sum + nbqp_per_cgp(icgp)
@@ -231,7 +232,7 @@ icgp=0
 sum=0
 node_assignment(0)%ww%start=icgp+1
 percent=REAL(totnbww, kind=prec)/n_nonbonded
-less_than_sum = master_assign*percent
+less_than_sum = int(master_assign*percent)
 do while((icgp .lt. nwat) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
    sum=sum + nbww_per_cgp(icgp)
@@ -256,7 +257,7 @@ icgp=0
 sum=0
 node_assignment(0)%qw%start=icgp+1
 percent=REAL(totnbqw, kind=prec)/n_nonbonded
-less_than_sum = master_assign*percent
+less_than_sum = int(master_assign*percent)
 do while((icgp .lt. nwat) .and. (sum .lt. less_than_sum))
    icgp=icgp+1
    sum=sum + nbqw_per_cgp(icgp)
@@ -280,7 +281,7 @@ node_assignment(numnodes-1)%qw%end=nwat
 !each node, based on the number of shake constraints in each searched molecule
 icgp=0
 sum=0
-average_pairs=REAL((constraints/numnodes),kind=prec)
+average_pairs=int(constraints/numnodes)
 do inode=0,numnodes-2
         node_assignment(inode)%shake%start=icgp+1
         less_than_sum = (inode+1)*average_pairs
@@ -295,7 +296,7 @@ node_assignment(numnodes-1)%shake%end=const_molecules
 
 !assignment of atom numbers
 sum=0
-average_pairs=REAL((natom/numnodes),kind=prec)
+average_pairs=int(natom/numnodes)
 do inode = 0,numnodes-2
         node_assignment(inode)%natom%start = sum + 1
         less_than_sum = (inode+1)*average_pairs
@@ -309,7 +310,7 @@ node_assignment(numnodes-1)%natom%end   = natom
 
 !assignment of solute atoms
 sum=0
-average_pairs=REAL((nat_solute/numnodes),kind=prec)
+average_pairs=int(nat_solute/numnodes)
 do inode = 0,numnodes-2
         node_assignment(inode)%nat_solute%start = sum + 1
         less_than_sum = (inode+1)*average_pairs
@@ -324,7 +325,7 @@ node_assignment(numnodes-1)%nat_solute%end   = nat_solute
 
 !assignment of solvent atoms
 sum=nat_solute
-average_pairs=REAL(((natom-nat_solute+1)/numnodes),kind=prec)
+average_pairs=int((natom-nat_solute+1)/numnodes)
 do inode = 0,numnodes-2
         node_assignment(inode)%nat_solvent%start = sum + 1
         less_than_sum = (inode+1)*average_pairs + nat_solute
@@ -338,7 +339,7 @@ node_assignment(numnodes-2)%nat_solvent%end + 1
 node_assignment(numnodes-1)%nat_solvent%end   = natom
 
 sum=0
-average_pairs=REAL((nmol/numnodes),kind=prec)
+average_pairs=int(nmol/numnodes)
 do inode = 0, numnodes-2
         node_assignment(inode)%nmol%start = sum + 1
         less_than_sum = (inode+1)*average_pairs
@@ -352,7 +353,7 @@ node_assignment(numnodes-2)%nmol%end + 1
 node_assignment(numnodes-1)%nmol%end   = nmol
 
 sum=0
-average_pairs=REAL((ncgp/numnodes),kind=prec)
+average_pairs=int(ncgp/numnodes)
 do inode = 0, numnodes-2
         node_assignment(inode)%ncgp%start = sum + 1
         less_than_sum = (inode+1)*average_pairs
@@ -420,23 +421,23 @@ call MPI_Bcast(totnbww, 1, MPI_INTEGER, 0, MPI_COMM_WORLD, ierr)
 #endif
 
 ! allocate
-calculation_assignment%pp%max = totnbpp/numnodes + 0.20*totnbpp
+calculation_assignment%pp%max = int(totnbpp/numnodes + 0.20*totnbpp)
 allocate(nbpp(calculation_assignment%pp%max), stat=alloc_status)
 call check_alloc('solute-solute non-bond list')
 
-calculation_assignment%pw%max = (totnbpw+3)/numnodes + 0.20*totnbpw
+calculation_assignment%pw%max = int((totnbpw+3)/numnodes + 0.20*totnbpw)
 allocate(nbpw(calculation_assignment%pw%max), stat=alloc_status)
 call check_alloc('solute-solvent non-bond list')
 
-calculation_assignment%ww%max = (totnbww+nwat)/numnodes + 0.20*totnbww
+calculation_assignment%ww%max = int((totnbww+nwat)/numnodes + 0.20*totnbww)
 allocate(nbww(calculation_assignment%ww%max), stat=alloc_status)
 call check_alloc('solvent-solvent non-bond list')
 
-calculation_assignment%qp%max = totnbqp/numnodes + 0.20*totnbqp
+calculation_assignment%qp%max = int(totnbqp/numnodes + 0.20*totnbqp)
 allocate(nbqp(calculation_assignment%qp%max,nstates), stat=alloc_status)
 call check_alloc('Qatom - solute non-bond list')
 
-calculation_assignment%qw%max = totnbqw/numnodes + 0.20*totnbqw
+calculation_assignment%qw%max = int(totnbqw/numnodes + 0.20*totnbqw)
 allocate(nbqw(calculation_assignment%qw%max,nstates), stat=alloc_status)
 call check_alloc('Qatom - water non-bond list')
 
@@ -490,7 +491,7 @@ subroutine lrf_taylor(LRF_loc)
 real(kind=prec)                                 :: LRF_loc
 ! *** local variables
 integer						::	i,ic
-real(kind=prec)						::	Vij, q
+real(kind=prec)						::	Vij
 TYPE(qr_vec)                                            :: dr,df,tmp
 
 ! global variables used:
@@ -932,11 +933,11 @@ subroutine nbpplis2(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,inside,jgr
-real(kind=prec)						:: rcut2,r2
-
-integer						::iagrid, igrid, jgrid, kgrid, gridnum
-
+integer						:: i,j,ig,ia,ja,inside,jgr
+real(kind=prec)					:: rcut2,r2
+#ifdef USE_GRID
+integer						::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 ! for spherical boundary 
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
@@ -1073,11 +1074,12 @@ subroutine nbpplis2_box(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,inside,jgr
+integer						:: i,j,ig,ia,ja,inside,jgr
 real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
-
-integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -1199,15 +1201,17 @@ end subroutine nbpplis2_box
 !-----------------------------------------------------------------------------
 subroutine nbpplis2_box_lrf(Rcut,RLRF)
 ! args
-real(kind=prec)						:: Rcut,RLRF
+real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,inside,jgr
+integer						:: i,j,ig,ia,ja,inside,jgr
 TYPE(qr_vec)					:: shift
-real(kind=prec)						:: rcut2,r2
+real(kind=prec)					:: rcut2,r2
 
-real(kind=prec)						::RcLRF2
-integer						::inside_LRF, is3
-integer						::iagrid, igrid, jgrid, kgrid, gridnum
+real(kind=prec)					::RcLRF2
+integer						::inside_LRF
+#ifdef USE_GRID
+integer						::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 ! for periodic boundary conditions
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
@@ -1348,12 +1352,13 @@ subroutine nbpplis2_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,is,jgr
-logical						::	inside
-real(kind=prec)						:: rcut2,r2
-real(kind=prec)						::	RcLRF2
-
-integer							::iagrid, igrid, jgrid, kgrid, gridnum
+integer						:: i,j,ig,ia,ja,is,jgr
+logical						:: inside
+real(kind=prec)					:: rcut2,r2
+real(kind=prec)					:: RcLRF2
+#ifdef USE_GRID
+integer						::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 !	This routine makes a list of non-bonded solute-solute atom pairs 
 !	excluding any Q-atoms.
 #ifdef _OPENMP
@@ -1497,10 +1502,11 @@ subroutine nbpplist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,jgr,is
-real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+integer						:: i,j,ig,ia,ja,jgr,is
+real(kind=prec)					:: rcut2,r2
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 
 ! For use with spherical boundary   
 !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -1619,11 +1625,12 @@ subroutine nbpplist_box(Rcut)
 ! args
 real(kind=prec)						:: Rcut
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,ig_sw, jg_sw,jgr
+integer						:: i,j,ig,ia,ja,ig_sw, jg_sw,jgr
 TYPE(qr_vec)					:: shift
-real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+real(kind=prec)					:: rcut2,r2
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 
 ! For use with periodic boundary conditions
 !	This routine makes a list of non-bonded solute-solute atom pairs 
@@ -1752,11 +1759,12 @@ subroutine nbpplist_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,is,is3,jgr
-real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
-real(kind=prec)						::	RcLRF2
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+integer						:: i,j,ig,ia,ja,is,jgr
+real(kind=prec)					:: rcut2,r2
+real(kind=prec)					:: RcLRF2
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -1884,14 +1892,13 @@ subroutine nbpplist_box_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)						:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,ia,ja,nl,ig_sw, jg_sw, is3, jgr
-real(kind=prec)						:: rcut2,r2
+integer						:: i,j,ig,ia,ja,ig_sw, jg_sw,jgr
+real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
-integer						:: LJ_code
-
 real(kind=prec)						::RcLRF2
-
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -2112,9 +2119,11 @@ subroutine nbpwlis2(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,ig,jg,ia,ja, inside,jgr,j,is
+integer						:: i,ig,ia,ja, inside,jgr,j,is
 real(kind=prec)						:: rcut2,r2
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
+#ifdef USE_GRID
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -2220,10 +2229,12 @@ subroutine nbpwlis2_box(Rcut)
 ! args
 real(kind=prec)						:: Rcut
 ! local variables
-integer						:: i,ig,jg,ia,ja,ig_atom, inside, jgr, LJ_code,j
+integer						:: i,ig,ia,ja,ig_atom, inside, jgr,j
 TYPE(qr_vec)					:: shift
 real(kind=prec)						:: rcut2,r2
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 ! for periodic boundary conditions
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
@@ -2330,15 +2341,15 @@ subroutine nbpwlis2_box_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,ig,jg,ia,ja,ig_atom, inside, jgr, LJ_code, j
+integer						:: i,ig,ia,ja,ig_atom, inside, jgr, j
 real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
 !LRF
 real(kind=prec)					:: RcLRF2
-integer						:: jg_cgp, inside_LRF, is3
-
-integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum
-
+integer						:: jg_cgp, inside_LRF
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 ! for periodic boundary conditions
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
@@ -2464,10 +2475,12 @@ subroutine nbpwlis2_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut, RLRF
 ! local variables
-integer						:: i,j,ig,jg,jg_cgp,ia,ja,inside,is,jgr
+integer						:: i,j,ig,jg_cgp,ia,ja,inside,is,jgr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						::	RcLRF2
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, LJ_code
+#ifdef USE_GRID
+integer                                                 ::jg ,iagrid, igrid, jgrid, kgrid, gridnum
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -2590,10 +2603,11 @@ subroutine nbpwlist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,ig,jg,ia,ja,jgr,j
+integer						:: i,ig,ia,ja,jgr,j
 real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 
 ! for use with spherical boundary
 
@@ -2697,11 +2711,12 @@ subroutine nbpwlist_box(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: i,ig,jg,ia,ja,ig_sw,jg_sw,jgr,j
-real(kind=prec)						:: rcut2,r2
+integer						:: i,ig,ia,ja,ig_sw,jg_sw,jgr,j
+real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
-integer						:: LJ_code
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                         ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 ! For use with periodic boundary conditions
 !	This routine makes a list of non-bonded solute-solvent atom pairs
 !	excluding Q-atoms.
@@ -2808,11 +2823,12 @@ subroutine nbpwlist_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,jg_cgp,ia,ja,is,jgr
+integer						:: i,j,ig,jg_cgp,ia,ja,is,jgr
 real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
 real(kind=prec)						::	RcLRF2
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#ifdef USE_GRID
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -2922,14 +2938,15 @@ subroutine nbpwlist_box_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,ig,jg,ia,ja,ig_sw,jg_sw,jgr
+integer						:: i,ig,ia,ja,ig_sw,jg_sw,jgr
 real(kind=prec)						:: rcut2,r2
-integer						:: LJ_code
 TYPE(qr_vec)					:: shift
 ! LRF
 real(kind=prec)						:: RcLRF2
-integer						:: jg_cgp, j, is3
-integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+integer						:: jg_cgp, j
+#ifdef USE_GRID
+integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum, jg
+#endif
 #ifdef _OPENMP
 integer :: quotient, remainder
 #endif
@@ -3049,7 +3066,7 @@ end subroutine nbpwlist_box_lrf
 !-------------------------------------------------------------------------------------
 subroutine make_qconn
 
-integer						::	 i, iq, is, ia
+integer						::	 i, iq, is
 
 allocate(qconn(nstates,nat_solute, nqat))
 qconn(:,:,:) = 9
@@ -3095,7 +3112,8 @@ recursive subroutine find_bonded(origin, current, level, state)
 !args
 integer, intent(in)			::	origin, current, level, state
 !locals
-integer						::	b, newcurrent, newlevel
+integer					:: b
+integer(AI)				:: newcurrent, newlevel
 
 !find q-atom connectivity using the bond list and the q-bond list
 !shaken bonds (code -1) must be taken into account, but not 
@@ -3191,9 +3209,7 @@ end function nbqq_count
 !---------------------------------------------------------------------------------
 
 subroutine nbqqlist
-integer						::	iq, j, jq, is, i, k,l, ia , ja
-real(kind=prec)                     :: el_scale
-logical                     :: set
+integer						:: iq,jq,is,ia,ja
 
 nbqq_pair(:) = 0
 
@@ -3254,7 +3270,7 @@ integer						:: nqpcgp(:)
 real(kind=prec)                                 :: rcut
 
 ! local variables
-integer						:: ig,ia,i,j,iq
+integer						:: ig,ia,i
 real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
 
@@ -3326,7 +3342,7 @@ integer						:: nqwmol(:)
 real(kind=prec)                                 :: rcut
 
 ! local variables
-integer						:: ig,ia,i,j,iq
+integer						:: ig,ia
 real(kind=prec)					:: rcut2,r2
 TYPE(qr_vec)					:: shift
 
@@ -3370,9 +3386,8 @@ subroutine nbqplis2(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: ig,ia,i,j,iq,nl,inside,is
+integer						:: ig,ia,i,iq,inside,is
 real(kind=prec)						:: rcut2,r2
-integer						:: xspec
 logical, save					:: list_done
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -3488,9 +3503,8 @@ subroutine nbqplis2_box(Rcut,Rq)
 ! args
 real(kind=prec)					:: Rcut,Rq
 !  ! local variables
-integer						:: ig,ia,i,j,iq,nl,inside,ig_atom,is
+integer						:: ig,ia,i,iq,inside,ig_atom,is
 real(kind=prec)					:: rcut2,r2
-integer						:: xspec
 logical,save					:: list_done = .false.
 TYPE(qr_vec)					:: shift
 
@@ -3611,9 +3625,8 @@ subroutine nbqplist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: ig,ia,i,j,iq,nl,is
+integer						:: ig,ia,i,iq,is
 real(kind=prec)						:: rcut2,r2
-integer						::	xspec
 logical, save				::	list_done = .false.
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -3712,10 +3725,9 @@ subroutine nbqplist_box(Rcut,Rq)
 ! args
 real(kind=prec)					:: Rq,Rcut
 ! local variables
-integer						:: ig,ia,i,j,iq,nl,ig_atom,is
+integer						:: ig,ia,i,iq,ig_atom,is
 real(kind=prec)					:: rcut2,r2
-integer						::	xspec
-integer						:: ga, gb, inside
+integer						:: inside
 logical,save					:: list_done = .false.
 TYPE(qr_vec)					:: shift
 #ifdef _OPENMP
@@ -3828,7 +3840,7 @@ subroutine nbqwlist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: ig,ia,i,is,iq,istate
+integer						:: ig,ia,is,iq
 real(kind=prec)						:: rcut2,r2
 logical,save					:: list_done = .false.
 
@@ -3915,7 +3927,7 @@ subroutine nbqwlist_box(Rcut,Rq)
 ! args
 real(kind=prec)					:: Rq,Rcut
 ! local variables
-integer						:: ig,ia,i,is,iq
+integer						:: ig,ia,is,iq
 real(kind=prec)					:: rcut2,r2
 logical,save					:: list_done = .false.
 TYPE(qr_vec)					:: shift
@@ -4043,9 +4055,11 @@ subroutine nbwwlist(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: iw,jw,ia,ja,la,ka,jwr
+integer						:: iw,ia,ja,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
+#ifdef USE_GRID
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#endif
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
 ! The number of atoms in each solvent molecule is stored in the global solv_atom
 ! uses the global variables:
@@ -4136,9 +4150,11 @@ subroutine nbwwlist_box(Rcut)
 ! args
 real(kind=prec)					:: Rcut
 ! local variables
-integer						:: iw,jw,ia,ja,la,ka,jwr
+integer						:: iw,ia,ja,la,ka,jwr
 real(kind=prec)					:: rcut2,r2
+#ifdef USE_GRID
 integer                                         :: iagrid, igrid, jgrid, kgrid, gridnum
+#endif
 TYPE(qr_vec)					:: shift
 ! for periodic boundary conditions
 ! This routine makes a list of non-bonded solvent-solvent atom pairs
@@ -4234,10 +4250,12 @@ subroutine nbwwlist_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,iw,jw,ia,ja,is,is3,la,ka,jwr
+integer						:: ig,jg,iw,ja,is,la,ka,jwr
 real(kind=prec)						:: rcut2,r2
 real(kind=prec)						::	RcLRF2
+#ifdef USE_GRID
 integer                                                 ::iagrid, igrid, jgrid, kgrid, gridnum
+#endif
 ! now with more parallel -> OMP added
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -4355,10 +4373,12 @@ subroutine nbwwlist_box_lrf(Rcut,RLRF)
 ! args
 real(kind=prec)					:: Rcut,RLRF
 ! local variables
-integer						:: i,j,ig,jg,iw,jw,ia,ja,is,is3,la,ka,jwr
+integer						:: ig,jg,iw,ja,is,la,ka,jwr
 real(kind=prec)					:: rcut2,r2
 real(kind=prec)					::	RcLRF2
+#ifdef USE_GRID
 integer                                         :: iagrid, igrid, jgrid, kgrid, gridnum
+#endif
 TYPE(qr_vec)					:: shift
 #ifdef _OPENMP
 integer :: quotient, remainder
@@ -4473,10 +4493,10 @@ subroutine nbmonitorlist
 !precalculate interactions for later use here, too
 !old stuff was not usefull any more
 ! local variables
-integer         :: i,j,ig,jg,ia,ja,nl,istate,LJ_code,maxingroups,par, atomnri
+integer         :: i,j,istate,maxingroups,par
 integer         :: max_int
 integer,allocatable :: num_int(:)
-integer         :: grpi,grpj,atomi,atomj,qq_pair,aLJ,bLJ
+integer         :: grpi,grpj,atomi,atomj
 
 
 if (monitor_group_pairs == 0) return
@@ -4598,10 +4618,9 @@ subroutine nonbond_monitor
 !monitor nonbonded energies between selected groups of atoms
 !rewritten tu use precomputed interaction energies
 
-real(kind=prec)  :: r,r2,r6,r12,r6_hc
 integer                 :: istate,par
 integer                 :: cstart,cend,calcgroup
-real(kind=prec)         :: V_a,V_b,Vel,Vvdw,Vwel,Vwvdw,Vwsum
+real(kind=prec)         :: Vel,Vvdw
 TYPE(ENERET_TYPE)       :: nb_ene
 
 do par=1,monitor_group_pairs
@@ -5429,7 +5448,7 @@ dist  = q_dist3(x(i)-x(j),shift)
 
 do istate = 1, nstates
 
-nb_ene = nbe_qx(nbqw(jp,istate),EQ(istate)%lambda,dist)
+nb_ene = nbe_qx(nbqw(jp,istate),lambda(istate),dist)
 ! calculate qi, Vel, V_a, V_b and dv
 Vel  = nb_ene%Vel 
 V_a  = nb_ene%V_a 
@@ -5618,7 +5637,7 @@ subroutine nonbond_qw_spc(EQ_loc,lambda)
 TYPE(NB_ENERGIES)                               :: EQ_loc(:)
 real(kind=prec)                                 :: lambda(:)
 ! local variables
-integer						:: iw,jw,iq,i,j,ip,ja,jp
+integer						:: iw,iq,i,j,ip,ja,jp
 integer						:: istate
 real(kind=prec)					:: Vel, dv
 real(kind=prec)					:: V_a, V_b
@@ -6512,8 +6531,8 @@ subroutine watpol(E_loc,md)
 TYPE(RESTRAINT_ENERGIES)                :: E_loc
 logical                                 :: md
 ! local variables
-integer					:: iw,is,i,il,jl,jw,imin,jmin,isolv,jsolv,j3
-real(kind=prec)				:: dr,rw,rshell,rm,rc,scp
+integer					:: iw,is,i,il,jl,imin,jmin,isolv,jsolv,jw
+real(kind=prec)				:: rm,rc,scp
 real(kind=prec)				:: tmin,arg,avtdum,dv,f0
 TYPE(qr_vec)                            :: f1,f2,f3,rmu,rcu,rmc
 
@@ -6725,10 +6744,7 @@ TYPE(ENERGIES)                          :: E_loc
 TYPE(OQ_ENERGIES)                       :: EQ_loc(:)
 integer,parameter                       :: vars=3
 integer,dimension(3,numnodes-1)         :: tag
-!integer,dimension(vars)	                :: blockcnt,ftype 
-!integer(kind=MPI_ADDRESS_KIND), dimension(vars)	:: fdisp, base
-integer                                 :: mpitype_package,mpitype_send
-integer                                 :: i,j,istate
+integer                                 :: i
 
 do i=1,numnodes-1
 tag(1,i)=numnodes*100+i

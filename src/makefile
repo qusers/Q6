@@ -99,7 +99,7 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	PREC=		-DQDOUBLE
 	FC=		gfortran
-	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto
+	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto 
 	FPP_FLG=	-cpp -DGCC
 
 	MPIFC=		mpif90
@@ -115,8 +115,8 @@ else ifeq ($(COMP),gcc)
 
 
 
-	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -Wuninitialized -DDEBUG
-	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
+	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
+	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
 	DEBUGMP=        -O0 -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
 
 	PROF=		-pg ${DEBUG}
@@ -399,10 +399,10 @@ qatom.o: qatom.f90 misc.o nrgy.o prmfile.o sizes.o index.o topo.o globals.o
 qcalc.o: qcalc.f90 calc_chemscore.o calc_pmfscore.o calc_xscore.o trj.o calc_base.o calc_rms.o calc_fit.o calc_geom.o version.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcalc.f90
 
-qcp.o: 	qcp.f90 topo.o qatom.o sizes.o nrgy.o potene.o globals.o math.o mpiglob.o
+qcp.o: 	qcp.f90 topo.o qatom.o sizes.o nrgy.o potene.o globals.o math.o mpiglob.o exc.o
 	${FC} ${FFLAGS} ${FPP_FLG} -c qcp.f90
 
-qcp_mpi.o: qcp.f90 topo.o qatom.o sizes.o nrgy.o potene_mpi.o globals.o math.o mpiglob_mpi.o
+qcp_mpi.o: qcp.f90 topo.o qatom.o sizes.o nrgy.o potene_mpi.o globals.o math.o mpiglob_mpi.o exc.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FPP_FLG} -DUSE_MPI \
 	-c qcp.f90 -o qcp_mpi.o
 

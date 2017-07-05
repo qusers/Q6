@@ -93,22 +93,17 @@ end if
 
 ! set wl values for every atom
 do i = 1, qcp_atnum
-call qcp_init_beads(qcp_atom(i),qcp_coord(i,:))
+call qcp_init_beads(qcp_coord(i,:))
 end do
 
 ! what are TIAC, CHIN, CHAC????
 end subroutine qcp_init
 
-subroutine qcp_init_beads(atom,qcpvec)
+subroutine qcp_init_beads(qcpvec)
 ! create initial guess for bead positions, wont even try to read stuff in
 ! again stolen from original code by D.T. Major
 ! arguments
-integer                         :: atom
 TYPE(qr_vec)                    :: qcpvec(:)
-! locals
-! displ -> displacment, dependent on heavy atom or not
-real(kind=prec)                 :: angle,percent,displ_l,displ_h,displ,dangl
-integer                         :: i, irand,jrand,krand
 
 qcpvec = zero
 
@@ -132,7 +127,7 @@ integer                         :: level,nmove
 
 ! locals
 real(kind=prec),parameter       :: half=0.5_prec
-integer                         :: n,i,j,nbsect,bbsect,nextbead,medbead,thisbead,bead
+integer                         :: i,j,nbsect,bbsect,nextbead,medbead,thisbead,bead
 TYPE(qr_vec)                    :: midpoint
 real(kind=prec)                 :: lbsect
 
@@ -228,7 +223,7 @@ end do
 
 end function qcp_gauss
 
-subroutine qcp_run(temp,E_init,EQ_init)
+subroutine qcp_run(temp,EQ_init)
 ! main meaty subroutine that performs the actual run to generate coordinates
 ! and evaluate energies 
 ! based on original code by D.T. Major and J.Gao
@@ -236,7 +231,6 @@ subroutine qcp_run(temp,E_init,EQ_init)
 ! only for bisection now, have to implement rest later
 ! arguments
 real(kind=prec)                         :: temp
-TYPE(ENERGIES), INTENT(in)              :: E_init
 TYPE(OQ_ENERGIES),INTENT(in)            :: EQ_init(:)
 ! locals
 integer                                 :: ncent,nmove,qcp_loop,istate
@@ -270,7 +264,7 @@ do i = 1, qcp_atnum
         end if
 	wl_lam1(i) = q_sqrt(wl_lam0(i))
 	wl_lam2(i) = 2.0_prec * wl_lam1(i)
-call qcp_init_beads(iqseq(qcp_atom(i)),qcp_coord(i,:))
+call qcp_init_beads(qcp_coord(i,:))
 if(use_qcp_mass) call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
 end do
 qcp_EQ_tot    = zero
@@ -377,8 +371,8 @@ if (nodeid .eq.0) then
 qcp_Ering  = zero
 if (use_qcp_mass) qcp_Ering2 = zero
 do i = 1, qcp_atnum
-qcp_Ering  = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
-if (use_qcp_mass) qcp_Ering2 = qcp_Ering2 + qcp_energy(iqseq(qcp_atom(i)),qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
+qcp_Ering  = qcp_Ering + qcp_energy(qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
+if (use_qcp_mass) qcp_Ering2 = qcp_Ering2 + qcp_energy(qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
 end do
 
 qcp_Ering_old = qcp_Ering
@@ -414,10 +408,10 @@ if(use_qcp_mass) qcp_Ering2 = zero
 do i = 1, qcp_atnum
 qcp_coord(i,:) = qcp_bisect(qcp_coord(i,:),wl_lam1(i),qcp_level,nmove)
 qcp_coord(i,:) = qcp_center(qcp_coord(i,:))
-qcp_Ering = qcp_Ering + qcp_energy(iqseq(qcp_atom(i)),qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
+qcp_Ering = qcp_Ering + qcp_energy(qcp_coord(i,:),pi_fac,winv(iqseq(qcp_atom(i))))
 if(use_qcp_mass) then
         call qcp_massper(qcp_sqmass(i),qcp_coord(i,:),qcp_coord2(i,:))
-        qcp_Ering2 = qcp_Ering2 + qcp_energy(iqseq(qcp_atom(i)),qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
+        qcp_Ering2 = qcp_Ering2 + qcp_energy(qcp_coord2(i,:),pi_fac,one/qcp_mass(i))
 end if
 end do
 if(qcp_write) then
@@ -642,12 +636,11 @@ if (ierr .ne. 0) call die('QCP Bcast d')
 end subroutine qcp_run
 
 
-real(kind=prec) function qcp_energy(atom,coord,wavelength,mass)
+real(kind=prec) function qcp_energy(coord,wavelength,mass)
 ! calculates the ring energies of the particles
 ! call this for each ring
 ! arguments
 TYPE(qr_vec)                    :: coord(:)
-integer                         :: atom
 real(kind=prec)                 :: wavelength
 real(kind=prec)                 :: mass
 ! locals
@@ -753,13 +746,10 @@ logical function qcp_initialize()
 ! and that all variables are assigned
 ! local variables
 character					:: text*200
-integer						:: i,j,length,ii
-real(kind=prec)						:: stepsize
-real(kind=prec)						:: lamda_tmp(max_states)
+integer						:: i,ii
+real(kind=prec)					:: lamda_tmp(max_states)
 integer						:: fu, fstat
 real(kind=prec)						::	rjunk
-integer						::	ijunk
-
 ! local parameters
 integer						:: num_args
 character(200)				:: infilename
@@ -769,7 +759,7 @@ character(len=200)				::	instring
 logical						::	inlog
 integer						::	mask_rows, number
 integer,parameter				:: maxmaskrows=30
-character(len=200)				:: gc_mask_tmp(maxmaskrows),str,str2
+character(len=200)				:: gc_mask_tmp(maxmaskrows),str,constraint_string
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
 logical                                         :: shake_all_hydrogens,shake_all_heavy
 character(200)                                  :: qcp_select,qcp_size_name
@@ -899,6 +889,33 @@ else
          shake_heavy   = .false.
 end if
 end if
+
+! find out if shake or lincs should be used, only if anything gets shaken
+if(shake_solvent .or. shake_solute) then
+        if(.not.prm_get_string_by_key('constraint_method',constraint_string)) then
+                ! defaulting to shake
+                const_method = SHAKE_CONST
+                write(*,*) 'Using Shake as the constraint algorithm'
+        else
+                if(constraint_string == 'SHAKE') then
+                        const_method = SHAKE_CONST
+                        write(*,*) 'Using Shake as the constraint algorithm'
+                else if(constraint_string == 'LINCS') then
+                        const_method = LINCS_CONST
+                        write(*,*) 'Using LINCS as the constraint algorithm'
+                end if
+        end if
+        if(const_method.eq.LINCS_CONST) then
+                if(.not.prm_get_integer_by_key('lincs_recursion',lincs_recursion)) then
+                        lincs_recursion = 4 ! default value for recursion
+                else if(lincs_recursion .lt. 2) then ! user does not know what to do
+                        ! default to 4 again to avoid idiotic behaviour
+                        lincs_recursion = 4
+                end if
+                write(*,987) lincs_recursion
+        end if
+end if
+987     format('Using ',i4,' LINCS recursion iterations')
 
 if(shake_solvent) then
 if(shake_heavy) write(*,17) 'solvent bonds','heavy atoms',onoff(shake_heavy)
@@ -1060,12 +1077,15 @@ end if
 inlog = prm_open_section('solvent')
 if(.not. inlog) inlog = prm_open_section('water') !try also the old name
 if(.not. inlog) then       !defaults
-        fk_wsphere = -1
-        Dwmz = -1
-        awmz = -1
+        fk_wsphere = -one
+        Dwmz = -one
+        awmz = -one
         wpol_restr = wpol_restr_default
         wpol_born = wpol_restr_default
-        fkwpol = -1 
+        fkwpol = -one
+        write(*,'(a)') 'Polarization force update at default 10/ps'
+        write(*,'(a,i4,a)') 'Update every ',nint(itdis),' steps'
+
 else
         if(prm_get_real_by_key('radius', rwat_in)) then
                 write(*,'(a,f8.2)') 'Target solvent radius =',rwat_in
@@ -1080,7 +1100,7 @@ else
 
   if(.not. prm_get_real_by_key('radial_force', fk_wsphere)) then
         write(*,'(a)') 'Solvent radial restraint force constant set to default'
-        fk_wsphere = -1 ! this will be set in water_sphere, once target radius is known
+        fk_wsphere = -one ! this will be set in water_sphere, once target radius is known
   end if
   yes=prm_get_logical_by_key('polarisation', wpol_restr, wpol_restr_default)
   !default is on when pol. restr is on, otherwise off
@@ -1201,11 +1221,74 @@ else
 98			format ('lambda-values      = ',10f8.5)
 end if
 end if
-
-! no excluded groups in QCP calculation
+!Option to make additional calculation with atom groups excluded from the
+!energy calculation to provide 'real' group contribution
 !Added Paul Bauer 2014
 use_excluded_groups = .false.
-ngroups_gc = 0
+ngroups_gc = prm_count('group_contribution')
+write (*,'(/,a)') 'List of excluded atom groups'
+if ( ngroups_gc .gt. 0 ) then
+!allocate new EQ arrays for each group
+777 format ('Number of excluded group calculations =',i4)
+write (*,777) ngroups_gc
+allocate(ST_gc(ngroups_gc), stat=alloc_status)
+call check_alloc('gc param store')
+778 format ('Groupnumber ',i4,'	contains')
+do i=1,ngroups_gc
+        write(*,778,advance='no') i
+        !read numbers from string
+        number = 0
+        do while (prm_get_field(instring))
+                number = number + 1
+                read(instring, *, iostat=fstat) gc_mask_tmp(number)
+                if(fstat /= 0) then
+                        write(*,'(a)') '>>> ERROR: Invalid mask.'
+                        qcp_initialize = .false.
+                        exit
+                end if
+        end do
+
+        mask_rows = number - 2
+        ST_gc(i)%seltype = trim(gc_mask_tmp(1))
+        ST_gc(i)%caltypen = trim(gc_mask_tmp(2))
+        if ((trim(ST_gc(i)%seltype) /= 'atom' ).and. (trim(ST_gc(i)%seltype) /= 'residue')) then
+779 format (/,'Could not understand name of the selection , ',a)
+                write (*,779) trim(ST_gc(i)%seltype)
+                qcp_initialize = .false.
+                exit
+        end if
+        if ((trim(ST_gc(i)%caltypen) /= 'full').and.(trim(ST_gc(i)%caltypen) /= 'electro') .and. &
+                (trim(ST_gc(i)%caltypen) /= 'vdw').and.(trim(ST_gc(i)%caltypen) /= 'all')) then
+781 format (/,'Could not understand name of the calculation type , ',a)
+                write (*,781) trim(ST_GC(i)%caltypen)
+                qcp_initialize = .false.
+                exit
+        end if
+        if(iene_cycle > 0) then
+        if(mask_rows == 0) then
+!You are not as funny as you think ...
+                write(*,780)
+780 format ('no atoms')
+                ST_gc(i)%count=0
+        else
+                ST_gc(i)%count=mask_rows
+                allocate(ST_gc(i)%maskarray(mask_rows),stat=alloc_status)
+                call check_alloc('gc maskarray')
+                
+                do ii=3,mask_rows+2
+                        yes = gc_store_mask(ST_gc(i),gc_mask_tmp(ii))
+                end do
+                use_excluded_groups = .true.
+                write (str,'(i4)') i
+782 format (i4,' atom groups')
+                write(*,782) mask_rows 
+        end if
+        elseif(mask_rows == 0) then
+                write(*,'(a)') 'Ignoring section for excluding atoms.'
+        end if
+end do
+
+end if
 
 !new section in *inp files to control QCP behaviour
 !will only trigger if FEP file is in use -> if more than 0 states
@@ -1636,7 +1719,7 @@ if (.not. use_PBC) then
 	    rexcl_i = rexcl_i * rexcl_o  !translate to Angstrom
 	  end if 
 	  if(iuse_switch_atom == 1) then
-	     call make_shell(nwat)
+	     call make_shell
 	  else
 	     call make_shell2(nwat)
 	  end if
@@ -1894,8 +1977,9 @@ if(ierr.ne.0) call die ('QPI Bcast x')
 call make_pair_lists(Rcq,Rcq**2,RcLRF**2,Rcpp**2,Rcpw**2,Rcww**2)
 ! first call to pot_energy to get classical energies of the given configuration
 call pot_energy(E,EQ,.true.)
+if (use_excluded_groups) call calculate_exc
 ! and call qcp_run now for qcp_energies
-call qcp_run(Tfree,E,EQ)
+call qcp_run(Tfree,EQ)
 
 if (noffd .gt. 0 ) call offdiag
 ! write stuff to nice data structure
@@ -2030,7 +2114,7 @@ end subroutine qcp_shutdown
 subroutine qcp_write_out
 ! arguments
 ! local variables
-integer					::	i,istate,ngrms
+integer					::	i,istate
 
 ! header line
 write(*,633) 'QCP energy'

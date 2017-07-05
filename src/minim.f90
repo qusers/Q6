@@ -98,13 +98,11 @@ end function grid_add
 logical function initialize()                  
 ! local variables
 character					:: text*200
-integer						:: i,j,length,ii
-real(kind=prec)						:: stepsize
-real(kind=prec)						:: lamda_tmp(max_states)
-integer						:: fu, fstat
-real(kind=prec)						::	rjunk
-integer						::	ijunk
-
+integer						:: i
+real(kind=prec)					:: stepsize
+real(kind=prec)					:: lamda_tmp(max_states)
+integer						:: fstat
+real(kind=prec)					::	rjunk
 ! local parameters
 integer						:: num_args
 character(200)				:: infilename
@@ -112,7 +110,7 @@ logical						::	yes
 logical						::	need_restart
 character(len=200)				::	instring
 logical						::	inlog
-integer						::	mask_rows, number
+integer						::	mask_rows
 real(kind=prec)                                 :: size_default = one/10000
 real(kind=prec)                                 :: Ecut_default = 1.0_prec
 logical                                         :: shake_all,shake_all_solvent,shake_all_solute
@@ -880,7 +878,7 @@ real(kind=prec),INTENT(INOUT)   :: oldmax
 !locals
 real(kind=prec)                 :: maxf
 integer                         :: i, atmaxf
-real(kind=prec)                 :: f2old,f2new
+real(kind=prec)                 :: f2new
 
 ! check if force on atom is increasing 
 maxforce   = 0
@@ -922,10 +920,9 @@ end subroutine update_pos
 subroutine min_run
 
 ! local variables
-integer				:: i,j,k,niter,retval
+integer				:: niter,retval
 !Random variable temperature control array
-real(kind=prec)				:: scaling,time0, time1, time_per_step, startloop, force
-integer(4)				:: time_completion
+real(kind=prec)				:: scaling,time0, time1, startloop, force
 !Local variables for file writing to energy files
 integer				:: loc_arrays
 !Define array length for EQ array in local usage

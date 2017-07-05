@@ -22,12 +22,12 @@ module TOPO
 ! types
 	type BOND_TYPE
 		integer(AI)				::	i, j
-		integer(SHRT)			::	cod
+		integer(AI)			::	cod
 	end type BOND_TYPE
 
 	type ANG_TYPE
 		integer(AI)				::	i, j, k
-		integer(SHRT)			::	cod
+		integer(AI)			::	cod
 	end type ANG_TYPE
 
 	type BONDLIB_TYPE
@@ -41,16 +41,16 @@ module TOPO
 
 	type TOR_TYPE
 		integer(AI)				::	i, j, k, l
-		integer(SHRT)			::	cod
+		integer(AI)			::	cod
 	end type TOR_TYPE
 
 	type TORLIB_TYPE
-		real					::	fk, rmult, deltor
-		real					::	paths
+		real(kind=prec)					::	fk, rmult, deltor
+		real(kind=prec)					::	paths
 	end type TORLIB_TYPE
 
 	type IMPLIB_TYPE
-		real					::	fk, imp0
+		real(kind=prec)					::	fk, imp0
 	end type IMPLIB_TYPE
 
 	type CGP_TYPE
@@ -66,7 +66,7 @@ module TOPO
 	end type IAC_TYPE
 
 	type LJ2_TYPE
-		integer(TINY)			::	i, j
+		integer(AI)			::	i, j
 	end type LJ2_TYPE
 
 	type RESIDUE_TYPE
@@ -80,7 +80,7 @@ integer, private			::	alloc_status
 private						::	topo_check_alloc
 
 !topology information
-real						::	version
+real(kind=prec)						::	version
 character(len=80)			::	title = ''
 character(len=80)			::	forcefield = ''
 character(len=8)			::	creation_date
@@ -92,7 +92,7 @@ character(len=256)			::	prm_file
 	!nat_pro = total # of atoms in topology, nat_solute = # solute atoms (no water)
 	integer				::	nat_pro, nat_solute, max_atom
 	TYPE(qr_vec), allocatable	::	xtop(:)			! topology/coordinates
-	integer(TINY), allocatable	::	iac(:)			! integer atom codes
+	integer(AI), allocatable	::	iac(:)			! integer atom codes
 	logical, allocatable		::	heavy(:)		! boolean flag, true if atom >= He
 	real(kind=prec), allocatable	::	crg(:)			! charges
 	real(kind=prec), allocatable	::	chg_solv(:)		! solvent charges
@@ -379,7 +379,7 @@ subroutine topo_reallocate(oldatoms, atoms, waters)
 	integer						::	oldbonds, bonds
 	integer						::	oldangles, angles
 	real(kind=prec), allocatable			::	crgtemp(:)
-	integer(1), allocatable		::	i1temp(:)
+	integer(AI), allocatable		::	i1temp(:)
 	type(BOND_TYPE), allocatable::	bndtemp(:)
 	type(ANG_TYPE), allocatable	::	angtemp(:)
 
@@ -457,7 +457,7 @@ logical function topo_load(filename, require_version)
 	real(kind=prec), intent(in)		::	require_version
 
 !locals
-	integer					::	u, readflag
+	integer					::	u
 
 	topo_load = .false.
 
@@ -510,17 +510,15 @@ logical function topo_read(u, require_version, extrabonds)
 
 	! local variables
 	integer				:: rd
-	integer				:: nat3, nwat
+	integer				:: nwat
 	integer				:: i,j,k,n, si
 	integer				:: nhyds
-	integer				:: paths
 	character(len=256)		:: line, restofline
         character(256)			:: version_string
 	character(len=10)		:: key, boundary_type !PWadded
 	integer				:: filestat
 	integer(1), allocatable		:: temp_list(:,:)
 	integer				:: extra,fdot
-	real(kind=prec)			:: deprecated
 
 	topo_read = .false.
 	! get rid of old topology
@@ -1395,11 +1393,9 @@ end subroutine topo_save
 
 !Sort out heavy atoms in restrained shell. Use protein center to calculate distance.
 !Uses coordinates from topology unless 'implicit_rstr_from_file' is specified.
-subroutine make_shell(nwat)
-! arguments
-        integer                                         :: nwat
+subroutine make_shell
 ! *** Local variables
-	integer						::	i,ig,i3
+	integer						::	i,ig
 	real(kind=prec)						::	rin2,r2
 
 	nshellats = 0
@@ -1430,8 +1426,8 @@ subroutine make_shell2(nwat)
 ! arguments
         integer                                         :: nwat
 ! *** Local variables
-	integer						::	i,ig,k
-	real(kind=prec)						::	rout2,rin2,r2
+	integer						::	i,ig
+	real(kind=prec)						::	rin2,r2
         TYPE(qr_vec), allocatable		::	cgp_cent(:)
 	nshellats = 0
 	rin2  = rexcl_i**2

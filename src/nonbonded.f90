@@ -185,7 +185,6 @@ TYPE(NBQP_TYPE)                 :: nb
 TYPE(qr_dist3)                  :: dist
 real(kind=prec)                 :: lambda
 ! local variables
-integer                         :: ip,iq,i,j
 real(kind=prec)                 :: r2,r,r6,r6_hc,r12
 
 
@@ -216,7 +215,6 @@ real(kind=prec)                         :: lambda
 TYPE(qr_dist)                           :: dist
 ! locals
 real(kind=prec)                         :: r, r2
-integer                                 :: iq, i, j
 
 r2   = dist%r2
 r    = dist%r

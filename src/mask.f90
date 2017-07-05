@@ -119,10 +119,8 @@ integer function mask_add(m, line, pretop)
 	character(len=80)			::	word
 	integer						::	pos
 	type(set)					::	s
-	integer						::	i
 	logical						::	empty
 	integer						::	readstat
-	integer						::	inthis
 
 	!clear set description
 	s%first = 1
@@ -254,7 +252,6 @@ logical function get_word(line, word, pos)
 	integer, save				::	linelen
 	character, save				::	TAB = char(9)
 	integer						::	start_field, end_field
-	logical						::	prm_res
 
 
 	get_word = .false.
@@ -428,7 +425,7 @@ subroutine mask_get(m, x, xmasked)
 	type(MASK_TYPE)			::	m
 	TYPE(qr_vec)			::	x(:)
 	TYPE(qr_vec)			::	xmasked(:)
-	integer				::	i, i3, j
+	integer				::	i,j
 
 	if(size(x) < nat_pro .or. size(xmasked) < m%included) then
 		write(*,900)
@@ -454,7 +451,7 @@ subroutine mask_put(m, x, xmasked)
 	type(MASK_TYPE)			::	m
 	TYPE(qr_vec)			::	x(:)
 	TYPE(qr_vec)			::	xmasked(:)
-	integer				::	i, i3, j
+	integer				::	i,j
 
 	if(size(x) < nat_pro .or. size(xmasked) < m%included) then
 		write(*,900)
