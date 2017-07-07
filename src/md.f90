@@ -1823,8 +1823,8 @@ if (ierr .ne. 0) call die('MD Bcast x')
                                         write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree,&
                                                 get_stddev(Tstat%free,Tstat%free2,Tstat%step)
                                 end do
-                        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
                         end if
+                        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
 
 
                         ! test for NaN
@@ -1880,8 +1880,8 @@ if (nodeid .eq. 0) then
                         write(*,201) trim(tscale(tgroups)%tname),istep,tscale(tgroups)%tfree,&
                                 get_stddev(Tstat%free,Tstat%free2,Tstat%step)
                 end do
-        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
         end if
+        Tstat = TSTAT_TYPE(zero,zero,zero,zero,0)
 end if
 201     format(a20,' temperature at step',i8,' T=',f10.1,' Average = ',f8.3,' +- ',f8.3)
 
