@@ -3216,6 +3216,7 @@ do ja = 1, nat_solute
         if(any(qconn(:,ja,:) .le. 3)) then
                 !bonded or angled to at least one Q-atom
                 do iq = 1, nqat
+                        ia = iqseq(iq)
                         do is = 1, nstates
                                 if(qconn(is, ja, iq) .ge. 4) then
                                         if(qconn(is, ja, iq) .eq. 4) then
@@ -3223,7 +3224,7 @@ do ja = 1, nat_solute
                                         elseif(qvdw_flag) then
                                                 vdw = 1
                                         else
-                                                vdw = ljcod(iac(is),iac(ja))
+                                                vdw = ljcod(iac(ia),iac(ja))
                                         end if
                                         call precompute_set_values_qp(iq,ja,is,vdw)
                                         if (use_excluded_groups) then
