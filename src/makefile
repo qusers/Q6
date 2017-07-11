@@ -109,15 +109,15 @@ else ifeq ($(COMP),gcc)
 	MPI=		${OMPI_FCFLAGS} ${FC_OPT} ${PREC}
 	MPFLAG=		-fopenmp ${MPI}
 
-	FFLAGS=		--static ${OMPI_FCFLAGS} ${PREC}
+	FFLAGS=		${OMPI_FCFLAGS} ${PREC}
 	FFLAGS_R8=	
 	DEBUG_FC=	${PREC}
 
 
 
-	DEBUG=          -O0 -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
-	DEBUGMPI=       -O0 -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
-	DEBUGMP=        -O0 -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
+	DEBUG=          -Og -fbacktrace -g ${DEBUG_FC}	-ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
+	DEBUGMPI=       -Og -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG -Wall -Wno-tabs -Wno-character-truncation
+	DEBUGMP=        -Og -fopenmp -fbacktrace -g ${DEBUG_FC}      -ffree-line-length-none -fcray-pointer -fall-intrinsics -std=legacy  -fstack-check -fstack-protector-all -DDEBUG
 
 	PROF=		-pg ${DEBUG}
 

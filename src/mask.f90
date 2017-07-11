@@ -397,7 +397,7 @@ subroutine get_sybylcode(sybylname)
 	integer					:: i = 1, check_sybylcode			! index
 	character(len=5)		:: this_sybyl_caps	! SYBYL_atom_type(i) in CAPS
 
-
+        check_sybylcode = 0
 	do i = 1, natyps
 		this_sybyl_caps = SYBYL_atom_type(i)
 		call upcase(this_sybyl_caps)

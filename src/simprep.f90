@@ -2381,6 +2381,7 @@ end do
 
 !get total number of shake constraints in solute (used for separate scaling of temperatures)
 !individual number for each scaling group used here
+exclshk = zero
 do tgroups = 1, ntgroups
         mol = 1
         emol = 1
@@ -3222,7 +3223,7 @@ do ja = 1, nat_solute
                                         elseif(qvdw_flag) then
                                                 vdw = 1
                                         else
-                                                vdw = ljcod(iac(ia),iac(ja))
+                                                vdw = ljcod(iac(is),iac(ja))
                                         end if
                                         call precompute_set_values_qp(iq,ja,is,vdw)
                                         if (use_excluded_groups) then

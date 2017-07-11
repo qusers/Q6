@@ -598,6 +598,7 @@ end function lrf_cgp_rep
 subroutine lrf_gather
 ! need this to keep some stuff from crashing with MPI_IN_PLACE option
 type(LRF_TYPE) :: MPI_LRF_TMP(ncgp)
+write(*,*) 'Process ',nodeid
 call MPI_Allreduce(LRF,MPI_LRF_TMP,ncgp,mpitype_batch_lrf,mpi_lrf_add,&
 MPI_COMM_WORLD,ierr)
 if (ierr .ne. 0) call die('lrf_gather reduce')
@@ -1432,6 +1433,7 @@ jgloop: do jgr = 1, ncgp_solute
 !	      --- outside cutoff ? ---
                 inside = .false.
                 ia = cgp(ig)%first
+                r2 = one
 pairloop:	do while( (ia .le. cgp(ig)%last) .and. (inside.eqv..false.) )
                         i = cgpatom(ia)
 			ja = cgp(jgr)%first
@@ -2545,6 +2547,7 @@ jgloop: do jgr = 1, nwat
 !	      --- outside cutoff ? ---
                 inside = 0
                 ia = cgp(ig)%first
+                r2 = one
                 do while ((ia .le. cgp(ig)%last) .and. (inside .eq. 0 ))
                         is = cgpatom(ia)
 			r2 = q_dist4(x(is),x(ja))
@@ -3310,6 +3313,8 @@ else
 	if (Rcq .gt. zero ) then
 		shift = x(ia) - x(qswitch)
                 r2 = q_dist4(shift,boxlength*q_nint(shift*inv_boxl))
+        else
+                r2 = one
 	end if
 end if
 
@@ -3362,6 +3367,7 @@ ia = nat_solute + solv_atom*ig-(solv_atom-1)
 if(.not. use_PBC .and. excl(ia)) cycle iwloop ! skip excluded waters
 
 !******PWadded if-statement 2001-10-01
+r2 = one
 if( .not. use_PBC ) then
 	r2 = q_dist4(x(ia),xpcent)
 else
@@ -3973,6 +3979,8 @@ iwloop: do ig = calculation_assignment%qw%start, calculation_assignment%qw%end
 	if (Rq.gt.zero) then
 	shift = x(ia) - x(qswitch)
         r2 = q_dist4(shift,boxlength*q_nint(shift*inv_boxl))
+        else
+        r2 = one
 	end if
 	! store if inside cutoff
 	if ( ( r2 .le. rcut2 ).or. (Rq.lt.zero)) then
@@ -6444,7 +6452,6 @@ TYPE(RESTRAINT_ENERGIES)                        :: E_loc
 ! local variables
 integer						:: iw,i,isolv,jsolv
 real(kind=prec)					:: db,erst,dv,fexp,b
-TYPE(qr_vec)					:: dcent
 real(kind=prec)					:: shift
 TYPE(qr_dist5)                                  :: distance
 
@@ -6602,7 +6609,7 @@ if ( rc > wshell(nwpolr_shell)%rout-wshell(nwpolr_shell)%dr ) then
   list_sh(wshell(is)%n_insh,is) = iw
 end if
 end do
-
+jmin = 1
 ! sort the solvent molecules according to theta
 do is = 1, nwpolr_shell
 imin = 0
