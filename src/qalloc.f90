@@ -668,7 +668,7 @@ end if
 3 format('=========================== FINAL ',A15,' =============================')
 ! legend line
 write(*,4) 'el', 'vdW' ,'bond', 'angle', 'torsion', 'improper'
-4 format(16X, 6A10)
+4 format(16X, 6A12)
 
 ! row by row: solute, solvent, solute-solvent, LRF, q-atom
 write(*,6) 'solute', E%pp%el, E%pp%vdw, E%p%bond, E%p%angle, E%p%torsion, E%p%improper

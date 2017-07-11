@@ -3998,6 +3998,7 @@ if (ntors .gt. ntors_solute) then
 ! fill array with all possible interaction codes
 allocate(interaction(solv_atom,solv_atom),stat=alloc_status)
 call check_alloc('solvent self interaction array')
+
 do i = 1 , solv_atom
 do j = 1 , solv_atom
 interaction(i,j) = ljcod(iac(nat_solute+i),iac(nat_solute+j))
@@ -4005,8 +4006,9 @@ end do
 end do
 
 ! first, exclude all self interactions
+! and go through atom if they are heavy or not
 do i = 1 , solv_atom
-interaction(i,i) = 0
+        interaction(i,i) = 0
 end do
 
 ! need to know kast atom of first solvent molecule, because we can stop searching there :)
@@ -4648,6 +4650,18 @@ end if
 if(awmz == -1) then !use magic for the reach of the Morse potential
         awmz = 0.2_prec/(one+q_exp(0.4_prec*(rwat-25.0_prec)))+0.3_prec
 end if
+allocate(is_heavy_solv(solv_atom),stat=alloc_status)
+call check_alloc('heavy solvent check array')
+is_heavy_solv(:) = .false.
+heavy_solv_atom = 0
+do i = 1, solv_atom
+        if(heavy(nat_solute+i)) then
+                is_heavy_solv(i) = .true.
+                heavy_solv_atom = heavy_solv_atom + 1
+        end if
+end do
+
+
 
 write (*,90) rwat, fk_wsphere, Dwmz, awmz
 90	format ('Target water sphere radius              = ',f10.2,/,&

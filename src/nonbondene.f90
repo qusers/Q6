@@ -6486,39 +6486,34 @@ else
 do iw = ncgp_solute + 1, ncgp
         i  = cgp(iw)%iswitch
         if (excl(i)) cycle ! skip excluded topology waters
-        dcent = zero
+        ! loop over all solvent atoms, calculate for heavy atoms
         jsolv = iw - ncgp_solute
-        i = nat_solute + solv_atom*jsolv - (solv_atom-1)
-        do isolv = 0 , solv_atom - 1
-                dcent = dcent + x(i+isolv)
-        end do
-        dcent = dcent/real(solv_atom,kind=prec)
-        distance = q_dist5(xwcent,dcent)
-        b = q_sqrt(distance%r2)
-        db = b - (rwat - shift)
+        do isolv = 0, solv_atom - 1
+        if(is_heavy_solv(isolv+1)) then
+                i = nat_solute + solv_atom*jsolv - (solv_atom-1)
+                distance = q_dist5(xwcent,x(i))
+                b = q_sqrt(distance%r2)
+                db = b - (rwat - shift)
 
-        ! calculate erst and dv
-        if ( db .gt. zero ) then
-                erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
-                dv = fk_wsphere*db/b
-        else
-                if (b .gt. zero) then
-                  fexp = q_exp ( awmz*db )
-                  erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
-                  dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
+                ! calculate erst and dv
+                if ( db .gt. zero ) then
+                        erst = 0.5_prec * fk_wsphere * db**2 - Dwmz
+                        dv = fk_wsphere*db/b
                 else
-                  dv = zero
-                  erst = zero
+                        if (b .gt. zero) then
+                          fexp = q_exp ( awmz*db )
+                          erst = Dwmz*(fexp*fexp-2.0_prec*fexp)
+                          dv = -2.0_prec*Dwmz*awmz*(fexp-fexp*fexp)/b
+                        else
+                          dv = zero
+                          erst = zero
+                        end if
                 end if
-        end if
-        dv = dv / solv_atom
 
-        ! update energy and forces
-        E_loc%solvent_radial = E_loc%solvent_radial + erst
-        jsolv = iw - ncgp_solute
-        i = nat_solute + solv_atom*jsolv - (solv_atom-1)
-        do isolv = 0 , solv_atom - 1
-               d(i+isolv) = d(i+isolv) + distance%vec*dv 
+                ! update energy and forces
+                E_loc%solvent_radial = E_loc%solvent_radial + erst
+                d(i+isolv) = d(i+isolv) + distance%vec*dv 
+        end if
         end do
 end do
 end if

@@ -319,6 +319,10 @@ type(PRECOMPUTE_INT_QQ),allocatable             :: qq_precomp(:,:,:)
 integer(AI),allocatable                         :: pp_map(:,:)
 integer                                         :: pp_low,pw_low
 
+! New ! For large solvents and SPH -> only save heavy solvent atoms
+integer                                         :: heavy_solv_atom
+logical,allocatable                             :: is_heavy_solv(:)
+
 !-----------------------------------------------------------------------
 !	Coordinates, velocities, forces
 !-----------------------------------------------------------------------
