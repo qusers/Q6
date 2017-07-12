@@ -3708,8 +3708,8 @@ if (use_excluded_groups) then
 	write(*,*)
 	write(*,*) 'Preparing residue groups for group contribution calculation'
 	ene_header%arrays = ngroups_gc + 1 + QCP_N
-	allocate(ene_header%types(ngroups_gc+1),ene_header%numres(ngroups_gc+1),&
-			ene_header%gcnum(ngroups_gc+1))
+	allocate(ene_header%types(ngroups_gc+QCP_N+1),ene_header%numres(ngroups_gc+QCP_N+1),&
+			ene_header%gcnum(ngroups_gc+QCP_N+1))
 	runvar = 2
         do i=1,ngroups_gc
                 call mask_initialize(ST_gc(i)%gcmask)

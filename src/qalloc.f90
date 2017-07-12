@@ -245,6 +245,7 @@ if(allocated(aLJ_solv)) deallocate(aLJ_solv)
 if(allocated(bLJ_solv)) deallocate(bLJ_solv)
 if(allocated(chg_solv)) deallocate(chg_solv)
 if(allocated(nonbnd_solv_int)) deallocate(nonbnd_solv_int)
+if(allocated(is_heavy_solv)) deallocate(is_heavy_solv)
 ! Nosé-Hoover array
 if ( thermostat == NOSEHOOVER) then
 deallocate (xnh, stat=alloc_status)
