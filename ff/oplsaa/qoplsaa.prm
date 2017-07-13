@@ -81,7 +81,12 @@ CAL	264.10	264.10	18.82	186.75	13.31	40.08	!CA2+ TheoChem 1992, Aqvist
 P	2447.79 2447.79	46.79 1730.85	33.09	30.97	!P
 Zn	3518.74 3518.74	59.32 2488.13	41.95	53.37	!Zn2+ 
 MG2+	96.00	96.00	32.0	67.88	22.63   24.31	!Mg+2 TheoChem 1992, Aqvist
-
+# DCM Solvent fernanda duarte ffld version 14
+dcm_Cl1          1692.2485  1692.2485    43.0554  1196.6004    30.4447     35.453  ! high   Cl    ! Cl attached to di halogen C
+dcm_C2            944.5180   944.5180    22.0296   667.8751    15.5773     12.011  ! high   CT    ! di chloro methyl
+dcm_H3             84.5728    84.5728     5.4127    59.8020     3.8273     1.0079  ! high   HC    ! H: alkanes
+dcm_H4             84.5728    84.5728     5.4127    59.8020     3.8273     1.0079  ! high   HC    ! H: alkanes
+dcm_Cl5          1692.2485  1692.2485    43.0554  1196.6004    30.4447     35.453  ! high   Cl    ! Cl attached to di halogen C
 *-----------------------------------------------------------------------
 [bonds] bond type definitions
 *iaci iacj	force.c.	dist.	SYBYL
@@ -172,7 +177,11 @@ CAr	NY	764.0	1.448
 CAr	NZ	1000.0	1.261
 CT	NT	764.0	1.448
 CA	N3	962.0	1.340	!Aniline
-
+# DCM Solvent fernanda duarte ffld version 14
+dcm_Cl1         dcm_C2              490.00     1.7810     ! high   ! 0 Cl-CT ==> Cl-CT
+dcm_C2          dcm_H3              680.00     1.0900     ! high   ! 0 CT-HC ==> HC-CT
+dcm_C2          dcm_H4              680.00     1.0900     ! high   ! 0 CT-HC ==> HC-CT
+dcm_C2          dcm_Cl5             490.00     1.7810     ! high   ! 0 CT-Cl ==> Cl-CT
 
 
 *-----------------------------------------------------------------------
@@ -362,7 +371,14 @@ CT	CP1	HC	75.000	110.700	0.000	0.000
 CT	CP1	N	160.000	109.700	0.000	0.000
 HC	CP1	HC	66.000	107.800	0.000	0.000
 HC	CP1	N	70.000	109.500	0.000	0.000
-
+#DCM Solvent fernanda duarte ffld version 14
+dcm_Cl1         dcm_C2          dcm_H3              102.00   107.6000     ! high   ! ==> HC-CT-Cl
+dcm_Cl1         dcm_C2          dcm_H4              102.00   107.6000     ! high   ! ==> HC-CT-Cl
+dcm_Cl1         dcm_C2          dcm_Cl5             156.00   111.7000     ! high   ! ==> Cl-CT-Cl !these are values from gromacs. ffld original 80 and 110.422
+dcm_Cl1         dcm_C2          dcm_Cl1             156.00   111.7000     ! high   ! ==> Cl-CT-Cl !these are values from gromacs. ffld original 80 and 110.422
+dcm_H3          dcm_C2          dcm_H4               66.00   107.8000     ! high   ! ==> HC-CT-HC
+dcm_H3          dcm_C2          dcm_Cl5             102.00   107.6000     ! high   ! ==> HC-CT-Cl
+dcm_H4          dcm_C2          dcm_Cl5             102.00   107.6000     ! high   ! ==> HC-CT-Cl
 
 
 *-----------------------------------------------------------------------

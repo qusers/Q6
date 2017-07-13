@@ -1,0 +1,30 @@
+{DCM}
+# Generated with q_ffld2q.py from 'dcm.ffld14'
+# Date: Wed Dec  2 19:12:13 2015
+    [info]
+        solvent 1
+        density 0.0094063172
+	dielectric 8930
+
+[atoms]
+    1  C2    dcm_C2		-0.0478
+    2  Cl1   dcm_Cl1            -0.1358
+    3  H3    dcm_H3              0.1597
+    4  H4    dcm_H4              0.1597
+    5  Cl5   dcm_Cl5            -0.1358
+
+
+[bonds]
+Cl1   C2   
+C2    H3   
+C2    H4   
+C2    Cl5  
+
+
+[impropers]
+
+
+[charge_groups]
+C2 Cl1 H3 H4 Cl5
+
+

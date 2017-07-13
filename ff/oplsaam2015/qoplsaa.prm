@@ -2196,50 +2196,61 @@ C267   C136   C283   C271       0.299    -1.000     0.000     1
 C267   C136   C283   C271       0.779    -2.000   180.000     1 
 C267   C136   C283   C271       0.128     3.000     0.000     1  
 ! from here manually added by Paul Bauer 06.10.2015 from FFLD 14
-C135	C944	N943	C942	0.914	-1	0	1
-C135	C944	N943	C942	0.122	-2	180	1
-C135	C944	N943	C942	-0.249	3	0	1
-H140	C944	N943	C942	0.089	3	0	1
-C944	N943	C942	N940	3.968	2	180	1
-C944	N943	C942	N941	3.968	2	180	1
-H240	N943	C942	N940	1	2	180	1
-H240	N943	C942	N941	1	2	180	1
-N943	C942	N940	H240	1	2	180	1
-N941	C942	N940	H240	1	2	180	1
-N943	C942	N940	H240	4	2	180	1
-N940	C942	N940	H240	4	2	180	1
-C224	C136	C136	C944	0.65	-1	0	1
-C224	C136	C136	C944	-0.025	-2	180	1
-C224	C136	C136	C944	0.1	3	0	1
-H140	C136	C136	C944	0.15	3	0	1
-C136	C136	C944	N943	1.366	-1	0	1
-C136	C136	C944	N943	-0.115	-2	180	1
-C136	C136	C944	N943	0.243	3	0	1
-C136	C136	C944	H140	0.15	3	0	1
-H140	C136	C944	N943	-0.291	3	0	1
-H140	C136	C944	H140	0.15	3	0	1
-C136	C944	N943	C942	0.914	-1	0	1
-C136	C944	N943	C942	0.122	-2	180	1
-C136	C944	N943	C942	-0.249	3	0	1
-C136	C944	N943	H240	-0.095	-1	0	1
-C136	C944	N943	H240	-0.208	-2	180	1
-C136	C944	N943	H240	0.209	3	0	1
-H140	C944	N943	C942	0.089	3	0	1
-H140	C944	N943	H240	0	3	0	1
-C944	N943	C942	N940	3.968	2	180	1
-C944	N943	C942	N941	3.968	2	180	1
-C136	C136	C292	N900	1.196	-1	0	1
-C136	C136	C292	N900	-0.337	-2	180	1
-C136	C136	C292	N900	0.275	3	0	1
-H140	C136	C292	N900	-0.507	-1	0	1
-H140	C136	C292	N900	-0.354	-2	180	1
-H140	C136	C292	N900	0.236	3	0	1
-C136	C292	N900	H240	-0.095	-1	0	1
-C136	C292	N900	H240	-0.208	-2	180	1
-C136	C292	N900	H240	0.209	3	0	1
-H140	C292	N900	H240	0.2	3	0	1
-N943    C942    N941    H240	4.0	2	180	1
-N940    C942    N941    H240	4.0	2	180	1
+! updated on 27.06.2017 -> new paramteres from maestro/2014 ffld_server -version 14
+C942    N943    C944   C136        -0.249  -3.0        0.0   1.0 # FFLD: high 0 CT-CT-NY-CD ==> CD-NY-CT-CT
+C942    N943    C944   C136        0.1215  -2.0      180.0   1.0 # FFLD: high 0 CT-CT-NY-CD ==> CD-NY-CT-CT
+C942    N943    C944   C136        0.9145   1.0        0.0   1.0 # FFLD: high 0 CT-CT-NY-CD ==> CD-NY-CT-CT
+C942    N943    C944   H140        0.0885   3.0        0.0   1.0 # FFLD: high 0 HC-CT-NY-CD ==> CD-NY-CT-HC
+C224    C136    C136   C944           0.1  -3.0        0.0   1.0 # FFLD: high 0 CT1-CTN-CT-CT ==> CT-CT-CTN-CT1
+C224    C136    C136   C944        -0.025  -2.0      180.0   1.0 # FFLD: high 0 CT1-CTN-CT-CT ==> CT-CT-CTN-CT1
+C224    C136    C136   C944          0.65   1.0        0.0   1.0 # FFLD: high 0 CT1-CTN-CT-CT ==> CT-CT-CTN-CT1
+C136    C136    C944   H140          0.15   3.0        0.0   1.0 # FFLD: high 0 CTN-CT-CT-HC ==> CTN-CT-CT-HC
+C136    C136    C944   N943        0.2425  -3.0        0.0   1.0 # FFLD: high 0 CTN-CT-CT-NY ==> CTN-CT-CT-NY
+C136    C136    C944   N943       -0.1145  -2.0      180.0   1.0 # FFLD: high 0 CTN-CT-CT-NY ==> CTN-CT-CT-NY
+C136    C136    C944   N943         1.366   1.0        0.0   1.0 # FFLD: high 0 CTN-CT-CT-NY ==> CTN-CT-CT-NY
+C136    C944    N943   H240          0.209  -3.0        0.0   1.0 # FFLD: high 0 CT-CT-NY-H ==> CT-CT-NY-H
+C136    C944    N943   H240        -0.2085  -2.0      180.0   1.0 # FFLD: high 0 CT-CT-NY-H ==> CT-CT-NY-H
+C136    C944    N943   H240         -0.095   1.0        0.0   1.0 # FFLD: high 0 CT-CT-NY-H ==> CT-CT-NY-H
+C944    C136    C136   H140          0.15   3.0        0.0   1.0 # FFLD: high 0 HC-CTN-CT-CT ==> CT-CT-CTN-HC
+C944    N943    C942   N940       -3.5085  -3.0        0.0   1.0 # FFLD: high 0 CT-NY-CD-NI ==> CT-NY-CD-NI
+C944    N943    C942   N940        -0.491  -2.0      180.0   1.0 # FFLD: high 0 CT-NY-CD-NI ==> CT-NY-CD-NI
+C944    N943    C942   N940         4.524   1.0        0.0   1.0 # FFLD: high 0 CT-NY-CD-NI ==> CT-NY-CD-NI
+C944    N943    C942   N941       -3.5085  -3.0        0.0   1.0 # FFLD: high 0 CT-NY-CD-NY ==> CT-NY-CD-NY
+C944    N943    C942   N941        -0.491  -2.0      180.0   1.0 # FFLD: high 0 CT-NY-CD-NY ==> CT-NY-CD-NY
+C944    N943    C942   N941         4.524   1.0        0.0   1.0 # FFLD: high 0 CT-NY-CD-NY ==> CT-NY-CD-NY
+H140    C136    C944   H140          0.15   3.0        0.0   1.0 # FFLD: high 0 HC-CT-CT-HC ==> HC-CT-CT-HC
+H140    C136    C944   N943        -0.291   3.0        0.0   1.0 # FFLD: high 0 HC-CT-CT-NY ==> HC-CT-CT-NY
+H140    C944    N943   H240            0.0   1.0        0.0   1.0 # FFLD: high 0 HC-CT-NY-H ==> H-NY-CT-HC
+H240    N940    C942   N941         0.209  -3.0        0.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N940    C942   N941       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N940    C942   N941        -2.345   1.0        0.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N940    C942   N943         0.209  -3.0        0.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N940    C942   N943       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N940    C942   N943        -2.345   1.0        0.0   1.0 # FFLD: high 0 NY-CD-NI-H ==> H-NI-CD-NY
+H240    N941    C942   N940         0.209  -3.0        0.0   1.0 # FFLD: high 0 NI-CD-NY-H ==> H-NY-CD-NI
+H240    N941    C942   N940       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 NI-CD-NY-H ==> H-NY-CD-NI
+H240    N941    C942   N940        -0.095   1.0        0.0   1.0 # FFLD: high 0 NI-CD-NY-H ==> H-NY-CD-NI
+H240    N941    C942   N943         0.209  -3.0        0.0   1.0 # FFLD: high 0 NY-CD-NY-H ==> H-NY-CD-NY
+H240    N941    C942   N943       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 NY-CD-NY-H ==> H-NY-CD-NY
+H240    N941    C942   N943        -0.095   1.0        0.0   1.0 # FFLD: high 0 NY-CD-NY-H ==> H-NY-CD-NY
+H240    N943    C942   N940         0.209  -3.0        0.0   1.0 # FFLD: high 0 H-NY-CD-NI ==> H-NY-CD-NI
+H240    N943    C942   N940       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 H-NY-CD-NI ==> H-NY-CD-NI
+H240    N943    C942   N940        -0.095   1.0        0.0   1.0 # FFLD: high 0 H-NY-CD-NI ==> H-NY-CD-NI
+H240    N943    C942   N941         0.209  -3.0        0.0   1.0 # FFLD: high 0 H-NY-CD-NY ==> H-NY-CD-NY
+H240    N943    C942   N941       -0.2085  -2.0      180.0   1.0 # FFLD: high 0 H-NY-CD-NY ==> H-NY-CD-NY
+H240    N943    C942   N941        -0.095   1.0        0.0   1.0 # FFLD: high 0 H-NY-CD-NY ==> H-NY-CD-NY
+!  also new LYN parameters
+C136    C136    C292    N900         1.497  -3.0        0.0   1.0 # FFLD: high 0 CT-CT-CT-NT ==> CT-CT-CT-NT
+C136    C136    C292    N900        0.0345  -2.0      180.0   1.0 # FFLD: high 0 CT-CT-CT-NT ==> CT-CT-CT-NT
+C136    C136    C292    N900          -2.5   1.0        0.0   1.0 # FFLD: high 0 CT-CT-CT-NT ==> CT-CT-CT-NT
+C136    C292    N900    H240          0.209  -3.0        0.0   1.0 # FFLD: high 0 CT-CT-NT-H ==> CT-CT-NT-H
+C136    C292    N900    H240        -0.2085  -2.0      180.0   1.0 # FFLD: high 0 CT-CT-NT-H ==> CT-CT-NT-H
+C136    C292    N900    H240         -0.095   1.0        0.0   1.0 # FFLD: high 0 CT-CT-NT-H ==> CT-CT-NT-H
+
+H140    C136    C292    N900        0.2365  -3.0        0.0   1.0 # FFLD: high 0 HC-CT-CT-NT ==> HC-CT-CT-NT
+H140    C136    C292    N900       -0.3545  -2.0      180.0   1.0 # FFLD: high 0 HC-CT-CT-NT ==> HC-CT-CT-NT
+H140    C136    C292    N900       -0.5065   1.0        0.0   1.0 # FFLD: high 0 HC-CT-CT-NT ==> HC-CT-CT-NT
+H140    C292    N900    H240            0.2   3.0        0.0   1.0 # FFLD: high 0 HC-CT-NT-H ==> H-NT-CT-HC
 
 [impropers]
 *iaci  iacj   iack   iacl      forceK     imp0

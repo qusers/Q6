@@ -1,0 +1,30 @@
+{MTH}
+# Generated with q_ffld2q.py from 'mth.ffld14'
+# Date: Wed Dec  2 19:12:13 2015
+    [info]
+        solvent 1
+        density 0.01488584270
+        dielectric 32700
+
+[atoms]
+    1  C1    CT             0.145
+    2  H2    HC             0.04
+    3  H3    HC             0.04
+    4  H4    HC             0.04
+    5  O5    OH            -0.683
+    6  H6    HO             0.418
+
+[bonds]
+C1    H2   
+C1    H3   
+C1    H4   
+C1    O5  
+O5    H6
+
+[impropers]
+
+
+[charge_groups]
+C1 H2 H3 H4 O5 H6
+
+!----------------------------------------------

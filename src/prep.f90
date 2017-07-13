@@ -5742,7 +5742,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 	logical,intent(in), optional				::	rest
 !locals
 	integer						::	waters_added
-	real(kind=prec)						::	rpack2
+	real(kind=prec)						::	rpack2,rwatpack2
 	integer						::	w_at, w_mol, p_atom
 	logical						::	wheavy(max_atlib), restart
 	real(kind=prec)					::	r2
@@ -5776,6 +5776,10 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
 
 	waters_added = 0
 	rpack2 = pack**2
+        ! solvent can pack closer to other solvent that to solute
+        ! default for now is 0.5 pack
+        ! needs option to set it explicitly
+        rwatpack2 = (pack/0.5_prec)**2
 	num_heavy = 0
 	do w_at = 1, lib(irc_solvent)%nat
 		if(lib(irc_solvent)%atnam(w_at)(1:1) == 'H') then
@@ -5993,7 +5997,7 @@ ploop:		do p_atom = 1, nat_pro !for each water check all other atoms
                                         else
                                         r2 = q_dist4(xw(w_at,w_mol),xw(next_atom,next_wat))
                                         end if
-					if( r2<rpack2 ) then
+					if( r2<rwatpack2 ) then
 						keep(w_mol) = .false.
 						cycle wloop
 					end if

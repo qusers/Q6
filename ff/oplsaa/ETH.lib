@@ -1,0 +1,36 @@
+{ETH}
+# simple ethanol solvent build with Gromacs charges and std atom types
+# density based on 789 kg/m³ and 46.06844 g/mol
+    [info]
+        solvent 1
+        density 0.010313694
+        dielectric 24500
+
+[atoms]
+     1       CA    CT   -0.18    
+     2       HA1   HC    0.06    
+     3       HA2   HC    0.06    
+     4       HA3   HC    0.06    
+     5       CB    CT    0.145    
+     6       HB1   HC    0.06
+     7       HB2   HC    0.06    
+     8       OH    OH   -0.683 
+     9       HO    HO    0.418
+   
+[bonds]
+ CA HA1
+ CA HA2
+ CA HA3
+ CA CB
+ CB HB1
+ CB HB2
+ CB OH
+ OH HO
+
+[impropers]
+
+[charge_groups]
+CB CA HA1 HA2 HA3 HB1 HB2 OH HO
+!----------------------------------------------
+
+

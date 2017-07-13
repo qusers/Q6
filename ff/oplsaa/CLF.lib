@@ -1,0 +1,27 @@
+{CLF}
+#  Chloroform based on Gromacs file, by hand
+    [info]
+        solvent 1
+        density 0.0075161501
+	dielectric 4810
+
+[atoms]
+       1  C1   dcm_C2  -0.3336
+       2  Cl1  dcm_Cl1  0.0120
+       3  Cl2  dcm_Cl1  0.0120
+       4  Cl3  dcm_Cl1  0.0120    
+       5  H1   dcm_H3   0.2976
+[bonds]
+C1    Cl1   
+C1    Cl2   
+C1    Cl3  
+C1    H1  
+
+
+[impropers]
+
+
+[charge_groups]
+C1 Cl1 Cl2 Cl3 H1
+
+
