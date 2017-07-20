@@ -3324,8 +3324,8 @@ pp_precomp(it)%vdWB = 2.0_prec * tempA * tempB
 end select
 pp_precomp(it)%elec = crg(i) * crg(j)
 
-if ( (q_abs(pp_precomp(it)%vdWA - zero).gt.1E-6_prec) .or. (q_abs(pp_precomp(it)%vdWB - zero).gt.1E-6_prec) &
-        .or. (q_abs(pp_precomp(it)%elec - zero).gt.1E-6_prec)) pp_precomp(it)%set  = .true.
+if ( (q_abs(pp_precomp(it)%vdWA - zero).gt.QREAL_EPS) .or. (q_abs(pp_precomp(it)%vdWB - zero).gt.QREAL_EPS) &
+        .or. (q_abs(pp_precomp(it)%elec - zero).gt.QREAL_EPS)) pp_precomp(it)%set  = .true.
 
 if (vdw .eq. 3 ) pp_precomp(it)%elec = pp_precomp(it)%elec * el14_scale
 
@@ -3360,8 +3360,8 @@ pw_precomp(low,j)%vdWB = 2.0_prec * tempA * tempB
 end select
 pw_precomp(low,j)%elec = crg(i) * chg_solv(j)
 
-if ( (q_abs(pw_precomp(low,j)%vdWA - zero).gt.1E-6_prec) .or. (q_abs(pw_precomp(low,j)%vdWB - zero).gt.1E-6_prec) &
-        .or. (q_abs(pw_precomp(low,j)%elec - zero).gt.1E-6_prec)) pw_precomp(low,j)%set  = .true.
+if ( (q_abs(pw_precomp(low,j)%vdWA - zero).gt.QREAL_EPS) .or. (q_abs(pw_precomp(low,j)%vdWB - zero).gt.QREAL_EPS) &
+        .or. (q_abs(pw_precomp(low,j)%elec - zero).gt.QREAL_EPS)) pw_precomp(low,j)%set  = .true.
 
 end subroutine precompute_set_values_pw
 
@@ -3413,8 +3413,8 @@ else
 qp_precomp(j,iq,istate)%elec = crg(i) * crg(j)
 end if
 
-if ( (q_abs(qp_precomp(j,iq,istate)%vdWA - zero).gt.1E-6_prec) .or. (q_abs(qp_precomp(j,iq,istate)%vdWB - zero).gt.1E-6_prec) &
-        .or. (q_abs(qp_precomp(j,iq,istate)%elec - zero).gt.1E-6)) qp_precomp(j,iq,istate)%set  = .true.
+if ( (q_abs(qp_precomp(j,iq,istate)%vdWA - zero).gt.QREAL_EPS) .or. (q_abs(qp_precomp(j,iq,istate)%vdWB - zero).gt.QREAL_EPS) &
+        .or. (q_abs(qp_precomp(j,iq,istate)%elec - zero).gt.QREAL_EPS)) qp_precomp(j,iq,istate)%set  = .true.
 
 qp_precomp(j,iq,istate)%score = sc_lookup(iq,iac(j),istate)
 if (vdw .eq. 3 ) qp_precomp(j,iq,istate)%elec = qp_precomp(j,iq,istate)%elec * el14_scale
@@ -3481,8 +3481,8 @@ end if
 qq_precomp(iq,jq,istate)%elec  = qq_precomp(iq,jq,istate)%elec * q_elscale
 qq_precomp(iq,jq,istate)%score = sc_lookup(iq,natyps+jq,istate)
 
-if ( (q_abs(qq_precomp(iq,jq,istate)%vdWA - zero).gt.1E-6_prec) .or. (q_abs(qq_precomp(iq,jq,istate)%vdWB - zero).gt.1E-6_prec) &
-        .or. (q_abs(qq_precomp(iq,jq,istate)%elec - zero).gt.1E-6_prec)) qq_precomp(iq,jq,istate)%set = .true.
+if ( (q_abs(qq_precomp(iq,jq,istate)%vdWA - zero).gt.QREAL_EPS) .or. (q_abs(qq_precomp(iq,jq,istate)%vdWB - zero).gt.QREAL_EPS) &
+        .or. (q_abs(qq_precomp(iq,jq,istate)%elec - zero).gt.QREAL_EPS)) qq_precomp(iq,jq,istate)%set = .true.
 
 if (vdw .eq. 3 ) qq_precomp(iq,jq,istate)%elec = qq_precomp(iq,jq,istate)%elec * el14_scale
 if ((vdw .eq. 2 ).and.(qvdw_flag)) qq_precomp(iq,jq,istate)%soft = .true.

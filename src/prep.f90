@@ -5779,7 +5779,7 @@ subroutine add_solvent_to_topology(waters_in_sphere, max_waters, make_hydrogens,
         ! solvent can pack closer to other solvent that to solute
         ! default for now is 0.5 pack
         ! needs option to set it explicitly
-        rwatpack2 = (pack/0.5_prec)**2
+        rwatpack2 = (pack/2.0_prec)**2
 	num_heavy = 0
 	do w_at = 1, lib(irc_solvent)%nat
 		if(lib(irc_solvent)%atnam(w_at)(1:1) == 'H') then

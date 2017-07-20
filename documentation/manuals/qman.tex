@@ -166,7 +166,16 @@ especially useful when simulating large systems, $e.g.$ the
 systems that are used with the periodic boundary condition.
 \end{itemize}
 
-
+New features of Q6 are listed here:
+\begin{itemize}
+	\item \textbf{Quantum classical path calculations.} The bisection QCP method of Major and Gao\cite{Major2007a,Gao2008}
+		allows the calculation of quantum corrections and isotope effects of EVB free energy profiles.
+	\item \textbf{Organic solvent models.} Updates to the solvent handling routines allow in principle any organic solvent
+		to be modelled.
+	\item \textbf{Group contributions on--the--fly calculations.} New routines to handle the calculation of residue or atom
+		specific energy contributions during a free energy calculation make it possible to cheaply assess the 
+		effect of removing specific inetractions in a molecular system.
+\end{itemize}
 
 
 
@@ -185,7 +194,7 @@ communication.
 
 The memory requirements vary with the size of the simulated system but
 are, in general, modest.  A system of  18 Å radius with a cutoff of 10
-Å  in non-bonded  interactions uses  about  3 to  7 Mb  of RAM  memory
+Å  in non-bonded  interactions uses  about  50 to  200 Mb  of RAM  memory
 depending slightly on the computer and operating system.
 
 \subsubsection{Compilers} 
@@ -949,6 +958,41 @@ In this case, a harmonic angle force is applied between the atoms 133, 132 and 3
  in order to enforce a 180\degree, with 3.0 kcal$\cdot $mol$^{-1}\cdot ${degrees}$^{-2}$
 at the state 2.
 
+If the interactions between residues and the reactive regions should be excluded
+for the energy calculation, this can be specified using the
+[\textbf{group{\_}contribution}] keyword. After this, a list of residues or atoms
+can be specified as follows below:
+\begin{center}
+	\begin{tabularx}{\textwidth}{|l l X|}
+		\hline
+		\multicolumn{3}{|l|}{[group{\_}contribution]} \\
+		residue & full & 123 \\
+		atom & elec & 359 360 361 \\
+		residue & vdw & 14 15 \\
+	\end{tabularx}
+\end{center}
+Here, three groups of residues or atoms will be removed in additional energy calculations
+to assess their influence on the overall reaction, with the total, electrostatic or van--der Waals
+interactions being affected, respectively.
+
+The newest addition to Q is performing BQCP \cite{Major2007a,Gao2008} calculations. This is
+possible both during the normal dynamics and as post--processing of trajectory files. In either case,
+the section [\textbf{QCP}] is added to the input file as shown below:
+\begin{center}
+	\begin{tabularx}{\textwidth}{|l X|}
+		\hline
+		\multicolumn{2}{|l|}{[QCP]} \\
+		qcp{\_}size & default \\
+		selection & hydrogen \\
+		qcp{\_}pdb & qcp.pdb \\
+		sampling & 20 \\
+	\end{tabularx}
+\end{center}
+This calculation would generate the energies for the system with quantum corrections for the hydrogen
+atoms, with 20 sampling steps for the classical coordinate and a ring--polymer size of 32 beads, 
+writing the bead coordinates to the file qcp.pdb.
+
+
 \subsubsection{\textbf{qdyn} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
@@ -1126,7 +1170,9 @@ may be used if we want to calculate the difference in hydration
 free energy between two ions, in this case Na$^{+}$ and K$^{+}$.
 Since the ions have the same charge the only change that needs to
 be made in a perturbation calculation between the two ions is to
-define two sets of Lennard-Jones interaction parameters.
+define two sets of Lennard-Jones interaction parameters. Please note
+that changes to the mass of a particle have no effect during the
+calculation, except when quantum corrections are calculated.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Ändrar numreringen på tabellerna%%%%%%%%
@@ -3354,6 +3400,10 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline 5 & \multicolumn{2}{p{320pt}|}{  Constant D$_{e}$ in the Morse potential, depth of the potential energy minimum.}\\
 \hline 6 & \multicolumn{2}{p{320pt}|}{  Constant a in the Morse potential.}\\
 \hline 7 & \multicolumn{2}{p{320pt}|}{  Flag for restraining also hydrogens (0=no, 1=yes).}\\
+
+
+
+
 \hline
 \end{longtable}
 \normalsize
@@ -4510,6 +4560,10 @@ A general and fast scoring function for protein--ligand interaction: A simplifie
 \bibitem{Schneider:1978}Schneider T., and Stoll E., Molecular-dynamics study of a three-dimensional one-component model for distortive phase transitions, Phys. Rev. B, 17, 1302-1322, 1978
 
 \bibitem{Frenkelbook} Frenkel D., and Smit B., Understanding Molecular Simulation - From Algorithms to Applications, Academic Press, 2002
+
+\bibitem{Major2007a} Major, D.T. and Gao, J., An Integrated Path Integral and Free--Energy Perturbation--Umbrella Sampling Method for Computing Kinetic Isotope Effects of Chemical Reactions in Solution and in Enzymes, J. Chem. Theo. Comp., 3, 949--960, 2007
+
+\bibitem{Gao2008} Gao, J., Wong, K.--Y., Major, D.T., Combined QM/MM and Path Integral Simulations of Kinetic Isotope Effects in the Proton Transfer Reaction Between Nitroethane and Acetate Ion in Water, J. Comp. Chem., 4, 514--522, 2008
 
 \end{thebibliography}
 
