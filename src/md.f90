@@ -294,13 +294,26 @@ end if
 
 15	format ('Target temperature =',f10.2,'  T-relax time     =',f10.2)
 
-yes = prm_get_integer_by_key('random_seed', iseed, 1) 
+yes = prm_get_integer_by_key('random_seed', iseed, -1) 
 if(.not. prm_get_real_by_key('initial_temperature', Tmaxw)) then
 iseed = 0 !set iseed = 0 if no initial temp
 need_restart = .true.
 end if
 
-if (iseed > 0) write (*,16) Tmaxw, iseed
+if (iseed .gt. 0) then
+	write (*,16) Tmaxw, iseed
+!if we need to reseed the run and value is less than one, generate seed from system time
+else if (.not.need_restart) then
+        write(*,'(a)') 'Generating seed from system time, please set seed manually to reproduce results'
+        call date_and_time(values=timeval)
+        iseed = timeval(5)*3600 + timeval(6)*60+timeval(7)+13337
+        iseed = MOD(iseed,10000)
+        if(MOD(iseed,2).eq.0) iseed = iseed + 1
+        write (*,16) Tmaxw, iseed
+end if
+ 
+
+
 16	format ('Initial velocities will be generated from Maxwell distribution:',&
         /,'Maxwell temperature=',f10.2,' Random number seed=',i10)
 
