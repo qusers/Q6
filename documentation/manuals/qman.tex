@@ -643,7 +643,8 @@ file at regular intervals (determined in the input file).
 The restart and energy files are Fortran binary files. The
 trajectory file follows the DCD format also used in other MD
 programs (Charmm, X-plor) and can be read by many visualization
-and trajectory animation programs.
+and trajectory animation programs. Please note that the trajctory
+reading routines in Q are not able to read files from other programs.
 
 \subsubsection{Preparing \textbf{qdyn} input files}\label{subsubsec:prep_qdyn_inp_f}
 In this overview the various aspects of defining the simulation
@@ -726,14 +727,19 @@ given in the section [\textbf{cut-offs}], as exemplified below:
   solute{\_}solute   & 10 \\
   solvent{\_}solvent & 10 \\
   solute{\_}solvent  & 10 \\
-  q{\_}atom          & 10 \\ \hline
+  q{\_}atom          & 10 \\ 
+  lrf                & 10 \\ \hline
 \end{tabularx}
 \end{center}
 
 The q{\_}atom entry defines the cut-off for interactions between
-Q-atoms and non-Q-atoms. No cut-off is used for interactions among
+Q-atoms and non-Q-atoms. The lrf entry defines the distance for the 
+Local Reaction Field long-range electrostatics cut-off. 
+No cut-off is used for interactions among
 Q-atoms. When using periodic boundary conditions, make certain all
-cut-off radii are less than half the shortest boxlength.
+cut-off radii are less than half the shortest boxlength. 
+Another option is to set the lrf and q{\_}atom distances to $-1$,
+indicating that the atoms should interact with all atoms within the simulation box.
 
 \textbf{Sphere}\\*[0.25cm] The \textbf{sphere} section defines
 parameters concerning the spherical boundary. The most frequently
@@ -764,6 +770,8 @@ simulations. The contents may often be as simple as:
   polarisation & on & !Enable solvent polarisation restraints \\ \hline
 \end{tabularx}
 \end{center}
+For more complex organc solvents, the polarisation restraints have 
+to be turned off at the moment.
 
 \textbf{Update and data collection intervals}\\*[0.25cm] The
 frequencies of regular events in the simulation are defined in the
@@ -968,7 +976,7 @@ can be specified as follows below:
 		\multicolumn{3}{|l|}{[group{\_}contribution]} \\
 		residue & full & 123 \\
 		atom & elec & 359 360 361 \\
-		residue & vdw & 14 15 \\
+		residue & vdw & 14 15 \\ \hline
 	\end{tabularx}
 \end{center}
 Here, three groups of residues or atoms will be removed in additional energy calculations
@@ -985,7 +993,7 @@ the section [\textbf{QCP}] is added to the input file as shown below:
 		qcp{\_}size & default \\
 		selection & hydrogen \\
 		qcp{\_}pdb & qcp.pdb \\
-		sampling & 20 \\
+		sampling & 20 \\ \hline
 	\end{tabularx}
 \end{center}
 This calculation would generate the energies for the system with quantum corrections for the hydrogen
@@ -1214,7 +1222,11 @@ this case (two parameters for the exponential repulsion function
 and two LJ parameters for 1-4 interactions). The last column is
 the atomic mass. The [\textbf{change{\_}atoms}] section states
 that q-atom number one is of type Na in state 1 and type K in
-state 2.
+state 2. The user has to be aware at this point the the atom
+mass specified in this section is only evaluated for the
+calculation of quantum effects. All other calculations are performed
+with the atom masses defined in the force field used for the
+simulation.
 
 So, in this example all we have done is to define the relevant LJ
 parameters for Na$^{+}$ and K$^{+}$ (Q-atom types for Na and K) as
@@ -1408,6 +1420,38 @@ between a specific pair of atoms k and l. The single record in
 this example defines mixing of states 1 and 2 (H$_{1,2})$ for
 q-atoms 2 and 8 with A=1.0 and $\mu $= 0.45.
 
+\subsection{Additional information for BQCP calculations}
+For the use of the BQCP implementation, specialized atom selections can be provided
+in the file under the header [\textbf{qcp{\_}atoms}]. If this section is found, atoms
+will be assigned to be treated using the BQCP approach in the order giving. 
+The atom numbers used below are taken from the proton transfer example above.
+\begin{center}
+\begin{tabularx}{\textwidth}{| l l |X|}
+  \hline \multicolumn{2}{|l|}{[qcp{\_}atoms]} & \\
+  \hline 1 & 2 & ! S donor\\
+  \hline 2 & 3 & ! transferred hydrogen\\
+  \hline 3 & 8 & ! O acceptor\\
+  \hline
+\end{tabularx}
+\end{center}
+In this case, the donor, acceptor and transferred atoms are designated to be treated
+this way. More general selections can also be done using atom selections
+in the input file for \textbf{qdyn}.\\
+If the calculation of kinetic isotope effects is desired, the user needs to provide
+the masses for the atoms under the header [\textbf{qcp{\_}mass}]. If this section is
+not found, or if atoms are missing from it, and the user requested the calculation 
+for different isotopes in the \textbf{qdyn} input file, masses will be automatically 
+read from the atom type definitions.
+\begin{center}
+\begin{tabularx}{\textwidth}{|l l |X|}
+	\hline \multicolumn{2}{|l|}{[qcp{\_}mass]} & \\
+	\hline 2 & 2.014 & ! Calculate for Deuterium in additon to protium\\
+	\hline
+\end{tabularx}
+\end{center}
+The example above instructs the program to also calculate the BQCP energies for
+the exhange of the transferred hydrogen to deuterium, while keeping the other atoms unchanged.
+
 \subsubsection{Monitoring non-bonded interactions}
 In analysing the details of $e.g.$ receptor-ligand interactions, it
 is useful to define some groups of atoms and calculate the
@@ -1438,6 +1482,9 @@ energies are evaluated separately for different FEP states and
 presented in the energy summaries in the \textbf{qdyn} output. In this
 example only a single state is defined so the $\lambda $-weighted
 averages are identical to the energies in state 1.
+The program will check on its own in how far the specified groups are able
+to actually interact, and will only calculate nonbonded energies if
+the atoms are not bonded to each other.
 
 ========== Monitoring selected groups of nonbonded interactions ==========
 \begin{tabbing}
@@ -1768,6 +1815,67 @@ be a difficult task for more than two states.
 \label{fig:Qfep-out}
 \end{figure}
 
+\subsection{BQCP post-processing}
+The calculation of quantum corrections can be performed as a post-processing step
+for already completed simulations. For this, the program \textbf{qpi} can be used,
+together with the simulation topology, FEP file containing the information
+outlined above, a properly formatted input file and the simulation trajectory 
+corresponding to different states of a simulation.
+\paragraph{Input file}
+The input file should be formatted in the same way as the file used to perform
+the initial simulation in \textbf{qdyn}, with a small number of changes.
+The \textbf{[MD]} section has to be renamed to \textbf{[GENERAL]},
+with the remaining lines left unchanged to ensure that the calculation will
+be performed on the same potential as during the classical simualtion. If the
+line \textbf{temperature} is not specified, \textbf{QPI} will require a restart
+file to calculate system temperatures from the velocities. An additional 
+change has to be performed to the \textbf{[files]} section, where the
+keyword \textbf{trajectory} has to be replaced with \textbf{traj{\_}input}.
+In general it is recommended to use the files from the classical simualtion and 
+perform those edits on them, instead of preparing new files, to avoid differences in
+the energy calculation between classical simulation and BQCP post-processing.
+The files also need to include the \textbf{[QCP]} section, or the program will
+terminate due to invalid input. This section has to be formatted the same
+was as specified above. The only difference to calcualtions during dynamics
+is that the user needs to provide the file name for the write out of bead
+coordinates using the \textbf{qcp{\_}pdb} keyword, or has to 
+explicitly turn of the write out using \textbf{qcp{\_}write off}.
+An example file is provided here, with the minimal input requirement.
+
+\begin{table}
+\begin{tabularx}{\textwidth}{|l l |X|}
+\hline
+\hline        [general] & & ! needed section to run calculation \\
+\hline        lrf & on & ! should be same as during simulation \\
+\hline        temperature & 300 & ! can be chosen freely, if missing calculated from restart file \\
+\hline        [cut-offs] & & ! optional, should be identical to classical simulation \\
+\hline        [files] & & ! required section \\
+\hline        topology & sys.top & ! same topology as during classical simulation \\
+\hline        energy & sys.en & ! file to write out energies to \\
+\hline        fep & sys.fep & ! same as during classical simulation\\
+\hline        traj{\_}input & sys.dcd & ! file with coordinates to calculate on, from classical simulation \\
+\hline        [QCP] & & ! required section \\
+\hline        selection & all & ! what subset of Q atoms should be treated as ring polymers \\
+\hline        equilibration & 10 & ! how many MC bisection steps should be taken before calculating energies \\
+\hline        sampling & 10 & ! how many ring polymer configurations hould be sampled \\
+\hline        qcp{\_}seed & -1 & ! random number seed for algorithm, -1 means take number from system time\\
+\hline        qcp{\_}kie & on & ! calculate energies for default and isotope masses \\
+\hline        qcp{\_}write & on & ! write bead coordinates to file \\
+\hline        qcp{\_}pdb & qcp.pdb & ! file name for bead coordinate file \\
+\hline        qcp{\_}show & off & ! only print minimal information about calculation \\
+\hline        qcp{\_}debug & off & ! do not print debug information \\
+\hline        qcp{\_}size & default & ! use default size of ring polymer, 32 beads \\
+\hline        [lambdas] & & ! needed for FEP states \\
+\hline        1.0 & 0.0 & ! Lambda values corresponding to classical simulation \\
+	\hline
+\end{tabularx}
+\end{table}
+%%\begin{figure}[h]
+%%\caption{Example \textbf{qpi} input file}
+%%\centering
+%%\includegraphics*[scale=1]{\dirfig/QPi_inp.pdf}
+%%\label{fig:Qpi-inp}
+%%\end{figure}
 
 \subsection{Scoring}\label{subsection:scoring} 
 Three   scoring   functions   are   implemented   in   \textbf{qcalc}:
@@ -3281,15 +3389,26 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline steps & Number of MD steps. & Required.\\
 \hline stepsize & MD stepsize ($\Delta$t) (fs). & Required.\\
 \hline temperature & Target temperature (K). & Required.\\
-\hline bath\_coupling & Temperature bath relaxation time T (fs)\cite{Berendsen:1984}. & Optional, default 100 fs. Must be $\geq$ stepsize. \\
+\hline bath\_coupling & Temperature bath relaxation time T (fs) to use with berendsen thermostat\cite{Berendsen:1984}. & Optional, default 100 fs. Must be $\geq$ stepsize. \\
 \hline separate\_scaling & Enable (on) or disable (off) separate temperature scaling of solute and solvent. & Optional, default on. \\
-\hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities.\\
+\hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities. Negative value or omission will generate number from system time.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
-\hline shake\_solvent & Enable (on) or disable (off) shake constraining of bonds and angles of water. & Optional, default on. We recommend the use of shake for water.\\
-\hline shake\_solute & Shake constraining of bonds to hydrogen atoms in solute bonds on or off. & Optional, default off.\\
-\hline shake\_hydrogens & Shake constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default off. \\
-\hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
+\hline constraint{\_}method & Method to apply constraints to the system, can be either SHAKE or LINCS. & Optional, default SHAKE.\\
+\hline shake\_solvent & Enable (on) or disable (off) constraining of bonds and angles of water. & Optional, default on. We recommend the use of constraints for water.\\
+\hline shake{\_}all & Constraining all bonds on or off. & Optional, default off. \\
+\hline shake{\_}solute & Constraining all solute bonds on or off. & Optional, default off. \\
+\hline shake{\_}heavy & Constraining of bonds to heavy atoms in solute and solvent on or off. & Optional, default off.\\
+\hline shake{\_}hydrogens & Constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default on. \\
 \hline
+\hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
+\hline verbose{\_}temp & Turn extended output for simulation temperature (on) or (off). If on, will print list of atoms exceeding temperature maximum and will print update to current system temperature if changes exceed 2{\%}. By default those are only printed at the desired ouptut interval. & Optional, default off. \\
+\hline
+\hline thermostat & Choice of thermostat used for system. Available thermostats are berendsen, langevin, nose-hoover. & Optional, default berendsen. \\
+\hline langevin{\_}friction & Friction constant for langevin thermostat. & Optional, default 1/bath{\_}coupling. \\
+\hline nhchains & Number of chains for Nose-Hoover thermostat & Optional, default 10.\\
+\hline integrator & Choice of intergrator for simulation, available options are leap-frog and velocity-verlet. & Optional, default leap-frog. \\
+
+
 \multicolumn{3}{p{394pt}}{}\\
 
 \multicolumn{3}{p{394pt}}{[\textbf{PBC}]: Settings for periodic boundary conditions.}\\
@@ -3332,7 +3451,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{[\textbf{intervals}]: Intervals between saving data and updating non-bond lists.}\\
 \hline non\_bond & Non-bond list (and LRF data) update interval. & Optional, default 10.\\
 \hline output & Interval for printing energy summaries. & Optional, default 10.\\
-\hline temperature & Interval for printing temperature. It will always be printed if it changed by $>$ 2\% since last printed. & Optional, default 10.\\
+\hline temperature & Interval for printing temperature. It will always be printed if it changed by $>$ 2\% since last printed and if verbose{\_}temp is set. & Optional, default 10.\\
 \hline energy & Interval for writing Q-atom energies to energy file. & Optional, default 0 (disabled).\\
 \hline trajectory & Interval for writing coordinates to trajectory file. & Optional, default 0 (disabled).\\
 \hline volume\_change & Interval for Monte-Carlo trial of new volume. & Optional, default 0 (disable).\\
@@ -3353,6 +3472,20 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{[\textbf{trajectory\_atoms}]: which atoms to include in the trajectory.}\\
 \hline
 \multicolumn{3}{|p{394pt}|}{The data in this section is an atom mask specification, it follows the rules in section Atom masks. Multiple lines may be used.}\\
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{QCP}]: BQCP calculation of quantum corrections.}\\
+\hline qcp{\_}seed & Random number seed for MC calculation. & Optional, can be calculated from system time.\\
+\hline qcp{\_}kie  & Enable (on) or disable (off) calculation of BQCP energies for different isotopes. & Optional, default off. \\
+\hline qcp{\_}write & Enable (on) or disable (off) write out of bead coordinates to file. Enabled by default in post processing, disabled bey default during MD. & Optional. \\
+\hline qcp{\_}pdb & Name of file for writing out bead coordinates. & Required if qcp{\_}write is on. \\
+\hline qcp{\_show} & Enable (on) or disable (off) printing of additional information concerning  BQCP calculations. & Optional, default off. \\
+\hline qcp{\_}debug & Enable (on) or disable (off) printing of BQCP debug information. & Optional, default off.\\
+\hline selection & Specification of atoms that should be converted into ring polymers for BQCP. Can be ``hydrogen'', ``hyd'', ``h'' to only include protons, ``all'', ``qatom'', ``fep'' to include all atoms in the FEP file, or ``individual'' to read the information from the FEP file & Optional, default ``hydrogen''\\
+\hline qcp{\_}size & Specify size of the ring polymers. Can be ``default'' size 32, ``small'' size 16, ``large'' size 64 or user specified later with ``userdefine''. Please note that the bisection strategy requires ring polymers that are results of $2^{n}$. & Optional, default size 32.\\
+\hline qcp{\_}size{\_}user & Userdefined size of ring polymer. Needs to be larger than 4, and a result of $2^{n}$. Only evaluated if qcp{\_}size selection is ``userdefine''. & Optional, default 16.\\
+\hline equilibration & Number of MC sampling steps before start of the energy calculation. & Optional, default 10.\\
+\hline sampling & Number of free particle sampling steps. & Optional, default 10.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3400,8 +3533,14 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline 5 & \multicolumn{2}{p{320pt}|}{  Constant D$_{e}$ in the Morse potential, depth of the potential energy minimum.}\\
 \hline 6 & \multicolumn{2}{p{320pt}|}{  Constant a in the Morse potential.}\\
 \hline 7 & \multicolumn{2}{p{320pt}|}{  Flag for restraining also hydrogens (0=no, 1=yes).}\\
-
-
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{group{\_}contribution}]: Calculate energies differences of residue or atom groups on free energy profile.}\\
+\hline 1 & \multicolumn{2}{p{320pt}|}{ Selection name, either atom (for individual atoms) or residue (for complete residues).} \\
+\hline 2 & \multicolumn{2}{p{320pt}|}{ Calculation type, either ``full'' for exclusion of both vdW and electrostatic interactions, ``electro'' to only exclude electrostatics or ``vdw'' to only exclude vdW interactions. A special selector is ``all'' that instructs the program to perform all three calculations for the same group.}\\
+\hline 3... & \multicolumn{2}{p{320pt}|}{Atom or residue numbers that should be excluded.} \\ 
+\hline
+\multicolumn{3}{p{394pt}}{}\\
 
 
 \hline
@@ -3693,6 +3832,18 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline 4 & \multicolumn{2}{p{341pt}|}{Q-atom l.}\\
 \hline 5 & \multicolumn{2}{p{341pt}|}{A$_{i,j}$ (kcal$\cdot$mol$^{-1}$).}\\
 \hline 6 & \multicolumn{2}{p{341pt}|}{$\mu_{i,j}$ (Å$^{-1}$).}\\
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{qcp{\_}atoms}]: Individual definition of atoms to include for BQCP calculations. Only needed if not defined in qdyn or qpi input file.}\\
+\hline 1 & \multicolumn{2}{p{341pt}|}{QCP atom index.}\\
+\hline 2 & \multicolumn{2}{p{341pt}|}{Q-Atom number.}\\
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{qcp{\_}mass}]: Definition of atom massed for isotope calculations. All masses not defined here will be taken from the mass information in the FEP file [\textbf{atom{\_}types}] section. Masses in amu.}\\
+\hline 1 & \multicolumn{2}{p{341pt}|}{QCP atom index number.}\\
+\hline 2 & \multicolumn{2}{p{341pt}|}{Isotope mass in amu.}\\
+
+
 \hline
 \end{longtable}
 \normalsize
