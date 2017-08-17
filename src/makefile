@@ -75,7 +75,7 @@ else ifeq ($(COMP),osx)
 	FFLAGS=         -fstack-protector -DG95=1 \
                         -ffree-line-length-none -fcray-pointer -fall-intrinsics\
                         -std=legacy -Wall -Wtabs ${PREC}
-	FFLAGS_R8=	-fdefault-real-8
+	FFLAGS_R8=	
 	FPP_FLG=        -cpp -DOSX
 
 	MPIFC=          mpif90
@@ -94,7 +94,7 @@ else ifeq ($(COMP),pgi)
 	FC=		pgf90
 	FC_OPT=		-fastsse -Mipa=fast,inline -Minline=lrf_update,size:10000,levels:2 -O4 -Munroll -mcmodel=medium -Minfo=inline
 	FFLAGS=		${PREC}
-	FFLAGS_R8=	-r8
+	FFLAGS_R8=	
 	FPP_FLG=	-Mpreprocess -DPGI
 
 	MPIFC=		mpif90
@@ -110,7 +110,7 @@ else ifeq ($(COMP),ibm)
 	PREC=		-DQDOUBLE
 	FC=             xlf90
 	FC_OPT=         -qsmp=omp
-	FFLAGS=		-qrealsize=8 -DIBM ${PREC}
+	FFLAGS=		-DIBM ${PREC}
 
 ################################################################################
 # GNU gcc-gfortran
