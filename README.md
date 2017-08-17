@@ -1,4 +1,4 @@
-qsource
+Q6
 =======
 Version control of the molecular dynamics code called Q, version 6, via github.
 
