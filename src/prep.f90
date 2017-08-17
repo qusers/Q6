@@ -1,8 +1,25 @@
-! (C) 2000 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! Q6: A comprehensive simulation package for molecular dynamics simulations and 
+! free energy calculations, including empirical valence bond simulations, 
+! linear interaction energy calculations, and free energy perturbation.
+! 
+! Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+! 
+! This program is free software; you can redistribute it and/or modify it under the 
+! terms of the GNU General Public License as published by the Free 
+! Software Foundation; either version 2 of the License, or any later version.
+! 
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+! See the GNU General Public License for more details.
+! 
+! You should have received a copy of the GNU General Public License along with 
+! this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+! Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+! how to contact you by electronic and paper mail.
 ! prep.f90
 ! by Johan Åqvist & John Marelius
 ! topology preparation, solvation, validation and PDB I/O
-!TODO: precision not fixed
 
 MODULE PREP
 	use BONDED
@@ -5072,7 +5089,7 @@ subroutine solvate_box_file
 		close(13)
 		call parse_reset
 		return
-	else if( lib(irc_solvent)%density <= 0. ) then
+	else if( lib(irc_solvent)%density <= zero ) then
 		write(*, '(a, a)' ) '>>>>> ERROR: Density not set in library entry ', lib(irc_solvent)%nam
 		close(13)
 		call parse_reset
@@ -5462,7 +5479,7 @@ subroutine solvate_sphere_file(shift)
 	backspace(13)
 	if(.not. set_irc_solvent()) then
 		goto 999
-	else if(lib(irc_solvent)%density <= 0.) then
+	else if(lib(irc_solvent)%density <= zero) then
 		write(*,910) lib(irc_solvent)%nam
 910		format('>>>>> ERROR: Density not set in library entry ',a)
 		goto 999

@@ -17,3 +17,7 @@ build-number.txt
 *swo
 *swp
 *ipa
+*.bbl
+*.bcf
+*.blg
+*.run.xml

@@ -1,4 +1,22 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! Q6: A comprehensive simulation package for molecular dynamics simulations and 
+! free energy calculations, including empirical valence bond simulations, 
+! linear interaction energy calculations, and free energy perturbation.
+! 
+! Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+! 
+! This program is free software; you can redistribute it and/or modify it under the 
+! terms of the GNU General Public License as published by the Free 
+! Software Foundation; either version 2 of the License, or any later version.
+! 
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+! See the GNU General Public License for more details.
+! 
+! You should have received a copy of the GNU General Public License along with 
+! this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+! Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+! how to contact you by electronic and paper mail.
 ! qpi.f90
 ! based on qdyn.f90
 ! by Johan Åqvist, John Marelius, Anders Kaplan & Martin Nervall
@@ -8,7 +26,7 @@
 ! this will look like a copy of qdyn,f90, because it needs to do a large part of the same work  done there
 ! so we also initialize the same variables and stuff, but exclude everything only needed during the actual md
 
-program QPI5
+program QPI6
   use QCP
   use VERSIONS
   use MPIGLOB ! use MPI global data
@@ -187,7 +205,7 @@ INTEGER(4) FUNCTION qsignal( signum, proc, sigflag )
        qsignal = 1
 END FUNCTION qsignal
 
-end program Qpi5
+end program QPI6
 
 ! signal handlers
 

@@ -1,8 +1,26 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! Q6: A comprehensive simulation package for molecular dynamics simulations and 
+! free energy calculations, including empirical valence bond simulations, 
+! linear interaction energy calculations, and free energy perturbation.
+! 
+! Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+! 
+! This program is free software; you can redistribute it and/or modify it under the 
+! terms of the GNU General Public License as published by the Free 
+! Software Foundation; either version 2 of the License, or any later version.
+! 
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+! See the GNU General Public License for more details.
+! 
+! You should have received a copy of the GNU General Public License along with 
+! this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+! Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+! how to contact you by electronic and paper mail.
 ! version.f90
 ! Initial date: 2015
 ! by Ireneusz Szeler
-! Q version and halp print info
+! Q version and help print info
 
 module VERSIONS
 
@@ -41,16 +59,38 @@ subroutine version_check(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
        fin = .true.
        write(*,*) 
        write(*,'(a,a)') trim(Q_PROGRAM), ' help information'
+       write(*,*) 'Q6: A comprehensive simulation package for molecular dynamics simulations and'
+       write(*,*) 'free energy calculations, including empirical valence bond simulations,'
+       write(*,*) 'linear interaction energy calculations, and free energy perturbation.'
+       write(*,*) 
+       write(*,*) 'Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer'
+       write(*,*) 
+       write(*,*) 'This program is free software; you can redistribute it and/or modify it under the'
+       write(*,*) 'terms of the GNU General Public License as published by the Free'
+       write(*,*) 'Software Foundation; either version 2 of the License, or any later version.'
+       write(*,*) 
+       write(*,*) 'This program is distributed in the hope that it will be useful,'
+       write(*,*) 'but WITHOUT ANY WARRANTY; without even the implied warranty of'
+       write(*,*) 'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.'
+       write(*,*) 'See the GNU General Public License for more details.'
+       write(*,*) 
+       write(*,*) 'You should have received a copy of the GNU General Public License along with'
+       write(*,*) 'this program; if not, write to the Free Software Foundation, Inc., 51 Franklin'
+       write(*,*) 'Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on'
+       write(*,*) 'how to contact you by electronic and paper mail.'
+       write(*,*) 
+       write(*,*) 'Information about copying and warrantry can be found in the file LICENCE'
+       write(*,*) 
        select case (Q_PROGRAM)
          case ('qdyn')
              write(*,*) 
              write(*,'(a)') 'To run calculations use: '
-             write(*,'(a,a,a)') '    ',trim(Q_PROGRAM), '5 inputfile.inp > output.file'
+             write(*,'(a,a,a)') '    ',trim(Q_PROGRAM), '6 inputfile.inp > output.file'
              write(*,'(a)') ' or for parallel version'
-             write(*,'(a,a,a)') '    mpienvirment ', trim(Q_PROGRAM), '5p inputfile.inp > output.file'
+             write(*,'(a,a,a)') '    mpienvironment ', trim(Q_PROGRAM), '6p inputfile.inp > output.file'
              write(*,*) 
              write(*,'(a)') 'where:'
-             write(*,'(a)') 'mpienvirment - e.q. mpirun -n 4, for more info check cluster informations '
+             write(*,'(a)') 'mpienvironment - e.q. mpirun -n 4, for more info check cluster informations '
              write(*,*) 
          case ('qfep')
              write(*,*) 
@@ -64,6 +104,9 @@ subroutine version_check(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
              write(*,*) 
              write(*,'(a,a)') 'In this moment no info available for ', trim(Q_PROGRAM) 
              write(*,*) 
+         case ('qpi')
+              write(*,*)
+              write(*,'(a,a)') 'At this moment no info available for ', trim(Q_PROGRAM)
          case default
              write(*,*) 
              write(*,'(a)') 'It is some new program added to Q?'
@@ -76,6 +119,8 @@ subroutine version_check(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
   select case (Q_PROGRAM)
     case ('qdyn')
       write(*,*) 
+      write(*,'(a,a,a,a)') 'Welcome in ', trim(Q_PROGRAM), ' modification date ', trim(Q_DATE)
+      write(*,*)
     case ('qfep')
       write(*,*) 
       write(*,'(a,a,a,a)') 'Welcome in ', trim(Q_PROGRAM), ' modification date ', trim(Q_DATE) 
@@ -87,12 +132,18 @@ subroutine version_check(Q_PROGRAM, Q_VERSION, Q_DATE, Q_SUFFIX)
     case ('qcalc')
       write(*,*) 
       write(*,'(a,a,a,a)') 'Welcome in ', trim(Q_PROGRAM), ' modification date ', trim(Q_DATE) 
-      write(*,*) 
+      write(*,*)
+    case ('qpi')
+      write(*,*)
+      write(*,'(a,a,a,a)') 'Welcome in ', trim(Q_PROGRAM), ' modification date ', trim(Q_DATE)
     case default
       write(*,*) 
       write(*,'(a)') 'Welcome in ...' 
       write(*,*) 
   end select
+  write(*,*) 'Q6, Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer'
+  write(*,*) 'Q6 comes with ABSOLUTELY NO WARRANTY.  This is free software, and you are welcome'
+  write(*,*) 'to redistribute it under certain conditions. For details, add the --help flag.'
 
 
 !  end if ! node .eq. 0

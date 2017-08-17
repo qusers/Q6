@@ -1,16 +1,33 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! Q6: A comprehensive simulation package for molecular dynamics simulations and 
+! free energy calculations, including empirical valence bond simulations, 
+! linear interaction energy calculations, and free energy perturbation.
+! 
+! Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+! 
+! This program is free software; you can redistribute it and/or modify it under the 
+! terms of the GNU General Public License as published by the Free 
+! Software Foundation; either version 2 of the License, or any later version.
+! 
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+! See the GNU General Public License for more details.
+! 
+! You should have received a copy of the GNU General Public License along with 
+! this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+! Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+! how to contact you by electronic and paper mail.
 ! q_prep.f90
 ! by Johan Åqvist & John Marelius
 ! Qprep topology preparation main program
-!TODO: precision not fixed
 
-PROGRAM qprep5
+PROGRAM qprep6
 	use VERSIONS
 	use PREP
 	use AVETR
 	IMPLICIT none
 
-	character(10)	::	PROGRAM_NAME    = 'Qprep'
+	character(10)	::	PROGRAM_NAME    = 'qprep'
 	character(80)	::	PROGRAM_VERSION = ''
 	character(80)	::	PROGRAM_DATE    = ''
 	character(10)	:: 	PROGRAM_SUFFIX  = ''
@@ -321,4 +338,4 @@ end function check_inputfile
 
 
 
-END PROGRAM qprep5
+END PROGRAM qprep6

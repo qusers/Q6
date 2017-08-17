@@ -25,13 +25,13 @@ MPICOM="mpirun "
 if [ $# -ne 1 ] ; then
 echo "Number of arguments has to be one for this script to work"
 echo "Please supply what test should be run"
-echo "Supported arguments are serial parallel hybrid and benchmark"
+echo "Supported arguments are serial parallel and benchmark"
 exit 1
 fi
-if [ "$1" != "serial" ] && [ "$1" != "parallel" ] && [ "$1" != "hybrid" ] && [ "$1" != "benchmark" ]
+if [ "$1" != "serial" ] && [ "$1" != "parallel" ] && [ "$1" != "benchmark" ]
 then
 echo "Did not understand the argument $1"
-echo "Please supply one of the following: serial parallel hybrid and benchmark"
+echo "Please supply one of the following: serial parallel and benchmark"
 exit 2
 fi
 
@@ -67,17 +67,12 @@ function make_run_test() {
 if [ "$2" == "serial" ] || [ "$2" == "benchmark" ] ; then
 RUNCOME="\$qbinary eq\${step}.inp > eq\${step}.log"
 RUNCOMD="\$qbinary dc\${step}.inp > dc\${step}.log"
-QBIN=qdyn5
+QBIN=Qdyn6
 fi
 if [ "$2" == "parallel" ] ; then
 RUNCOME="$MPICOM -np $CORES \$qbinary eq\${step}.inp > eq\${step}.log"
 RUNCOMD="$MPICOM -np $CORES \$qbinary dc\${step}.inp > dc\${step}.log"
-QBIN=qdyn5p
-fi
-if [ "$2" == "hybrid" ] ; then
-RUNCOME="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary eq\${step}.inp > eq\${step}.log : -np \$(( $CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
-RUNCOMD="$MPICOM -np 1 -x OMP_NUM_THREADS=2 \$qbinary dc\${step}.inp > dc\${step}.log : -np \$(( $CORES - 2 )) -x OMP_NUM_THREADS=1 \$qbinary"
-QBIN=qdyn5h
+QBIN=Qdyn6p
 fi
 
 echo "

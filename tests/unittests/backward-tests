@@ -1,2 +1,0 @@
-there is an old q version around (q_all 2.X). One should compare the output of this version with serial q.
-this can be challenging because old and new inputs are different. (contact Johan, and check with Qexport).

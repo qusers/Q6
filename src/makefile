@@ -1,3 +1,22 @@
+# Q6: A comprehensive simulation package for molecular dynamics simulations and 
+# free energy calculations, including empirical valence bond simulations, 
+# linear interaction energy calculations, and free energy perturbation.
+# 
+# Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+# 
+# This program is free software; you can redistribute it and/or modify it under the 
+# terms of the GNU General Public License as published by the Free 
+# Software Foundation; either version 2 of the License, or any later version.
+# 
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of 
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+# See the GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License along with 
+# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+# Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+# how to contact you by electronic and paper mail.
 ################################################################################
 #  Q V.6.0 Makefile                                                            #
 #  code authors: Johan Aqvist, Martin Almlof, Martin Ander, Jens Carlson,      #
@@ -99,7 +118,7 @@ else ifeq ($(COMP),ibm)
 else ifeq ($(COMP),gcc)
 	PREC=		-DQDOUBLE
 	FC=		gfortran
-	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto 
+	FC_OPT=		-Ofast -unroll -finline-limit=10000000 -flto -Bstatic
 	FPP_FLG=	-cpp -DGCC
 
 	MPIFC=		mpif90
@@ -147,100 +166,82 @@ all:    tools serial
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
-	qpi qfep qprep qdum qcalc qmin move1 move2
+	Qpi6 Qfep6 Qprep6 Qdum6 Qcalc6 move1 move2
 
 serial:	
 	@make FFLAGS="${FFLAGS} ${FFLAGS_R8} ${FC_OPT}" \
-	qdyn move1 moveqdyn
+	Qdyn6 move1 moveqdyn
 
 debug:
 	@make FFLAGS="${DEBUG}" \
-	qpi qdyn qfep qprep qdum qcalc qmin move1 move2 moveqdyn
+	Qpi6 Qdyn6 Qfep6 Qprep6 Qdum6 Qcalc6 move1 move2 moveqdyn
 
 prof:
 	@make FFLAGS="${PROF}" \
-	qfep qprep qdyn qdum qcalc move1 move2
+	Qfep6 Qprep6 Qdyn6 Qdum6 Qcalc6 move1 move2
 
 mpi:
 	@make FFLAGS="${MPI}" \
-	qdynp qpip qminp move1 move3
+	Qdyn6p Qpi6p  move1 move3
 
 mpidebug:
 	@make FFLAGS="${DEBUGMPI}" \
-	qdynp qpip qminp move1 move3 
-hybrid:
-	@make FFLAGS="${MPFLAG}" \
-	qdynh move1 move4
-
-hybriddebug:
-	@make FFLAGS="${DEBUGMP}" \
-	qdynh move1 move4
+	Qdyn6p Qpi6p move1 move3 
 
 clean:
 	-rm -f *.o  *.mod *.M *.kmo *.il *.oo
 
 nuke:
-	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo qfep qdynh qdynp qdyn qprep qcalc qdum qmin qminp qpi qpip ../bin ../obj
+	-rm -rf *.o  *.mod *.M *.kmo *.il *.oo Qfep6 Qdyn6p Qdyn6 Qprep6 Qcalc6 Qdum6 Qqpi6 Qpi6p ../bin ../obj
 
-qcalc qprep qfep: mpiglob.o
+Qcalc6 Qprep6 Qfep6: mpiglob.o
 
-qcalc qdyn qdum qdynp qdynh qprep qfep qpi qpip qmin qminp: version.o misc.o math.o
+Qcalc6 Qdyn6 Qdum6 Qdyn6p Qprep6 Qfep6 Qpi6 Qpi6p: version.o misc.o math.o
 
-qcalc qdyn qdum qdynp qdynh qprep qpi qpip qmin qminp: mask.o prmfile.o sizes.o topo.o trj.o index.o
+Qcalc6 Qdyn6 Qdum6 Qdyn6p Qprep6 Qpi6 Qpi6p: mask.o prmfile.o sizes.o topo.o trj.o index.o
 
-qcalc qdyn qdum qdynp qdynh qfep qpi qpip qmin qminp: nrgy.o
+Qcalc6 Qdyn6 Qdum6 Qdyn6p Qfep6 Qpi6 Qpi6p: nrgy.o
 
-qcalc: qatom.o
+Qcalc6: qatom.o
 
-qcalc qprep qfep: parse.o
+Qcalc6 Qprep6 Qfep6: parse.o
 
-qcalc qprep: maskmanip.o
+Qcalc6 Qprep6: maskmanip.o
 
-qdyn qdum: qdyn.o
+Qdyn6 Qdum6: qdyn.o
 
-qmin: qmin.o
+Qdyn6 Qdum6 Qdyn6p Qpi6 Qpi6p: qatom.o exc.o globals.o
 
-qdyn qdum qdynp qdynh qpi qpip qmin qminp: qatom.o exc.o globals.o
-
-qprep: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
+Qprep6: q_prep.o prefs.o prep.o avetr.o nrgy.o bonded.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qfep: qfep.o 
+Qfep6: qfep.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qcalc: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
+Qcalc6: calc_base.o calc_chemscore.o calc_fit.o calc_geom.o calc_pmfscore.o \
 	calc_com_ke.o calc_com.o calc_rdf.o calc_rms.o calc_rmsf.o \
 	calc_entropy.o calc_nb.o calc_xscore.o qcalc.o eigen.o globals.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdyn qdum qpi qmin: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
+Qdyn6 Qdum6 Qpi6: simprep.o qcp.o potene.o nonbondene.o nonbonded.o qalloc.o \
 	bonded.o bondene.o mpiglob.o 
 
-qdynp qdynh qpip qminp: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
+Qdyn6p Qpi6p: simprep_mpi.o qcp_mpi.o potene_mpi.o nonbondene_mpi.o qalloc_mpi.o \
 	nonbonded.o bonded.o bondene_mpi.o mpiglob_mpi.o
 
-qdyn : md.o 
+Qdyn6 : md.o 
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qmin : minim.o
+Qdum6 : md_dum.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qminp :qmin_mpi.o minim_mpi.o
+Qdyn6p : md_mpi.o qdyn_mpi.o 
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdum : md_dum.o
+Qpi6   : qpi.o
 	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
 
-qdynp : md_mpi.o qdyn_mpi.o 
-	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
-
-qdynh : md_mpi.o qdyn_mpi.o
-	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
-
-qpi   : qpi.o
-	${FC} ${FFLAGS} ${FLIBS} $+ -o $@
-
-qpip  : qpi_mpi.o
+Qpi6p  : qpi_mpi.o
 	${MPIFC} ${MPIFLAGS} ${FFLAGS} ${FLIBS} $+ -o $@
 
 ################################################################################
@@ -455,20 +456,17 @@ version.o: version.f90
 	${FC} ${FFLAGS} ${FPP_FLG} ${BUILD_NUMBER_LDFLAGS} -c $<
 
 moveqdyn:
-	mkdir -p ../bin ; mv qdyn ../bin/qdyn
+	mkdir -p ../bin ; mv Qdyn6 ../bin/
 move1:
 	mkdir -p ../obj ; mv *.o *.mod ../obj/
 	@if ! test -f $(BUILD_NUMBER_FILE); then echo 0 > $(BUILD_NUMBER_FILE); fi
 	@echo $$(($$(cat $(BUILD_NUMBER_FILE)) + 1)) > $(BUILD_NUMBER_FILE)
 
 move2:
-	mkdir -p ../bin ; mv qfep qprep qdum qcalc qpi qmin ../bin/
+	mkdir -p ../bin ; mv Qfep6 Qprep6 Qdum6 Qcalc6 Qpi6 ../bin/
 
 move3:
-	mkdir -p ../bin ; mv qdynp qpip qminp ../bin/
-
-move4:
-	mkdir -p ../bin ; mv qdynh ../bin/
+	mkdir -p ../bin ; mv Qdyn6p Qpi6p ../bin/
 
 
 
@@ -485,13 +483,11 @@ what:
 	@echo "Use: make [target] [COMP=compiler]"
 	@echo
 	@echo "[target] is one of:"
-	@echo "all              Everything, including optimized and optimized qdyn/qdynp"
-	@echo "tools            Speed optimized versions of qdyn, qdum, qfep, qcalc and qprep"
+	@echo "all              Everything, including optimized and optimized Qdyn6/Qdyn6p Qpi6/Qpi6p"
+	@echo "tools            Speed optimized versions of Qdyn6, Qdum6, Qfep6, Qcalc6 and Qprep6"
 	@echo "debug            Tools with debug information (stacktraces)."
-	@echo "mpi              qdynp using a currently loaded MPI library"
-	@echo "mpidebug         qdynp with debug information (stacktraces)."
-	@echo "hybrid           qdynh using a currently loaded MPI library and OpenMP library"
-	@echo "hybriddebug      qdynh with debug information (stacktraces)."
+	@echo "mpi              Qdyn6p using a currently loaded MPI library"
+	@echo "mpidebug         Qdyn6p with debug information (stacktraces)."
 	@echo
 	@echo "For compiler/os pick one of:"
 	@echo "ifort            Intel Fortran compiler"

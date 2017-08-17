@@ -2,7 +2,7 @@
 % Main Latex Settings for Document
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[a4paper,11pt]{article}
-\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage[dvips,pdftex]{graphicx}
 \usepackage[small]{caption}  %Set text in Figure captions
 \usepackage{parskip}         %does noindent in general and nice margin distance
@@ -16,21 +16,23 @@
 \usepackage{multirow}        %fix nested tables
 \usepackage{bigstrut}
 \newcommand{\dirfig}{./pictures}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
 \usepackage{gensymb}
+\usepackage{listings}
 \usepackage{titlesec}
+\usepackage[style=chem-acs,backend=biber,autocite=superscript]{biblatex}
 \pagestyle{fancy}
 %Overrides all other setting to show what we want.
 \textwidth = 430pt \textheight = 640pt \voffset = -50pt
 \hoffset=-20pt
 \setcounter{page}{0}
 \renewcommand{\thesection}{\Alph{section}}
-
-
-
-
-
-
+\let\origcite\cite
+\def\cite#1{\unskip~\origcite{#1}}
+\let\origref\ref
+\def\ref#1{\unskip~\origref{#1}}
+\newenvironment{codetext}{\fontfamily{pcr}\selectfont}{\par}
+\addbibresource{References.bib}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % The document begins here with the title page
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45,13 +47,14 @@
 \end{center}
 \end{figure}
 \begin{center}
-%\Huge{M}\huge{ANUAL}\\
-%\huge{FOR}\\
-\huge{\textbf{our}} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
-\huge{PACKAGE}\\% \Huge{Q}\\
+\Huge{M}\huge{ANUAL} \huge{FOR}\\
+%%\huge{\textbf{our}} \Huge{M}\huge{OLECULAR} \Huge{D}\huge{YNAMICS}\\
+%%\huge{PACKAGE}\\
+\Huge{Q}6\\
+	Free Energy Calculations in (Bio)Molecular Systems\\
 \vspace{0.7cm}
-\large{Version 5.7\\
-February 6, 2015}\\
+\large{Version 6.0\\
+	\today}\\
 %\footnotesize{February 6, 2015}\\
 \large{\url{http://xray.bmc.uu.se/~aqwww/q}}
 \end{center}
@@ -71,23 +74,38 @@ February 6, 2015}\\
 
 \newpage
 
-
-
-
-
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Licence
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{LICENSE STATEMENT}
+%\lstinputlisting[breaklines]{Licensefile.txt}
+\input{Licensefile.txt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How to cite
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{HOW TO CITE}
+The development of Q has been funded through grants to the Kamerlin and {\AA}qvist groups.
+To allow further development, we kindly ask you to cite the relevant papers:
+\begin{itemize}
+	\item{Q6: A comprehensive toolkit for empirical valence bond and related free energy calculations\\
+		P. Bauer, A. Barrozo, B. A. Amrein, M. Purg, M. Esguerra, P. B. Wilson, D. T. Major, J. {\AA}qvist, S. C. L. Kamerlin\\
+		To be submitted}
+	\item{Q: a molecular dynamics program for free energy calculations and empirical valence bond simulations in biomolecular systems\\
+		J. Marelius, K. Kolmodin, I. Feierberg, J. {\AA}qvist\\
+		Journal of Molecular Graphics and Modelling 16, 213-225, 1998}
+\end{itemize}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Preface
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{PREFACE}
-Q started its development sometime in the nineteen nineties originally
+Q started its development sometime in the 1990s originally
 by  Johan \AA  qvist,  and since  then a  list  of collaborators  have
 contributed to  the code, among  them: John Marelius,  Karin Kolmodin,
 Isabella Feierberg, Martin Alml\"of, Martin Ander, Jens Carlson, Peter
 Hanspers, Anders Kaplan, Kajsa  Ljunjberg, Martin Nervall, Johan Sund,
-Paul Bauer, Alexandre Barrozo, Masoud  Karemi, Irek Szeler, and \AA ke
+Paul Bauer, Alexandre Barrozo, Masoud  Kazemi, Irek Szeler, and \AA ke
 Sandgren.   The code  is in  active development  and new  features are
-being  implemented  mainly  following   the  fortran  2003  standard.
+being  implemented  mainly  following   the  Fortran  2003  standard.
 Additionally the  MPI implementation has  been updated to  enhance the
 speed   of  running   parallel  jobs   and  provide   a  more   robust
 parallelization across  different cluster architectures.   The program
@@ -120,21 +138,22 @@ possible  both to  quantitatively  verify  calculated results  against
 experimental  data,  and  to  make  predictions  which  can  be  tested
 experimentally.
 
-Q~\cite{Marelius:1999} is a set of tools tailored specifically to the
+Q~\cite{Marelius1998} is a set of tools tailored specifically to the
 calculation of free energies using diverse approaches, namely
 (I)      free      energy     perturbation      (FEP)      simulations
-\cite{Kollman:1993,Beveridge:1989}, (II) empirical  valence bond (EVB)
-calculations   \cite{Warshel:1988,Aaqvist:1993}   of   reaction   free
-energies    and     (III)    linear    interaction     energy    (LIE)
-calculations\cite{Aaqvist:1994,Jones-Hertzog:1997,Hansson:1998}     of
-receptor-ligand binding affinities.
+\cite{Kollman1993,Beveridge1989}, (II) empirical  valence bond (EVB)
+calculations   \cite{Warshel1997,Aqvist1993}   of   reaction   free
+energies, (III)    linear    interaction     energy    (LIE)
+calculations\cite{Aqvist1994,Jones-Hertzog1997,Hansson1998}     of
+receptor-ligand binding affinities and (IV) calculation of quantum effects
+using the BQCP approach\cite{Major2007a,Gao2008}.
 
 The main features which distinguish Q from other MD packages are:
 \begin{itemize}
 \item \textbf{The spherical  boundary.} Q is intended  for free energy
 calculations in  biomolecular systems solvated in  a spherical droplet
 of   explicit   water   molecules.    Using   a   spherical   boundary
-\cite{Warshel:1978,Berkowitz:1982,Brunger:1984}  makes it  possible to
+\cite{Warshel1978a,Berkowitz1982,Brunger1984}  makes it  possible to
 limit the size of the simulated system, $i.e.$ to focus the simulation
 on a  smaller region such as  a binding site, and  also makes accurate
 treatment of long-range electrostatics rather inexpensive.
@@ -152,21 +171,19 @@ biomolecules of  moderate size on  a personal computer, or  very large
 molecular systems  on a  super-computer, without any  modifications of
 the program.
 \end{itemize}
+Several features have been added since the last release of Q:
 
-The main  features which have been  added to the Q  code since version
-5.0 are:
+%%\begin{itemize}
+%%\item \textbf{Periodic boundary conditions.} The periodic boundary
+%%allows an additional way to perform calculations.
+%%
+%%\item \textbf{Parallel version.} By using more than one computer a
+%%single simulation can be executed faster. The parallel version is
+%%especially useful when simulating large systems, $e.g.$ the
+%%systems that are used with the periodic boundary condition.
+%%\end{itemize}
 
-\begin{itemize}
-\item \textbf{Periodic boundary conditions.} The periodic boundary
-allows an additional way to perform calculations.
-
-\item \textbf{Parallel version.} By using more than one computer a
-single simulation can be executed faster. The parallel version is
-especially useful when simulating large systems, $e.g.$ the
-systems that are used with the periodic boundary condition.
-\end{itemize}
-
-New features of Q6 are listed here:
+%%New features of Q6 are listed here:
 \begin{itemize}
 	\item \textbf{Quantum classical path calculations.} The bisection QCP method of Major and Gao\cite{Major2007a,Gao2008}
 		allows the calculation of quantum corrections and isotope effects of EVB free energy profiles.
@@ -185,51 +202,94 @@ New features of Q6 are listed here:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{INSTALLATION AND SETUP}
 \subsection{System requirements} 
-Q 5.7 can  be compiled and run  in Windows 7, Mac OSX  and Linux.  The
-parallel  \textbf{qdynp}   version  of   the  main   dynamics  program
-\textbf{qdyn} has been greatly improved from that of version 5.0 which
+Q 6.0 can  be compiled and run  in Windows 7, Mac OSX  and Linux.  The
+parallel  \textbf{Qdyn6p}   version  of   the  main   dynamics  program
+\textbf{Qdyn6} has been greatly improved from that of version 5.0 which
 was  using  an older  Message  Passing  Interface (MPI)  standard  and
 one-sided communication  instead of the  more portable point  to point
 communication.
 
 The memory requirements vary with the size of the simulated system but
-are, in general, modest.  A system of  18 Å radius with a cutoff of 10
-Å  in non-bonded  interactions uses  about  50 to  200 Mb  of RAM  memory
+are, in general, modest.  A system of  18 {\AA} radius with a cutoff of 10
+{\AA}  in non-bonded  interactions uses  about  50 to  200 Mb  of RAM  memory
 depending slightly on the computer and operating system.
 
 \subsubsection{Compilers} 
 A  modern Fortran  compiler is  required  to build  the main  programs
-(\textbf{qdyn},   \textbf{qprep},   \textbf{qfep},   \textbf{qdum}   ,
-\textbf{qcalc}).
+(\textbf{Qdyn6},   \textbf{Qprep6},   \textbf{Qfep6},   \textbf{Qdum6}   ,
+\textbf{Q6calc}, \textbf{Qpi6}).
 
 A  Fortran compiler  and  an  MPI library  is  required  to build  the
-parallel version of \textbf{qdynp}.
+parallel version of \textbf{Qdyn6p} and \textbf{Qpi6p}.
+
+The program \textbf{git} is needed to access the source code repository.
 
 \subsection{Installation}
-The following components, available from the Q web site
-\url{http://xray.bmc.uu.se/~aqwww/q}, are required to use Q:
-\begin{enumerate}
-\item Executable images (available for some popular platforms).
-\item Or source code (to compile on your own system).
-\item Force field parameter and library files.
-\end{enumerate}
-Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
-and download the files to this directory.
+The installation can be performed either through the use of 
+executable images, available at \url{https://github.com/qusers/Q6/releases},
+or through compilation of the source code that is available through github
+at \url{https://github.com/qusers/Q6}. The repository also contains
+a collection of force field parameter and fragment libraries. 
+We recommend to build the software from
+source, as it allows better optimizations to be used.\\
+To do so, please follow the instructions below.
+%Make a directory such as $\sim$/Q, /usr/local/Q or C:$\backslash$Q
+%and download the files to this directory.
 
 \subsubsection{Installing executable images}
 \textbf{Windows 7}
+% no Windows support from me, but others are free to do this
+Executables for Windows need to be placed into a folder used to perform the calculation,
+and can be executed from the ``cmd'' prompt. Please note that precompiled images are not
+fully optimized and are not recommended for use with large calculations.\\
 
 \textbf{Linux}
+Copy the exectuable files from the current release version to a folder
+that is included in the system {\$}PATH environment (e.g. $\sim$/bin).
+Mark the files as executable using ``chmod +x'' and run them as any other command.\\
+Please note that prebuild binaries are not fully optimized, and can not be used to perform
+calculations using parallelization such as MPI.\\
 
 \textbf{Mac OSX}
+The binaries on OSX can be used in the same way as under Linux. The user just needs to 
+place them in a directory and mark them as executable.
 
 \subsubsection{Building the programs from source code}
+
 \textbf{Windows 7}
+% there is no Windows support from me, those are just very basic instructions
+Building under Windows in Visual Study might be possible, but is not currently
+supported. To compile binaries from source, cross--compilation has to be performed
+from one of the other supported build environments mentioned below.\\
 
 \textbf{Linux} 
+Clone the Q6 repository from github, using \\
+\begin{codetext}
+\noindent
+git clone https://github.com/qusers/Q6.git
+\end{codetext}
+This will create a new folder ``Q6'' in the current location, with the repository.
+Change directory to the repository and use \\
+\begin{codetext}
+\noindent
+	git checkout master \&\& git pull master
+\end{codetext}
+to switch to the main branch and collect any recent updates of the code. Those commands also have to be
+used if you want to update your version to the newest one in our repository.
+
+Afterwards, change directory to the ``src'' subfolder, and type ``make''
+to have an overview over the compilation options. To compile both the serial and parallel
+version of Q6 with the GCC compiler, issue the command \\
+\begin{codetext}\noindent
+	make all mpi COMP=gcc
+\end{codetext}
+Afterwards the binary files will be located in the folder ``bin''.\\
 
 \textbf{Mac OSX}
-
+Building from source is similar to Linux. The only additional prerequisite is that
+a OSX build environment like homebrew or fink is available, or that the 
+nessecary compilers have been installed previously. All other instructions are the same
+as for Linux.
 
 
 
@@ -238,45 +298,51 @@ and download the files to this directory.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{USER GUIDE}
 The  structure  of  Q  resembles  that of  many  other  MD  simulation
-programs.  The main  program is  \textbf{qdyn} which  carries out  the
+programs.  The main  program is  \textbf{Qdyn6} which  carries out  the
 actual trajectory calculations. Besides  normal input control data, it
 needs  the   type  of  data   usually  referred  to  as   a  molecular
 topology. This  is a file  containing information about how  atoms are
 bonded to  each other  etc. together  with all  the parameters  of the
 force field  (FF) to be used.  This topology file is  created with the
-preparation  program \textbf{qprep}  which is  an interactive  program
+preparation  program \textbf{Qprep6}  which is  an interactive  program
 that uses  pdb (Protein Data  Bank) coordinate files together  with FF
-specific files  to generate the  topology. \textbf{qprep} can  also be
+specific files  to generate the  topology. \textbf{Qprep6} can  also be
 used  for  various other  data  transformation  purposes as  described
 below.  Input data for FEP, EVB or receptor-ligand complex simulations
 is given in  a separate file, referred  to below as the  fep file. The
 fep file lists atoms to be transformed, called Q-atoms and force field
-parameters for  the different states in  perturbation simulations. For
-analysis of the computations the main tool is \textbf{qfep} which is a
+parameters for  the different states in  perturbation simulations. 
+\textbf{Qpi6} is used to perform the calculation of quantum effects 
+following the BQCP approach as a postprocessing option. For
+analysis of the computations the main tool is \textbf{Qfep6} which is a
 program that  carries out  FEP and EVB  calculations of  free energies
-using energy data  produced by \textbf{qdyn}. A  number of utility
+using energy data  produced by \textbf{Qdyn6} and \textbf{Qpi6}. 
+A  number of utility
 programs  (trajectory   and  energy  averaging,   radial  distribution
-functions, ...) are  also provided. The general outline of  Q is shown
+functions, ...) are  also provided. Additonally, the graphical user interface
+QGui (\url{https://github.com/qusers/qgui}) \cite{Isaksen2015} can be used, or the command line 
+utilities QTools (\url{https://github.com/mpurg/qtools}) \cite{qtools}. 
+The general outline of  Q is shown
 in figure \ref{fig:overview}.
 
 \begin{figure}[h]
 \begin{center}
 \resizebox{15cm}{!}{\includegraphics*{\dirfig/Q_overview_2.pdf}}
 \caption{Overview of the procedure for free energy calculation
-with Q. The white boxes represent files and also show typical file
+with Q6. The white boxes represent files and also show typical file
 name extensions. The black boxes are programs.}
 \label{fig:overview}
 \end{center}
 \end{figure}
 
 In the following sections we will go through the normal sequence
-of steps for preparing a topology file with \textbf{qprep} and then
+of steps for preparing a topology file with \textbf{Qprep6} and then
 describe in detail the input data required for running MD
-simulations with \textbf{qdyn}.
+simulations with \textbf{Qdyn6}.
 
 \subsection{Preparing a molecular topology} The topology file
-prepared with the program \textbf{qprep} contains all the information about
-the molecular system needed for a simulation with \textbf{qdyn}. To make a
+prepared with the program \textbf{Qprep6} contains all the information about
+the molecular system needed for a simulation with \textbf{Qdyn6}. To make a
 topology you need
 
 \begin{itemize}
@@ -287,15 +353,15 @@ library entries.
 \item Coordinates for all (non-solvent) atoms in the form of a PDB file.
 \end{itemize}
 
-\subsubsection{\textbf{qprep} - Preparing coordinates} The PDB file format
-\cite{pdb} used for co-ordinate input to \textbf{qprep} is a fixed format,
+\subsubsection{\textbf{Qprep6} - Preparing coordinates} The PDB file format
+\cite{pdb} used for co-ordinate input to \textbf{Qprep6} is a fixed format,
 $i.e.$, the number of spaces between columns of data is significant
 and tab characters are not permitted. Case is significant -
 lower-case letters should not be used. Only ATOM and HETATM
-records are read by \textbf{qprep}, all other records are ignored.
+records are read by \textbf{Qprep6}, all other records are ignored.
 
 Hydrogen atoms are not required - their coordinates will be
-generated by \textbf{qprep} in such a way that the bond and angles to the
+generated by \textbf{Qprep6} in such a way that the bond and angles to the
 hydrogen atom are at an energy minimum. To further control the
 placement of hydrogens, a special torsion potential defined in the
 fragment library entry may be included. See
@@ -304,7 +370,7 @@ hydrogen atom coordinates are given in the PDB file, they will not
 be altered.
 
 When a structure containing more than one molecule is loaded into
-\textbf{qprep}, the program will identify the boundaries between molecules
+\textbf{Qprep6}, the program will identify the boundaries between molecules
 either by the type of fragment or using `gap' marker lines.
 Fragments which are monomers in a polymer chain, like amino acids,
 have designated `head' and `tail' atoms in their library entries,
@@ -317,13 +383,13 @@ the first molecule. The gap marker consists of the word GAP in
 capital letters on a separate line.
 
 The numbering of atoms in the PDB is not significant. Note that
-\textbf{qprep} will renumber all atoms in a single sequence starting at
+\textbf{Qprep6} will renumber all atoms in a single sequence starting at
 one. This is necessary in order to incorporate hydrogen atoms in
 the sequence. The result is thus that \textit{atom numbers in the
-PDB file read by \textbf{qprep} and PDB files generated by \textbf{qprep} will be
+PDB file read by \textbf{Qprep6} and PDB files generated by \textbf{Qprep6} will be
 different}. Residue numbers are used merely to distinguish one
 residue from the next and the residues will also be renumbered by
-\textbf{qprep}. Residue numbers must be numeric, alphanumeric identifiers
+\textbf{Qprep6}. Residue numbers must be numeric, alphanumeric identifiers
 such as 60A sometimes encountered in the protein data bank are not
 permitted.
 
@@ -334,11 +400,11 @@ function   of   the   protein   and  should   be   included   in   the
 simulation. However,  most of the crystallographic  waters surrounding
 the protein can be removed. In fact, the presence of a large number of
 water molecules around the protein  surface will disturb the solvation
-algorithm  leading  to   inhomogenous  water  density.  \textbf{qprep}
+algorithm  leading  to   inhomogenous  water  density.  \textbf{Qprep6}
 assumes that  solvent molecules appear  after solute molecules  in the
 PDB file and  keeps track of the last solute  atom.  Solvent molecules
 are identified  by their  residue names. The  list of  solvent residue
-names  is a  user-setable  preference in  \textbf{qprep} (see  Setting
+names  is a  user-setable  preference in  \textbf{Qprep6} (see  Setting
 preference on page \pageref{setting_pref}) with the default value WAT,
 HOH,  H2O,  SPC,  TIP3.  Solvent  molecules  added  by  the  solvation
 algorithm  will  appear at  the  end  of  the atom  sequence.  Solvent
@@ -348,7 +414,8 @@ outside the solute sphere.
 
 \subsubsection{Selecting a force field}
 Q is designed  to run with a wide selection  of force fields. Fragment
-libraries and force field parameters for AMBER95, AMBER/OPLS, OPLS-AA,
+libraries and force field parameters for AMBER95, AMBER14, AMBER/OPLS, 
+OPLS-AA,
 CHARMM  v.22,  GROMOS87   and  GROMOS96  are  supplied   with  the
 program. The corresponding  library and FF parameter  files are listed
 in table \ref{tab:FF} on page \pageref{tab:FF}. In addition to all the
@@ -356,7 +423,7 @@ interaction parameters,  a Q force  field parameter file  also include
 overall  properties of  the force  field, such  as the  van der  Waals
 parameter combination rule. Selecting a force field is thus equivalent
 to loading  the appropriate fragment  library and parameter  file into
-\textbf{qprep}.
+\textbf{Qprep6}.
 
 \subsubsection{Adding force field library entries}
 Your simulations will probably include molecular fragments other
@@ -365,7 +432,7 @@ included in the standard library files and you therefore need to
 write a library entry for each 'new' residue, ligand, co-factor or
 other molecule. We suggest you keep your library entries in a
 separate file rather than adding to the standard library file.
-Load first the standard library and then your own into \textbf{qprep}. If
+Load first the standard library and then your own into \textbf{Qprep6}. If
 you need to modify an entry in the standard library, add the
 modified entry (keeping the same name) to your own library file -
 it will replace the old entry when loaded.
@@ -375,9 +442,9 @@ old one, this ensures the correct syntax. For details, see the
 section Fragment library file format on page
 \pageref{subsubsec:fragment_lib_f_f}.
 
-\subsubsection{Running \textbf{qprep}}
-\textbf{qprep} is a command-oriented program designed to be run
-interactively. The first thing you need to learn about \textbf{qprep} is
+\subsubsection{Running \textbf{Qprep6}}
+\textbf{Qprep6} is a command-oriented program designed to be run
+interactively. The first thing you need to learn about \textbf{Qprep6} is
 that there is a help command which gives a list of available
 commands. The program's input parser will prompt for the
 parameters required for each command but will also accept complex
@@ -386,14 +453,14 @@ the command \textbf{readlib} and await the prompt 'Name of
 molecular library' or you may type \textbf{readlib
 my{\_}ligands.lib} on one line.
 
-A good deal of effort has been spent to make \textbf{qprep} handle errors
+A good deal of effort has been spent to make \textbf{Qprep6} handle errors
 gracefully. When a problem is encountered in a fragment library,
 parameter file or PDB file, you will be notified but the
 processing of the file will proceed, thus exposing also errors
 later in the file. After correcting the problem you simply read
 the file again without the need to restart the program.
 
-The different steps to generate a topology with \textbf{qprep} are
+The different steps to generate a topology with \textbf{Qprep6} are
 described below, in the sequence they are normally executed. More
 detailed information is available in the section Topology
 preparation reference on page \pageref{subsec:top_prep_ref}.
@@ -431,7 +498,7 @@ box. When a boundary has been chosen the centre and radius in the
 spherical case, and boxlengths in the periodical case are
 specified. It is important that the boundary condition defined in
 the topology file is consistent with the boundary condition used
-when running dynamics with \textbf{qdyn}.
+when running dynamics with \textbf{Qdyn6}.
 
 \textbf{Adding solvent}\\*[0.25cm] Use the \textbf{solvate}
 command to add solvent molecules to the loaded structure. Using
@@ -452,11 +519,11 @@ used to solvate a system of any size.
 simulation of the same molecular system.
 \end{itemize}
 
-When using one of the two first methods, \textbf{qprep} first fills a
+When using one of the two first methods, \textbf{Qprep6} first fills a
 sphere completely with solvent and then deletes molecules where
 heavy atoms are closer than a threshold distance to any heavy atom
 in the loaded structure. The threshold distance is controlled by
-the \textbf{qprep} preference value \textbf{solvent{\_}pack}.
+the \textbf{Qprep6} preference value \textbf{solvent{\_}pack}.
 Crystallographic solvent molecules (in the PDB file loaded by
 readpdb) more than 2~{\AA} outside the solvent sphere will be
 excluded from the simulation to avoid excessive radial restraining
@@ -467,15 +534,23 @@ file with a sphere of solvent. Moreover the threshold distance is
 also applied to solvent molecules near the boundary, to avoid
 crashes between solvent molecules in neighbouring boxes.
 
-At present, the choice of solvent is limited to tri-atomic
-molecules like the SPC\cite{Berendsen:1981} and
-TIP3P\cite{Jorgensen:1983} water models or methanol in an extended
-atom representation.
+Currently, Q6 is able to simulate both tri-atomic
+molecules like the SPC\cite{berendsenintermolecular} and
+TIP3P\cite{Jorgensen1983b} water models, as well as
+more complex organic solvents such as chloroform, dichloromethane,
+methanol and ethanol in all-atom representation.
 
 Note: Make sure that crystallographic water molecules and waters
 added by the solvate command have \textit{the same residue name}!
-Otherwise \textbf{qprep} will mark the topology as mixed-solvent, which is
-not implemented in \textbf{qdyn} at present.
+Otherwise \textbf{Qprep6} will mark the topology as mixed-solvent, which is
+not implemented in \textbf{Qdyn6} at present.
+
+The software now has added support to more complex solvents than
+the previously supported three--atom solvent models. Those solvents
+are added in the same way to the final topology as previous solvents.
+A set of currently supported solvents is included in the force field
+directory of the program distribution. Other solvents can also be included,
+as long as the simulation parameters are known.
 
 \textbf{Adding cross-link bonds}\\*[0.25cm] Cross-link bonds such
 as disulphide bridges in proteins are not generated automatically
@@ -509,7 +584,7 @@ the radius used in the solvation step.
 
 \textbf{Verifying the topology}\\*[0.25cm] The successful
 generation of a topology in the step above is no guarantee that it
-is correct. Fortunately \textbf{qprep} offers a number of commands to check
+is correct. Fortunately \textbf{Qprep6} offers a number of commands to check
 the topology:
 
 \begin{itemize}
@@ -549,10 +624,10 @@ topology modifications for perturbation simulations. Use the
 atoms of the topology.
 
 \textbf{Setting preferences}\label{setting_pref}\\*[0.25cm] A
-number of parameters that affect the operation of \textbf{qprep}, $e.g.$
+number of parameters that affect the operation of \textbf{Qprep6}, $e.g.$
 during solvation, but which are not normally changed are not
 required as input to the commands. These parameters may be changed
-by experience users by the preference mechanism in \textbf{qprep}.
+by experience users by the preference mechanism in \textbf{Qprep6}.
 
 The \textbf{prefs} command is used to list the values of
 user-setable parameters and the \textbf{set} command to change a
@@ -561,20 +636,21 @@ value.
 The preference parameters and their default values are listed in
 the table on page \pageref{subsubsec:Qprep_preferences}.
 
-\subsection{Running dynamics with \textbf{qdyn}}
-Once a molecular topology file has been generated with \textbf{qprep}, you
-can carry out MD, FEP and EVB simulations with \textbf{qdyn}. The
+\subsection{Running dynamics with \textbf{Qdyn6}}
+Once a molecular topology file has been generated with \textbf{Qprep6}, you
+can carry out MD, FEP and EVB simulations with \textbf{Qdyn6}. The
 simulation can have either spherical or periodic boundary
 condition, and can be executed either sequentially or in parallel.
 
-In this section we will describe the basic functions of \textbf{qdyn} and
+In this section we will describe the basic functions of \textbf{Qdyn6} and
 go through the different options that are available for control of
 the dynamics runs. There are two main input files that are used to
 set up the dynamics specifications:
 
 \begin{enumerate}
-\item The \textbf{qdyn} input file that controls things like time-step, temperature,
-cut-offs, restraints etc. \item The FEP file which is an auxiliary
+\item The \textbf{Qdyn6} input file that controls things like time-step, temperature,
+cut-offs, restraints etc.
+\item The FEP file which is an auxiliary
 file whose function is to redefine the topology information for
 certain atoms. This enables the explicit control over selected
 force field parameters that is necessary for FEP and EVB
@@ -594,13 +670,13 @@ simulations, this phase is composed of a series of simulations
 using intermediate potentials defined by different sets of weight
 coefficients for the FEP states.
 
-A separate \textbf{qdyn} input file is used for each sub-simulation. It is
+A separate \textbf{Qdyn6} input file is used for each sub-simulation. It is
 therefore practical to prepare a command file (shell script or
 batch file) which executes all the sub-simulations sequentially.
-The name of the input file is passed to \textbf{qdyn} as the first (and
+The name of the input file is passed to \textbf{Qdyn6} as the first (and
 only) argument on the command line. (It is not possible to use
 redirection of the standard input stream by the $<$ operator.) A
-simple example of such a file where \textbf{qdyn} is invoked once for each
+simple example of such a file where \textbf{Qdyn6} is invoked once for each
 input file and the output redirected to a log file follows:
 
 \begin{table}[htbp]
@@ -608,18 +684,18 @@ input file and the output redirected to a log file follows:
 \caption{Multi-stage simulation command file}
 \begin{tabularx}{\textwidth}{|l l l X|}
   \hline
-  \textbf{qdyn} & relax.inp & $>$ & relax.log \\
-  \textbf{qdyn} & eq1.inp   & $>$ & eq1.log \\
-  \textbf{qdyn} & eq2.inp   & $>$ & eq2.log \\
-  \textbf{qdyn} & eq3.inp   & $>$ & eq3.log \\
-  \textbf{qdyn} & data1.inp & $>$ & data1.log \\
-  \textbf{qdyn} & data2.inp & $>$ & data2.log \\ \hline
+  \textbf{Qdyn6} & relax.inp & $>$ & relax.log \\
+  \textbf{Qdyn6} & eq1.inp   & $>$ & eq1.log \\
+  \textbf{Qdyn6} & eq2.inp   & $>$ & eq2.log \\
+  \textbf{Qdyn6} & eq3.inp   & $>$ & eq3.log \\
+  \textbf{Qdyn6} & data1.inp & $>$ & data1.log \\
+  \textbf{Qdyn6} & data2.inp & $>$ & data2.log \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
 
-\subsubsection{Output generated by \textbf{qdyn}} The different data files
-generated by \textbf{qdyn} are (shown in the overview in
+\subsubsection{Output generated by \textbf{Qdyn6}} The different data files
+generated by \textbf{Qdyn6} are (shown in the overview in
 \figurename~\ref{fig:overview}):
 
 \begin{itemize}
@@ -629,7 +705,7 @@ device and normally redirected to a log file.
 \item Final coordinates and velocities are written to a `restart' file to be
 used to start the next sub-simulation and, after conversion to a
 structure file (see Analyzing structures from the simulation on
-page \pageref{subsubsec:Analyzing_struc_f_t_sim}, for viewing the
+page \pageref{subsubsec:Analyzing_struc_f_t_sim}), for viewing the
 final structure. This file is also updated during the simulation
 and if the forces and velocities become too large and the
 simulation is terminated prematurely. The file thus also serves a
@@ -644,14 +720,14 @@ The restart and energy files are Fortran binary files. The
 trajectory file follows the DCD format also used in other MD
 programs (Charmm, X-plor) and can be read by many visualization
 and trajectory animation programs. Please note that the trajctory
-reading routines in Q are not able to read files from other programs.
+reading routines in Q6 are not able to read files from other programs.
 
-\subsubsection{Preparing \textbf{qdyn} input files}\label{subsubsec:prep_qdyn_inp_f}
+\subsubsection{Preparing \textbf{Qdyn6} input files}\label{subsubsec:prep_qdyn_inp_f}
 In this overview the various aspects of defining the simulation
-set-up are introduced. For more complete information, see \textbf{qdyn}
+set-up are introduced. For more complete information, see \textbf{Qdyn6}
 input file format on page \pageref{subsubsec:qdyn_inp_file_form}.
 
-The \textbf{qdyn} input file contains the specification of the dynamics
+The \textbf{Qdyn6} input file contains the specification of the dynamics
 simulation. It is a text file divided into sections, starting with
 a section heading and containing information on the different
 aspects of the simulation. The sections are of two kinds:
@@ -713,7 +789,7 @@ condition. Additional options is added as exemplified below:
 The rigid{\_}box{\_}centre option gives a periodic box with fixed
 coordinates instead of centering the box around the solute. In the
 above example the Monte-Carlo constant pressure algorithm,
-described in \cite{Wennerstroem}, is performed with target
+is performed with target
 pressure 1.5 bar and maximum volume displacement 65 {\AA}$^{3}$.
 
 \textbf{Non-bonded interactions} \\*[0.25cm] Cut-off radii for the
@@ -948,7 +1024,7 @@ the [\textbf{wall{\_}restraints}] section is not used in combination with
 periodic boundary conditions. One can choose between harmonic or Morse
 potential.
 
-As one last possibility of restraints in Q, the [\textbf{angle{\_}restraints}]
+As one last possibility of restraints in Q6, the [\textbf{angle{\_}restraints}]
  are a specific type of force, based on the harmonic angle forces present in 
 any force field. It can be useful, for instance, if you want to avoid an 
 aspartate bound to a metal center to not be bidentally coordinated. In order 
@@ -983,7 +1059,7 @@ Here, three groups of residues or atoms will be removed in additional energy cal
 to assess their influence on the overall reaction, with the total, electrostatic or van--der Waals
 interactions being affected, respectively.
 
-The newest addition to Q is performing BQCP \cite{Major2007a,Gao2008} calculations. This is
+The newest addition to Q6 is performing BQCP \cite{Major2007a,Gao2008} calculations. This is
 possible both during the normal dynamics and as post--processing of trajectory files. In either case,
 the section [\textbf{QCP}] is added to the input file as shown below:
 \begin{center}
@@ -1001,13 +1077,13 @@ atoms, with 20 sampling steps for the classical coordinate and a ring--polymer s
 writing the bead coordinates to the file qcp.pdb.
 
 
-\subsubsection{\textbf{qdyn} input file examples}
+\subsubsection{\textbf{Qdyn6} input file examples}
 We give two annotated examples below. The first is the simplest
 possible input file, using default values for all optional
 parameters. The second is a bit more elaborate and exemplifies the
 use of many extra options such as special restraints. Detailed
 information about the data in each section is found in the section
-\textbf{qdyn} input file format on page
+\textbf{Qdyn6} input file format on page
 \pageref{subsubsec:qdyn_inp_file_form}.
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
@@ -1025,7 +1101,7 @@ information about the data in each section is found in the section
 \end{longtable}
 
 \begin{longtable}{|p{105pt} p{60pt}|p{235pt}|}
-\caption{Advanced \textbf{qdyn} input file} \\
+\caption{Advanced \textbf{Qdyn6} input file} \\
   \hline \textbf{Data}            &              & \textbf{Description} \\
   \endhead
   \hline [MD]                     &              & Basic data for the simulation \\
@@ -1040,12 +1116,12 @@ information about the data in each section is found in the section
   \hline shake{\_}hydrogens       & on           & Shake bonds to hydrogen in solute \& solvent \\
   \hline lrf                      & on           & Use lrf for electrostatics beyond cut-off \\
   \hline [cut-offs]               &              & Cut-off radii for different groups of atoms \\
-  \hline solute{\_}solute         & 10           & Solute-solute cut-off (Å) \\
-  \hline solvent{\_}solvent       & 10           & Water-water cut-off (Å) \\
-  \hline solute{\_}solvent        & 10           & Solute-water cut-off (Å) \\
-  \hline q{\_}atom                & 10           & Q-atom non-q-atom cut-off (Å) \\
+	\hline solute{\_}solute         & 10           & Solute-solute cut-off ({\AA}) \\
+	\hline solvent{\_}solvent       & 10           & Water-water cut-off ({\AA}) \\
+	\hline solute{\_}solvent        & 10           & Solute-water cut-off ({\AA}) \\
+	\hline q{\_}atom                & 10           & Q-atom non-q-atom cut-off ({\AA}) \\
   \hline [sphere]                 &              & Definition of the simulation sphere \\
-  \hline shell{\_}radius          & 18           & Definition of the inner restrained shell (Å). \\
+	\hline shell{\_}radius          & 18           & Definition of the inner restrained shell ({\AA}). \\
   \hline shell{\_}force           & 10.0         & Restraining force constant in shell (kcal$\cdot $mol$^{-1}\cdot ${\AA}$^{-2}$) \\
   \hline [solvent]                &              & Solvent boundary settings \\
   \hline radial{\_}force          & 60.0         & Force constant for radial restraining (kcal$\cdot $mol$^{-1}\cdot ${\AA}$^{-2}$) \\
@@ -1095,19 +1171,19 @@ of each elementary reaction step. In such a model of a reaction
 bonds, angles, torsions, partial charges, vdW parameters etc. may
 change for many atoms.
 
-The idea behind this definition of different states is that \textbf{qdyn},
+The idea behind this definition of different states is that \textbf{Qdyn6},
 for each configuration of the system's particles, will keep track
 of the energies of each state and write these to the energy file.
 The mapping potential or sampling potential used to generate the
 forces controlling the dynamics is a mixture of the FEP/EVB
 states, determined by the mapping parameter or weight coefficient
-$\lambda $ given to each (pure) state in the \textbf{qdyn} input file. The
+$\lambda $ given to each (pure) state in the \textbf{Qdyn6} input file. The
 free energy differences between FEP/EVB states can then easily be
-calculated by \textbf{qfep} using the standard FEP formula or the potential
+calculated by \textbf{Qfep6} using the standard FEP formula or the potential
 of mean force (umbrella sampling) approach to obtain the EVB
 ground state reaction free energy profiles.
 
-The FEP file has the same overall structure as the \textbf{qdyn} input file
+The FEP file has the same overall structure as the \textbf{Qdyn6} input file
 (see page \pageref{subsubsec:prep_qdyn_inp_f}) with various kinds
 of data grouped into sections, the majority of which are optional.
 We will describe FEP files for a couple of prototype cases,
@@ -1183,7 +1259,7 @@ that changes to the mass of a particle have no effect during the
 calculation, except when quantum corrections are calculated.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% Ändrar numreringen på tabellerna%%%%%%%%
+%%%%%% Ã…ndrar numreringen pÃ¥ tabellerna%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \setcounter{table}{3}
 
@@ -1212,12 +1288,12 @@ monovalent cations, and the section [\textbf{change{\_}charges}]
 is therefore omitted. The only specific definitions needed here
 are the following. In the section [\textbf{atom{\_}types}] the
 parameters for the atoms involved in the perturbation are given.
-Whether (A$_{i}$, B$_{i})$ or (R$^{\ast }$, $\varepsilon )$ LJ
+Whether (A$_{i}$, B$_{i}$) or (R$^{\ast }$, $\varepsilon$ ) LJ
 parameters are used depends on the combination rule specified in
 the FF parameter file used to generate the topology. The first
 column is the name of the Q-atom type, then follows the
-Lennard-Jones A$_{i}$ (or R$^{\ast })$ and B$_{i}$ (or
-$\varepsilon )$ parameters. Columns four to seven are not used in
+Lennard-Jones A$_{i}$ (or R$^{\ast }$) and B$_{i}$ (or
+$\varepsilon $) parameters. Columns four to seven are not used in
 this case (two parameters for the exponential repulsion function
 and two LJ parameters for 1-4 interactions). The last column is
 the atomic mass. The [\textbf{change{\_}atoms}] section states
@@ -1251,9 +1327,9 @@ topology number of the relevant atoms are given.
 
 The FEP file below describes the two EVB states used for
 calculating the free energy profile of proton transfer in a
-particular enzyme \cite{Kolmodin:}. It is beyond the scope here to
+particular enzyme \cite{Kolmodin1999}. It is beyond the scope here to
 describe the EVB method in detail, but reviews on this topic are
-available \cite{Aaqvist:1993}.
+available \cite{Aqvist1993}.
 
 Here we want to define the first state with the proton (H)
 attached to the sulphur atom of the cysteine and the phosphate
@@ -1376,8 +1452,8 @@ strong repulsion at very short distances. The vdW interaction
 between these pairs of atoms is given by:
 
 \[
-V_{soft} = C_{i}\cdot C_{j}\cdot e^{(-a_{i}\cdot a_{j}\cdot
-r_{i,j})}
+V_{soft} = C_{i}\cdot C_{j}\cdot e^{\left(-a_{i}\cdot a_{j}\cdot
+r_{i,j}\right)}
 \]
 
 where r$_{i,j}$ is the distance between the specific atom pair
@@ -1406,7 +1482,7 @@ Angles, torsions and impropers depend on the existence of bonds
 connecting the atoms defining the angle. Angles of all kinds can
 therefore be coupled to bonds, in which case the angle energy will
 be scaled by the ratio of the actual value of the Morse bond
-energy to the dissociation energy \cite{Aaqvist:1991}. In the
+energy to the dissociation energy \cite{Aqvist1991}. In the
 example angle 6 (P{\-}O{\-}H ) is coupled to bond 3 (O{\-}H) and
 angle 7 (CB{\-}S{\-}H) to bond 2 (S{\-}H), according to the
 [\textbf{angle{\_}couplings}] section. Coupling torsions and
@@ -1414,13 +1490,13 @@ impropers (not in the example) work the same way.
 
 Off-diagonal elements of the Hamiltonian are defined in the
 section [\textbf{off{\_}diagonals}]. They are represented by
-H$_{i,j}$=A$_{i,j}\cdot e^{(-\mu _{i,j}\cdot \rm{r}_{k,l})}$ where
+H$_{i,j}$=A$_{i,j}\cdot e^{\left(-\mu _{i,j}\cdot \rm{r}_{k,l}\right)}$ where
 i and j are the two states involved and r$_{k,l}$ is the distance
 between a specific pair of atoms k and l. The single record in
-this example defines mixing of states 1 and 2 (H$_{1,2})$ for
+this example defines mixing of states 1 and 2 (H$_{1,2}$) for
 q-atoms 2 and 8 with A=1.0 and $\mu $= 0.45.
 
-\subsection{Additional information for BQCP calculations}
+\subsubsection{Additional information for BQCP calculations}
 For the use of the BQCP implementation, specialized atom selections can be provided
 in the file under the header [\textbf{qcp{\_}atoms}]. If this section is found, atoms
 will be assigned to be treated using the BQCP approach in the order giving. 
@@ -1436,11 +1512,11 @@ The atom numbers used below are taken from the proton transfer example above.
 \end{center}
 In this case, the donor, acceptor and transferred atoms are designated to be treated
 this way. More general selections can also be done using atom selections
-in the input file for \textbf{qdyn}.\\
+in the input file for \textbf{Qdyn6}.\\
 If the calculation of kinetic isotope effects is desired, the user needs to provide
 the masses for the atoms under the header [\textbf{qcp{\_}mass}]. If this section is
 not found, or if atoms are missing from it, and the user requested the calculation 
-for different isotopes in the \textbf{qdyn} input file, masses will be automatically 
+for different isotopes in the \textbf{Qdyn6} input file, masses will be automatically 
 read from the atom type definitions.
 \begin{center}
 \begin{tabularx}{\textwidth}{|l l |X|}
@@ -1479,7 +1555,7 @@ group of a co-factor.
 Five groups of atoms are defined, and the interactions between
 groups 1{\-}3, 2{\-}4 and 2{\-}5 should be calculated. The
 energies are evaluated separately for different FEP states and
-presented in the energy summaries in the \textbf{qdyn} output. In this
+presented in the energy summaries in the \textbf{Qdyn6} output. In this
 example only a single state is defined so the $\lambda $-weighted
 averages are identical to the energies in state 1.
 The program will check on its own in how far the specified groups are able
@@ -1500,11 +1576,33 @@ all states weighted by $\lambda $, weighted sum of electrostatic
 energies, weighted sum of Lennard-Jones energies, electrostatic
 energy in state 1, Lennard-Jones energy of state 1.
 
-There is a similar feature in \textbf{qcalc} (see page
+There is a similar feature in \textbf{Qcalc6} (see page
 \pageref{subsubsec:qcalc}) where one can analyze non-bonded
 interactions from saved trajectory files.
 
-\subsection{Parallel version of Q} Even though computers become
+\subsubsection{Obtaining residue non-bonded contributions over complete free energy calculations}
+\label{subsubsec:groupexc}
+The [\textbf{group{\_}contribution}] routine mentioned above 
+can be used to obtain the residue 
+contributions over the full reaction, with additional
+sections added to the energy files for analysis in \textbf{Qfep6}.
+For the syntax used please refer to section \ref{subsubsec:qdyn_inp_file_form}.
+The routine will add one addtional calculation of the residue contributions towards the
+ttoal energy of the system at every point that the energies are saved, to allow
+the substraction from the total energy in equation \ref{eq:gcmd}.
+\begin{equation} \label{eq:gcmd}
+\begin{aligned}
+E_{total}       =& E_{qq,el} + E_{qq,vdw} + E_{qp,el} + E_{qp,vdw} \\
++& E_{pp,el} + E_{pp,vdw} + E_{bond} + E_{angle} + E_{torsion}
+\end{aligned}
+\end{equation}
+The reduced energies are then calcualted by simply substraction the individual residue 
+contributions from the total values in equation \ref{eq:gcmd2}.
+\begin{equation} \label{eq:gcmd2}
+E_{exclude} = E_{Total} - E_{qq,el}^{q-exc} - E_{qq,vdw}^{q-exc} - E_{qp,el}^{q-exc} - E_{qp,vdw}^{q-exc}
+\end{equation}
+
+\subsection{Parallel version of Q6} Even though computers become
 faster every year the work that a single computer can do is
 limited. A single execution of Q will take hours or even days. If
 a several computers were able to work in parallel with the same
@@ -1516,103 +1614,104 @@ drive. The nodes communicate through a fast network switch
 providing an environment suitable for running parallel program. Q
 has been parallelised to fit these type of machines.
 
-The part of Q that can be run in parallel is \textbf{qdyn} which contain
-the time demanding conformational sampling. The parallel version
-is suitable to run on 2 - 20 nodes depending on the size of the
-problem and the speed of the network.
+The parts of Q6 that can be run in parallel are \textbf{Qdyn6} which contain
+the time demanding conformational sampling and \textbf{Qpi6}, which performs
+the equally time demanding quantum correction calculations. The parallel version
+is suitable to run on 2 - 12 processor codes depending on the size of the
+problem.
 
-\subsubsection{Performance} To measure how well a parallel program
-runs there are two quantities. The first one is the speed-up
-defined as
+%%\subsubsection{Performance} To measure how well a parallel program
+%%runs there are two quantities. The first one is the speed-up
+%%defined as
+%%
+%%\begin {equation}
+%%S_p = \frac{\rm sequential\ time}{\rm parallel\ time} =
+%%\frac{T^s_1}{T_p} \label{eq:speedup}
+%%\end{equation}
+%%
+%%where $T^s_1$ is the execution time for the best sequential
+%%program and $T_p$ is the execution time for the parallel version
+%%with $p$ processors. The absolute speedup gives a measure of the
+%%improvement achieved by the parallelisation, \emph{i.e.} how many
+%%times faster the parallel version is compared to the original.
+%%
+%%The second quantity is the efficiency defined as
+%%
+%%\begin {equation}
+%%\eta = \frac{\rm sequential\ time}{P \times \rm parallel\ time} =
+%%\frac{T_1^s}{P \times T_p} \label{eq:efficiency}
+%%\end{equation}
+%%
+%%where $P$ is the number of processors. The efficiency describes
+%%how well the total cpu-time is utilised in the parallel version
+%%compared to the sequential program.
+%%
+%%The speed-up and efficiency of Q was measured using periodic
+%%boundary condition for a molecular system with a ion-channel with
+%%1550 atoms solvated by 4514 water molecules. Two series of
+%%executions were made with two different cut-offs. The tests were
+%%performed at a cluster with IBM SP2-nodes, 160 MHz.
+%%
+%%The results of the test series can be seen in figure.
+%%\ref{fig:speedup} and \ref{fig:efficiency}. The graphs show the
+%%typical behaviour of a parallel program; the more nodes you use
+%%the faster executions you get. But at the same time the nodes are
+%%utilised less efficient. It is a trad-off between speed and
+%%efficiency that is up to the user to decide. When the number of
+%%simulations is close to the number of computers it is more
+%%efficient to run sequentially; performing 15 simulations on 15
+%%computers is best done by assigning one job per node.
+%%
+%%
+%%\begin{figure}[hbt]
+%%\begin{center}
+%%\includegraphics*[scale=0.6]{\dirfig/speedup.pdf}
+%%\caption{Speedup of the parallel version of \textbf{qdyn}.}
+%%\label{fig:speedup}
+%%\end{center}
+%%\end{figure}
+%%
+%%\begin{figure}[hbt]
+%%\begin{center}
+%%\includegraphics*[scale=0.6]{\dirfig/efficiency.pdf}
+%%\caption{Efficiency of the nodes when running \textbf{qdyn} in parallel.
+%%The efficiency decreases as the number of nodes increase due to
+%%more communication and longer summation of the forces.}
+%%\label{fig:efficiency}
+%%\end{center}
+%%\end{figure}
 
-\begin {equation}
-S_p = \frac{\rm sequential\ time}{\rm parallel\ time} =
-\frac{T^s_1}{T_p} \label{eq:speedup}
-\end{equation}
-
-where $T^s_1$ is the execution time for the best sequential
-program and $T_p$ is the execution time for the parallel version
-with $p$ processors. The absolute speedup gives a measure of the
-improvement achieved by the parallelisation, \emph{i.e.} how many
-times faster the parallel version is compared to the original.
-
-The second quantity is the efficiency defined as
-
-\begin {equation}
-\eta = \frac{\rm sequential\ time}{P \times \rm parallel\ time} =
-\frac{T_1^s}{P \times T_p} \label{eq:efficiency}
-\end{equation}
-
-where $P$ is the number of processors. The efficiency describes
-how well the total cpu-time is utilised in the parallel version
-compared to the sequential program.
-
-The speed-up and efficiency of Q was measured using periodic
-boundary condition for a molecular system with a ion-channel with
-1550 atoms solvated by 4514 water molecules. Two series of
-executions were made with two different cut-offs. The tests were
-performed at a cluster with IBM SP2-nodes, 160 MHz.
-
-The results of the test series can be seen in figure.
-\ref{fig:speedup} and \ref{fig:efficiency}. The graphs show the
-typical behaviour of a parallel program; the more nodes you use
-the faster executions you get. But at the same time the nodes are
-utilised less efficient. It is a trad-off between speed and
-efficiency that is up to the user to decide. When the number of
-simulations is close to the number of computers it is more
-efficient to run sequentially; performing 15 simulations on 15
-computers is best done by assigning one job per node.
-
-
-\begin{figure}[hbt]
-\begin{center}
-\includegraphics*[scale=0.6]{\dirfig/speedup.pdf}
-\caption{Speedup of the parallel version of \textbf{qdyn}.}
-\label{fig:speedup}
-\end{center}
-\end{figure}
-
-\begin{figure}[hbt]
-\begin{center}
-\includegraphics*[scale=0.6]{\dirfig/efficiency.pdf}
-\caption{Efficiency of the nodes when running \textbf{qdyn} in parallel.
-The efficiency decreases as the number of nodes increase due to
-more communication and longer summation of the forces.}
-\label{fig:efficiency}
-\end{center}
-\end{figure}
-
-\subsubsection{Running Q on a cluster} Q version 5.0 and higher can
+\subsubsection{Running Q6 on a cluster} Q version 5.0 and higher can
 be run in parallel on clusters. The parallel version is easy to
 use. The only requirement is a computer cluster with high
 bandwidth and a version of Message Passing Interface (MPI)
 installed. MPI is a standard interface for communication between
-nodes in a cluster. To run Q on the cluster you need the parallel
-version of Q, \emph{i.e.} the one that has been compiled with the
+nodes in a cluster. To run Q6 on the cluster you need the parallel
+version of Q6, \emph{i.e.} the one that has been compiled with the
 MPI-flag activated. If you compile the program yourself define the
 variable USE\_MPI to the preprocessor. To check that you have the
 right version execute the program and confirm that the suffix
 "\_parallel" is added to the version info in the log file. Look at
-the top of the file where it should read "\textbf{qdyn} version
-X.XX\_parallel initialising....". The parallel version can be
+the top of the file where it should read "\textbf{Qdyn} version
+6.X.X\_parallel initialising....". The parallel version can be
 executed on a single node but still requires MPI installed.
 
-When submitting jobs to a cluster Q will automatically detect how
-many nodes that are available. Thus no special input to Q is
-required about how many nodes are being used. Make sure you run on
-dedicated nodes, \emph{i.e.} you have exclusive access to the
-nodes, and that no other job is running on the nodes. If the nodes
-are not dedicated entirely to Q the parallel execution become
-meaningless as a result of the synchronisation between the nodes
-in each time step. Consult your system administrator on how to
-commit jobs to a specified number of dedicated nodes.
+%When submitting jobs to a cluster Q will automatically detect how
+%many nodes that are available. Thus no special input to Q is
+%required about how many nodes are being used. Make sure you run on
+%dedicated nodes, \emph{i.e.} you have exclusive access to the
+%nodes, and that no other job is running on the nodes. If the nodes
+%are not dedicated entirely to Q the parallel execution become
+%meaningless as a result of the synchronisation between the nodes
+%in each time step. Consult your system administrator on how to
+%commit jobs to a specified number of dedicated nodes.
 
 \subsection{Analysis of results}
 
 \subsubsection{Analyzing structures from the simulation}
-\label{subsubsec:Analyzing_struc_f_t_sim} \textbf{qprep} is also used after
+\label{subsubsec:Analyzing_struc_f_t_sim} \textbf{Qprep6} is also used after
 the simulation to convert the binary trajectory and restart
-coordinate files generated by \textbf{qdyn} to PDB or mol2 files suitable
+coordinate files generated by \textbf{Qdyn6} to PDB or mol2 files suitable
 for viewing in a molecular graphics program.
 
 \textbf{Making PDB or mol2 files from restart or trajectory
@@ -1650,12 +1749,12 @@ HETATM in their info section.
 
 \textbf{Trajectory animation}\\*[0.25cm] There are a number of
 programs for visualising and analysing MD trajectories, $e.g.$
-Visual Molecular Dynamics, VMD \cite{VMD, VMD_homepage} and
-gOpenMol \cite{gOM, gOM_homepage} which can read the DCD format
-trajectories generated by \textbf{qdyn}. To create a PDB file with the same
+Visual Molecular Dynamics, VMD \cite{HUMP96, vmdhomepage} and
+gOpenMol \cite{Laaksonen1992, gomhomepage} which can read the DCD format
+trajectories generated by \textbf{Qdyn6}. To create a PDB file with the same
 set of atoms as in the trajectory, as required by the
 visualization programs,
-execute the steps below in \textbf{qprep}:\\
+execute the steps below in \textbf{Qprep6}:\\
 
 \begin{itemize}
 \item[1.] Load the topology file using the \textbf{readtop} command. The
@@ -1673,12 +1772,12 @@ markers.
 \end{itemize}
 
 
-\subsubsection{Free energy calculation using \textbf{qfep}} Performing free
+\subsubsection{Free energy calculation using \textbf{Qfep6}} Performing free
 energy perturbation (FEP) calculations with Q involves running a
 set of consecutive input files which have the mapping parameter
 vector $\lambda$ ranging in a desired way (usually [1, 0] to [0,
-1] for two states). \textbf{qfep} is a program which reads the energy files
-generated by \textbf{qdyn} and calculates the total change in free energy
+1] for two states). \textbf{Qfep6} is a program which reads the energy files
+generated by \textbf{Qdyn6} and calculates the total change in free energy
 for the complete perturbation from state A ($\varepsilon_1$) to
 state B ($\varepsilon_2$). The difference in free energy between
 the two states is calculated by Zwanzig's formula:
@@ -1695,7 +1794,7 @@ the difference in V$_{eff}$ between two adjacent perturbation
 steps.
 
 \begin{table}
-\caption{\textbf{qfep} input file for FEP/EVB evaluation}
+\caption{\textbf{Qfep6} input file for FEP/EVB evaluation}
 \begin{tabularx}{\textwidth}{|l|l|X|}
 \hline \textbf{Line}& \textbf{Data}& \textbf{Description} \\
 \hline 1  & 11            & Number of energy files \\
@@ -1706,7 +1805,7 @@ steps.
 \hline 6  & 12.3          & Energy shift $\Delta \alpha_{ij}$ (for states$\ne $1) \\
 \hline 7  & 1             & Number of off-diagonal elements $\ne $0 \\
 \hline 7.1& 1 2 18.1 0.32 0.0 2.0 & i, j, A$_{ij}$, $\mu _{ij}$, $\eta _{ij}$, r$_{0ij}$ \\
-\hline 8  & 1 -1          & Linear combination of states defining the reaction coordinate ($\varepsilon_{1}-\varepsilon_{2})$. \\
+\hline 8  & 1 -1          & Linear combination of states defining the reaction coordinate ($\varepsilon_{1}-\varepsilon_{2}$). \\
 \hline 9  & md{\_}00.ene  & List of energy files \\
 \hline 10{\ldots}& md{\_}01.ene& \\
 \hline {\ldots}19& md{\_}10.ene& \\
@@ -1724,7 +1823,7 @@ $\varepsilon_{1}$ to $\varepsilon_{2}$ is also given (sum(dGf) and
 sum(dGr)), as well as the average accumulated change calculated
 from the forward and reverse way $\langle$dG$\rangle$.
 
-\textbf{qfep} also calculates free energy functions, or potentials of mean
+\textbf{Qfep6} also calculates free energy functions, or potentials of mean
 force, by the perturbation formula:
 
 \begin {equation}
@@ -1774,7 +1873,7 @@ quantum mechanical coupling of the states. This coupling is zero
 for normal FEP calculations. H$_{ij} \ne $ 0 results in mixing of
 states i and j, which is desired when calculating reaction free
 energy profiles for reactions represented by the empirical valence
-bond (EVB) model. In \textbf{qfep} the off-diagonal element is a function
+bond (EVB) model. In \textbf{Qfep6} the off-diagonal element is a function
 of the form:
 
 \begin {equation}
@@ -1789,7 +1888,7 @@ function.
 
 The EVB method allows calibration  of simulated reference reactions to
 experimental data obtained from gas-phase or solution experiments. The
-two  EVB  parameters H$_{ij}$  (mostly  A$_{ij})$  and $\Delta  \alpha
+two  EVB  parameters H$_{ij}$  (mostly  A$_{ij}$)  and $\Delta  \alpha
 _{ij}$ are  varied until the  calculated profile and  the experimental
 data  coincide.  $\Delta \alpha  _{ij}$  is  a constant  energy  shift
 between  the  states  that  represents their  difference  in  heat  of
@@ -1799,35 +1898,37 @@ level and H$_{ij}$ regulates the degree of mixing of the states at the
 transition state $i.e.$ the $\Delta$G$^{\ddag }$ level.
 
 The energies describing the FEP functions and the reaction free energy
-profile are summarized  in the last table  generated by \textbf{qfep}.
+profile are summarized  in the last table  generated by \textbf{Qfep6}.
 Note that each bin has  contributions from several different values of
 $\lambda$.  Likewise,  each  value  of $\lambda$  contributes  to  the
 sampling of several different bins.
 
 It  is  possible to  handle  more  than  two  valence bond  states  in
-\textbf{qdyn} and \textbf{qfep}, however  sampling and calibration may
+\textbf{Qdyn6} and \textbf{Qfep6}, however  sampling and calibration may
 be a difficult task for more than two states.
 
 \begin{figure}[h]
-\caption{Example \textbf{qfep} output file}
+\caption{Example \textbf{Qfep6} output file}
 \centering
 \includegraphics*[scale=1]{\dirfig/Qfep_out.pdf}
 \label{fig:Qfep-out}
 \end{figure}
-
+\clearpage
 \subsection{BQCP post-processing}
+\label{section:qpi}
 The calculation of quantum corrections can be performed as a post-processing step
-for already completed simulations. For this, the program \textbf{qpi} can be used,
+for already completed simulations. For this, the program \textbf{Qpi6} can be used,
 together with the simulation topology, FEP file containing the information
 outlined above, a properly formatted input file and the simulation trajectory 
 corresponding to different states of a simulation.
+
 \paragraph{Input file}
 The input file should be formatted in the same way as the file used to perform
-the initial simulation in \textbf{qdyn}, with a small number of changes.
+the initial simulation in \textbf{Qdyn6}, with a small number of changes.
 The \textbf{[MD]} section has to be renamed to \textbf{[GENERAL]},
 with the remaining lines left unchanged to ensure that the calculation will
 be performed on the same potential as during the classical simualtion. If the
-line \textbf{temperature} is not specified, \textbf{QPI} will require a restart
+line \textbf{temperature} is not specified, \textbf{Qpi6} will require a restart
 file to calculate system temperatures from the velocities. An additional 
 change has to be performed to the \textbf{[files]} section, where the
 keyword \textbf{trajectory} has to be replaced with \textbf{traj{\_}input}.
@@ -1843,6 +1944,8 @@ explicitly turn of the write out using \textbf{qcp{\_}write off}.
 An example file is provided here, with the minimal input requirement.
 
 \begin{table}
+	\centering
+\caption{Example \textbf{Qpi6} input file}
 \begin{tabularx}{\textwidth}{|l l |X|}
 \hline
 \hline        [general] & & ! needed section to run calculation \\
@@ -1870,17 +1973,30 @@ An example file is provided here, with the minimal input requirement.
 	\hline
 \end{tabularx}
 \end{table}
+\paragraph{BQCP Theory}
+In the Quantum Classical Path description\cite{Hwang1993}, the quantum energy of a system is calculated according to the
+path integral formulation of quantum mechanics as the average
+over the energy of the free particle distribution, represented as a ring polymer of $n$ beads, over
+the average of the classical distribution. Each of the beads on the ring polymer represents one
+imaginary time slice in this case. The individual bead coordinates are sampled according to the bisection
+algorithm first developped by Ceperley\cite{Ceperley1995}, with the modifications later proposed by 
+Gao \emph{et al.}\cite{Gao2008}. At each classical coordinate chosen for the BQCP
+calculation of energies, ring polymers will be generated at the position of the classical coordinates.
+For the complete derivation on how free particle positions are chosen, and the concepts behind
+QCP the reader is asked to consult the original research papers by Hwang and Warshel\cite{Hwang1993}, as well
+as the work by Major and Gao\cite{Major2007a,Gao2008}.
+
 %%\begin{figure}[h]
 %%\caption{Example \textbf{qpi} input file}
 %%\centering
 %%\includegraphics*[scale=1]{\dirfig/QPi_inp.pdf}
 %%\label{fig:Qpi-inp}
 %%\end{figure}
-
+\clearpage
 \subsection{Scoring}\label{subsection:scoring} 
-Three   scoring   functions   are   implemented   in   \textbf{qcalc}:
-X-Score\cite{Wang:2002},       ChemScore\cite{Eldridge:1997}       and
-PMF-Score\cite{Muegge:1999}.   X-Score  and ChemScore  are  empiricial
+Three   scoring   functions   are   implemented   in   \textbf{Qcalc6}:
+X-Score\cite{Wang2002},       ChemScore\cite{Eldridge1997}       and
+PMF-Score\cite{Muegge1999}.   X-Score  and ChemScore  are  empiricial
 whilst PMF-Score is knowledge based.
 
 All  scoring functions  require  the  topology to  be  loaded and  the
@@ -1888,7 +2004,7 @@ correct mask be specified. The initial topology (with coordinates from
 the .top-file) can be scored to verify atom typing.
 
 Both trajectory and restart files can be scored. The following options
-are available in \textbf{qcalc}  when specifying trajectory or restart
+are available in \textbf{Qcalc6}  when specifying trajectory or restart
 files:
 \begin{itemize}
   \item{adding \emph{,frames=every n} means  calculations will only be
@@ -1914,7 +2030,7 @@ confusion, examples of typical inputs will be given.
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      \textbf{qcalc}$>$                        & xscore    \\
+      \textbf{Qcalc6}$>$                        & xscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
@@ -1925,7 +2041,7 @@ confusion, examples of typical inputs will be given.
       Cofactor (. or EOL terminates):  & .                          \\
       FF translation key:              & qoplsaa                               \\
       Scoring parameters:              & xscore\_default.input                \\
-      \textbf{qcalc}$>$                         & go                                   \\
+      \textbf{Qcalc6}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5                                \\
                                    &  mean                                \\
       \hline
@@ -1984,7 +2100,7 @@ following parameters and filenames are used:
     ATOM\_TRANSLATIONS   &   atom\_type\_conversions.dat  \\
     \end{tabular}
 
-Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang:2002}.
+Applying more than one hydrophobic algorithm results in a consensus score. Default scoring coefficients are as reported in \cite{Wang2002}.
 
   \paragraph{Output}
   When SHOW\_LIGAND and/or SHOW\_PROTEIN is specified, a list of ligand and/or protein atoms is displayed, showing the atom type, residue, atomic properties, neighbouring atoms and bonds for each atom. In  addition, a list of bonds and aromatic rings detected are output.
@@ -2009,14 +2125,14 @@ Applying more than one hydrophobic algorithm results in a consensus score. Defau
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      \textbf{qcalc}$>$                        & chemscore    \\
+      \textbf{Qcalc6}$>$                        & chemscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
       Score initial topology? (yes/no) & yes                                  \\
       Q-atom (FEP) file:               & c:/peter/data/P450/adm/lig.fep  \\
       Parameter file:                  & c:/peter/data/ff/chemscore\_oplsaa.prm \\
-      \textbf{qcalc}$>$                         & go                                   \\
+      \textbf{Qcalc6}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5                                \\
                                    &  mean                                \\
       \hline
@@ -2043,7 +2159,7 @@ Applying more than one hydrophobic algorithm results in a consensus score. Defau
       Prompt                        & Input     \\
       \hline
       Topology file:                & c:/peter/data/P450/adm/adm.top  \\
-      \textbf{qcalc}$>$                        & chemscore    \\
+      \textbf{Qcalc6}$>$                        & chemscore    \\
       Mask:                         & residue 1 407       \\
       Mask                          & .         \\
 
@@ -2051,7 +2167,7 @@ Applying more than one hydrophobic algorithm results in a consensus score. Defau
       Q-atom (FEP) file:               & c:/peter/data/P450/adm/lig.fep  \\
       Force field translation key:  & qoplsaa \\
       Scoring parameters:           & pmfscore\_default.input \\
-      \textbf{qcalc}$>$                         & go                                   \\
+      \textbf{Qcalc6}$>$                         & go                                   \\
       Enter names of coordinate or restart files & c:/peter/data/.../md.dcd,frames=every 5 \\
                                    &  mean                                \\
       \hline
@@ -2072,7 +2188,7 @@ Applying more than one hydrophobic algorithm results in a consensus score. Defau
   When SHOW\_LIGAND and/or SHOW\_PROTEIN is specified, a list of ligand and/or protein atoms is displayed, showing the atom type, residue, atomic properties, neighbouring atoms and bonds for each atom. In addition, a list of rings detected are output. If specified, bonds are also output.
   Atomic binding score is displayed only when scoring the initial configuration (topology).
 
-  It is safe to consider PMF-Score results as rankings where a more negative score means better binding. For details about converting PMF-Score to free energy of binding, see \cite{Muegge:1999}.
+  It is safe to consider PMF-Score results as rankings where a more negative score means better binding. For details about converting PMF-Score to free energy of binding, see \cite{Muegge1999}.
 
 \subsection{Useful tips}
 \begin{itemize}
@@ -2082,16 +2198,17 @@ keyword in the [\textbf{FEP}] section of the FEP file to instead
 of renumbering all the atoms!
 \item Make a separate library file for your new molecules
 and leave the amino acid library unchanged. Load both library
-files in \textbf{qprep}!
+files in \textbf{Qprep6}!
 \item It is possible to add parameters to the parameter
-file without restarting \textbf{qprep}. Just type maketop and the updated
+file without restarting \textbf{Qprep6}. Just type maketop and the updated
 file will be used!
 \item For FEP simulations involving dummy
-atoms, the daring user might consider ignoring some \textbf{qprep} warnings
+atoms, the daring user might consider ignoring some \textbf{Qprep6} warnings
 about missing parameters all of those interactions are to be
 redefined in a FEP file. It is possible, but in general not
 advisable, to write a topology file with missing parameters and to
-use it in \textbf{qdyn}.
+use it in \textbf{Qdyn6}. Ignoring warnings means that no help has to 
+be exoected in the case of resulting errors later in the simulation!
 \item Use build rules in your fragment library entries to control the
 positioning of hydrogens.
 \item Improve scoring accuracy by averaging over e.g. every 10:th frame
@@ -2125,7 +2242,7 @@ cysteines that are connected through sulphur bridges should be renamed
 CSS.
 
 Note also that hydrogen atoms need not  to be present in the PDB file,
-they will be added by the \textbf{qprep} program.
+they will be added by the \textbf{Qprep6} program.
 
 \subsubsection{Modeling ionic groups of the protein}
 Be aware  that the default  model of  the charged amino  acid residues
@@ -2177,13 +2294,13 @@ can be omitted.
 You also need a pdb file for  the ligand, copy the relevant lines from
 the PDB file of the complex to a separate file.
 
-\subsubsection{\textbf{qprep}}
+\subsubsection{\textbf{Qprep6}}
 Now  it is  time to  make  the topology  files. They  contain all  the
-information  about  the  system  and are  used  in  the  \textbf{qdyn}
-simulation.  This is done in \textbf{qprep}, where the sulphur bridges
+information  about  the  system  and are  used  in  the  \textbf{Qdyn6}
+simulation.  This is done in \textbf{Qprep6}, where the sulphur bridges
 also are  created.  You have to  make two topology files,  one for the
 ligand  in protein  simulation  and  one for  the  ligand without  the
-protein  simulation.   In \textbf{qprep},  you  start  by reading  the
+protein  simulation.   In \textbf{Qprep6},  you  start  by reading  the
 library  files  and  the  pdb  files  (\textit{readlib  }filename.lib,
 \textit{readpdb }filename.pdb).  In the ligand-protein  topology, both
 the amino  acid library and the  ligand library files has  to be read,
@@ -2194,14 +2311,14 @@ numbers  of the  sulphurs,  you can  list the  atoms  in the  cysteins
 from the  PDB file  since atoms  will be  renumbered as  hydrogens are
 added. After this you select boundary  and solvate the system. Then it
 is time  to create  the topology, \textit{maketop}.  If there  are any
-parameters missing, \textbf{qprep}  will tell you here.  To create new
+parameters missing, \textbf{Qprep6}  will tell you here.  To create new
 parameters, edit  the parameter  file in  a way that  you can  see the
 changes  made. You  can  always write  comments in  the  file after  a
 "!". After saving  the modified parameter file, all you  need to do is
 \textit{maketop }again.  To write the  topology file, use  the command
 \textit{writetop.}
 
-There  are many  other  useful applications  to \textbf{qprep},  among
+There  are many  other  useful applications  to \textbf{Qprep6},  among
 other things you can list the  high energy bonds, angles, torsions and
 impropers    by   the    commands   \textit{checkbond    }energylevel,
 \textit{checkangs }energylevel and so on. If  you get a too high bond,
@@ -2213,7 +2330,7 @@ redefine them automatically (\textit{changeimp} 2 energylevel).  After
 using changeimp,  you need to write  the topology again. You  may also
 want  to  make a  new  PDB  file,  use \textit{writepdb,  }with  atoms
 renumbered   and    hydrogens   added.   By    typing   \textit{help},
-\textbf{qprep} lists all the commands with a small explanation.
+\textbf{Qprep6} lists all the commands with a small explanation.
 
 \subsubsection{FEP files}
 In this  example the  only thing  specified in the  FEP files  are the
@@ -2224,7 +2341,7 @@ file. There are a lot of other things that can be specified in the FEP
 file, but none of those functions are used in this example.
 
 \subsubsection{Creating input files}
-The input file  controls the simulation in  \textbf{qdyn}. It contains
+The input file  controls the simulation in  \textbf{Qdyn6}. It contains
 information on how many steps, how long steps, what temperature, which
 topology to use and  a lot of other things. In  this example, the data
 collection phase was  split into five identical,  consecutive steps to
@@ -2252,8 +2369,8 @@ The coordinates  of the water  sphere must  be specified in  the first
 input file. In this example, a co-ordinate file with randomly oriented
 water molecules on a grid, was used.
 
-\subsubsection{\textbf{qdyn}}
-To  start  the  simulation,   write:  \textbf{qdyn}  filename.inp  $>$
+\subsubsection{\textbf{Qdyn6}}
+To  start  the  simulation,   write:  \textbf{Qdyn6}  filename.inp  $>$
 filename.log, to use  a specific input file and write  the output to a
 log file. When  many input files are  used it is much  easier to write
 all the commands to a command file and then run that.
@@ -2273,7 +2390,7 @@ figure \ref{fig:tutorial_energies}.
 
 Viewing the structures after the  different parts of the simulation is
 a very  important part of the  evaluation of the simulations.  To make
-pdb files of  the restart files use \textbf{qprep}.  Read the topology
+pdb files of  the restart files use \textbf{Qprep6}.  Read the topology
 file, then read the restart file (\textit{readx }md0{\#}.re) and write
 the new pdb file.
 
@@ -2325,7 +2442,7 @@ The $\beta $-value varies with the number of OH - groups on the
 ligand, when using GROMOS87 for ligands with no ionic groups,
 $\beta $ should be selected from a set of values accordingly to
 the composition of the ligand (number of
-OH-groups).\cite{Hansson:1998}
+OH-groups).\cite{Hansson1998}
 
 
 \section{REFERENCE GUIDE}
@@ -2345,7 +2462,7 @@ and topology modules.
 The figure does not show the dependence of some modules on others.
 
 \subsection{Force field reference information}
-Q is  not associated with  any particular  force field, that  is, it's
+Q6 is  not associated with  any particular  force field, that  is, it's
 force-field agnostic. The force fields are defined in parameter files,
 separate from the program and the choice of force field is thus simply
 a matter of which parameter file to use. Any force field could be used
@@ -2416,23 +2533,25 @@ cut-off  only based  on the  distance between  the switching  centres,
 while others include  all interactions between two groups  if any pair
 of atoms is within the cut-off radius.
 
-Some properties of the force fields available for Q are given in table
+Some properties of the force fields available for Q6 are given in table
 \ref{tab:FF}. Please note that these are our translations of the force
 field and we cannot guarantee 100\% identity with the original.
 
 \begin{table}[htbp]
-\small \caption{Force fields available in Q.} \label{tab:FF}
+\small \caption{Force fields available in Q6.} \label{tab:FF}
 \begin{tabularx}{\textwidth}{|p{58pt}|p{40pt}|p{32pt}|p{50pt}|p{50pt}|l|p{27pt}|X|}
 \hline \bf{Force field}\footnotemark[1] & \bf{CH$_n$
 groups}\footnotemark[2] & \bf{LJ type}\footnotemark[3]
  & \bf{Impropers}\footnotemark[4] & \bf{Charge groups}\footnotemark[5] & \bf{Cut-off}\footnotemark[6]
  & \bf{Atom types}\footnotemark[7] & \bf{Ref}\\
-\hline Amber95     & all-atom & $\varepsilon_{ij}$,R$_{ij}$     & periodic & residues        & any       & 48  & \cite{Cornell:1995} \\
-\hline Amber/OPLS  & extended & A$_{ij}$,B$_{ij}$               & periodic & $\leq$ 11 atoms & switching & 39  & \cite{Jorgensen:1988} \\
-\hline CHARMM v.22 & all-atom & $\varepsilon_{ij}$,R$_{ij}^{*}$ & harmonic & $\leq$ 13 atoms & switching & 186 & \cite{Brooks:1993} \\
-\hline GROMOS87    & extended & A$_{ij}$,B$_{ij}$               & harmonic & $\leq$ 10 atoms & switching & 28  & \cite{Gunsteren:1987,Gunsteren:mod} \\
-\hline GROMOS96    & extended & A$_{ij}$,B$_{ij}$               & harmonic & $\leq$ 10 atoms & switching & 28  & \cite{Gunsteren:1996} \\
-\hline OPLS-AA     & all-atom & A$_{ij}$,B$_{ij}$               & periodic & $\leq$ 15 atoms & switching & 35  & \cite{Jorgensen:1988}\\
+\hline Amber95     & all-atom & $\varepsilon_{ij}$,R$_{ij}$     & periodic & residues        & any       & 48  & \cite{Cornell1995} \\
+\hline Amber14     & all-atom & $\varepsilon_{ij}$,R$_{ij}$     & periodic & residues        & any       & 65  & \cite{Maier2015a} \\
+\hline Amber/OPLS  & extended & A$_{ij}$,B$_{ij}$               & periodic & $\leq$ 11 atoms & switching & 39  & \cite{Jorgensen1988} \\
+\hline CHARMM v.22 & all-atom & $\varepsilon_{ij}$,R$_{ij}^{*}$ & harmonic & $\leq$ 13 atoms & switching & 186 & \cite{Brooks1983} \\
+\hline GROMOS87    & extended & A$_{ij}$,B$_{ij}$               & harmonic & $\leq$ 10 atoms & switching & 28  & \cite{gunsteren:87} \\
+\hline GROMOS96    & extended & A$_{ij}$,B$_{ij}$               & harmonic & $\leq$ 10 atoms & switching & 28  & \cite{Gunsteren1996} \\
+\hline OPLS-AA     & all-atom & A$_{ij}$,B$_{ij}$               & periodic & $\leq$ 15 atoms & switching & 35  & \cite{Jorgensen1996a}\\
+\hline OPLS-AA/2015& all-atom & A$_{ij}$,B$_{ij}$               & periodic & $\leq$ 15 atoms & switching & 84  & \cite{Robertson2015a} \\
 \hline
 \end{tabularx}
 \normalsize
@@ -2466,6 +2585,8 @@ atoms in two charge groups.}
 \footnotetext[7]{The number of different atom types defined in the
 Q implementation of the force field.}
 
+The individual files for the fragment and parameter libraries are found
+in the folder ``ff'' of the source code distribution.
 The file names of the different fragment libraries and parameter
 files are given in Table \ref{tab:ff_files}.
 
@@ -2474,14 +2595,40 @@ files are given in Table \ref{tab:ff_files}.
 \caption{Force field files.}
 \label{tab:ff_files}
 \small
+\begin{tabular}{|c|c|c|c|}
+	\hline \textbf{Force field} & \textbf{Folder name} & \textbf{Library file} & \textbf{FF parameter file} \\
+	\hline Amber95              & amber95     & qamber95.lib          & qamber95.prm \\
+	\hline Amber14              & amber14sb   & qamber14.lib          & qamber14.prm \\
+	\hline Amber/OPLS           & oplsamber   & qopls.lib             & qopls.prm \\
+	\hline CHARMM v.22          & charmm22    & qcharmm22.lib         & qcharmm22.prm \\
+	\hline GROMOS87             & gromos87    & qgrm87.lib            & qgrm87.prm \\
+	\hline GROMOS96             & gromos96    & qgrm96.lib            & qgrm96.prm \\
+	\hline OPLSAA               & oplsaa      & qoplsaa.lib           & qoplsaa.prm \\
+	\hline OPLSAA-2015          & oplsaam2105 & qoplsaa.lib           & qoplsaa.prm \\
+\hline
+\end{tabular}
+\normalsize
+\end{center}
+\end{table}
+
+\subsubsection{Solvent selection}\label{subsubsec:solvselct}
+Different organic solvents can be used for calculations with Q6, as long as 
+a fragment library entry and associated parameters are available. For the 
+format of the solvent file, please consult page \pageref{subsubsec:solvent_file_format}.
+A set of organic solvents that have been tested for use in Q6 with the OPLS-AA force field are
+added in the respective folder and are listed below in table \ref{tab:solvents}.
+
+\begin{table}[htbp]
+\begin{center}
+\caption{Solvents for the OPLS-AA force field.}
+\label{tab:solvents}
+\small
 \begin{tabular}{|c|c|c|}
-\hline \textbf{Force field} & \textbf{Library file} & \textbf{FF parameter file} \\
-\hline Amber95              & Qamber95.lib          & Qamber95.prm \\
-\hline Amber/OPLS           & Qopls.lib             & Qopls.prm \\
-\hline CHARMM v.22          & Qcharmm22.lib         & Qcharmm22.prm \\
-\hline GROMOS87             & Qgrm87.lib            & Qgrm87.prm \\
-\hline GROMOS96             & Qgrm96.lib            & Qgrm96.prm \\
-\hline OPLSAA               & Qoplsaa.lib           & Qoplsaa.prm \\
+	\hline \textbf{Solvent name} & \textbf{File name} & \textbf{Density [1/{\AA}$^{3}$]} \\ 
+	\hline Chloroform            & CLF.lib     & 0.00752             \\ 
+	\hline Dichloromethane       & DCM.lib     & 0.00941             \\ 
+	\hline Methanol              & MTH.lib     & 0.01489             \\ 
+	\hline Ethanol               & ETH.lib     & 0.01031             \\ 
 \hline
 \end{tabular}
 \normalsize
@@ -2489,24 +2636,28 @@ files are given in Table \ref{tab:ff_files}.
 \end{table}
 
 
+
+
 \subsection{Topology preparation reference}\label{subsec:top_prep_ref}
-\subsubsection{Coordinate files for input into \textbf{qprep}}
-Atomic coordinates are entered into \textbf{qprep} as PDB files. The PBD
-file must conform to some rules to be accepted by \textbf{qprep} (if not
+\subsubsection{Coordinate files for input into \textbf{Qprep6}}
+Atomic coordinates are entered into \textbf{Qprep6} as PDB files. The PBD
+file must conform to some rules to be accepted by \textbf{Qprep6} (if not
 specified use the PDB standard):
 
 \begin{itemize}
-\item  \textbf{qprep}  will  only  accept and  read  ATOM  and  HETATM
-records. All other record types have to be removed.
+\item  \textbf{Qprep6}  will  only  accept and  read  ATOM  and  HETATM
+records. All other record types are ignored and will generate warnings.
 \item  Residue numbers  must be  numeric, $i.e.$  alphanumeric residue
 identifiers  like 60B  are not  allowed.  Use  the renumber  script to
 renumber residues.   The numbering does  not have  to start at  1, but
-\textbf{qprep} will renumber residues starting at 1.
+\textbf{Qprep6} will renumber residues starting at 1.
 \item Molecules  must be separated with  a gap marker line.  This line
 should  contain  only the  word  GAP  in capital  letters,  optionally
 preceded by blanks  or tabs. There should  not be a gap  marker at the
-end of the file.
-\item  Atom  numbering  is  not significant  and  \textbf{qprep}  will
+end of the file. Qprep6 will try to detect gaps between molecules
+by itself, but the user should make sure that the molecules are properly
+separated in the final topology.
+\item  Atom  numbering  is  not significant  and  \textbf{Qprep6}  will
 renumber atoms  starting from 1.  Note that the numbering  will change
 due to the insertion of hydrogen atoms.
 \item Only upper case letters may be used in PDB files.
@@ -2516,17 +2667,17 @@ maximal length of residue names is 3 alphanumeric characters (position
 \item Atom  names must match  atom names within the  relevant fragment
 library entry.
 \item  Temperature  factors  and  occupancy  numbers  are  ignored  by
-\textbf{qprep} and are optional.
+\textbf{Qprep6} and are optional.
 \end{itemize}
 
 \subsubsection{Atom masks}\label{subsubsec:atom_masks}
 An atom mask defines a subset of atoms and is used:
 \begin{itemize}
-\item in \textbf{qprep} to select which atoms are included when writing
+\item in \textbf{Qprep6} to select which atoms are included when writing
 structure files (PDB and mol2)
-\item in \textbf{qdyn} to select which atoms
+\item in \textbf{Qdyn6} to select which atoms
 to include in the trajectory and
-\item in \textbf{qcalc} to select atoms
+\item in \textbf{Qcalc6} to select atoms
 for superposition and coordinate deviation calculations.
 \end{itemize}
 The atom mask is constructed by selecting atoms within a sequence
@@ -2550,7 +2701,7 @@ lines may be used to construct the mask in an additive manner {\-}
 the atom sets specified by each line are combined with a logical
 or. If no mask is given, all atoms are selected by default.
 
-\subsubsection{\textbf{qprep} commands}
+\subsubsection{\textbf{Qprep6} commands}
 
 \begin{longtable}{|p{58pt}|p{27pt}|p{110pt}|p{170pt}|}
 \hline
@@ -2616,11 +2767,11 @@ should be written. Enter y for yes or n for no.\\
 \hline \bf{writetop} & wt & [topology file ["title"]] & Write topology file.\\
 \hline \bf{xlink} & xl &  & Search for possible cross-links such
 as disulphides and make bonds. For each non-bonded heavy atom pair
-separated by less than 2.1 Å, the program will ask whether to add a bond or not.\\
+separated by less than 2.1 {\AA}, the program will ask whether to add a bond or not.\\
 \hline
 \end{longtable}
 
-\subsubsection{\textbf{qprep} preferences}
+\subsubsection{\textbf{Qprep6} preferences}
 \label{subsubsec:Qprep_preferences} Use together with set, $e.g.$:
 set solvent\_pack 2.6.
 
@@ -2629,10 +2780,10 @@ set solvent\_pack 2.6.
 \begin{tabularx}{\textwidth}{|p{120pt}|X|p{60pt}|}
 \hline \normalsize \sc{name} & \normalsize \sc{meaning} & \normalsize \sc{default value} \\
 \hline \bf{solvent\_pack}  &  minimum distance between solute and
-solvent heavy atoms when adding solvent & 2.4 Å \\
-\hline \bf{solute\_density} & number density of solute & 0.05794 Å$^{-3}$ \\
+	solvent heavy atoms when adding solvent & 2.4 {\AA} \\
+	\hline \bf{solute\_density} & number density of solute & 0.05794 {\AA}$^{-3}$ \\
 \hline \bf{max\_xlink} & upper limit of bond length when searching
-for possible cross-link bonds & 2.1 Å \\
+	for possible cross-link bonds & 2.1 {\AA} \\
 \hline {\bf{random\_\-seed\_\-solute}} & integer seed value for
 the random number sequence used to generate solute hydrogen atom coordinates & 179857\\
 \hline \bf{random\_\-seed\_\-solvent} & integer seed value for the
@@ -2646,7 +2797,7 @@ random number sequence used to generate solvent hydrogen atom coordinates & 7589
 \label{subsubsec:fragment_lib_f_f} \index{library file}The
 fragment library file is a text file containing definitions of all
 the molecular building blocks, $i.e.$ amino acid residues, ligands
-etc., and is used by \textbf{qprep} to generate a molecular topology from a
+etc., and is used by \textbf{Qprep6} to generate a molecular topology from a
 PDB file. The format of the library file follows the same standard
 as the parameter file. Each fragment/residue entry starts with an
 entry name enclosed in curly braces, $e.g.$ {\{}ALA{\}}, maximum 3
@@ -2656,7 +2807,7 @@ within the entry.
 The optional [\textbf{info}] section contains the keyword
 SYBYLtype which identifies the SYBYL substructure type (residue or
 group) for the entry and is used only for writing mol2 files with
-\textbf{qprep}. The [\textbf{atoms}] section defines the sequential number,
+\textbf{Qprep6}. The [\textbf{atoms}] section defines the sequential number,
 name, type and charge of the atoms in the entry. The atom name
 must match the name used in PDB files to be read, but the order of
 atoms is not important. In the following sections atoms are
@@ -2682,7 +2833,7 @@ default ATOM. CONECT records in PDB file will be generated for
 HETATM groups. \\
 \hline Solvent & on or off & If on, this entry is recognised
 as a solvent.\\
-\hline Density & number density (Å$^{-3}$) & Only used for solvents,
+	\hline Density & number density ({\AA}$^{-3}$) & Only used for solvents,
 to solvate using a grid and to calculate the effective
 solvent radius.\\
 \hline
@@ -2717,7 +2868,7 @@ bonded. & Optional, default none. Should
 not be defined for entire molecules.\\
 \hline
 \end{tabularx}
-
+\clearpage
 [\textbf{build\_rules}]: Define rules for generating hydrogen
 atom coordinates.
 \label{tab:buildrules}\\
@@ -2873,12 +3024,12 @@ on page \pageref{fig:prm_ex}.
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline \bf{col.} & \bf{description} \\
 \hline 1 & atom type name, max 8 characters \\
-\hline 2 &  Lennard-Jones A parameter for type 1 pairs (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$)
-for geometric combination or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$) for arithmetic combination) \\
-\hline 3 & LJ A parameter type 2 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$)\\
-\hline 4 &  LJ B parameter type 1 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{3}$) or $\varepsilon$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$)\\
-\hline 5 & LJ A parameter type 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ Å$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$)\\
-\hline 6  & LJ B parameter type 2 and 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}\cdot$Å$^{3}$) or $\varepsilon$(kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$)\\
+	\hline 2 &  Lennard-Jones A parameter for type 1 pairs (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ {\AA}$^{6}$)
+	for geometric combination or R$^*$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{12}$) for arithmetic combination) \\
+	\hline 3 & LJ A parameter type 2 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ {\AA}$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{12}$)\\
+	\hline 4 &  LJ B parameter type 1 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ {\AA}$^{3}$) or $\varepsilon$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{6}$)\\
+	\hline 5 & LJ A parameter type 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}$ $\cdot$ {\AA}$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{12}$)\\
+	\hline 6  & LJ B parameter type 2 and 3 (kcal$^{1/2}$ $\cdot$ mol$^{-1/2}\cdot${\AA}$^{3}$) or $\varepsilon$(kcal$\cdot$mol$^{-1}\cdot${\AA}$^{6}$)\\
 \hline 7 & mass of (extended) atom (u) \\
 \hline 8  & SYBYL atom type (5 character string), optional\\
 \hline
@@ -2908,8 +3059,8 @@ atom types col. description \\
 \hline \bf{col.} & \bf{description} \\
 \hline 1 &  atom type 1\\
 \hline 2 &  atom type 2 \\
-\hline 3 & force constant (kcal $\cdot$ mol$^{-1}$ $\cdot$ Å$^{-2}$) \\
-\hline 4 & equilibrium length (Å) \\
+	\hline 3 & force constant (kcal $\cdot$ mol$^{-1}$ $\cdot$ {\AA}$^{-2}$) \\
+	\hline 4 & equilibrium length ({\AA}) \\
 \hline 5 & SYBYL bond type (2 character string), optional \\
 \hline
 \end{tabularx}
@@ -2922,7 +3073,7 @@ of atom types col. description.\\
 \hline 2  & atom type 2 \\
 \hline 3 & atom type 3 \\
 \hline 4 & force constant (kcal $\cdot$ mol$^{-1}$ $\cdot$ rad$^{-2}$) \\
-\hline 5 & equilibrium angle (°)\\
+\hline 5 & equilibrium angle (\degree)\\
 \hline
 \end{tabularx}
 
@@ -2940,7 +3091,7 @@ before to indicate that more components follow on subsequent
 lines, i. e. for a torsion potential with multiple components all
 but the last
 component should be entered with negative periodicity. \\
-\hline 7  & phase shift ($\delta$/n define the location of first maximum) (°) \\
+\hline 7  & phase shift ($\delta$/n define the location of first maximum) (\degree) \\
 \hline 8 & number of paths \\
 \hline
 \end{tabularx}
@@ -2952,7 +3103,7 @@ for pairs of atom types or for single atom types col. description \\
 \hline 1 & atom type 1 \\
 \hline 2 & atom type 2 or 0 or ? to match any atom type \\
 \hline 3 & force constant (kcal $\cdot$ mol$^{-1}$ $\cdot$ rad$^{-2}$) \\
-\hline 4 & equilibrium angle (°)\\
+\hline 4 & equilibrium angle (\degree)\\
 \hline
 \end{tabularx}
 \normalsize
@@ -2965,10 +3116,10 @@ for pairs of atom types or for single atom types col. description \\
 \end{figure}
 
 \subsubsection{Solvent file format}
-\label{subsubsec:solvent_file_format} \textbf{qprep} can solvate a
+\label{subsubsec:solvent_file_format} \textbf{Qprep6} can solvate a
 molecular systems by filling empty space in the simulation sphere
-or box by water molecules taken from a water file. This file is a
-special PDB-like file containing a box or a sphere of water
+or box by solvent molecules taken from a solvent file. This file is a
+special PDB-like file containing a box or a sphere of solvent
 molecules. The residue name in the water file is used to designate
 the library entry to use for generating bonds etc.
 
@@ -2976,30 +3127,33 @@ When using a box for solvation, the box can be replicated in all
 direction so that a small box can be used to solvate a big
 simulation sphere or box. Spheres cannot be replicated and must be
 larger than the intended simulation system. The box or sphere will
-be translated to the water generation centre, so the origin used
+be translated to the solvent generation centre, so the origin used
 in the file is arbitrary. A sphere can not be used to solvate a
 system intended for simulation with periodic boundaries. The file
 format is described in Table \ref{tab:wat_file}.
 
 
 \begin{table}[h]
-\caption{Water file format} \label{tab:wat_file}
+\caption{Solvent file format} \label{tab:wat_file}
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline \bf{line} & \bf{content}\\
-\hline 1 & For a box: side of the box (Å).For a sphere: radius of
+\hline 1 & For a box: side of the box ({\AA}).For a sphere: radius of
 the sphere followed by the word \textbf{sphere}. \\
-\hline 3 $\cdot$ n-1 & Coordinates of the oxygen atom of water
+\hline 3 $\cdot$ n-1 & Coordinates of the first atom of solvent
 molecule n in PDB format. \\
-\hline 3 $\cdot$ n & Coordinates of the first hydrogen atom of
-water molecule n in PDB format. \\
-\hline 3 $\cdot$ n+1 & Coordinates of the second hydrogen atom of
-water molecule n in PDB format. \\
+\hline 3 $\cdot$ n & Coordinates of the second atom of
+solvent molecule n in PDB format. \\
+\hline 3 $\cdot$ n+1 & Coordinates of the third atom of
+solvent molecule n in PDB format. \\
 \hline
 \end{tabularx}
 \end{table}
 
+For larger solvent molecules, the remaining atoms again have to 
+follow in the same format as above.
+
 %End Nervall
-%Start Almlöf
+%Start AlmlÃ¶f
 
 \subsection{Boundary conditions}
 \label{subsec:boundary}
@@ -3008,16 +3162,16 @@ water molecule n in PDB format. \\
 simulation sphere are excluded from non-bonded interactions and
 are tightly restrained to their initial coordinates by a harmonic
 potential with a force constant of 200
-kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$. All bonded interactions are
+kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$. All bonded interactions are
 evaluated as for atoms inside the sphere. Solute atoms in the
 outermost shell of the simulation sphere are also restrained to
 their initial coordinates with a harmonic potential to avoid
 distortion of bonds across the sphere boundary. The radius
-of this shell and the force constant is given in the \textbf{qdyn} input
+of this shell and the force constant is given in the \textbf{Qdyn6} input
 file (section [\textbf{sphere}], keywords shell\_radius and
 shell\_force). The restrained shell radius is by default equal to the outer,
 \emph{i.e.} no atoms will be restrained unless the restrained shell radius is redefined. The force constant has
-a default value of 10 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.
+a default value of 10 kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$.
 
 The grouping of atoms in the inside shell or excluded regions is
 done before the simulation starts using the initial coordinates
@@ -3039,14 +3193,14 @@ equation $V_{sphere} \left(r_w\right) = \frac{4\pi}{3}\cdot r_w^3
 = N_p\left(r_w\right)\cdot v_p+N_w\cdot v_w $ where N$_p$(r$_w$)
 is the number of heavy solute atoms within a radius r$_w$ from the
 water centre, v$_p$ is the average volume per heavy atom in
-proteins (17.3 Å$^3$), N$_w$ is the (fixed) number of solvent
+proteins (17.3 {\AA}$^3$), N$_w$ is the (fixed) number of solvent
 molecules and v$_w$ is the volume of a solvent molecule (29.9
-Å$^3$ for water).
+{\AA}$^3$ for water).
 
 The radial restraining potential has a half-harmonic term that
 pushes solvent molecules back into the sphere and a Morse-like
 term that pulls molecules from inside out towards the boundary
-\cite{Essex:1995}:
+\cite{Essex1995}:
 \begin {equation}
 \label{eq:scaas}
  V_{solvent}(r) = \begin{cases}
@@ -3066,17 +3220,17 @@ T:  $r_0 = r_w - \sqrt{\frac{k_b \cdot T}{K}}$ where r$_w$ is the
 target solvent radius. The appropriate values of D$_e$ and
 $\alpha$ depend on r$_w$ and are calculated using empirical
 functions calibrated to give correct values for water spheres from
-12 to 30 Å:
+12 to 30 {\AA}:
 \begin {equation}
 \label {eq:empscaas}
 \begin {split}
 D_e \left(r_w \right) = 0.26 \frac{kcal}{mol} \cdot e^{\left(
--0.19 \frac{1}{\text{Å}} \cdot \left( r_w - 15\text{Å} \right)
+-0.19 \frac{1}{\text{{\AA}}} \cdot \left( r_w - 15\text{{\AA}} \right)
 \right)} + 0.74
 \frac{kcal}{mol} \\
-\alpha \left(r_w \right) = 0.20 \frac{1}{\text{Å}} \left/ \left(1
-+ e^{ \left( 0.4 \frac{1}{\text{Å}} \cdot \left( r_w - 25\text{Å}
-\right) \right)} \right) \right. + 0.30 \frac{1}{\text{Å}}
+\alpha \left(r_w \right) = 0.20 \frac{1}{\text{{\AA}}} \left/ \left(1
++ e^{ \left( 0.4 \frac{1}{\text{{\AA}}} \cdot \left( r_w - 25\text{{\AA}}
+\right) \right)} \right) \right. + 0.30 \frac{1}{\text{{\AA}}}
 \end{split}
 \end{equation}
 
@@ -3099,9 +3253,9 @@ Born's formula is taken into account unless disabled by setting
 charge\_correction to off in the input file. The polarisation
 distribution restraints are applied in three thin shells to
 minimise the radial dependence of the polarisation which occurs in
-a single, thicker shell. The outermost shell is 0.5 Å thick, the
-second 1.0 Å, the third 1.5 Å, so the polarisation is restrained
-in the outermost 3 Å of the simulation sphere.
+a single, thicker shell. The outermost shell is 0.5 {\AA} thick, the
+second 1.0 {\AA}, the third 1.5 {\AA}, so the polarisation is restrained
+in the outermost 3 {\AA} of the simulation sphere.
 
 The restraining works by sorting the molecules of each shell
 according to the angle between dipole vector and radial axis and
@@ -3183,15 +3337,15 @@ max\_volume\_displacement, which corresponds to $\Delta V_{max}$.
 \subsection{Units}
 \label{subsec:units}
 
-The units used in Q are the basic units in table \ref{tab:units}
+The units used in Q6 are the basic units in table \ref{tab:units}
 and combinations thereof. \small
 \begin{table}[h]
 \begin{center}
-\caption{Units in Q} \label{tab:units}
+\caption{Units in Q6} \label{tab:units}
 \begin{tabular}{|l|l|}
 \hline time & fs \\
 \hline temperature & K \\
-\hline length & Å \\
+	\hline length & {\AA} \\
 \hline energy & kcal$\cdot$mol$^{-1}$ \\
 \hline charge & e \\
 \hline
@@ -3206,7 +3360,7 @@ equation, being some methods more precise than others. Nevertheless,
 high precision is not necessarily the most important feature of an algorithm 
 for molecular dynamics simulations. An equation of motion must be 
 time-reversible in order to conserve the phase space volume if one is looking 
-for physical conservation laws. Q provides two options of symplectic 
+for physical conservation laws. Q6 provides two options of symplectic 
 integrators: the Leapfrog and the velocity Verlet algorithms.
 
 \subsubsection{Leapfrog algorithm}
@@ -3242,10 +3396,10 @@ This is scheme is prone to less error, as it computes positions and velocities
 at the same time interval. However, the computational cost becomes slightly higher.
 
 \subsubsection{Constant temperature algorithms}
-Q comes with the option of choosing the thermostat which the user
+Q6 comes with the option of choosing the thermostat which the user
 judges appropriate. The three thermostats present are
-Berendsen\cite{Berendsen:1984}, Nos\'e-Hoover chains\cite{Tuckerman:1992}
- and Langevin\cite{Schneider:1978}. One can change the thermostat
+Berendsen\cite{Berendsen1984}, Nos\'e-Hoover chains\cite{Martyna1992}
+ and Langevin\cite{Schneider1978}. One can change the thermostat
 by inserting the keyword thermostat in the section [\textbf{MD}]
 in the input file, followed by "berendsen", "nose-hoover" or "langevin".
 Every thermostat has its own setup parameters, which will be described
@@ -3308,7 +3462,7 @@ Now, if we call $\textbf{p'} = \textbf{p}/s$, and define a new Hamiltonian as
 \frac{\textbf{p'}_{i}^2}{2m_{i}} + V(\textbf{r}^N),
 \end{equation}
 
-it is possible to show that the average of any observable is (see \cite{Frenkelbook} for more details):
+it is possible to show that the average of any observable is (see \cite{Frenkel:1996} for more details):
 
 \begin{equation}
  \langle A(\textbf{p}/s,\textbf{r}) \rangle_{NVE} = \langle A(\textbf{p'},\textbf{r}) \rangle_{NVT}
@@ -3320,7 +3474,7 @@ this particle at the canonical ensemble. Nevertheless, it has been shown that a
 single particle Nos\'e-Hoover particle was not able to sample properly
 the canonical ensemble in some cases. The solution to the problem was
 to create additional particles that would interact with each other in a
-chain-like way \cite{Tuckerman:1992}. If we apply the Nos\'e-Hoover
+chain-like way \cite{Martyna1992}. If we apply the Nos\'e-Hoover
 thermostat in a chain way $C$ times, the new equations of motion become:
 
 \begin{align}
@@ -3336,9 +3490,9 @@ thermostat in a chain way $C$ times, the new equations of motion become:
   -k_{B}T \right)
 \end{align}
 
-In Q, one can control the mass of the thermostat particles. The larger the mass,
+In Q6, one can control the mass of the thermostat particles. The larger the mass,
 the larger the coupling with the thermostat, and less temperature oscilation will
-occur. The standard value is set to XXX.
+occur. The standard value is set to $\text{k}_{\text{b}}T/{{\tau}^{2}}$.
 
 \paragraph{Langevin thermostat:}
 
@@ -3365,8 +3519,8 @@ Fokker-Planck equation formed from variables generated by the equation
 equation enables the canonical ensemble sampling.
 
 \subsection{File and format descriptions}
-\subsubsection{\textbf{qdyn} input file format}\label{subsubsec:qdyn_inp_file_form}
-The name of the input file is passed to \textbf{qdyn} as the first argument
+\subsubsection{\textbf{Qdyn6} input file format}\label{subsubsec:qdyn_inp_file_form}
+The name of the input file is passed to \textbf{Qdyn6} as the first argument
 on the command line. The file is divided into sections, each
 starting with a section heading enclosed in square brackets.
 Within a section are lines with a keyword and a value, or just
@@ -3377,10 +3531,10 @@ within sections is not important (but the order of table
 \ref{tab:qdyninputfileformat} is preferred). Many keywords have
 default values and can be omitted, to make it easier to set up a
 simple simulation. The use of default values will be shown in the
-output from \textbf{qdyn}. Sections with no required entries are optional.
+output from \textbf{Qdyn6}. Sections with no required entries are optional.
 \small
 \begin{longtable}{|p{78pt}|p{158pt}|p{158pt}|}
-\caption{\textbf{qdyn} input file format}
+\caption{\textbf{Qdyn6} input file format}
 \label{tab:qdyninputfileformat}
 \endhead
 
@@ -3389,7 +3543,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline steps & Number of MD steps. & Required.\\
 \hline stepsize & MD stepsize ($\Delta$t) (fs). & Required.\\
 \hline temperature & Target temperature (K). & Required.\\
-\hline bath\_coupling & Temperature bath relaxation time T (fs) to use with berendsen thermostat\cite{Berendsen:1984}. & Optional, default 100 fs. Must be $\geq$ stepsize. \\
+\hline bath\_coupling & Temperature bath relaxation time T (fs) to use with berendsen thermostat\cite{Berendsen1984}. & Optional, default 100 fs. Must be $\geq$ stepsize. \\
 \hline separate\_scaling & Enable (on) or disable (off) separate temperature scaling of solute and solvent. & Optional, default on. \\
 \hline random\_seed & Integer value to seed the random number generator. & Optional. Used only for random velocities. Change number to get a different set of velocities. Negative value or omission will generate number from system time.\\
 \hline initial\_temperature & Temperature (K) of Maxwellian distribution for random velocities. & Optional except when no restart file is used. Use \emph{only} when velocities should be randomised!\\
@@ -3399,15 +3553,13 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline shake{\_}solute & Constraining all solute bonds on or off. & Optional, default off. \\
 \hline shake{\_}heavy & Constraining of bonds to heavy atoms in solute and solvent on or off. & Optional, default off.\\
 \hline shake{\_}hydrogens & Constraining of bonds to hydrogen atoms in solute and solvent on or off.  & Optional, default on. \\
-\hline
 \hline lrf & LRF Taylor expansion of electrostatic field beyond cut-off radius (on/off). & Optional, default on.\\
 \hline verbose{\_}temp & Turn extended output for simulation temperature (on) or (off). If on, will print list of atoms exceeding temperature maximum and will print update to current system temperature if changes exceed 2{\%}. By default those are only printed at the desired ouptut interval. & Optional, default off. \\
-\hline
 \hline thermostat & Choice of thermostat used for system. Available thermostats are berendsen, langevin, nose-hoover. & Optional, default berendsen. \\
 \hline langevin{\_}friction & Friction constant for langevin thermostat. & Optional, default 1/bath{\_}coupling. \\
 \hline nhchains & Number of chains for Nose-Hoover thermostat & Optional, default 10.\\
 \hline integrator & Choice of intergrator for simulation, available options are leap-frog and velocity-verlet. & Optional, default leap-frog. \\
-
+\hline
 
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3423,16 +3575,16 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{}\\
 
 \multicolumn{3}{p{394pt}}{[\textbf{cut-offs}]: Cut-off radii for non-bonded interactions.}\\
-\hline solute\_solute & Cut-off radius (Å) for solute-solute atom pairs. & Optional, default 10 Å.\\
-\hline solvent\_solvent & Cut-off radius (Å) for solvent-solvent. & Optional, default 10 Å.\\
-\hline solute\_solvent & Cut-off radius (Å) for solute-solvent. & Optional, default 10 Å.\\
-\hline q\_atom & Cut-off radius (Å) for Q-atoms interaction with all atoms. & Optional, default 99 Å, \emph{$i.e.$} no cut-off. If PBC used, compare to boxlength.\\
-\hline lrf & Cut-off radius (Å) for LRF expansion. & Optional, default 99 Å, \emph{$i.e.$} no cut-off.\\
+\hline solute\_solute & Cut-off radius ({\AA}) for solute-solute atom pairs. & Optional, default 10 {\AA}.\\
+\hline solvent\_solvent & Cut-off radius ({\AA}) for solvent-solvent. & Optional, default 10 {\AA}.\\
+\hline solute\_solvent & Cut-off radius ({\AA}) for solute-solvent. & Optional, default 10 {\AA}.\\
+\hline q\_atom & Cut-off radius ({\AA}) for Q-atoms interaction with all atoms. & Optional, default 99 {\AA}, \emph{$i.e.$} no cut-off. If PBC used, compare to boxlength.\\
+\hline lrf & Cut-off radius ({\AA}) for LRF expansion. & Optional, default 99 {\AA}, \emph{$i.e.$} no cut-off.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
 \multicolumn{3}{p{394pt}}{[\textbf{sphere}]: Not used in PBC simulations.}\\
-\hline shell\_force & Force constant (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$) for shell restraints. & Optional, default 10 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
+\hline shell\_force & Force constant (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$) for shell restraints. & Optional, default 10 kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$.\\
 \hline shell\_radius & Inner radius of restrained shell (\AA). & Optional, default outer shell radius.\\
 \hline exclude\_bonded & Flag controlling whether bonded interactions between excluded atoms should be eliminated (on) or retained (off) to reproduce energies in earlier versions. & Optional, default off.\\
 \hline
@@ -3440,7 +3592,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 
 \multicolumn{3}{p{394pt}}{[\textbf{solvent}]: Boundary conditions of solvent sphere. Optional, can be omitted in vacuum simulations and must be omitted in PBC simulations.}\\
 \hline radius & Target solvent radius. &  Optional. Use this only to override the calculated target radius from the topology.\\
-\hline radial\_force & Force constant (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$) for half-harmonic radial restraint at boundary. & Optional, default 60 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
+\hline radial\_force & Force constant (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$) for half-harmonic radial restraint at boundary. & Optional, default 60 kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$.\\
 \hline polarisation & Polarisation restraints in outer solvent shell on or off. & Optional, default on.\\
 \hline charge\_correction &  Enable (on) or disable (off) correction of solvent polarisation restraints for total charge of Q-atoms by Born's formula. & Optional, default on.\\
 \hline polarisation\_force & Force constant (kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$) for solvent polarisation restraints. & Optional, default = 20 kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$.\\
@@ -3451,7 +3603,8 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{[\textbf{intervals}]: Intervals between saving data and updating non-bond lists.}\\
 \hline non\_bond & Non-bond list (and LRF data) update interval. & Optional, default 10.\\
 \hline output & Interval for printing energy summaries. & Optional, default 10.\\
-\hline temperature & Interval for printing temperature. It will always be printed if it changed by $>$ 2\% since last printed and if verbose{\_}temp is set. & Optional, default 10.\\
+\hline temperature & Interval for printing temperature. It will always be printed if it changed by $>$ 2\% since last printed and if verbose{\_}temp is set. As tempearture write out now includes statistics concerning the fluctuation,
+longer write out intervals can be used. & Optional, default 10.\\
 \hline energy & Interval for writing Q-atom energies to energy file. & Optional, default 0 (disabled).\\
 \hline trajectory & Interval for writing coordinates to trajectory file. & Optional, default 0 (disabled).\\
 \hline volume\_change & Interval for Monte-Carlo trial of new volume. & Optional, default 0 (disable).\\
@@ -3501,7 +3654,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{[\textbf{sequence\_restraints}]: Restrain sequences of atoms.}\\
 \hline 1 & \multicolumn{2}{p{320pt}|}{Number of first atom in sequence.}\\
 \hline 2 & \multicolumn{2}{p{320pt}|}{Number of last atom in sequence.}\\
-\hline 3 & \multicolumn{2}{p{320pt}|}{Force constant (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$) for harmonic potential.}\\
+\hline 3 & \multicolumn{2}{p{320pt}|}{Force constant (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$) for harmonic potential.}\\
 \hline 4 & \multicolumn{2}{p{320pt}|}{Flag for restraining also hydrogens (0=no, 1=yes).}\\
 \hline 5 & \multicolumn{2}{p{320pt}|}{Flag for restraining the sequence of atoms to its mass center (2), geometrical centre by the force proportianl to the corresponding atom mass normalized with C12 mass and acting on all atoms (1), or each atom to its initial coordinates (0 or missing).}\\
 \hline
@@ -3509,8 +3662,8 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 
 \multicolumn{3}{p{394pt}}{[\textbf{atom\_restraints}]: Restrain individual atom positions.}\\
 \hline 1 & \multicolumn{2}{p{320pt}|}{Atom number.}\\
-\hline 2,3,4 & \multicolumn{2}{p{320pt}|}{Target x y and z coordinates (Å).}\\
-\hline 5,6,7 & \multicolumn{2}{p{320pt}|}{Force constants (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$) in x y and z directions. With separate force constants for x,y,z this can be used to restrain atoms to lines and planes as well.}\\
+\hline 2,3,4 & \multicolumn{2}{p{320pt}|}{Target x y and z coordinates ({\AA}).}\\
+\hline 5,6,7 & \multicolumn{2}{p{320pt}|}{Force constants (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$) in x y and z directions. With separate force constants for x,y,z this can be used to restrain atoms to lines and planes as well.}\\
 \hline 8 & \multicolumn{2}{p{320pt}|}{FEP state where the restraint is active (energies and forces will be scaled by lambda) or 0 = active in all states.}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
@@ -3518,9 +3671,9 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \multicolumn{3}{p{394pt}}{[\textbf{distance\_restraints}]: Restrain atom-atom distances.}\\
 \hline 1 & \multicolumn{2}{p{320pt}|}{  Number of first atom.}\\
 \hline 2 & \multicolumn{2}{p{320pt}|}{  Number of last atom.}\\
-\hline 3 & \multicolumn{2}{p{320pt}|}{  Lower distance limit for unrestrained region (Å).}\\
-\hline 4 & \multicolumn{2}{p{320pt}|}{  Upper distance limit for unrestrained region (Å). Set lower limit = upper limit for standard harmonic potential.}\\
-\hline 5 & \multicolumn{2}{p{320pt}|}{  Force constant (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$).}\\
+\hline 3 & \multicolumn{2}{p{320pt}|}{  Lower distance limit for unrestrained region ({\AA}).}\\
+\hline 4 & \multicolumn{2}{p{320pt}|}{  Upper distance limit for unrestrained region ({\AA}). Set lower limit = upper limit for standard harmonic potential.}\\
+\hline 5 & \multicolumn{2}{p{320pt}|}{  Force constant (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$).}\\
 \hline 6 & \multicolumn{2}{p{320pt}|}{  FEP state where the restraint is active (energies and forces will be scaled by lambda) or 0 = active in all states.}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
@@ -3529,7 +3682,7 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline 1 & \multicolumn{2}{p{320pt}|}{  Number of first atom in sequence.}\\
 \hline 2 & \multicolumn{2}{p{320pt}|}{  Number of last atom in sequence.}\\
 \hline 3 & \multicolumn{2}{p{320pt}|}{  Distance from water centre beyond which the restraining potential is applied.}\\
-\hline 4 & \multicolumn{2}{p{320pt}|}{  Force constant (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$) for harmonic potential.}\\
+\hline 4 & \multicolumn{2}{p{320pt}|}{  Force constant (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$) for harmonic potential.}\\
 \hline 5 & \multicolumn{2}{p{320pt}|}{  Constant D$_{e}$ in the Morse potential, depth of the potential energy minimum.}\\
 \hline 6 & \multicolumn{2}{p{320pt}|}{  Constant a in the Morse potential.}\\
 \hline 7 & \multicolumn{2}{p{320pt}|}{  Flag for restraining also hydrogens (0=no, 1=yes).}\\
@@ -3546,6 +3699,59 @@ output from \textbf{qdyn}. Sections with no required entries are optional.
 \hline
 \end{longtable}
 \normalsize
+
+\subsubsection{\textbf{Qpi6} input file format}\label{subsubsec:qpi_inp_file_form}
+Input files for \textbf{Qpi6} are handled the same way as for \textbf{Qdyn6}. 
+The same restrictions concerning file format and comments apply as outlined above in
+section \ref{subsubsec:qdyn_inp_file_form}. Files only need limited changes,
+and commands that are not needed in \textbf{Qpi6} compared to \textbf{Qdyn6} are ignored,
+so that users can reuse their files. The major changes needed are mentioned below in table
+\ref{tab:qpiinputfileformat}. As above, default values are chosen for most keywords
+and sections if they are omitted.
+\small
+\begin{longtable}{|p{78pt}|p{158pt}|p{158pt}|}
+\caption{\textbf{Qpi6} input file format}
+\label{tab:qpiinputfileformat}
+\endhead
+
+\multicolumn{3}{p{394pt}}{[\textbf{GENERAL}]:Basic simulation data.}\\
+\hline \textbf{keyword} & \textbf{value} & \textbf{comment}\\
+\hline temperature & Simulation temperature, needed for chosing correct bead distribution. & Optional, if not defined then calculated from restart file.\\
+\hline steps & Ignored in \textbf{Qpi6}. & Ignored. \\
+\hline stepsize & Ignored in \textbf{Qpi6}. & Ignored. \\
+	\hline bath{\_}coupling & Ignored in \textbf{Qpi6}. & Ignored. \\
+	\hline thermostat & Ignored in \textbf{Qpi6}. & Ignored. \\
+	\hline integrator & Ignored in \textbf{Qpi6}. & Ignored. \\
+	\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{PBC}]:Setting for periodic boundary conditions.}\\
+\hline
+\multicolumn{3}{p{394pt}}{All settings are ignored in \textbf{Qpi6}. Only used to detect if PBC is on or off.}\\
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{intervals}]:Intervals between saving data and updating lists.}\\
+\hline
+\multicolumn{3}{p{394pt}}{All settings are ignored in \textbf{Qpi6}.}\\
+\hline
+\multicolumn{3}{p{394pt}}{}\\
+\multicolumn{3}{p{394pt}}{[\textbf{intervals}]:Intervals between saving data and updating lists.}\\
+	\hline topology & Topology file name. & Required. \\
+	\hline restart & Name of file containing coordinates and velocities. & Optional, only needed to calculate temperatures from velocities if not defined in section [GENERAL].\\
+	\hline final & Ignored in \textbf{Qpi6}. & Ignored. \\
+	\hline traj{\_}input & File name of trajectory file containing classical coordinates from previous simulation that should be used to calculate quantum corrections. & Required. \\
+	\hline energy & File name for energy output file. & Required.\\
+	\hline fep & FEP file name. & Required for calculations in \textbf{Qpi6}. \\
+	\hline restart & Restart file with new coordinates for restraining. & Optional, used to redefine positions for the calculation of restraint energies.\\
+	\hline
+
+\multicolumn{3}{p{394pt}}{}\\
+\hline
+\end{longtable}
+\normalsize
+All remaining keywords and sections are handled identically to \textbf{Qdyn6}. The user
+should set the same values there as they have been chosen during the 
+classical simulation.
+
 
 \subsubsection{FEP file format}
 \label{subsubsec:fepfileformat}
@@ -3610,12 +3816,12 @@ defined in the section [\textbf{off\_diagonals}].
 
 If vanishing or appearing atoms are  part of your FEP strategy, it may
 be desirable to  use a \textit{softcore} potential for  the Q-atoms in
-question.\cite{Zacharias:1994}    Softcore   potentials    have   been
-implemented in \textbf{qdyn}  according to equation \ref{eq:softcore}.
+question.\cite{Zacharias1994}    Softcore   potentials    have   been
+implemented in \textbf{Qdyn6}  according to equation \ref{eq:softcore}.
 Depending on the value of \textbf{softcore\-\_use\-\_max\-\_potential}
 given in  the [\textbf{FEP}]  section, the $\alpha$-values  are either
 read directly  from the  [\textbf{softcore}] section or  calculated by
-\textbf{qdyn} in a  pairwise manner based upon  the desired potentials
+\textbf{Qdyn6} in a  pairwise manner based upon  the desired potentials
 at $r=0$ given in the [\textbf{softcore}] section. Softcore potentials
 are  only  available  for  Q-atoms, i.e.  Q-Q,  Q-water  and  Q-solute
 interactions  are  treated  with  softcore.  In  the  case  of  a  Q-Q
@@ -3668,7 +3874,7 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline offset\_residue & Residue/fragment number. & Optional. Set offset to the topology number of the first atom in the given residue minus one.\\
 \hline offset\_name & Residue/fragment name. & Optional. Set offset to the topology number of the first atom in the first residue with the given name minus one.\\
 \hline qq\_use\-\_library\-\_charges & This is a special feature for studying $e.g.$ electrostatic linear response. Set to 'on' to use the library charges from the topology for intra-Q-atom interactions, i. e. change only Q-atom-surrounding electrostatic interactions. &Optional, default off.\\
-\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. \textbf{qdyn} will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
+\hline softcore\-\_use\-\_max\-\_potential & Set to 'on' if the values entered in the [\textbf{softcore}] section are the desired maximum potentials (kcal/mol) at $r=0$. \textbf{Qdyn6} will then calculate pairwise $\alpha_{ij}$ to be used in equation \ref{eq:softcore}. 'off' means the values are to be used directly in equation \ref{eq:softcore}.&Optional, default off.\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3681,12 +3887,12 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 
 \multicolumn{3}{p{394pt}}{[\textbf{atom\_types}]: Define new atom types for Q-atoms: Standard LJ parameters and parameters for the exponential repulsion potential $V_{soft} = C_i\cdot C_j\epsilon^{-a_i\cdot a_j\cdot r_{i,j})}$.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Name (max 8 characters).}\\
-\hline 2 & \multicolumn{2}{p{341pt}|}{Lennard-Jones A parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot$Å$^{6}$) for geometric combination or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$)for arithmetic combination rule.}\\
-\hline 3 & \multicolumn{2}{p{341pt}|}{LJ B parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot$Å$^{3}$) or $\epsilon$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$).}\\
+\hline 2 & \multicolumn{2}{p{341pt}|}{Lennard-Jones A parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot${\AA}$^{6}$) for geometric combination or R$^*$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{12}$)for arithmetic combination rule.}\\
+\hline 3 & \multicolumn{2}{p{341pt}|}{LJ B parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot${\AA}$^{3}$) or $\epsilon$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{6}$).}\\
 \hline 4 & \multicolumn{2}{p{341pt}|}{Soft repulsion force constant C$_i$ (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}$) in V$_{soft}$.}\\
-\hline 5 & \multicolumn{2}{p{341pt}|}{Soft repulsion distance dependence parameter a$_i$ (Å$^{-\frac{1}{2}}$) in V$_{soft}$.}\\
-\hline 6 & \multicolumn{2}{p{341pt}|}{Lennard-Jones A parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot$Å$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{12}$) for 1-4 interactions.}\\
-\hline 7 & \multicolumn{2}{p{341pt}|}{LJ B parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot$Å$^{3}$) or e (kcal$\cdot$mol$^{-1}\cdot$Å$^{6}$) for 1-4 interactions.}\\
+\hline 5 & \multicolumn{2}{p{341pt}|}{Soft repulsion distance dependence parameter a$_i$ ({\AA}$^{-\frac{1}{2}}$) in V$_{soft}$.}\\
+\hline 6 & \multicolumn{2}{p{341pt}|}{Lennard-Jones A parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot${\AA}$^{6}$) or R$^*$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{12}$) for 1-4 interactions.}\\
+\hline 7 & \multicolumn{2}{p{341pt}|}{LJ B parameter (kcal$^{\frac{1}{2}}\cdot$mol$^{-\frac{1}{2}}\cdot${\AA}$^{3}$) or e (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{6}$) for 1-4 interactions.}\\
 \hline 8 & \multicolumn{2}{p{341pt}|}{Atomic mass (u).}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
@@ -3739,9 +3945,9 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \multicolumn{3}{p{394pt}}{Morse and harmonic potentials can be mixed (but each bond type is either kind). Entries with four values are Morse potentials and entries with three values are harmonic.}\\
 \hline & \textbf{Morse potential} & \textbf{Harmonic potential}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{\centering{Q-bond type number (starting with 1).}}\\
-\hline 2 & Morse potential dissociation energy, D$_e$ (kcal$\cdot$mol$^{-1}$). &  Harmonic force constant k$_b$ (kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$).\\
-\hline 3 & Exponential co-efficient $\alpha$ in Morse potential (Å$^{-2}$). & Equilibrium bond length r$_0$ in harmonic potential (Å).\\
-\hline 4 & Equilibrium bond length r$_0$ in Morse potential (Å).&\\
+\hline 2 & Morse potential dissociation energy, D$_e$ (kcal$\cdot$mol$^{-1}$). &  Harmonic force constant k$_b$ (kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$).\\
+\hline 3 & Exponential co-efficient $\alpha$ in Morse potential ({\AA}$^{-2}$). & Equilibrium bond length r$_0$ in harmonic potential ({\AA}).\\
+\hline 4 & Equilibrium bond length r$_0$ in Morse potential ({\AA}).&\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3755,7 +3961,7 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \multicolumn{3}{p{394pt}}{[\textbf{angle\_types}]: Define Q-angle types.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Q-angle type number (starting with 1).}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Harmonic force constant (kcal$\cdot$mol$^{-1}$$\cdot$rad$^{-2}$).}\\
-\hline 3 & \multicolumn{2}{p{341pt}|}{Equilibrium angle (°).}\\
+\hline 3 & \multicolumn{2}{p{341pt}|}{Equilibrium angle (\degree).}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3771,7 +3977,7 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline 1 & \multicolumn{2}{p{341pt}|}{Q-torsion type number (starting with 1).}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Force constant = $\frac{1}{2}\cdot$barrier height (kcal$\cdot$mol$^{-1}$).}\\
 \hline 3 & \multicolumn{2}{p{341pt}|}{Periodicity (number of maxima per turn).}\\
-\hline 4 & \multicolumn{2}{p{341pt}|}{Phase shift (°).}\\
+\hline 4 & \multicolumn{2}{p{341pt}|}{Phase shift (\degree).}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3787,7 +3993,7 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \multicolumn{3}{p{394pt}}{[\textbf{improper\_types}]: Define Q-improper types.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Q-improper type number (starting with 1).}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Harmonic force constant (kcal$\cdot$mol$^{-1}$$\cdot$rad$^{-2}$). N.B. new impropers defined here are always harmonic.}\\
-\hline 3 & \multicolumn{2}{p{341pt}|}{Equilibrium angle (°).}\\
+\hline 3 & \multicolumn{2}{p{341pt}|}{Equilibrium angle (\degree).}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3821,7 +4027,7 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \multicolumn{3}{p{394pt}}{[\textbf{shake\_constraints}]: Define extra shake constraints. The effective constraint distance will be the sum of the distances given for each state, weighted by their $\lambda$ values. Note: constraints defined here do not override constraints imposed by setting the shake flag to \emph{on} in the \textbf{qdyn} input file. To remove a constraint the bond must be redefined as a Q-bond. The order in which atoms are given is not important.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{Topology atom number of first atom.}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Topology atom number of second atom.}\\
-\hline 3... & \multicolumn{2}{p{341pt}|}{Constraint distance (Å) in state 1, state 2, ...}\\
+\hline 3... & \multicolumn{2}{p{341pt}|}{Constraint distance ({\AA}) in state 1, state 2, ...}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
 
@@ -3831,10 +4037,10 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \hline 3 & \multicolumn{2}{p{341pt}|}{Q-atom k.}\\
 \hline 4 & \multicolumn{2}{p{341pt}|}{Q-atom l.}\\
 \hline 5 & \multicolumn{2}{p{341pt}|}{A$_{i,j}$ (kcal$\cdot$mol$^{-1}$).}\\
-\hline 6 & \multicolumn{2}{p{341pt}|}{$\mu_{i,j}$ (Å$^{-1}$).}\\
+\hline 6 & \multicolumn{2}{p{341pt}|}{$\mu_{i,j}$ ({\AA}$^{-1}$).}\\
 \hline
 \multicolumn{3}{p{394pt}}{}\\
-\multicolumn{3}{p{394pt}}{[\textbf{qcp{\_}atoms}]: Individual definition of atoms to include for BQCP calculations. Only needed if not defined in qdyn or qpi input file.}\\
+\multicolumn{3}{p{394pt}}{[\textbf{qcp{\_}atoms}]: Individual definition of atoms to include for BQCP calculations. Only needed if not defined in Qdyn6 or Qpi6 input file.}\\
 \hline 1 & \multicolumn{2}{p{341pt}|}{QCP atom index.}\\
 \hline 2 & \multicolumn{2}{p{341pt}|}{Q-Atom number.}\\
 \hline
@@ -3848,210 +4054,210 @@ on page \pageref{tab:FEP_file_f_p_t_r}.
 \end{longtable}
 \normalsize
 
-\subsection{Output files}
-\label{subsec:logfiles}
-\subsubsection{\textbf{qdyn} log file}
-\label{subsubsec:qdynlogfiles}
-
-The output from the \textbf{qdyn} simulation is gathered in a log
-file. This log file is divided into two parts, one showing the
-initialisation of the simulations and the other showing different
-energies form all the steps of the simulation. The units used in
-the log files are the basic units in table \ref{tab:units} on page
-\pageref{tab:units} and appropriate combinations thereof.
-
-\textbf{Initialisation phase}\\*[0.25cm] In this part of the log
-file, all input data from input, topology and FEP files are read
-and the simulation is initialised.
-
-\textbf{Reading input from eq1.inp}
-
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{203pt}|p{203pt}|}
-\hline \begin{tabular}{p{101.5pt} p{101.5pt}} Number of MD steps = 1 & Stepsize (fs) = 0.200 \end{tabular}&\\
-\hline \begin{tabular}{p{101.5pt}p{101.5pt}}Target temperature  =  1.00 & T-relax time  =  1.00 \end{tabular} & Temperature bath temperature and time constant for coupling.\\
-\hline Initial velocities will be generated from Maxwell distribution:\newline Maxwell temperature= 1.00  Random number seed= 4320 & Initial velocities are random values from Maxwell's velocity dirstibution at 1 K.\\
-\hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
-\hline Nonbonded method   = LRF Taylor expansion outside cut-off & Local reaction field approximation applied beyond cut-off.\\
-\hline Cut-off radii for non-bonded interactions:\newline \begin{tabular}{ll}Solute-solute:&10.00\\Solvent-solvent:&10.00\\Solute-solvent:&10.00\\Q-atom-non-Q-atom:&99.00\\LRF:&99.00 \end{tabular} & \\
-\hline \begin{tabular}{lll}Shell restraint force constant    &     =  & 50.00 \end{tabular} & Heavy solute atoms in the shell region defined in the topology will be restrained to their initial positions by harmonic potentials with force constant 50 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$.\\
-\hline Water polarisation force constant set to default & \\
-\hline \begin{tabular}{p{101.5pt}p{101.5pt}}Non-bonded pair list update interval =& 25 \end{tabular}& \\
-\hline \begin{tabular}{p{117pt}ll}Energy summary print-out interval & = & 10\end{tabular}\newline\begin{tabular}{p{117pt}ll}Temperature print-out interval & = & 1\\Trajectory write interval& = & 5\\Energy file write interval & = & 5 \end{tabular}&Energy summary will be written to log file every 10 steps, Temperature every step, a trajectory frame every 10 steps, and an energy file record every 5 steps.\\
-\hline \begin{tabular}{lll}Topology file & = & cdc25v4.top \end{tabular} & \\
-\hline Initial coordinates taken from topology. & The simulation starts from topology coordinates, not from a restart file.\\
-\hline \begin{tabular}{ll}Final coord. file & = eq1.re\\Trajectory file & = eq1.dcd\\Energy file & = eq1.en\\FEP input file & = pt.fep \end{tabular} & \\
-\hline \begin{tabular}{lll}lambda-values & = & 0.50000 0.50000 \end{tabular} & Weights for the 2 FEP states used.\\
-\hline Listing of restraining data: & \\
-\hline \begin{tabular}{ll}No. of sequence restraints = & 1 \end{tabular} \newline \begin{tabular}{lllll} atom\_i & atom\_j & fc & H-flag & to\_centre \\ 1 & 1619 & 5.00 & 0 & 0 \end{tabular} & Atoms 1 through 1619 will be restrained to their initial positions  with force constant 5 kcal$\cdot$mol$^{-1}\cdot$Å$^{-2}$ but hydrogens will not be restrained. Restraints will be applied to individual atom positions, not to the geometrical centre of the set of atoms.\\
-\hline \begin{tabular}{ll}No. of distance restraints = & 6\end{tabular} \newline \begin{tabular}{rrrrrr}atom\_i & atom\_j & dist1 & dist2 & fc & state \\ 1631 & 1624 & 1.50 & 1.50 & 5.00 & 0 \\ 1631 & 922 & 1.50 & 1.50 & 5.00 & 0 \\ 922 & 1624 & 3.00 & 4.00 & 5.00 & 0 \\ 911 & 924 & 3.20 & 3.20 & 10.00 & 0 \\ 912 & 924 & 2.20 & 2.60 & 10.00 & 0 \\ 932 & 1621 & 3.20 & 3.20 & 10.00 & 0 \end{tabular} & Six atom-atom distances will be restrained using harmonic potentials (dist1=dist2) or flat-bottom potentials (0 between dist1 and dist2) with different force constants. The zero means that the restraints will be in effect in all states.\\
-\hline
-\end{longtable}
-
-
-\normalsize
-\textbf{Reading topology file}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{203pt}|p{203pt}|}
-\hline CDC25 + PP1 + 2 H2O & Title of topology.\\
-\hline \begin{tabular}{lll}No. of solute atoms & = & 1631\\No. of solvent atoms & = & 882\end{tabular} & \multirow{-1}{203pt}[0.5\baselineskip]{There are 1631 solute atoms.}\\
-\hline \begin{tabular}{llr}No. of coordinates & = & 7539\\No. of atom type codes & = & 2513\\No. of solute bonds & = & 1670\\No. of solvent bonds & = & 882\\No. of solute angles & = & 2380\\No. of solvent angles & = & 294\\No. of solute torsions & = & 3037\\No. of solvent torsions & = & 0\\No. of solute impropers & = & 626\\No. of solvent impropes & = & 0\\No. of atomic charges & = & 2513\\No. of solute charge grps & = & 1036\\No. of solvent charge gps & = & 294 \end{tabular}& \\
-\hline \begin{tabular}{llr}vdW rule [ 1=G / 2=A ] & = & 1\\El-static 1-4 damping & = & 1.000\\Coulomb constant & = & 332.0000 \\&&\end{tabular} & \multirow{-1}{203pt}[1.5\baselineskip]{The force field uses the geometric combinatin rule for LJ parameters, no recuction of electrostaic 1-4 interactions and the constant in Coulomb's law is 332 kcal$\cdot$mol$^{-1}\cdot$e$^{-2}\cdot$Å.}\\
-\hline \begin{tabular}{llr}No. of atom types & = & 32\\No. of LJ type 2 pairs & = & 87 \end{tabular} & \\
-\hline \begin{tabular}{llr}No. of heavy atoms & = & 1342 \end{tabular}& \\
-\hline \begin{tabular}{llr}No. of 1-4 neighbours & = & 2962\\No. long-range 1-4 nbrs & = & 0 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{The 1-4 neighbour list.}\\
-\hline \begin{tabular}{llr}No. of nbor exclusions & = & 4932\\No. of long-range excls & = & 0 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{The 1-2 \& 1-3 neighbour list is also divided into two parts.}\\
-\hline \begin{tabular}{llr}No. of residues & = & 456\\No of solute residues & = & 162 \end{tabular} & \multirow{-1}{203pt}[0.5\baselineskip]{There are 162 solute fragments and 294 water molecules, giving 456 fragments.}\\
-\hline \begin{tabular}{llr}No. of molecules & = & 296 \end{tabular} & The are 296 separate molecules (protein+ligand+294 waters).\\
-\hline \begin{tabular}{llr}Atom type names & = & 32\\SYBYL atom types & = & 32 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{Atom type names and their SYBYL mol2 file equivalents.}\\
-\hline \begin{tabular}{llrrr}Exclusion radius & = & 16.000&&\\Restrained shell radius & = & 14.500&&\\Eff. solvent radius & = & 15.920&&\\Solute centre & = & 11.040 & 42.102 & 67.730\\Solvent centre & = & 11.040 & 42.102 & 67.730\\No. of excluded atoms & = & 1051&&\\No. of atoms in shell & = & 114 &&\\&&&&\\&&&&\end{tabular} & \multirow{-1}{203pt}[4\baselineskip]{Radius of simulation sphere.\newline Inner radius of restrained shell.\newline Effective solvent radius (used for solvent restraints) based on the number and distribution of solute and solvent atoms.\newline Coordinates for the centre of the simulation sphere and the solvent sphere.\newline 1051 atoms are outside the simulation sphere and excluded from bonded interactions.\newline 114 atoms are in the restrained shell.}\\
-\hline Molecular topology read successfully. & \\
-\hline
-\end{longtable}
-
-
-\normalsize
-\textbf{Reading Q atom list}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{250pt}|p{154pt}|}
-\hline \begin{tabular}{p{0.3\textwidth} p{0.3\textwidth}}No. of fep/evb states = 2 & No. of fep/evb atoms = 8\end{tabular} & \\
-\hline \begin{tabular}{lllllllll}Atom nos.: & 921 & 922 & 1631 & 1620 & 1621 & 1622 & 1623 & 1624\end{tabular} & \multirow{-1}{154pt}[0.0\baselineskip]{These atoms in the topology become Q atoms.}\\
-\hline
-\end{longtable}
-
-\normalsize
-\textbf{Reading fep/evb strategy}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{250pt}|p{154pt}|}
-\hline No. of changing charges = 8 & Charges of 8 Q atoms are to be changed.\\
-\hline Effective Q-atom charges for all Q-atoms\newline \begin{tabular}{rrr}Q atom & charge in state 1 & state 2 \\ 1 & 0.180 & 0.000 \\ 2 & -0.450 & -1.000 \\ 3 & 0.270 & 0.398 \\ 4 & 0.940 & 1.230 \\ 5 & -0.360 & -0.360 \\ 6 & -0.860 & -0.860 \\ 7 & -0.860 & -0.860 \\ 8 & -0.860 & -0.548\end{tabular} & The charges of ALL Q atoms are listed, whether changed or not.\\
-\hline \begin{tabular}{lrr}SUM & -2.000 & -2.000\end{tabular} & The sum of the Q atom charges is important to check!\\
-\hline No. of Q-atom types  = 7 & 7 new atom types are to be defined.\\
-\hline \begin{tabular}{lrrrrrrr}Name & Ai & Bi & Ci & ai & Ai(1-4) & Bi(1-4) & Mass\\P & 2303.00 & 59.35 & 0.00 & 1.81 & 2303.00 & 59.35 & 30.97\\OE & 600.00 & 23.25 & 70.00 & 1.81 & 600.00 & 23.25 & 16.00\\OD & 956.00 & 23.01 & 70.00 & 1.81 & 550.00 & 23.25 & 16.00\\H & 0.00 & 0.00 & 6.50 & 1.81 & 0.00 & 0.00 & 3.00\\CB & 2906.00 & 46.63 & 0.00 & 0.00 & 1304.00 & 33.60 & 14.03\\SH & 2001.57 & 44.74 & 165.00 & 1.81 & 2001.57 & 44.74 & 32.06\\S- & 7200.00 & 136.00 & 165.00 & 1.81 & 2001.57 & 44.74 & 32.06\end{tabular} & \multirow{-1}{154pt}[3.5\baselineskip]{Parameters for Q atom types.}\\
-\hline Assigning Q-atom types to all Q atoms:\newline \begin{tabular}{rrr}Q atom & atom type in state 1 & state 2 \\ 1 & CB & CB  \\2 & SH & S- \\3 & H & H \\4 & P & P \\5 & OE & OE \\6 & OD & OD \\7 & OD & OD \\8 & OD & OE\end{tabular} & Atom types for ALL Q atoms are redefined in each state.\\
-\hline No. of soft repulsion non-bonded pairs = 2\newline \begin{tabular}{rr}atom\_i & atom\_j \\ 2 & 3 \\ 3 & 8\end{tabular} & Two pairs of non-bonded atoms should interact with the exponential repulsion potential instead of Lennard-Jones.\\
-\hline No. of excluded non-bonded pairs = 3\newline \begin{tabular}{rrrr}atom\_i & atom\_j & excluded in state 1 & state 2 \\ 1631 & 1621 & 0 & 1 \\ 1631 & 1622 & 0 & 1 \\ 1631 & 1623 & 0 & 1\end{tabular} & Three pairs of non-bonded atoms should not interact at all.\\
-\hline Q-bond types:\newline \begin{tabular}{rrrrrr}type \# & Morse & E\_diss & alpha & b0 & Harmonic force\_k \\ 1 & 85.00 & 2.00 & 1.61 & &\\2 & 120.00 & 2.00 & 1.49 &&\\ 3 & 110.00 & 2.00 & 1.00 &&\\ 4 & 94.00 & 2.00 & 1.33&&\end{tabular} & Four Morse type bond potentials are defined. The first one has a dissociation energy of 85 kcal/mol, exponential coefficient 2 Å-2 and equilibrium bond length 1.61 Å.\\
-\hline No. of changing bonds = 3\newline \begin{tabular}{rrrr}atom\_i & atom\_j & bond type in state 1 & state 2 \\ 922 & 1631 & 4 & 0 \\ 1624 & 1631 & 0 & 3 \\ 1620 & 1624 & 2 & 1\end{tabular} & Three bonds are redefined using the Morse bond types above. Bond type zero in one state means the bond is not present in that state.\\
-\hline Q-angle types:\newline \begin{tabular}{rrr}type \# & force-k & theta0 \\ 1 & 95.00 & 109.50 \\ 2 & 140.00 & 120.00 \\ 3 & 110.00 & 109.50 \\ 4 & 95.00 & 96.00\end{tabular} & Four angle potentials are defined. The first one has a harmonic force constant of 95 kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$ and equilibrium angle 109.5°.\\
-\hline No. of changing angles = 4\newline \begin{tabular}{rrrrr}atom\_i & atom\_j & atom\_k & angle type in state 1 & state 2 \\ 921 & 922 & 1631 & 4 & 0 \\ 1631 & 1624 & 1620 & 0 & 3 \\ 1624 & 1620 & 1622 & 2 & 1 \\ 1624 & 1620 & 1623 & 2 & 1\end{tabular} & Four angles are redefined using the angle types above. Angle type zero in one state means the angle is not present in that state.\\
-\hline Q-torsion types:\newline \begin{tabular}{rrrr}type \# & force-k & mult & delta \\ 1 & 0.70 & 3.00 & 0.00 \\ 2 & 0.25 & -3.00 & 0.00 \\ 3 & 0.75 & 2.00 & 0.00\end{tabular} & Three torsion potentials are definedThe first one has a rotation barrier half-height of 0.7 kcal/mol, 3 maxima per turn and the first maximum at 0°.\\
-\hline No. of changing torsions = 7\newline \begin{tabular}{rrrrrr}atom\_i & atom\_j & atom\_k & atom\_l & torsion type in state 1 & state 2 \\ 920 & 921 & 922 & 1631 & 1 & 0 \\ 1631 & 1624 & 1620 & 1621 & 0 & 2 \\ 1631 & 1624 & 1620 & 1621 & 0 & 3 \\ 1631 & 1624 & 1620 & 1622 & 0 & 2 \\ 1631 & 1624 & 1620 & 1622 & 0 & 3 \\ 1631 & 1624 & 1620 & 1623 & 0 & 2 \\ 1631 & 1624 & 1620 & 1623 & 0 & 3\end{tabular} & Seven torsions are redefined using the torsion types above. torsion code zero in one state means the torsion is not present in that state.\\
-\hline Q-improper types:\newline \begin{tabular}{rrr}type \# & force-k & imp0 \\ 1 & 95.00 & 120.00\end{tabular} & One improper torsion potential is defined. It has a harmonic force constant of 95 kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$ and its minimum at 120°.\\
-\hline No. of changing impropers= 1\newline \begin{tabular}{rrrrrr} atom\_i & atom\_j & atom\_k & atom\_l & improper type in state 1 & state 2 \\ 920 & 921 & 922 & 1631 & 1 & 0\end{tabular} & One improper torsion is redefined using the improper type defined above. Improper code zero in one state means the improper is not present in that state.\\
-\hline No. of angle-Morse couplings = 2\newline \begin{tabular}{rr}angle\_i & bond\_j \\ 1 & 1 \\ 2 & 2\end{tabular} & Two Q angles are to be coupled to Q bonds.\\
-\hline No. of torsion-Morse couplings = 7\newline \begin{tabular}{rrr}torsion\_i & bond\_j \\ 1 & 1 \\ 2 & 2 \\ 3 & 2 \\ 4 & 2 \\ 5 & 2 \\ 6 & 2 \\ 7 & 2\end{tabular} & Seven Q torsions are to be coupled to Q bonds.\\
-\hline No. offdiagonal (Hij) funcs. =  1\newline \begin{tabular}{rrrrrr}state\_i & state\_j & atom\_k & atom\_l & Aij & mu\_ij \\ 1 & 2 & 2 & 8 & 1.00 & 0.45\end{tabular} & One off-diagonal Hamiltonian functions for mixing of states is defined. It relates states 1 and 2 by a function of the distance between Q atoms 2 and 8 and the parameters A=1.00 kcal/mol and $\mu$=0.45 Å$^{-1}$ \\
-\hline No. atom groups to monitor = 2\newline \begin{tabular}{rrrrrr}group 1: & 921 & 922&&&\\group 2: & 1620 & 1621 & 1622 & 1623 & 1624\end{tabular} & Two groups of atoms are defined for monitoring their non-bonded interactions.\\
-\hline No. of group pairs to monitor = 1\newline \begin{tabular}{rr}group\_i & group\_j\\1 & 2\end{tabular} & The non-bonded interactions between atom group 1 and atom group 2 above are to be monitored.\\
-\hline \end{longtable}
-
-\normalsize
-\textbf{Removing redefined interactions from topology}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{250pt}|p{154pt}|}
-\hline \begin{tabular}{lrrrr}type & atom1 & atom2 & atom3 & atom4\\bond & 1620 & 1624&&\\bond & 1624 & 1631&&\\angle & 1622 & 1620 & 1624&\\angle & 1623 & 1620 & 1624&\\angle & 1620 & 1624 & 1631&\\torsion & 1621 & 1620 & 1624 & 1631\\torsion & 1621 & 1620 & 1624 & 1631\\torsion & 1622 & 1620 & 1624 & 1631\\torsion & 1622 & 1620 & 1624 & 1631\\torsion & 1623 & 1620 & 1624 & 1631\\torsion & 1623 & 1620 & 1624 & 1631\end{tabular} & \multirow{-1}{154pt}[5.5\baselineskip]{Bonds, angles, torsions and impropers redefined by the FEP file are removed from the normal topology.}\\
-\hline \end{longtable}
-
-\normalsize
-\textbf{Initialising dynamics}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{203pt}|p{203pt}|}
-\hline \begin{tabular}{lrr}Total charge of non-Q atoms & = & 1.00\\Total charge of system & = & -1.00\\&&\end{tabular} & \multirow{-1}{203pt}[1\baselineskip]{The sum of the partial charges of all non-Q atoms is 1.00. Including also the effective charge of the Q atoms gives the total charge -1.00 for the whole system.}\\
-\hline \begin{tabular}{lrr}Target water sphere radius & = & 15.92\end{tabular} & This radius is calculated from the number of water molecules and solute atoms and the average number densities, to ensure correct density of the water.\\
-\hline \begin{tabular}{lrr}Surface inward harmonic force constant & = & 60.00\\Surface attraction well depth & = & 0.96\\Surface attraction well width & = & 0.49\\&&\end{tabular} & \multirow{-1}{203pt}[1.5\baselineskip]{Force constant in the radial half-harmonic potential acting on water molecules outside the target water sphere radius and parameters for the boundary attraction potential. These are normally calculated by the program, based on the radius.}\\
-\hline Water polarisation restraints : ON, Born correction enabled\newline Radial polarisation force constant =  20.00 & Water polarisation restraints in the boundary region are enabled and the polarisation will be corrected for the net charge of the system.\\
-\hline Setting up 3 water shells for polarisation restraints.\newline \begin{tabular}{rrr}Shell \# & outer radius & inner radius \\ 1 & 15.92 & 15.42 \\ 2 & 15.42 & 14.42 \\ 3 & 14.42 & 12.92\end{tabular} & The polarisation restraints are applied in three sub-shells.\\
-\hline Coordinates for 472 atoms will be written to the trajectory. & The atom mask specification in the trajectory\_atoms section of the input file matched 472 atoms.\\
-\hline \begin{tabular}{lrr}Number of shake constraints & = & 2552\\No. molecules with shake constraints & = & 296\end{tabular}\newline Initial x-shaking required 3 interations per molecule on average.\newline Initial v-shaking required 8 interations per molecule on average. & \multirow{-1}{203pt}[0.5\baselineskip]{Initial positions and velocities are shaken.}\\
-\hline \end{longtable}
-
-\normalsize
-\textbf{Nonbonded pair count and distribution}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of \textbf{qdyn} will list pair list sizes also for other nodes than node 0.}\\
-\hline No. of Rcq indep. nb pairs involving q-atoms = 55 in state : 1\newline No. of Rcq indep. nb pairs involving q-atoms = 52 in state : 2 & The size of the Q-atom-Q-atom non-bonded pair list in each state. This list also includes interactions between Q atoms and non-Q atoms which are bonded, angled or torsioned to a Q atom.\\
-\hline \begin{tabular}{rrr}Initial temperatures are : Ttot = & 1.08 Tfree = & 1.14\end{tabular} & The initial temperature is calculated. Ttot takes all the degrees of freedom of the system into account, whereas Tfree excludes restrained degrees of freedom, $e.g.$ excluded atoms and shake constraints.\\
-\hline \end{longtable}
-\normalsize
-
-
-\textbf{Simulation phase}\\*[0.25cm] This part of the log file
-shows the progress of the simulation in terms of temperatures and
-energy summaries.
-
-\textbf{Nonbonded pair list generation}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\ 0 count & 35222 & 39304 & 118989 & 4528 & 9648\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[1\baselineskip]{Non-bonded pair lists are generated. In the parallel version, each node reports its list sizes.}\\
-\hline
-\end{longtable}
-\normalsize
-\textbf{Energy summary at step 0}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{lrrrrrr} & el & vdW & bond & angle & torsion & improper\\solute & -560.13 & -182.55 & 0.00 & 0.00 & 309.92 & 96.67\\solvent & -3402.39 & 549.41 & 0.00 & 0.00 & 0.00 & 0.00\\solute-solvent & -494.15 & 383.01&&&&\\LRF & 40.70&&&&&\\Q-atom & -420.84 & 78.87 & -190.09 & 3.43 & 1.89 & 0.00 \\& total & fix & water\_rad & water\_pol & shell & solute\\restraints & 46.05 & 0.00 & 4.36 & 19.06 & 0.00 & 22.63 \\ & total & potential & kinetic&&&\\SUM & -3065.30 & -3075.23 & 9.93&&&\\&&&&&&\\&&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[6.5\baselineskip]{Bond and angle energies are zero due to shake.The Q-atom line lists the effective, $i.e.$ $\lambda$-weighted Q-atom energies. The total restraint energy is a sum of terms from fixing excluded atoms, the radial water restraints, the water polarisation restraints, restraining of solute atoms in the shell near the boundary and solute restraints specified in the input file.The total energy of the system is the sum of potential and kinetic energy.}\\
-\hline
-\end{longtable}
-\normalsize
-\textbf{Q-atom energies at step 0}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 & 0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 & 0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 & 0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 & 0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 & 0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 & 0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 & 0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 & 0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint\\Q-SUM & 1 & 0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 & 0.5000 & -430.34 & 22.63&&&&\end{tabular} & \multirow{-1}{111pt}[9\baselineskip]{The Q atom energies are calculated and shown for each state, together with the $\lambda$ values. Q atom-Q atom non-bonded energies also include interactions with non-Q atoms bonded, angled or torsioned to Q atoms. Q-surrounding interaction energies are the sum of Q-solute ("Q-prot") and Q-water energies. These energies enter into LIE calculations of binding affinity. This is the sum of all the above. Restraints that are applied per state, $e.g.$ positional and distance, are listed for each state. The total Q-atom energies are the sum of all the above and the restraints.}\\
-\hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & Off-diagonal Hamiltonian function value and the inter-atomic distance on which it is based.\\
-\hline
-\end{longtable}
-\normalsize
-\textbf{Monitoring selected groups of nonbonded interactions}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{rrrrrrrr}pair & Vwsum & Vwel & Vwvdw & 1:Vel & 1:Vvdw & 2:Vel & 2:Vvdw \\ 1 & 98.16 & 95.99 & 2.17 & 58.64 & 1.97 & 133.35 & 2.37\\&&&&&&&\\&&&&&&&\\&&&&&&&\end{tabular} & \multirow{-1}{111pt}[2\baselineskip]{The non-bonded interaction energies between the pairs of atom groups specified in the FEP file are listed both as $\lambda$-weighted sums and for each state separately.}\\
-\hline
-\end{longtable}
-\normalsize
-\textbf{Temperatures}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{llll}Temperature at step & 1: T\_tot= & 1.4 T\_free= & 1.6\end{tabular} & The total and "free" temperatures are printed at the specified interval, or if the total temperature changed by $>$2\% since it was last printed. This simulation was only one step.\\
-\hline
-\end{longtable}
-\normalsize
-\textbf{FINAL Energy summary}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{lrrrrrr} & el & vdW & bond & angle & torsion & improper\\solute & -560.13 & -182.55 & 294.99 & 369.97 & 309.92 & 96.67\\solvent & -3402.39 & 549.41 & 0.00 & 0.00 & 0.00 & 0.00\\solute-solvent & -494.15 & 383.01&&&&\\LRF & 40.70&&&&&\\Q-atom & -420.84 & 78.87 & -190.09 & 3.43 & 1.89 & 0.00\\ & total & fix & water\_rad & water\_pol & shell & protein\\restraints & 46.05 & 0.00 & 4.36 & 19.06 & 0.00 & 22.63 \\& total & potential & kinetic&&&\\SUM & -3065.30 & -3075.23 & 9.93&&&\end{tabular} & \multirow{-1}{111pt}[4.5\baselineskip]{The energy summaries at the end of the simulations contain the same information as the ones printed during the simulations.}\\
-\hline
-\end{longtable}
-
-\normalsize
-\textbf{FINAL Q-atom energies}
-\tiny
-\vspace{-1\baselineskip}
-\begin{longtable}{|p{295pt}|p{111pt}|}
-\hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 &0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 &0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 &0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 &0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 &0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 &0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 &0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 &0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint&&&&\\Q-SUM & 1 &0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 &0.5000 & -430.34 & 22.63&&&&\end{tabular} & \\
-\hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & \\
-\hline qdyn version 4.15 terminated normally. & This simulation complete without errors.\\
-\hline
-\end{longtable}
-
-\normalsize
-
-\subsubsection{\textbf{qfep} log file}
-[To be added]
+ %% \subsection{Output files}
+ %% \label{subsec:logfiles}
+ %% \subsubsection{\textbf{Qdyn6} log file}
+ %% \label{subsubsec:qdynlogfiles}
+ %% 
+ %% The output from the \textbf{Qdyn6} simulation is gathered in a log
+ %% file. This log file is divided into two parts, one showing the
+ %% initialisation of the simulations and the other showing different
+ %% energies form all the steps of the simulation. The units used in
+ %% the log files are the basic units in table \ref{tab:units} on page
+ %% \pageref{tab:units} and appropriate combinations thereof.
+ %% 
+ %% \textbf{Initialisation phase}\\*[0.25cm] In this part of the log
+ %% file, all input data from input, topology and FEP files are read
+ %% and the simulation is initialised.
+ %% 
+ %% \textbf{Reading input from eq1.inp}
+ %% 
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{203pt}|p{203pt}|}
+ %% \hline \begin{tabular}{p{101.5pt} p{101.5pt}} Number of MD steps = 1 & Stepsize (fs) = 0.200 \end{tabular}&\\
+ %% \hline \begin{tabular}{p{101.5pt}p{101.5pt}}Target temperature  =  1.00 & T-relax time  =  1.00 \end{tabular} & Temperature bath temperature and time constant for coupling.\\
+ %% \hline Initial velocities will be generated from Maxwell distribution:\newline Maxwell temperature= 1.00  Random number seed= 4320 & Initial velocities are random values from Maxwell's velocity dirstibution at 1 K.\\
+ %% \hline  Shake constraints  on  all solvent  bonds: on  \newline{}Shake constraints on all solute bonds to hydrogen: off \newline Shake constraints on all bonds to hydrogen: off & \\
+ %% \hline Nonbonded method   = LRF Taylor expansion outside cut-off & Local reaction field approximation applied beyond cut-off.\\
+ %% \hline Cut-off radii for non-bonded interactions:\newline \begin{tabular}{ll}Solute-solute:&10.00\\Solvent-solvent:&10.00\\Solute-solvent:&10.00\\Q-atom-non-Q-atom:&99.00\\LRF:&99.00 \end{tabular} & \\
+ %% \hline \begin{tabular}{lll}Shell restraint force constant    &     =  & 50.00 \end{tabular} & Heavy solute atoms in the shell region defined in the topology will be restrained to their initial positions by harmonic potentials with force constant 50 kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$.\\
+ %% \hline Water polarisation force constant set to default & \\
+ %% \hline \begin{tabular}{p{101.5pt}p{101.5pt}}Non-bonded pair list update interval =& 25 \end{tabular}& \\
+ %% \hline \begin{tabular}{p{117pt}ll}Energy summary print-out interval & = & 10\end{tabular}\newline\begin{tabular}{p{117pt}ll}Temperature print-out interval & = & 1\\Trajectory write interval& = & 5\\Energy file write interval & = & 5 \end{tabular}&Energy summary will be written to log file every 10 steps, Temperature every step, a trajectory frame every 10 steps, and an energy file record every 5 steps.\\
+ %% \hline \begin{tabular}{lll}Topology file & = & cdc25v4.top \end{tabular} & \\
+ %% \hline Initial coordinates taken from topology. & The simulation starts from topology coordinates, not from a restart file.\\
+ %% \hline \begin{tabular}{ll}Final coord. file & = eq1.re\\Trajectory file & = eq1.dcd\\Energy file & = eq1.en\\FEP input file & = pt.fep \end{tabular} & \\
+ %% \hline \begin{tabular}{lll}lambda-values & = & 0.50000 0.50000 \end{tabular} & Weights for the 2 FEP states used.\\
+ %% \hline Listing of restraining data: & \\
+ %% \hline \begin{tabular}{ll}No. of sequence restraints = & 1 \end{tabular} \newline \begin{tabular}{lllll} atom\_i & atom\_j & fc & H-flag & to\_centre \\ 1 & 1619 & 5.00 & 0 & 0 \end{tabular} & Atoms 1 through 1619 will be restrained to their initial positions  with force constant 5 kcal$\cdot$mol$^{-1}\cdot${\AA}$^{-2}$ but hydrogens will not be restrained. Restraints will be applied to individual atom positions, not to the geometrical centre of the set of atoms.\\
+ %% \hline \begin{tabular}{ll}No. of distance restraints = & 6\end{tabular} \newline \begin{tabular}{rrrrrr}atom\_i & atom\_j & dist1 & dist2 & fc & state \\ 1631 & 1624 & 1.50 & 1.50 & 5.00 & 0 \\ 1631 & 922 & 1.50 & 1.50 & 5.00 & 0 \\ 922 & 1624 & 3.00 & 4.00 & 5.00 & 0 \\ 911 & 924 & 3.20 & 3.20 & 10.00 & 0 \\ 912 & 924 & 2.20 & 2.60 & 10.00 & 0 \\ 932 & 1621 & 3.20 & 3.20 & 10.00 & 0 \end{tabular} & Six atom-atom distances will be restrained using harmonic potentials (dist1=dist2) or flat-bottom potentials (0 between dist1 and dist2) with different force constants. The zero means that the restraints will be in effect in all states.\\
+ %% \hline
+ %% \end{longtable}
+ %% 
+ %% 
+ %% \normalsize
+ %% \textbf{Reading topology file}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{203pt}|p{203pt}|}
+ %% \hline CDC25 + PP1 + 2 H2O & Title of topology.\\
+ %% \hline \begin{tabular}{lll}No. of solute atoms & = & 1631\\No. of solvent atoms & = & 882\end{tabular} & \multirow{-1}{203pt}[0.5\baselineskip]{There are 1631 solute atoms.}\\
+ %% \hline \begin{tabular}{llr}No. of coordinates & = & 7539\\No. of atom type codes & = & 2513\\No. of solute bonds & = & 1670\\No. of solvent bonds & = & 882\\No. of solute angles & = & 2380\\No. of solvent angles & = & 294\\No. of solute torsions & = & 3037\\No. of solvent torsions & = & 0\\No. of solute impropers & = & 626\\No. of solvent impropes & = & 0\\No. of atomic charges & = & 2513\\No. of solute charge grps & = & 1036\\No. of solvent charge gps & = & 294 \end{tabular}& \\
+ %% \hline \begin{tabular}{llr}vdW rule [ 1=G / 2=A ] & = & 1\\El-static 1-4 damping & = & 1.000\\Coulomb constant & = & 332.0000 \\&&\end{tabular} & \multirow{-1}{203pt}[1.5\baselineskip]{The force field uses the geometric combinatin rule for LJ parameters, no recuction of electrostaic 1-4 interactions and the constant in Coulomb's law is 332 kcal$\cdot$mol$^{-1}\cdot$e$^{-2}\cdot${\AA}.}\\
+ %% \hline \begin{tabular}{llr}No. of atom types & = & 32\\No. of LJ type 2 pairs & = & 87 \end{tabular} & \\
+ %% \hline \begin{tabular}{llr}No. of heavy atoms & = & 1342 \end{tabular}& \\
+ %% \hline \begin{tabular}{llr}No. of 1-4 neighbours & = & 2962\\No. long-range 1-4 nbrs & = & 0 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{The 1-4 neighbour list.}\\
+ %% \hline \begin{tabular}{llr}No. of nbor exclusions & = & 4932\\No. of long-range excls & = & 0 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{The 1-2 \& 1-3 neighbour list is also divided into two parts.}\\
+ %% \hline \begin{tabular}{llr}No. of residues & = & 456\\No of solute residues & = & 162 \end{tabular} & \multirow{-1}{203pt}[0.5\baselineskip]{There are 162 solute fragments and 294 water molecules, giving 456 fragments.}\\
+ %% \hline \begin{tabular}{llr}No. of molecules & = & 296 \end{tabular} & The are 296 separate molecules (protein+ligand+294 waters).\\
+ %% \hline \begin{tabular}{llr}Atom type names & = & 32\\SYBYL atom types & = & 32 \end{tabular}& \multirow{-1}{203pt}[0.5\baselineskip]{Atom type names and their SYBYL mol2 file equivalents.}\\
+ %% \hline \begin{tabular}{llrrr}Exclusion radius & = & 16.000&&\\Restrained shell radius & = & 14.500&&\\Eff. solvent radius & = & 15.920&&\\Solute centre & = & 11.040 & 42.102 & 67.730\\Solvent centre & = & 11.040 & 42.102 & 67.730\\No. of excluded atoms & = & 1051&&\\No. of atoms in shell & = & 114 &&\\&&&&\\&&&&\end{tabular} & \multirow{-1}{203pt}[4\baselineskip]{Radius of simulation sphere.\newline Inner radius of restrained shell.\newline Effective solvent radius (used for solvent restraints) based on the number and distribution of solute and solvent atoms.\newline Coordinates for the centre of the simulation sphere and the solvent sphere.\newline 1051 atoms are outside the simulation sphere and excluded from bonded interactions.\newline 114 atoms are in the restrained shell.}\\
+ %% \hline Molecular topology read successfully. & \\
+ %% \hline
+ %% \end{longtable}
+ %% 
+ %% 
+ %% \normalsize
+ %% \textbf{Reading Q atom list}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{250pt}|p{154pt}|}
+ %% \hline \begin{tabular}{p{0.3\textwidth} p{0.3\textwidth}}No. of fep/evb states = 2 & No. of fep/evb atoms = 8\end{tabular} & \\
+ %% \hline \begin{tabular}{lllllllll}Atom nos.: & 921 & 922 & 1631 & 1620 & 1621 & 1622 & 1623 & 1624\end{tabular} & \multirow{-1}{154pt}[0.0\baselineskip]{These atoms in the topology become Q atoms.}\\
+ %% \hline
+ %% \end{longtable}
+ %% 
+ %% \normalsize
+ %% \textbf{Reading fep/evb strategy}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{250pt}|p{154pt}|}
+ %% \hline No. of changing charges = 8 & Charges of 8 Q atoms are to be changed.\\
+ %% \hline Effective Q-atom charges for all Q-atoms\newline \begin{tabular}{rrr}Q atom & charge in state 1 & state 2 \\ 1 & 0.180 & 0.000 \\ 2 & -0.450 & -1.000 \\ 3 & 0.270 & 0.398 \\ 4 & 0.940 & 1.230 \\ 5 & -0.360 & -0.360 \\ 6 & -0.860 & -0.860 \\ 7 & -0.860 & -0.860 \\ 8 & -0.860 & -0.548\end{tabular} & The charges of ALL Q atoms are listed, whether changed or not.\\
+ %% \hline \begin{tabular}{lrr}SUM & -2.000 & -2.000\end{tabular} & The sum of the Q atom charges is important to check!\\
+ %% \hline No. of Q-atom types  = 7 & 7 new atom types are to be defined.\\
+ %% \hline \begin{tabular}{lrrrrrrr}Name & Ai & Bi & Ci & ai & Ai(1-4) & Bi(1-4) & Mass\\P & 2303.00 & 59.35 & 0.00 & 1.81 & 2303.00 & 59.35 & 30.97\\OE & 600.00 & 23.25 & 70.00 & 1.81 & 600.00 & 23.25 & 16.00\\OD & 956.00 & 23.01 & 70.00 & 1.81 & 550.00 & 23.25 & 16.00\\H & 0.00 & 0.00 & 6.50 & 1.81 & 0.00 & 0.00 & 3.00\\CB & 2906.00 & 46.63 & 0.00 & 0.00 & 1304.00 & 33.60 & 14.03\\SH & 2001.57 & 44.74 & 165.00 & 1.81 & 2001.57 & 44.74 & 32.06\\S- & 7200.00 & 136.00 & 165.00 & 1.81 & 2001.57 & 44.74 & 32.06\end{tabular} & \multirow{-1}{154pt}[3.5\baselineskip]{Parameters for Q atom types.}\\
+ %% \hline Assigning Q-atom types to all Q atoms:\newline \begin{tabular}{rrr}Q atom & atom type in state 1 & state 2 \\ 1 & CB & CB  \\2 & SH & S- \\3 & H & H \\4 & P & P \\5 & OE & OE \\6 & OD & OD \\7 & OD & OD \\8 & OD & OE\end{tabular} & Atom types for ALL Q atoms are redefined in each state.\\
+ %% \hline No. of soft repulsion non-bonded pairs = 2\newline \begin{tabular}{rr}atom\_i & atom\_j \\ 2 & 3 \\ 3 & 8\end{tabular} & Two pairs of non-bonded atoms should interact with the exponential repulsion potential instead of Lennard-Jones.\\
+ %% \hline No. of excluded non-bonded pairs = 3\newline \begin{tabular}{rrrr}atom\_i & atom\_j & excluded in state 1 & state 2 \\ 1631 & 1621 & 0 & 1 \\ 1631 & 1622 & 0 & 1 \\ 1631 & 1623 & 0 & 1\end{tabular} & Three pairs of non-bonded atoms should not interact at all.\\
+ %% \hline Q-bond types:\newline \begin{tabular}{rrrrrr}type \# & Morse & E\_diss & alpha & b0 & Harmonic force\_k \\ 1 & 85.00 & 2.00 & 1.61 & &\\2 & 120.00 & 2.00 & 1.49 &&\\ 3 & 110.00 & 2.00 & 1.00 &&\\ 4 & 94.00 & 2.00 & 1.33&&\end{tabular} & Four Morse type bond potentials are defined. The first one has a dissociation energy of 85 kcal/mol, exponential coefficient 2 {\AA}-2 and equilibrium bond length 1.61 {\AA}.\\
+ %% \hline No. of changing bonds = 3\newline \begin{tabular}{rrrr}atom\_i & atom\_j & bond type in state 1 & state 2 \\ 922 & 1631 & 4 & 0 \\ 1624 & 1631 & 0 & 3 \\ 1620 & 1624 & 2 & 1\end{tabular} & Three bonds are redefined using the Morse bond types above. Bond type zero in one state means the bond is not present in that state.\\
+ %% \hline Q-angle types:\newline \begin{tabular}{rrr}type \# & force-k & theta0 \\ 1 & 95.00 & 109.50 \\ 2 & 140.00 & 120.00 \\ 3 & 110.00 & 109.50 \\ 4 & 95.00 & 96.00\end{tabular} & Four angle potentials are defined. The first one has a harmonic force constant of 95 kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$ and equilibrium angle 109.5\degree.\\
+ %% \hline No. of changing angles = 4\newline \begin{tabular}{rrrrr}atom\_i & atom\_j & atom\_k & angle type in state 1 & state 2 \\ 921 & 922 & 1631 & 4 & 0 \\ 1631 & 1624 & 1620 & 0 & 3 \\ 1624 & 1620 & 1622 & 2 & 1 \\ 1624 & 1620 & 1623 & 2 & 1\end{tabular} & Four angles are redefined using the angle types above. Angle type zero in one state means the angle is not present in that state.\\
+ %% \hline Q-torsion types:\newline \begin{tabular}{rrrr}type \# & force-k & mult & delta \\ 1 & 0.70 & 3.00 & 0.00 \\ 2 & 0.25 & -3.00 & 0.00 \\ 3 & 0.75 & 2.00 & 0.00\end{tabular} & Three torsion potentials are definedThe first one has a rotation barrier half-height of 0.7 kcal/mol, 3 maxima per turn and the first maximum at 0\degree.\\
+ %% \hline No. of changing torsions = 7\newline \begin{tabular}{rrrrrr}atom\_i & atom\_j & atom\_k & atom\_l & torsion type in state 1 & state 2 \\ 920 & 921 & 922 & 1631 & 1 & 0 \\ 1631 & 1624 & 1620 & 1621 & 0 & 2 \\ 1631 & 1624 & 1620 & 1621 & 0 & 3 \\ 1631 & 1624 & 1620 & 1622 & 0 & 2 \\ 1631 & 1624 & 1620 & 1622 & 0 & 3 \\ 1631 & 1624 & 1620 & 1623 & 0 & 2 \\ 1631 & 1624 & 1620 & 1623 & 0 & 3\end{tabular} & Seven torsions are redefined using the torsion types above. torsion code zero in one state means the torsion is not present in that state.\\
+ %% \hline Q-improper types:\newline \begin{tabular}{rrr}type \# & force-k & imp0 \\ 1 & 95.00 & 120.00\end{tabular} & One improper torsion potential is defined. It has a harmonic force constant of 95 kcal$\cdot$mol$^{-1}\cdot$rad$^{-2}$ and its minimum at 120\degree.\\
+ %% \hline No. of changing impropers= 1\newline \begin{tabular}{rrrrrr} atom\_i & atom\_j & atom\_k & atom\_l & improper type in state 1 & state 2 \\ 920 & 921 & 922 & 1631 & 1 & 0\end{tabular} & One improper torsion is redefined using the improper type defined above. Improper code zero in one state means the improper is not present in that state.\\
+ %% \hline No. of angle-Morse couplings = 2\newline \begin{tabular}{rr}angle\_i & bond\_j \\ 1 & 1 \\ 2 & 2\end{tabular} & Two Q angles are to be coupled to Q bonds.\\
+ %% \hline No. of torsion-Morse couplings = 7\newline \begin{tabular}{rrr}torsion\_i & bond\_j \\ 1 & 1 \\ 2 & 2 \\ 3 & 2 \\ 4 & 2 \\ 5 & 2 \\ 6 & 2 \\ 7 & 2\end{tabular} & Seven Q torsions are to be coupled to Q bonds.\\
+ %% \hline No. offdiagonal (Hij) funcs. =  1\newline \begin{tabular}{rrrrrr}state\_i & state\_j & atom\_k & atom\_l & Aij & mu\_ij \\ 1 & 2 & 2 & 8 & 1.00 & 0.45\end{tabular} & One off-diagonal Hamiltonian functions for mixing of states is defined. It relates states 1 and 2 by a function of the distance between Q atoms 2 and 8 and the parameters A=1.00 kcal/mol and $\mu$=0.45 {\AA}$^{-1}$ \\
+ %% \hline No. atom groups to monitor = 2\newline \begin{tabular}{rrrrrr}group 1: & 921 & 922&&&\\group 2: & 1620 & 1621 & 1622 & 1623 & 1624\end{tabular} & Two groups of atoms are defined for monitoring their non-bonded interactions.\\
+ %% \hline No. of group pairs to monitor = 1\newline \begin{tabular}{rr}group\_i & group\_j\\1 & 2\end{tabular} & The non-bonded interactions between atom group 1 and atom group 2 above are to be monitored.\\
+ %% \hline \end{longtable}
+ %% 
+ %% \normalsize
+ %% \textbf{Removing redefined interactions from topology}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{250pt}|p{154pt}|}
+ %% \hline \begin{tabular}{lrrrr}type & atom1 & atom2 & atom3 & atom4\\bond & 1620 & 1624&&\\bond & 1624 & 1631&&\\angle & 1622 & 1620 & 1624&\\angle & 1623 & 1620 & 1624&\\angle & 1620 & 1624 & 1631&\\torsion & 1621 & 1620 & 1624 & 1631\\torsion & 1621 & 1620 & 1624 & 1631\\torsion & 1622 & 1620 & 1624 & 1631\\torsion & 1622 & 1620 & 1624 & 1631\\torsion & 1623 & 1620 & 1624 & 1631\\torsion & 1623 & 1620 & 1624 & 1631\end{tabular} & \multirow{-1}{154pt}[5.5\baselineskip]{Bonds, angles, torsions and impropers redefined by the FEP file are removed from the normal topology.}\\
+ %% \hline \end{longtable}
+ %% 
+ %% \normalsize
+ %% \textbf{Initialising dynamics}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{203pt}|p{203pt}|}
+ %% \hline \begin{tabular}{lrr}Total charge of non-Q atoms & = & 1.00\\Total charge of system & = & -1.00\\&&\end{tabular} & \multirow{-1}{203pt}[1\baselineskip]{The sum of the partial charges of all non-Q atoms is 1.00. Including also the effective charge of the Q atoms gives the total charge -1.00 for the whole system.}\\
+ %% \hline \begin{tabular}{lrr}Target water sphere radius & = & 15.92\end{tabular} & This radius is calculated from the number of water molecules and solute atoms and the average number densities, to ensure correct density of the water.\\
+ %% \hline \begin{tabular}{lrr}Surface inward harmonic force constant & = & 60.00\\Surface attraction well depth & = & 0.96\\Surface attraction well width & = & 0.49\\&&\end{tabular} & \multirow{-1}{203pt}[1.5\baselineskip]{Force constant in the radial half-harmonic potential acting on water molecules outside the target water sphere radius and parameters for the boundary attraction potential. These are normally calculated by the program, based on the radius.}\\
+ %% \hline Water polarisation restraints : ON, Born correction enabled\newline Radial polarisation force constant =  20.00 & Water polarisation restraints in the boundary region are enabled and the polarisation will be corrected for the net charge of the system.\\
+ %% \hline Setting up 3 water shells for polarisation restraints.\newline \begin{tabular}{rrr}Shell \# & outer radius & inner radius \\ 1 & 15.92 & 15.42 \\ 2 & 15.42 & 14.42 \\ 3 & 14.42 & 12.92\end{tabular} & The polarisation restraints are applied in three sub-shells.\\
+ %% \hline Coordinates for 472 atoms will be written to the trajectory. & The atom mask specification in the trajectory\_atoms section of the input file matched 472 atoms.\\
+ %% \hline \begin{tabular}{lrr}Number of shake constraints & = & 2552\\No. molecules with shake constraints & = & 296\end{tabular}\newline Initial x-shaking required 3 interations per molecule on average.\newline Initial v-shaking required 8 interations per molecule on average. & \multirow{-1}{203pt}[0.5\baselineskip]{Initial positions and velocities are shaken.}\\
+ %% \hline \end{longtable}
+ %% 
+ %% \normalsize
+ %% \textbf{Nonbonded pair count and distribution}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\all & count & 35222 & 39304 & 118980 & 4576 & 9648 \\ 0 & alloc & 37183 & 41469 & 126720 & 4904 & 9648\\ &&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[2.5\baselineskip]{Non-bonded pairs are counted and pair lists are allocated dynamically (with a little extra space). The parallel version of \textbf{qdyn} will list pair list sizes also for other nodes than node 0.}\\
+ %% \hline No. of Rcq indep. nb pairs involving q-atoms = 55 in state : 1\newline No. of Rcq indep. nb pairs involving q-atoms = 52 in state : 2 & The size of the Q-atom-Q-atom non-bonded pair list in each state. This list also includes interactions between Q atoms and non-Q atoms which are bonded, angled or torsioned to a Q atom.\\
+ %% \hline \begin{tabular}{rrr}Initial temperatures are : Ttot = & 1.08 Tfree = & 1.14\end{tabular} & The initial temperature is calculated. Ttot takes all the degrees of freedom of the system into account, whereas Tfree excludes restrained degrees of freedom, $e.g.$ excluded atoms and shake constraints.\\
+ %% \hline \end{longtable}
+ %% \normalsize
+ %% 
+ %% 
+ %% \textbf{Simulation phase}\\*[0.25cm] This part of the log file
+ %% shows the progress of the simulation in terms of temperatures and
+ %% energy summaries.
+ %% 
+ %% \textbf{Nonbonded pair list generation}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{rrrrrrr}node & value & solute-solute & solute-water & water-water & Q-solute & Q-water \\ 0 count & 35222 & 39304 & 118989 & 4528 & 9648\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[1\baselineskip]{Non-bonded pair lists are generated. In the parallel version, each node reports its list sizes.}\\
+ %% \hline
+ %% \end{longtable}
+ %% \normalsize
+ %% \textbf{Energy summary at step 0}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{lrrrrrr} & el & vdW & bond & angle & torsion & improper\\solute & -560.13 & -182.55 & 0.00 & 0.00 & 309.92 & 96.67\\solvent & -3402.39 & 549.41 & 0.00 & 0.00 & 0.00 & 0.00\\solute-solvent & -494.15 & 383.01&&&&\\LRF & 40.70&&&&&\\Q-atom & -420.84 & 78.87 & -190.09 & 3.43 & 1.89 & 0.00 \\& total & fix & water\_rad & water\_pol & shell & solute\\restraints & 46.05 & 0.00 & 4.36 & 19.06 & 0.00 & 22.63 \\ & total & potential & kinetic&&&\\SUM & -3065.30 & -3075.23 & 9.93&&&\\&&&&&&\\&&&&&&\\&&&&&&\\&&&&&&\end{tabular} & \multirow{-1}{111pt}[6.5\baselineskip]{Bond and angle energies are zero due to shake.The Q-atom line lists the effective, $i.e.$ $\lambda$-weighted Q-atom energies. The total restraint energy is a sum of terms from fixing excluded atoms, the radial water restraints, the water polarisation restraints, restraining of solute atoms in the shell near the boundary and solute restraints specified in the input file.The total energy of the system is the sum of potential and kinetic energy.}\\
+ %% \hline
+ %% \end{longtable}
+ %% \normalsize
+ %% \textbf{Q-atom energies at step 0}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 & 0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 & 0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 & 0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 & 0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 & 0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 & 0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 & 0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 & 0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint\\Q-SUM & 1 & 0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 & 0.5000 & -430.34 & 22.63&&&&\end{tabular} & \multirow{-1}{111pt}[9\baselineskip]{The Q atom energies are calculated and shown for each state, together with the $\lambda$ values. Q atom-Q atom non-bonded energies also include interactions with non-Q atoms bonded, angled or torsioned to Q atoms. Q-surrounding interaction energies are the sum of Q-solute ("Q-prot") and Q-water energies. These energies enter into LIE calculations of binding affinity. This is the sum of all the above. Restraints that are applied per state, $e.g.$ positional and distance, are listed for each state. The total Q-atom energies are the sum of all the above and the restraints.}\\
+ %% \hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & Off-diagonal Hamiltonian function value and the inter-atomic distance on which it is based.\\
+ %% \hline
+ %% \end{longtable}
+ %% \normalsize
+ %% \textbf{Monitoring selected groups of nonbonded interactions}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{rrrrrrrr}pair & Vwsum & Vwel & Vwvdw & 1:Vel & 1:Vvdw & 2:Vel & 2:Vvdw \\ 1 & 98.16 & 95.99 & 2.17 & 58.64 & 1.97 & 133.35 & 2.37\\&&&&&&&\\&&&&&&&\\&&&&&&&\end{tabular} & \multirow{-1}{111pt}[2\baselineskip]{The non-bonded interaction energies between the pairs of atom groups specified in the FEP file are listed both as $\lambda$-weighted sums and for each state separately.}\\
+ %% \hline
+ %% \end{longtable}
+ %% \normalsize
+ %% \textbf{Temperatures}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{llll}Temperature at step & 1: T\_tot= & 1.4 T\_free= & 1.6\end{tabular} & The total and "free" temperatures are printed at the specified interval, or if the total temperature changed by $>$2\% since it was last printed. This simulation was only one step.\\
+ %% \hline
+ %% \end{longtable}
+ %% \normalsize
+ %% \textbf{FINAL Energy summary}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{lrrrrrr} & el & vdW & bond & angle & torsion & improper\\solute & -560.13 & -182.55 & 294.99 & 369.97 & 309.92 & 96.67\\solvent & -3402.39 & 549.41 & 0.00 & 0.00 & 0.00 & 0.00\\solute-solvent & -494.15 & 383.01&&&&\\LRF & 40.70&&&&&\\Q-atom & -420.84 & 78.87 & -190.09 & 3.43 & 1.89 & 0.00\\ & total & fix & water\_rad & water\_pol & shell & protein\\restraints & 46.05 & 0.00 & 4.36 & 19.06 & 0.00 & 22.63 \\& total & potential & kinetic&&&\\SUM & -3065.30 & -3075.23 & 9.93&&&\end{tabular} & \multirow{-1}{111pt}[4.5\baselineskip]{The energy summaries at the end of the simulations contain the same information as the ones printed during the simulations.}\\
+ %% \hline
+ %% \end{longtable}
+ %% 
+ %% \normalsize
+ %% \textbf{FINAL Q-atom energies}
+ %% \tiny
+ %% \vspace{-1\baselineskip}
+ %% \begin{longtable}{|p{295pt}|p{111pt}|}
+ %% \hline \begin{tabular}{lrrrrrrrr}type & st & lambda & el & vdW & bond & angle & torsion & improper\\Q-Q & 1 &0.5000 & -45.93 & 40.43&&&&\\Q-Q & 2 &0.5000 & 52.53 & 51.53 &&&&\\&&&&&&&&\\Q-prot & 1 &0.5000 & -330.52 & 34.00&&&&\\Q-prot & 2 &0.5000 & -315.82 & 33.62 &&&&\\&&&&&&&&\\Q-wat & 1 &0.5000 & -110.72 & -0.75&&&&\\Q-wat & 2 &0.5000 & -91.21 & -1.09 &&&&\\&&&&&&&&\\Q-surr. & 1 &0.5000 & -441.25 & 33.25&&&&\\Q-surr. & 2 &0.5000 & -407.03 & 32.53 &&&&\\&&&&&&&&\\Q-any & 1 &0.5000 & -487.17 & 73.68 & -194.18 & 6.69 & 0.49 & 0.00\\Q-any & 2 &0.5000 & -354.50 & 84.06 & -186.00 & 0.17 & 3.30 & 0.00 \\&&&&&&&&\\type & st & lambda & total & restraint&&&&\\Q-SUM & 1 &0.5000 & -577.86 & 22.63&&&&\\Q-SUM & 2 &0.5000 & -430.34 & 22.63&&&&\end{tabular} & \\
+ %% \hline H( 1, 2) =  0.32 dist. between Q-atoms  2  8 =  2.56 & \\
+ %% \hline qdyn version 4.15 terminated normally. & This simulation complete without errors.\\
+ %% \hline
+ %% \end{longtable}
+ %% 
+ %% \normalsize
+ %% 
+ %% \subsubsection{\textbf{Qfep6} log file}
+ %% [To be added]
 %\subsection{Differences from earlier versions}
 
 %FIX THIS SECTION! Remove, update or put it on the web!
@@ -4090,19 +4296,23 @@ energy summaries.
 %\item Any tri-atomic molecule may be used as solvent, not only SPC or TIP3P water models.
 %\end{itemize}
 
-%Almlöf end
+%AlmlÃ¶f end
 %--------------sinisa-----------%
 
-\subsection{Utility programs} A number of little programs and scripts that may
-be useful in the different steps in preparing or analyzing MD
-simulations are also available at the Q web site and briefly
-described here.
+\subsection{Utility programs}
+Analysis of simulation data is possible through the use of either
+the graphical user interface QGui (available at 
+\url{https.//github.com/qusers/qgui}) or through a set of command
+line tools available at \url{htpps://github.com/mpurg/qtools}.
+Those programs only rely on the programs available in Q
+and can facilitate both simulation set--up and analysis.
 
+Within Q6 itself, the following two utility tools are available.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%  jeca start %%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{\textbf{qcalc}}\label{subsubsec:qcalc}
+\subsubsection{\textbf{Qcalc6}}\label{subsubsec:qcalc}
 
 % ~~~~~~~~~~~~~~~~~~ Peter begin ~~~~~~~~~~~~~~~~~~
 
@@ -4211,7 +4421,7 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%% Ändrar numreringen på tabellerna%%%%%%%%
+%%%%%% Ã„ndrar numreringen pÃ¥ tabellerna%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\setcounter{table}{13}
 
@@ -4299,9 +4509,9 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% INTE BRA MEN FÅR DUGA SÅ LÄNGE!%%%%%%%
+%%%%%%% INTE BRA MEN FÃ–R DUGA SÃ… LÃ„NGE!%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newpage
+%%\newpage
 
 
 %\begin{table}[h]
@@ -4471,7 +4681,7 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 %                             startup.\\ \hline
 %\end{longtable}
 
-\subsubsection{Analysis programs}
+%%\subsubsection{Analysis programs}
 
 %\textbf{qave}\\
 %\begin{tabularx}{\textwidth}{|l|X|}
@@ -4605,117 +4815,35 @@ See section \ref{subsection:scoring} on page \pageref{subsection:scoring} for mo
 %\hline
 %\end{tabularx}
 
-\textbf{qdum}\\
+\subsubsection{\textbf{Qdum6}}\label{subsubsec:qdum}
+
+\textbf{Qdum6}\\
 \begin{tabularx}{\textwidth}{|l|X|}
 \hline
- function: &   Test \textbf{qdyn} input files quickly.\\\hline
- input:    &   \textbf{qdyn} input file.\\\hline
+ function: &   Test \textbf{Qdyn6} input files quickly.\\\hline
+ input:    &   \textbf{Qdyn6} input file.\\\hline
  output:   &   Log file, restart file.\\\hline
- usage:    &   \verb"qdum test.inp"\\\hline
- notes:    &   \textbf{qdum} is a version of \textbf{qdyn} without the dynamics loop. It reads all input, initiates the
-               simulation, writes a restart file and terminates. Qdum is build from the same source
-               code as \textbf{qdyn}.\\
+ usage:    &   \verb"Qdum6 test.inp"\\\hline
+ notes:    &   \textbf{Qdum6} is a version of \textbf{Qdyn6} without the dynamics loop. It reads all input, initiates the
+	       simulation, writes a restart file and terminates. \textbf{Qdum6} is build from the same source
+               code as \textbf{Qdyn6}.\\
+\hline
+\end{tabularx}
+
+\subsubsection{\textbf{Qpi6}}\label{subsubsec:qpi}
+
+\textbf{Qpi6}\\
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+ function: &   Perform trajectory post--processing to calculate quantum corrections using the BQCP approach.\\\hline
+ input:    &   Modified \textbf{Qdyn6} input file as outlined above in section \ref{section:qpi}. Requires Qdyn6 trajectory file, FEP file, Topology file and optionally Qdyn6 restart file\\\hline
+ output:   &   Log file, energy file.\\\hline
+ usage:    &   \verb"Qpi6 test.inp"\\\hline
+ notes:    &   \textbf{Qpi6} calculates path integral qunatum corrections to the classical energies using the BQCP approach. It reads the coordinates from the trajectory file and performs a number of calculations on each classical structure after converting the coordinates of the atoms in the reacting center into ring--polymers.\\
 \hline
 \end{tabularx}
 
 \newpage
-
-\begin{thebibliography}{2}
-\bibitem{Marelius:1999}Marelius, J., Kolmodin, K., Feierberg, I. and Åqvist, J. Q: An MD
-program for free energy calculations and empirical valence bond
-simulations in biomolecular systems, J. Mol. Graphics Mod. 1999,
-16, 213-225.
-\bibitem{Kollman:1993}Kollman, P.A., Free Energy Calculations:
-Applications to Chemical and Biochemical Phenomena. Chem. Rev.
-1993, 2395-2417.
-\bibitem{Beveridge:1989}Beveridge, D.L. and DiCapua, F.M., Free energy via molecular simulation:
-applications to chemical and biomolecular systems. Annu. Rev.
-Biophys. Biophys. Chem. 1989, 431-492.
-\bibitem{Warshel:1988}Warshel, A., Computer modeling of Chemical reactions in Enzymes
-and Solutions. Wiley, New York, 1988.
-\bibitem{Aaqvist:1993}Åqvist, J. and Warshel, A., Simulation of Enzyme Reactions Using Valence Bond Force Fields
-and Other Hybrid Quantum/Classical Approaches. Chem. Rev.
-1993,93,2523-2544.
-\bibitem{Aaqvist:1994}Åqvist, J., Medina, C. and Samuelsson, J.E., A new method for predicting binding
-affinity in computer-aided drug design., Protein Engng. 1994, 7,
-385-391.
-\bibitem{Jones-Hertzog:1997}Jones-Hertzog, D.K. and Jorgensen, W.L., Binding Affinities for Sulfonamide
-Inhibitors with Human Thrombin Using Monte Carlo Simulations with
-a Linear Response Method. J. Med. Chem. 1997, 40, 1539-1550.
-\bibitem{Hansson:1998}Hansson, T., Marelius, J. and Åqvist, J., Ligand Binding Affinity
-Prediction by Linear Interaction Energy Methods, J. Comput.-Aided
-Mol. Des. 1998, 12, 27-35.
-\bibitem{Warshel:1978}Warshel, A., A microscopic
-model for calculations of chemical processes in aqueous solution,
-Chem. Phys. Lett. 1978, 55, 454-458.
-\bibitem{Berkowitz:1982}Berkowitz, M. and McCammon, J.A., Molecular Dynamics with Stochastic Boundary Conditions,
-Chem. Phys. Lett. 1982, 90, 215-217.
-\bibitem{Brunger:1984}Brünger, A. T., Brooks, C.L. III. and Karplus, M., Stochastic Boundary Conditions for
-Molecular Dynamics Simulations of ST2 Water, Chem. Phys. Lett.
-1984, 105, 495-500.
-\bibitem{pdb}See $e.g.$ http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2\_frame.html.
-\bibitem{Berendsen:1981}Berendsen, H.J.C., Postma, J.P.M., van Gunsteren, W.F. and Hermans, J., Interaction
-models for water in relation to protein hydration, In
-Intermolcular Forces, Pullman, B. (ed.). Riedel, Dordrect, 1981,
-pp 331-342.
-\bibitem{Jorgensen:1983}Jorgensen, W.L., Chandrasekhar, J., Madura, J.D., Impey, R.W. and Klein, M.L., Comparison
-of Simple Potential Functions for Simulating Liquid Water. J.
-Chem. Phys. 1983, 79, 926-935.
-\bibitem{Kolmodin:}Kolmodin, K. and Åqvist, J, PTP proton transfer...
-\bibitem{Aaqvist:1991}Åqvist, J., Free Energy Perturbation Study of Metal Ion Catalyzed Proton Transfer in Water. J. Phys. Chem. 1991, 95,
-4587-4590.
-\bibitem{Wennerstroem} http://www.ibg.uu.se/upload/PetraW.pdf Wennerström, P. (valid link
-2003-06).
-\bibitem{VMD} Humphrey, W., Dalke, A. and Schulten, K., VMD -Visual Molecular Dynamics, J. Mol. Graph., 1996, 14,
-33-38.
-\bibitem{VMD_homepage} VMD home page:http://www.ks.uiuc.edu/Research/vmd/ Laaksonen, L., A (valid link
-2003-06).
-\bibitem{gOM} graphics program for the analysis and display of moleculardynamics trajectories, J. Mol. Graph. 1992, 10, 33.
-\bibitem{gOM_homepage} gOpenMol home page: http://www.csc.fi/~laaksone/gopenmol/gopenmol.html valid link (2003-06).
-\bibitem{Cornell:1995} Cornell, W.D., Cieplak, P., Bayly, C.I., Gould, I.R., Merz, K.M. Jr., Ferguson,D.M., Spellmeyer, D.C., Fox, T., Caldwell, J.W. and Kollman, P.A., A second generation force field for the simulation of proteins and nucleic acids. J. Am. Chem. Soc. 1995, 117,
-5179-5197.
-\bibitem{Jorgensen:1988} Jorgensen, W.L. and Tirado-Rives, J., The OPLS Potential Functions for Proteins.Energy Minimizations for Crystals of Cyclic Peptides and Crambin. J. Am. Chem. Soc. 1988, 110,
-1657-1666.
-\bibitem{Brooks:1993} Brooks, B.R., Bruccoleri, R.E., Olafson, B.D., States, D.J., Swaminathan, S. and Karplus, M., CHARMM: A Program for Macromolecular Energy, Minimization, and Dynamics Calculations. J. Comp. Chem. 1993, 4,
-187-217.
-\bibitem{Gunsteren:1987} van Gunsteren, W.F. and Berendsen, H.J.C., Groningen Molecular Simulation (GROMOS) Library Manual. Biomos B.V., Groningen,
-1987.
-\bibitem{Gunsteren:mod} van Gunsteren, W. F., [GROMOS87
-modification].
-\bibitem{Gunsteren:1996} van Gunsteren, W.F., Billeter, S.R., Eising, A.A., Hünenberger, P.H., Krüger, P., Mark, A.E. and Tironi, I.G., Biomolecular Simulation: The GROMOS96 Manual and User Guide. Hochschulverlag AG an der ETH Zürich,
-1996.
-\bibitem{Jorgensen:1996} Jorgensen W.L., Maxwell D.S., Tirado-Rives J., Development and Testing of the OPLS All-Atom Force Field on
-Conformational Energetics and Properties of Organic Liquids.
-J.Am.Chem. Soc. 1996, 118, 11225-11236.
-\bibitem{Essex:1995}Essex, J.W. and Jorgensen, W.L., An Empirical Boundary Potential for Water Droplet Simulations. J. Comp. Chem. 1995, 16, 951-972
-\bibitem{Berendsen:1984}Berendsen, H.J.C, Postna, J.P.M., van
-Gunsteren, W.F., di Nola, A. and Haak, J.R., Molecular dynamics
-with coupling to an external bath, J. Chem. Phus. 1984, 81,
-3684-3690.
-\bibitem{Zacharias:1994} Zacharias M., Straatsma T.P., McCammon J.A., Separation-shifted scaling, a new scaling method for Lennard-Jones
-interactions in thermodynamic integration. J.Chem.Phys. 1994, 100,
-9025-9031.
-
-\bibitem{Wang:2002}Renxiao~Wang, Luhua Lai and Shaomeng Wang,
-Further development and validation of empirical scoring functions for structure-based binding affinity prediction,
-Journal of Computer-Aided Molecular Design, 16, 11-26, 2002
-
-\bibitem{Eldridge:1997}Matthew~D.~Eldridge, Christopher~W.~Murray, Timothy~R.~Auton, Gaia V. Paolini and Roger~P.~Mee,
-Empirical scoring functions: I. The deveoplment of a fast empirical scoring function to estimate the binding affinity of ligands in receptor complexes, Journal of Computer-Aided Molecular Design, 11, 425-445, 1997
-
-\bibitem{Muegge:1999}Ingo~Muegge and Yvonne~C.~Martin,
-A general and fast scoring function for protein--ligand interaction: A simplified approach, J. Med. Chem., 42, 701-894, 1999
-
-\bibitem{Tuckerman:1992}Martyna G.J., Klein M.L., and Tuckerman M.E., Nos\'e-Hoover chains: The canonical ensemble via continuous dynamics, J. Chem. Phys., 97, 2635-2645, 1992
-
-\bibitem{Schneider:1978}Schneider T., and Stoll E., Molecular-dynamics study of a three-dimensional one-component model for distortive phase transitions, Phys. Rev. B, 17, 1302-1322, 1978
-
-\bibitem{Frenkelbook} Frenkel D., and Smit B., Understanding Molecular Simulation - From Algorithms to Applications, Academic Press, 2002
-
-\bibitem{Major2007a} Major, D.T. and Gao, J., An Integrated Path Integral and Free--Energy Perturbation--Umbrella Sampling Method for Computing Kinetic Isotope Effects of Chemical Reactions in Solution and in Enzymes, J. Chem. Theo. Comp., 3, 949--960, 2007
-
-\bibitem{Gao2008} Gao, J., Wong, K.--Y., Major, D.T., Combined QM/MM and Path Integral Simulations of Kinetic Isotope Effects in the Proton Transfer Reaction Between Nitroethane and Acetate Ion in Water, J. Comp. Chem., 4, 514--522, 2008
-
-\end{thebibliography}
+\printbibliography
 
 \end{document}

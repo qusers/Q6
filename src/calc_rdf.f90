@@ -1,10 +1,27 @@
-! (C) 2014 Uppsala Molekylmekaniska HB, Uppsala, Sweden
+! Q6: A comprehensive simulation package for molecular dynamics simulations and 
+! free energy calculations, including empirical valence bond simulations, 
+! linear interaction energy calculations, and free energy perturbation.
+! 
+! Copyright © 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer
+! 
+! This program is free software; you can redistribute it and/or modify it under the 
+! terms of the GNU General Public License as published by the Free 
+! Software Foundation; either version 2 of the License, or any later version.
+! 
+! This program is distributed in the hope that it will be useful, 
+! but WITHOUT ANY WARRANTY; without even the implied warranty of 
+! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+! See the GNU General Public License for more details.
+! 
+! You should have received a copy of the GNU General Public License along with 
+! this program; if not, write to the Free Software Foundation, Inc., 51 Franklin 
+! Street, Fifth Floor, Boston, MA  02110-1301, USA. Also add information on 
+! how to contact you by electronic and paper mail.
 ! calc_rdf.f90
 ! by Martin Andér and Martin Almlöf (multiple atoms in first mask and PBC)
 !       
 ! Calculates RDF for a center atom with respect to all atoms in
 ! target_mask, using Nbins bins from r=0 to r=rdf_radius
-!TODO: precision not fixed
 
 module CALC_RDF
 	use CALC_BASE

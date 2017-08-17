@@ -1,5 +1,0 @@
-a) run some trajectory for say 10000 steps with qdyn5. save the logfile.
-b) then run the same trajecotry for 5000 steps, write a restart. then read that restart and run for 5000 more steps.
-
-a and be should give the exact same results, shouldnd they (except for 2x header and 2x footer and different step numbers).
-If that does not work, restart is defective.
