@@ -34,7 +34,7 @@ implicit none
 	integer		:: mxpts=200,mxbin=10,mxstates=4
 	character(80)      ::filnam, line
 	integer           ::i,j,ifile,ipt,istate,ibin,nfiles,nstates,ERR, &
-	                      nskip,nbins,nmin,idum,noffd,nnoffd,offel
+	                      nskip,nbins,nmin,idum,noffd,nnoffd,offel,num_offd
 
 	type(OFFDIAG_SAVE),allocatable		:: offd(:)
 
@@ -195,7 +195,7 @@ end if
 		read (*,*) alfa(istate)
 		write (*,6) istate,alfa(istate)
 	end do
-6	format('# Alpha for state ',i2,'              =',f6.2)
+6	format('# Alpha for state ',i2,'              =',f9.2)
 7	format('--> Give alpha for state ',i2,':')
 
 	scale_Hij=0.0
@@ -204,6 +204,8 @@ end if
 		read (*,*) scale_Hij
 		write (*,8) scale_Hij
 8	format('# Scale factor for Hij            =',f6.2)
+! variable to store the actual offdiagonals used later
+                num_offd = noffd
 	else
 		call prompt ('--> Number of off-diagonal elements:')
 		read (*,*) nnoffd
@@ -214,6 +216,8 @@ end if
 			read (*,*) i, j, A(i,j), mu(i,j), eta(i,j), rxy0(i,j)
 			write(*,12) i, j, A(i,j), mu(i,j), eta(i,j), rxy0(i,j)
 		end do
+! variable to store the actual offdiagonals used later
+                num_offd = nnoffd
 9	format('# Number of off-diagonal elements =',i6)
 11	format('#   i   j   A(i,j)  mu(i,j) eta(i,j) rxy0(i,j)')
 12	format('#',2i4,1x,f9.2,1x,f9.2,1x,f9.2,1x,f9.2)
@@ -344,7 +348,7 @@ end if
 		write(*,'(a,a)') '# Energy files from Qdyn, version: ',fileheader%version
 		!read 1st record to get lambdas
 		if(is_old_file) rewind(f)
-		idum = get_ene(f, EQ(:), offd, nstates,nnoffd,fileheader%arrays)
+		idum = get_ene(f, EQ(:), offd, nstates,num_offd,fileheader%arrays)
 		if(idum /= 0) then
 			!we have a problem
 			write(*,'(a,a)') 'ERROR: Unexpected end-of-file in first record of ', &
@@ -395,7 +399,7 @@ end if
                                 fileheader%gcnum(1:fileheader%arrays),fileheader%version
 
 		end if
-		do while(get_ene(f, EQ(:), offd, nstates, nnoffd,fileheader%arrays) == 0) !keep reading till EOF
+		do while(get_ene(f, EQ(:), offd, nstates, num_offd,fileheader%arrays) == 0) !keep reading till EOF
 			ipt = ipt + 1
 			if (ipt .eq. (mxpts-1)) then
 !ops, we need larger arrays to keep track of the temporary points
@@ -446,7 +450,7 @@ end if
 				do j=1,fileheader%arrays
 				EQ(i)%total(j)=EQ(i)%total(j)+alfa(i)
 				FEPtmp%v(j,i, ipt) = EQ(i)%total(j)
-				if (nnoffd .ne. 0) then
+				if (num_offd .ne. 0) then
 					FEPtmp%r(j,i,ipt) = offd(i)%rkl
 			        end if
 				end do
@@ -528,7 +532,7 @@ end if
 		FEP(ifile)%gap(:,:) = FEPtmp%gap(1:fileheader%arrays,1:FEP(ifile)%npts)
 		FEP(ifile)%c1(:,:) = FEPtmp%c1(1:fileheader%arrays,1:FEP(ifile)%npts)
 		FEP(ifile)%c2(:,:) = FEPtmp%c2(1:fileheader%arrays,1:FEP(ifile)%npts)
-		if(nnoffd > 0) then
+		if(num_offd > 0) then
 			allocate(FEP(ifile)%r(fileheader%arrays,nstates, FEP(ifile)%npts), STAT=ERR)
 			if(ERR /= 0) then
 				stop 'Qfep5 terminated abnormally: Out of memory when allocating arrays. 1'
@@ -741,7 +745,7 @@ end if
 	         		avc1(ibin)=avc1(ibin)+FEP(ifile)%c1(j,ipt)
                 		avc2(ibin)=avc2(ibin)+FEP(ifile)%c2(j,ipt)
 				!Only gives first r_xy distance
-				if(nnoffd > 0)	avr(ibin)=avr(ibin)+FEP(ifile)%r(j,1,ipt)
+				if(num_offd > 0) avr(ibin)=avr(ibin)+FEP(ifile)%r(j,1,ipt)
 				nbinpts(ibin)=nbinpts(ibin)+1
 			end do          !ipt
 			do ibin=1,nbins
@@ -827,7 +831,7 @@ write(*,28)
 	do ifile=1,nfiles
 		deallocate(FEP(ifile)%v, FEP(ifile)%vg, FEP(ifile)%gap, &
 		FEP(ifile)%c1, FEP(ifile)%c2,FEP(ifile)%lambda)
-		if(nnoffd > 0) deallocate(FEP(ifile)%r)
+		if(num_offd > 0) deallocate(FEP(ifile)%r)
 	end do
 	deallocate(FEP)
 	deallocate(FEPtmp%v,FEPtmp%vg,FEPtmp%gap,FEPtmp%c1,FEPtmp%c2,FEPtmp%lambda,FEPtmp%r)
