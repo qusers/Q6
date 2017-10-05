@@ -10,11 +10,12 @@ Q is a set of Molecular Dynamics (MD) tools tailored to the following specific k
 4. Quantum Classical Path (QCP)
 
 © Copyright 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer.
-
+(http://doi.org/10.5281/zenodo.1002739)
 Developed by:	The Department of Cell and Molecular Biology
 	        Uppsala University, Uppsala, Sweden
 	        http://xray.bmc.uu.se/~aqwww/q/ 
 		paul.bauer.q@gmail.com, qmoldyn@googlegroups.com 
+
 
 ## Installation
 The current makefiles make it relatively easy to compile the code in a linux or mac OSX environment.
