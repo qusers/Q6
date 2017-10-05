@@ -10,7 +10,8 @@ Q is a set of Molecular Dynamics (MD) tools tailored to the following specific k
 4. Quantum Classical Path (QCP)
 
 © Copyright 2017 Johan Åqvist, John Marelius, Shina Caroline Lynn Kamerlin and Paul Bauer.
-(http://doi.org/10.5281/zenodo.1002739)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002739.svg)](https://doi.org/10.5281/zenodo.1002739)
+
 Developed by:	The Department of Cell and Molecular Biology
 	        Uppsala University, Uppsala, Sweden
 	        http://xray.bmc.uu.se/~aqwww/q/ 
