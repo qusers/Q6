@@ -53,7 +53,7 @@ ifeq ($(COMP),ifort)
 	FPP_FLG=	-fpp -DINTEL
 
 	MPIFC=		mpif90
-	MPIFLAGS=	-f90=${FC} -Nmpi
+	MPIFLAGS=	-f90=${FC}
 	OMPI_FC=	${FC}
 	MPI_FC=		${FC}
 	MPI_FCFLAGS=	${FFLAGS} ${FC_OPT}
@@ -162,7 +162,6 @@ default: what
 # Targets
 ################################################################################
 all:    tools serial 
-	
 
 tools:
 	@make FFLAGS="${FFLAGS} ${FC_OPT}" \
