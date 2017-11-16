@@ -493,9 +493,9 @@ end if
 				if (nstates==2) then
 					FEPtmp%vg(j,ipt)=0.5_prec*(EQ(1)%total(j)+EQ(2)%total(j))-  &
 						0.5_prec*q_sqrt( (EQ(1)%total(j)-EQ(2)%total(j))**2 + 4.*Hij(1,2,j)**2 )
-					if(nnoffd > 0) then
-						FEPtmp%c1(j,ipt)=1./(1.+((FEPtmp%vg(j,ipt)-EQ(1)%total(j))/Hij(1,2,j))**2)
-						FEPtmp%c2(j,ipt)=1-FEPtmp%c1(j,ipt)
+					if(num_offd > 0) then
+						FEPtmp%c1(j,ipt)=one/(one+((FEPtmp%vg(j,ipt)-EQ(1)%total(j))/Hij(1,2,j))**2)
+						FEPtmp%c2(j,ipt)=one-FEPtmp%c1(j,ipt)
 					end if
 				else
 					call tred2(Hij(:,:,j),nstates,d,e)
