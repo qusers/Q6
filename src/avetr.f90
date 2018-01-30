@@ -40,12 +40,8 @@ subroutine avetr_calc
   logical :: fin
   N_sets = 0
   call trajectory
-! number of coordinates is still natom*3
-! but store is now size of natom so we can
-! access everything by the atom index instead of 
-! having to play around with numbers
   ncoords = trj_get_ncoords() 
-  allocate(x_in(ncoords/3), x_sum(ncoords/3), x2_sum(ncoords/3), &
+  allocate(x_in(ncoords), x_sum(ncoords), x2_sum(ncoords), &
 				stat=allocation_status)
   if (allocation_status .ne. 0) then
     write(*,*) 'Out of memory!'
@@ -93,10 +89,11 @@ integer         :: i
 	x_sum = x_sum / real(N_sets,kind=prec)
 	x2_sum = x2_sum / real(N_sets,kind=prec)
         temp = temp * zero
-        do i=1, ncoords/3
+        do i=1, ncoords
         temp = x2_sum(i) - (x_sum(i)*x_sum(i))
         end do
-        temp = temp / real(ncoords,kind=prec)
+        ! need to divide by number of coordinates, not number of atoms
+        temp = temp / real(ncoords*3,kind=prec)
         rmsd = q_sqrt(temp%x+temp%y+temp%z)
 end subroutine average
 
