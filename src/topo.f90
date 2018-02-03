@@ -627,6 +627,13 @@ logical function topo_read(u, require_version, extrabonds)
           end if
           dielectric = int(80*1000) !default for dielectric (of water) to keep rest working
         end if
+! fix for custom files with no set dielectric constant
+! assume water values if the set value is zero or less
+      if (dielectric .le. 0) then
+        dielectric = int(80*1000)
+        write(*,'(a)') 'Warning, number for provided dielectric is zero (and thus meaningless).'
+        write(*,'(a,i6)') 'Setting it to water value, ',dielectric
+      end if
 
 	write (*,20) nat_solute, nat_pro-nat_solute
 20	format ('No. of solute atoms     = ',i10,/,&
@@ -1068,6 +1075,12 @@ logical function topo_read(u, require_version, extrabonds)
 ! ok, no info on solvent density
           topo_rho_wat = 0.0335_prec
           read (line,*,err=1000) rexcl_o, rwat
+        end if
+! if the topology file has nonsensical density, set it to water value
+        if (topo_rho_wat .le. zero) then
+          topo_rho_wat = 0.0335_prec
+          write(*,'(a)') 'Warning, provided solvent density is zero, and thus meaningless'
+          write(*,'(a,f10.8)') 'Assuming water and setting it to ',topo_rho_wat
         end if
 		  write(*, '(a,f10.3)') 'Exclusion radius        = ', rexcl_o
 		  write(*, '(a,f10.3)') 'Eff. solvent radius     = ', rwat

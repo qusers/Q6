@@ -2741,7 +2741,7 @@ subroutine oldreadlib(filnam)
 		lib(nlibres)%SYBYLTYPE = '****'
 		lib(nlibres)%HETATM =.false. !don't use new feature
 		lib(nlibres)%solvent =.false. !don't use new feature
-		lib(nlibres)%density =0 !don't use new feature
+		lib(nlibres)%density = zero !don't use new feature
 		read(1, '(a)') line
 		READ(line, fmt=*, err=9, end=9) lib(nlibres)%nam, lib(nlibres)%SYBYLTYPE
 9		write( *, 2, advance='no') lib(nlibres)%nam
