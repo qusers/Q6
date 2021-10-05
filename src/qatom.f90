@@ -459,19 +459,6 @@ logical function qatom_load_atoms(fep_file)
 		nqat = prm_max_enum('atoms', type_count) !count number of q-atoms & get highest q-atom number
 		!allocate memory for qatom list
 		allocate(iqseq(nqat))
-! allocate all stuff that was hard coded before
-                allocate(iang_coupl(3,nqat),itor_coupl(3,nqat),iimp_coupl(3,nqat),iqshake(nqat) , &
-                        jqshake(nqat),qshake_dist(nqat,max_states),EMorseD(nqat) , &
-                        dMorse_i(nqat),dMorse_j(nqat))
-                        iang_coupl  = 0
-                        itor_coupl  = 0
-                        iimp_coupl  = 0
-                        iqshake     = 0
-                        jqshake     = 0
-                        qshake_dist = zero
-                        EMorseD     = zero
-                        dMorse_i    = zero
-                        dMorse_j    = zero
 		yes = prm_open_section('atoms') !rewind section
 		do i = 1, type_count
 			if(prm_get_int_int(s, topno)) then
@@ -1002,6 +989,19 @@ logical function qatom_load_fep(fep_file)
 	section = 'change_bonds'
 	nqbond = prm_count(section)
 	if(nqbond > 0)  then
+            ! allocate all stuff that was hard coded before
+            allocate(iang_coupl(3,nqbond),itor_coupl(3,nqbond),iimp_coupl(3,nqbond),iqshake(nqbond) , &
+                    jqshake(nqbond),qshake_dist(nqbond,max_states),EMorseD(nqbond) , &
+                    dMorse_i(nqbond),dMorse_j(nqbond))
+                    iang_coupl  = 0
+                    itor_coupl  = 0
+                    iimp_coupl  = 0
+                    iqshake     = 0
+                    jqshake     = 0
+                    qshake_dist = zero
+                    EMorseD     = zero
+                    dMorse_i    = zero
+                    dMorse_j    = zero
 		write (*,160) nqbond
 		write(*,161) ('state',i,i=1,nstates)
 		allocate(qbnd(nqbond),stat=alloc_status_qat)
