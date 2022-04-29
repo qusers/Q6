@@ -40,8 +40,10 @@ BUILD_NUMBER_FILE=build-number.txt
 ################################################################################
 ifeq ($(COMP),ifort)
 	PREC=		-DQDOUBLE
-	FC=			ifort 
-	FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline \
+	#FC=			ifort 
+	#FC_OPT=		-O3 -ip -ipo -xHost -inline-forceinline 
+	FC=		ifort 
+	FC_OPT=		-O3 -ip -ipo -inline-forceinline -march=core-avx-i\
 				-unroll-aggressive -finline-limit=1000\
 				-no-prec-div -no-inline-max-per-compile \
 				-no-inline-max-per-routine \
