@@ -538,8 +538,8 @@ do ib = 1, nqbond
 !Force scaling factor to be 1 when distance is smaller than r0
  if ( db > zero ) then
  	EMorseD(ib) = -(fexp*fexp-2.0_prec*fexp)
-        dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
- 	dMorse_j(ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/(calc%a_vec*calc%dist)
+    dMorse_i(ib) = 2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/calc%dist*calc%a_vec
+ 	dMorse_j(ib) = -2.0_prec*qbondlib(ic)%amz*(fexp-fexp*fexp)*EQ(istate)%lambda/calc%dist*calc%a_vec
  else
  	EMorseD(ib) = one
  	dMorse_i(ib) = dMorse_i(ib) * zero
