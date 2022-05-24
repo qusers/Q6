@@ -14,7 +14,7 @@ Q is a set of Molecular Dynamics (MD) tools tailored to the following specific k
 
 Developed by:	The Department of Cell and Molecular Biology
 	        Uppsala University, Uppsala, Sweden
-	        http://xray.bmc.uu.se/~aqwww/q/ 
+	        https://www.icm.uu.se/cbbi/aqvist-lab/ 
 		paul.bauer.q@gmail.com, qmoldyn@googlegroups.com 
 
 
