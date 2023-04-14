@@ -1289,7 +1289,7 @@
         HD1  CD1  CG    NE1
         HE1  NE1  CD1   CE2
         HZ2  CZ2  CE2   CH2
-        HH2  CH2  CE2   CZ3
+        HH2  CH2  CZ2   CZ3
         HZ3  CZ3  CH2   CE3
         HE3  CE3  CZ3   CD2
         CE2  CD2  CG    CE3
